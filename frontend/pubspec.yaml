@@ -1,0 +1,35 @@
+name: impal_smart_todolist
+description: "Aplikasi all in one berbasis sistem cerdas untuk mempermudah penjadwalan dan organisir mahasiswa - Kelompok 7 IMPAL"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Networking & State / Storage
+  http: ^1.2.0
+  shared_preferences: ^2.2.2
+  intl: ^0.19.0
+
+  # Multiplatform & Utilities
+  flutter_local_notifications: ^17.0.0
+  window_manager: ^0.3.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icons/
+    - assets/images/

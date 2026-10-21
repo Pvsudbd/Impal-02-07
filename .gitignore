@@ -1,0 +1,54 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# ----------------------------------------------------
+# Frontend (Flutter / Dart)
+# ----------------------------------------------------
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+frontend/.pub-cache/
+frontend/.pub/
+frontend/build/
+frontend/doc/api/
+frontend/windows/flutter/ephemeral/
+frontend/*.vcxproj.user
+frontend/.gradle/
+frontend/android/app/debug
+frontend/android/app/profile
+frontend/android/app/release
+
+# ----------------------------------------------------
+# Backend (Node / Laravel / Python)
+# ----------------------------------------------------
+backend/node_modules/
+backend/vendor/
+backend/storage/*.key
+backend/storage/logs/
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+backend/__pycache__/
+backend/*.pyc
