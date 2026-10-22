@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
+import 'presentation/features/auth/login_page.dart';
 
 void main() {
   runApp(const MaterialApp(
-    home: Scaffold(
-      body: Center(
-        child: Text('Aplikasi Todolist Sistem Cerdas'),
-      ),
-    ),
+    debugShowCheckedModeBanner: false,
+    home: Login(),
   ));
 }
