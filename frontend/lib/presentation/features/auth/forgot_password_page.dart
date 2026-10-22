@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
@@ -15,17 +16,29 @@ class ForgotPassword extends StatefulWidget {
 
 class _ForgotPasswordState extends State<ForgotPassword> {
   late final TextEditingController _emailController;
+  late final TextEditingController _phoneController;
+
   RecoveryMethod _selectedMethod = RecoveryMethod.email;
   bool _isLoading = false;
+
   String? _emailError;
+  String? _phoneError;
 
   @override
   void initState() {
     super.initState();
-    _emailController = TextEditingController(text: 'YogaPerkakas@gmail.com');
+    _emailController = TextEditingController();
+    _phoneController = TextEditingController();
+
     _emailController.addListener(() {
       if (_emailError != null) {
         setState(() => _emailError = null);
+      }
+    });
+
+    _phoneController.addListener(() {
+      if (_phoneError != null) {
+        setState(() => _phoneError = null);
       }
     });
   }
@@ -33,29 +46,24 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   @override
   void dispose() {
     _emailController.dispose();
+    _phoneController.dispose();
     super.dispose();
-  }
-
-  String _maskEmail(String email) {
-    final trimmed = email.trim();
-    final atIndex = trimmed.indexOf('@');
-    if (atIndex <= 1) {
-      return trimmed;
-    }
-    final prefix = trimmed.substring(0, atIndex > 3 ? 3 : 1);
-    final domain = trimmed.substring(atIndex);
-    return '$prefix••••••••$domain';
   }
 
   void _navigateBack() {
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
     } else {
-      Navigator.pushReplacement(
-        context,
-        AuthFadeRoute(page: const Login()),
-      );
+      _navigateToSignIn();
     }
+  }
+
+  void _navigateToSignIn() {
+    Navigator.pushAndRemoveUntil(
+      context,
+      AuthFadeRoute(page: const Login()),
+      (route) => false,
+    );
   }
 
   void _showHelpInfo() {
@@ -67,21 +75,42 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   }
 
   Future<void> _handleSendRecovery() async {
-    final email = _emailController.text.trim();
+    String destination;
 
-    String? error;
-    if (email.isEmpty) {
-      error = 'Email or Student ID is required';
-    } else if (!email.contains('@') && !RegExp(r'^[0-9]+$').hasMatch(email)) {
-      error = 'Please enter a valid campus email or Student ID';
-    } else if (email.contains('@') &&
-        !RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email)) {
-      error = 'Invalid email address format';
-    }
+    if (_selectedMethod == RecoveryMethod.email) {
+      final email = _emailController.text.trim();
+      String? error;
 
-    if (error != null) {
-      setState(() => _emailError = error);
-      return;
+      if (email.isEmpty) {
+        error = 'Email or Student ID is required';
+      } else if (!email.contains('@') && !RegExp(r'^[0-9]+$').hasMatch(email)) {
+        error = 'Please enter a valid campus email or Student ID';
+      } else if (email.contains('@') &&
+          !RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email)) {
+        error = 'Invalid email address format';
+      }
+
+      if (error != null) {
+        setState(() => _emailError = error);
+        return;
+      }
+      destination = email;
+    } else {
+      final phone = _phoneController.text.trim();
+      final digitsOnly = phone.replaceAll(RegExp(r'[^0-9]'), '');
+      String? error;
+
+      if (phone.isEmpty) {
+        error = 'Phone number is required';
+      } else if (digitsOnly.length < 9) {
+        error = 'Please enter a valid phone number (min. 9 digits)';
+      }
+
+      if (error != null) {
+        setState(() => _phoneError = error);
+        return;
+      }
+      destination = phone;
     }
 
     setState(() => _isLoading = true);
@@ -91,10 +120,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     if (!mounted) return;
 
     setState(() => _isLoading = false);
-
-    final destination = _selectedMethod == RecoveryMethod.email
-        ? email
-        : '+62 812-****-8904';
 
     showTopToast(
       context,
@@ -115,112 +140,79 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
-    return Scaffold(
-      backgroundColor: isMobile ? const Color(0xFF282D37) : const Color(0xFF1E222B),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: isMobile ? 20 : 16,
-              vertical: isMobile ? 20 : 32,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 440,
+    final topNavBar = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Back Button
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: _navigateBack,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF323846),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 0 : 28,
-                  vertical: isMobile ? 0 : 32,
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+
+        // Title
+        const Text(
+          'Password Recovery',
+          style: TextStyle(
+            color: Color(0xFF8E95A5),
+            fontSize: 14,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+
+        // Help Chip Button
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: _showHelpInfo,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0x19FA6144),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'Help ?',
+                style: TextStyle(
+                  color: Color(0xFFFF7D65),
+                  fontSize: 12,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
                 ),
-                decoration: isMobile
-                    ? null
-                    : ShapeDecoration(
-                        color: const Color(0xFF282D37),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        shadows: const [
-                          BoxShadow(
-                            color: Color(0x66000000),
-                            blurRadius: 20,
-                            offset: Offset(0, 10),
-                            spreadRadius: -2,
-                          )
-                        ],
-                      ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Top Navigation Bar
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Back Button
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(10),
-                            onTap: _navigateBack,
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF323846),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                Icons.arrow_back_rounded,
-                                size: 18,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
 
-                        // Title
-                        const Text(
-                          'Password Recovery',
-                          style: TextStyle(
-                            color: Color(0xFF8E95A5),
-                            fontSize: 14,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-
-                        // Help Chip Button
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(6),
-                            onTap: _showHelpInfo,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: const Color(0x19FA6144),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'Help ?',
-                                style: TextStyle(
-                                  color: Color(0xFFFF7D65),
-                                  fontSize: 12,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 28),
+    final contentColumn = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!isMobile) ...[
+          topNavBar,
+          const SizedBox(height: 24),
+        ],
 
                     // Hero Section: Icon, Title, Subtitle
                     Center(
@@ -248,7 +240,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                               color: Colors.white,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 14),
                           const Text(
                             'Forgot Password?',
                             textAlign: TextAlign.center,
@@ -264,7 +256,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                           const SizedBox(
                             width: 320,
                             child: Text(
-                              'Enter your registered Student ID or campus email to receive password reset instructions.',
+                              'Select your recovery method and provide your details to receive password reset instructions.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Color(0xFF8E95A5),
@@ -279,11 +271,11 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 22),
 
-                    // Input Label
+                    // SECTION 1: Recovery Method Selection (placed ON TOP)
                     const Text(
-                      'Email or Student ID',
+                      'Choose Recovery Method',
                       style: TextStyle(
                         color: Color(0xFFD1D5DB),
                         fontSize: 13,
@@ -291,109 +283,45 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
 
-                    // Input Field with Red Inline Validation Error
-                    _buildEmailInput(),
-
-                    const SizedBox(height: 16),
-
-                    // Recovery Method Radio Cards
+                    // Option 1: Send to Email Card
                     _buildMethodCard(
                       method: RecoveryMethod.email,
                       title: 'Send to Email',
-                      subtitle: 'Link dispatched to ${_emailController.text.isNotEmpty ? _maskEmail(_emailController.text) : 'your campus email'}',
+                      subtitle: 'Receive reset instructions via your registered email',
                       icon: Icons.mail_outline_rounded,
                     ),
                     const SizedBox(height: 10),
+
+                    // Option 2: Send via SMS Card
                     _buildMethodCard(
                       method: RecoveryMethod.sms,
                       title: 'Send 6-Digit Code via SMS',
-                      subtitle: 'Dispatched to +62 812••••••••8904',
+                      subtitle: 'Receive confirmation code on your mobile phone',
                       icon: Icons.chat_bubble_outline_rounded,
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // SECTION 2: Form Input (Adapts dynamically to the chosen method)
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      ),
+                      child: _selectedMethod == RecoveryMethod.email
+                          ? _buildEmailForm()
+                          : _buildPhoneForm(),
                     ),
 
                     const SizedBox(height: 16),
 
-                    // Important Notice Card
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF323846),
-                        borderRadius: BorderRadius.circular(10),
-                        border: const Border(
-                          left: BorderSide(
-                            color: Color(0xFFFA6144),
-                            width: 3.5,
-                          ),
-                        ),
-                      ),
-                      child: const Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.only(top: 2),
-                            child: Icon(
-                              Icons.info_outline_rounded,
-                              size: 16,
-                              color: Color(0xFFFA6144),
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: 'Important: ',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11.5,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: 'Recovery links remain valid for ',
-                                    style: TextStyle(
-                                      color: Color(0xFFD1D5DB),
-                                      fontSize: 11.5,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w400,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: '5 minutes',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11.5,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: '. If you cannot locate the message, check your Junk/Spam folder.',
-                                    style: TextStyle(
-                                      color: Color(0xFFD1D5DB),
-                                      fontSize: 11.5,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w400,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // SECTION 3: Dynamic Important Notice Card
+                    _buildImportantNotice(),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 22),
 
                     // Submit Button
                     Material(
@@ -463,7 +391,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                             ),
                           ),
                           InkWell(
-                            onTap: _navigateBack,
+                            onTap: _navigateToSignIn,
                             child: const Text(
                               'Sign In',
                               style: TextStyle(
@@ -494,22 +422,80 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       ),
                     ),
                   ],
+                );
+
+    return Scaffold(
+      backgroundColor: isMobile ? const Color(0xFF282D37) : const Color(0xFF1E222B),
+      body: SafeArea(
+        child: isMobile
+            ? Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: topNavBar,
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 440),
+                          child: contentColumn,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+                      decoration: ShapeDecoration(
+                        color: const Color(0xFF282D37),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        shadows: const [
+                          BoxShadow(
+                            color: Color(0x66000000),
+                            blurRadius: 20,
+                            offset: Offset(0, 10),
+                            spreadRadius: -2,
+                          )
+                        ],
+                      ),
+                      child: contentColumn,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        ),
       ),
     );
   }
 
-  Widget _buildEmailInput() {
+  Widget _buildEmailForm() {
     final hasError = _emailError != null && _emailError!.isNotEmpty;
 
     return Column(
+      key: const ValueKey('email_form'),
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        const Text(
+          'Email or Student ID',
+          style: TextStyle(
+            color: Color(0xFFD1D5DB),
+            fontSize: 13,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
         Container(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -533,6 +519,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
               Expanded(
                 child: TextField(
                   controller: _emailController,
+                  onTap: TopToast.dismiss,
                   keyboardType: TextInputType.emailAddress,
                   style: const TextStyle(
                     color: Colors.white,
@@ -596,6 +583,238 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     );
   }
 
+  Widget _buildPhoneForm() {
+    final hasError = _phoneError != null && _phoneError!.isNotEmpty;
+
+    return Column(
+      key: const ValueKey('phone_form'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Phone Number',
+          style: TextStyle(
+            color: Color(0xFFD1D5DB),
+            fontSize: 13,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF323846),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: hasError ? const Color(0xFFEF4444) : const Color(0xFF3B4150),
+              width: hasError ? 1.4 : 1.0,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.phone_android_rounded,
+                size: 20,
+                color: hasError ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _phoneController,
+                  onTap: TopToast.dismiss,
+                  keyboardType: TextInputType.phone,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontFamily: 'Inter',
+                  ),
+                  cursorColor: const Color(0xFFFA6144),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9+\s-]')),
+                  ],
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    hintText: 'e.g. 0812-3456-8904',
+                    hintStyle: TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 13.5,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ),
+              ),
+              if (_phoneController.text.isNotEmpty)
+                GestureDetector(
+                  onTap: () {
+                    _phoneController.clear();
+                    setState(() {});
+                  },
+                  child: const Icon(
+                    Icons.clear_rounded,
+                    size: 16,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  size: 13,
+                  color: Color(0xFFEF4444),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    _phoneError!,
+                    style: const TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontSize: 11.5,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildImportantNotice() {
+    final isEmail = _selectedMethod == RecoveryMethod.email;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF323846),
+        borderRadius: BorderRadius.circular(10),
+        border: const Border(
+          left: BorderSide(
+            color: Color(0xFFFA6144),
+            width: 3.5,
+          ),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.info_outline_rounded,
+              size: 16,
+              color: Color(0xFFFA6144),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: isEmail
+                    ? const [
+                        TextSpan(
+                          text: 'Important: ',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            height: 1.4,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'Recovery links remain valid for ',
+                          style: TextStyle(
+                            color: Color(0xFFD1D5DB),
+                            fontSize: 11.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
+                            height: 1.4,
+                          ),
+                        ),
+                        TextSpan(
+                          text: '5 minutes',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            height: 1.4,
+                          ),
+                        ),
+                        TextSpan(
+                          text: '. If you cannot locate the message, check your Junk/Spam folder.',
+                          style: TextStyle(
+                            color: Color(0xFFD1D5DB),
+                            fontSize: 11.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
+                            height: 1.4,
+                          ),
+                        ),
+                      ]
+                    : const [
+                        TextSpan(
+                          text: 'Important: ',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            height: 1.4,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'SMS verification codes remain valid for ',
+                          style: TextStyle(
+                            color: Color(0xFFD1D5DB),
+                            fontSize: 11.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
+                            height: 1.4,
+                          ),
+                        ),
+                        TextSpan(
+                          text: '5 minutes',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            height: 1.4,
+                          ),
+                        ),
+                        TextSpan(
+                          text: '. Make sure your device has active cellular reception.',
+                          style: TextStyle(
+                            color: Color(0xFFD1D5DB),
+                            fontSize: 11.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMethodCard({
     required RecoveryMethod method,
     required String title,
@@ -608,7 +827,13 @@ class _ForgotPasswordState extends State<ForgotPassword> {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => setState(() => _selectedMethod = method),
+        onTap: () {
+          setState(() {
+            _selectedMethod = method;
+            _emailError = null;
+            _phoneError = null;
+          });
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           width: double.infinity,

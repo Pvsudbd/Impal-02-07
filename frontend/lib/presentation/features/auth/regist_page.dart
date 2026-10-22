@@ -181,54 +181,38 @@ class _RegisterState extends State<Register> {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
 
-    return Scaffold(
-      backgroundColor: isMobile ? const Color(0xFF282D37) : const Color(0xFF1E222B),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 16, vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: isMobile ? 0 : 28, vertical: isMobile ? 0 : 36),
-                decoration: isMobile
-                    ? null
-                    : BoxDecoration(
-                        color: const Color(0xFF282D37),
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: const [
-                          BoxShadow(color: Color(0x66000000), blurRadius: 18, offset: Offset(0, 10), spreadRadius: -2),
-                        ],
-                      ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Top Navigation
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(10),
-                            onTap: _navigateBack,
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF323846),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              alignment: Alignment.center,
-                              child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
-                            ),
-                          ),
-                        ),
-                        const Text('Step 1 of 1', style: TextStyle(color: Color(0xFF8E95A5), fontSize: 13, fontWeight: FontWeight.w700, fontFamily: 'Inter')),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
+    final topNavBar = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: _navigateBack,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF323846),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
+            ),
+          ),
+        ),
+        const Text('Step 1 of 1', style: TextStyle(color: Color(0xFF8E95A5), fontSize: 13, fontWeight: FontWeight.w700, fontFamily: 'Inter')),
+      ],
+    );
+
+    final contentColumn = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!isMobile) ...[
+          topNavBar,
+          const SizedBox(height: 18),
+        ],
 
                     // Title & Description
                     const Text('Create Account', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800, fontFamily: 'Inter', letterSpacing: -0.5)),
@@ -241,7 +225,7 @@ class _RegisterState extends State<Register> {
                     const SizedBox(height: 6),
                     _input(
                       ctrl: _nameCtrl,
-                      hint: 'Enter full name (e.g. Yoga Perkakas)',
+                      hint: 'Enter your full name',
                       icon: Icons.person_outline_rounded,
                       errorText: _nameError,
                     ),
@@ -251,7 +235,7 @@ class _RegisterState extends State<Register> {
                     const SizedBox(height: 6),
                     _input(
                       ctrl: _emailCtrl,
-                      hint: 'Enter email (e.g. yoga@student.telkomuniversity.ac.id)',
+                      hint: 'Enter your email address',
                       icon: Icons.mail_outline_rounded,
                       type: TextInputType.emailAddress,
                       errorText: _emailError,
@@ -429,11 +413,50 @@ class _RegisterState extends State<Register> {
                       child: Text('IMPAL Group 7 • Telkom University © 2026', style: TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontFamily: 'Inter')),
                     ),
                   ],
+                );
+
+    return Scaffold(
+      backgroundColor: isMobile ? const Color(0xFF282D37) : const Color(0xFF1E222B),
+      body: SafeArea(
+        child: isMobile
+            ? Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: topNavBar,
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 440),
+                          child: contentColumn,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF282D37),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x66000000), blurRadius: 18, offset: Offset(0, 10), spreadRadius: -2),
+                        ],
+                      ),
+                      child: contentColumn,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -452,6 +475,7 @@ class _RegisterState extends State<Register> {
     List<TextInputFormatter>? inputFormatters,
   }) {
     final hasError = errorText != null && errorText.isNotEmpty;
+    final isPasswordField = obscure || ctrl == _pwdCtrl || ctrl == _confirmCtrl;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -480,6 +504,11 @@ class _RegisterState extends State<Register> {
                 child: TextField(
                   controller: ctrl,
                   obscureText: obscure,
+                  enableInteractiveSelection: !isPasswordField,
+                  contextMenuBuilder: isPasswordField
+                      ? (context, editableTextState) => const SizedBox.shrink()
+                      : null,
+                  onTap: TopToast.dismiss,
                   keyboardType: type,
                   inputFormatters: inputFormatters,
                   style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter'),

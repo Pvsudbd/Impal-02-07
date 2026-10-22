@@ -11,26 +11,37 @@ enum ToastType {
 class TopToast {
   static OverlayEntry? _activeEntry;
   static _TopToastWidgetState? _activeState;
+  static String? _lastMessage;
+  static DateTime? _lastShownTime;
 
   /// Display a top notification pop-up.
+  /// Guarantees that toasts NEVER stack or overlap, and throttles duplicate messages.
   static void show(
     BuildContext context, {
     required String message,
     ToastType type = ToastType.info,
     Color? backgroundColor,
     IconData? icon,
-    Duration duration = const Duration(milliseconds: 3200),
+    Duration duration = const Duration(milliseconds: 2800),
   }) {
-    // If an existing toast is active, dismiss it quickly
-    if (_activeState != null && _activeState!.mounted) {
-      _activeState!.dismissFast();
-    } else {
-      _removeEntry();
+    final now = DateTime.now();
+
+    // Anti-spam debounce: suppress identical message spammed within 1.5 seconds
+    if (_lastMessage == message &&
+        _lastShownTime != null &&
+        now.difference(_lastShownTime!) < const Duration(milliseconds: 1500)) {
+      return;
     }
+
+    _lastMessage = message;
+    _lastShownTime = now;
+
+    // Immediately dismiss & remove any previous toast so they NEVER stack
+    _removeEntry();
 
     final overlay = Overlay.maybeOf(context, rootOverlay: true) ?? Overlay.of(context);
 
-    late OverlayEntry entry;
+    OverlayEntry? entry;
     entry = OverlayEntry(
       builder: (ctx) => _TopToastWidget(
         key: UniqueKey(),
@@ -40,8 +51,12 @@ class TopToast {
         customIcon: icon,
         duration: duration,
         onDismissed: () {
-          if (entry.mounted && _activeEntry == entry) {
-            entry.remove();
+          if (entry != null && entry.mounted) {
+            try {
+              entry.remove();
+            } catch (_) {}
+          }
+          if (_activeEntry == entry) {
             _activeEntry = null;
             _activeState = null;
           }
@@ -56,11 +71,24 @@ class TopToast {
     overlay.insert(entry);
   }
 
-  static void _removeEntry() {
-    if (_activeEntry != null && _activeEntry!.mounted) {
-      _activeEntry!.remove();
+  /// Instantly dismiss any currently active toast.
+  static void dismiss() {
+    if (_activeState != null && _activeState!.mounted) {
+      _activeState!.dismiss();
+    } else {
+      _removeEntry();
     }
-    _activeEntry = null;
+  }
+
+  static void _removeEntry() {
+    if (_activeEntry != null) {
+      try {
+        if (_activeEntry!.mounted) {
+          _activeEntry!.remove();
+        }
+      } catch (_) {}
+      _activeEntry = null;
+    }
     _activeState = null;
   }
 }
@@ -104,7 +132,7 @@ class _TopToastWidgetState extends State<_TopToastWidget>
 
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
     );
 
     _slideAnim = Tween<Offset>(
@@ -136,18 +164,6 @@ class _TopToastWidgetState extends State<_TopToastWidget>
     if (_isDismissing || !mounted) return;
     _isDismissing = true;
     _timer?.cancel();
-    _animController.reverse().then((_) {
-      if (mounted) {
-        widget.onDismissed();
-      }
-    });
-  }
-
-  void dismissFast() {
-    if (_isDismissing || !mounted) return;
-    _isDismissing = true;
-    _timer?.cancel();
-    _animController.duration = const Duration(milliseconds: 150);
     _animController.reverse().then((_) {
       if (mounted) {
         widget.onDismissed();
@@ -202,13 +218,13 @@ class _TopToastWidgetState extends State<_TopToastWidget>
                       color: bgColor,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: Colors.white.withValues(alpha: 0.2),
                         width: 1,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.35),
-                          blurRadius: 20,
+                          color: Colors.black.withValues(alpha: 0.4),
+                          blurRadius: 18,
                           offset: const Offset(0, 8),
                           spreadRadius: 1,
                         ),
@@ -226,13 +242,20 @@ class _TopToastWidgetState extends State<_TopToastWidget>
                               fontFamily: 'Inter',
                               color: Colors.white,
                               fontSize: 13.5,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                               height: 1.35,
                             ),
                           ),
                         ),
                         const SizedBox(width: 10),
-                        const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
+                        InkWell(
+                          onTap: dismiss,
+                          borderRadius: BorderRadius.circular(12),
+                          child: const Padding(
+                            padding: EdgeInsets.all(2.0),
+                            child: Icon(Icons.close_rounded, color: Colors.white70, size: 16),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -254,7 +277,7 @@ void showTopToast(
   bool? isError,
   Color? backgroundColor,
   IconData? icon,
-  Duration duration = const Duration(milliseconds: 3200),
+  Duration duration = const Duration(milliseconds: 2800),
 }) {
   final resolvedType = isError == true
       ? ToastType.error
@@ -268,4 +291,9 @@ void showTopToast(
     icon: icon,
     duration: duration,
   );
+}
+
+/// Dismiss any active top toast notification.
+void dismissTopToast() {
+  TopToast.dismiss();
 }

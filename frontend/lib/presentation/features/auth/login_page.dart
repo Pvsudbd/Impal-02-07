@@ -24,8 +24,8 @@ class _LoginState extends State<Login> {
   @override
   void initState() {
     super.initState();
-    _usernameController = TextEditingController(text: 'Yoga Perkakas');
-    _passwordController = TextEditingController(text: 'password123');
+    _usernameController = TextEditingController();
+    _passwordController = TextEditingController();
     _usernameController.addListener(() {
       if (_usernameError != null) setState(() => _usernameError = null);
     });
@@ -85,7 +85,7 @@ class _LoginState extends State<Login> {
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(
               horizontal: isMobile ? 24 : 16,
-              vertical: isMobile ? 24 : 32,
+              vertical: isMobile ? 20 : 32,
             ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(
@@ -212,6 +212,7 @@ class _LoginState extends State<Login> {
                               Expanded(
                                 child: TextField(
                                   controller: _usernameController,
+                                  onTap: TopToast.dismiss,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
@@ -293,6 +294,9 @@ class _LoginState extends State<Login> {
                                 child: TextField(
                                   controller: _passwordController,
                                   obscureText: _obscurePassword,
+                                  enableInteractiveSelection: false,
+                                  contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
+                                  onTap: TopToast.dismiss,
                                   inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
                                   style: const TextStyle(
                                     color: Colors.white,
@@ -305,7 +309,7 @@ class _LoginState extends State<Login> {
                                     isDense: true,
                                     contentPadding: EdgeInsets.symmetric(vertical: 6),
                                     border: InputBorder.none,
-                                    hintText: 'Enter password',
+                                    hintText: 'Enter your password',
                                     hintStyle: TextStyle(
                                       color: Color(0xFF6B7280),
                                       fontSize: 14,
