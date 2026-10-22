@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/utils/page_transitions.dart';
+import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
 import 'terms_privacy_page.dart';
 
@@ -21,11 +23,28 @@ class _RegisterState extends State<Register> {
   bool _agreeTerms = false;
   bool _isLoading = false;
 
+  String? _nameError;
+  String? _emailError;
+  String? _pwdError;
+  String? _confirmError;
+
   @override
   void initState() {
     super.initState();
-    _pwdCtrl.addListener(() => setState(() {}));
-    _confirmCtrl.addListener(() => setState(() {}));
+    _nameCtrl.addListener(() {
+      if (_nameError != null) setState(() => _nameError = null);
+    });
+    _emailCtrl.addListener(() {
+      if (_emailError != null) setState(() => _emailError = null);
+    });
+    _pwdCtrl.addListener(() {
+      if (_pwdError != null) setState(() => _pwdError = null);
+      setState(() {});
+    });
+    _confirmCtrl.addListener(() {
+      if (_confirmError != null) setState(() => _confirmError = null);
+      setState(() {});
+    });
   }
 
   @override
@@ -38,6 +57,7 @@ class _RegisterState extends State<Register> {
   }
 
   // Password Validation Checkers
+  bool get _hasNoSpace => !_pwdCtrl.text.contains(' ');
   bool get _hasMinLength => _pwdCtrl.text.length >= 8;
   bool get _hasUpperLower =>
       RegExp(r'[a-z]').hasMatch(_pwdCtrl.text) && RegExp(r'[A-Z]').hasMatch(_pwdCtrl.text);
@@ -48,6 +68,7 @@ class _RegisterState extends State<Register> {
   int get _pwdScore {
     final p = _pwdCtrl.text;
     if (p.isEmpty) return 0;
+    if (!_hasNoSpace) return 1;
     int s = (_hasMinLength ? 1 : 0) + (_hasUpperLower ? 1 : 0) + (_hasNumSymbol ? 1 : 0);
     return (p.length >= 12 && s == 3) ? 4 : s;
   }
@@ -73,37 +94,68 @@ class _RegisterState extends State<Register> {
     final name = _nameCtrl.text.trim();
     final email = _emailCtrl.text.trim();
 
-    if (name.isEmpty) return _showToast('Nama lengkap tidak boleh kosong!', isError: true);
-    if (email.isEmpty || !RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email)) {
-      return _showToast('Format email tidak valid!', isError: true);
+    String? nameErr;
+    String? emailErr;
+    String? pwdErr;
+    String? confirmErr;
+
+    if (name.isEmpty) {
+      nameErr = 'Full name is required';
     }
-    if (!_hasMinLength || !_hasUpperLower || !_hasNumSymbol) {
-      return _showToast('Password belum memenuhi seluruh kriteria keamanan!', isError: true);
+
+    if (email.isEmpty) {
+      emailErr = 'Email address is required';
+    } else if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email)) {
+      emailErr = 'Invalid email address format';
     }
-    if (_pwdCtrl.text != _confirmCtrl.text) {
-      return _showToast('Konfirmasi password tidak cocok!', isError: true);
+
+    if (_pwdCtrl.text.isEmpty) {
+      pwdErr = 'Password is required';
+    } else if (!_hasNoSpace) {
+      pwdErr = 'Password cannot contain spaces';
+    } else if (!_hasMinLength || !_hasUpperLower || !_hasNumSymbol) {
+      pwdErr = 'Password does not meet all security criteria';
     }
+
+    if (_confirmCtrl.text.isEmpty) {
+      confirmErr = 'Please confirm your password';
+    } else if (_confirmCtrl.text.contains(' ')) {
+      confirmErr = 'Password confirmation cannot contain spaces';
+    } else if (_pwdCtrl.text != _confirmCtrl.text) {
+      confirmErr = 'Password confirmation does not match';
+    }
+
+    setState(() {
+      _nameError = nameErr;
+      _emailError = emailErr;
+      _pwdError = pwdErr;
+      _confirmError = confirmErr;
+    });
+
+    if (nameErr != null || emailErr != null || pwdErr != null || confirmErr != null) {
+      return;
+    }
+
     if (!_agreeTerms) {
-      return _showToast('Harap setujui Ketentuan Layanan & Kebijakan Privasi!', isError: true);
+      _showToast('Please read and agree to the Terms of Service & Privacy Policy first!', isError: true);
+      _openTermsPrivacy();
+      return;
     }
 
     setState(() => _isLoading = true);
     Future.delayed(const Duration(milliseconds: 700), () {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      _showToast('Pendaftaran akun $name berhasil! Silakan Sign In.');
+      _showToast('Registration successful for $name! Please Sign In.');
       Navigator.pushReplacement(context, AuthFadeRoute(page: const Login()));
     });
   }
 
   void _showToast(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
-        backgroundColor: isError ? const Color(0xFFEF4444) : const Color(0xFFFA6144),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
+    showTopToast(
+      context,
+      msg,
+      type: isError ? ToastType.error : ToastType.success,
     );
   }
 
@@ -187,12 +239,23 @@ class _RegisterState extends State<Register> {
                     // Inputs
                     _label('Full Name'),
                     const SizedBox(height: 6),
-                    _input(ctrl: _nameCtrl, hint: 'Enter full name (e.g. Yoga Perkakas)', icon: Icons.person_outline_rounded),
+                    _input(
+                      ctrl: _nameCtrl,
+                      hint: 'Enter full name (e.g. Yoga Perkakas)',
+                      icon: Icons.person_outline_rounded,
+                      errorText: _nameError,
+                    ),
                     const SizedBox(height: 16),
 
                     _label('Email'),
                     const SizedBox(height: 6),
-                    _input(ctrl: _emailCtrl, hint: 'Enter email (e.g. yoga@student.telkomuniversity.ac.id)', icon: Icons.mail_outline_rounded, type: TextInputType.emailAddress),
+                    _input(
+                      ctrl: _emailCtrl,
+                      hint: 'Enter email (e.g. yoga@student.telkomuniversity.ac.id)',
+                      icon: Icons.mail_outline_rounded,
+                      type: TextInputType.emailAddress,
+                      errorText: _emailError,
+                    ),
                     const SizedBox(height: 16),
 
                     _label('Password'),
@@ -202,6 +265,8 @@ class _RegisterState extends State<Register> {
                       hint: 'Enter new password',
                       icon: Icons.lock_outline_rounded,
                       obscure: _obscurePwd,
+                      errorText: _pwdError,
+                      inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
                       suffix: IconButton(
                         icon: Icon(_obscurePwd ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF9CA3AF), size: 20),
                         onPressed: () => setState(() => _obscurePwd = !_obscurePwd),
@@ -243,6 +308,8 @@ class _RegisterState extends State<Register> {
                       hint: 'Confirm your password',
                       icon: Icons.lock_outline_rounded,
                       obscure: _obscureConfirm,
+                      errorText: _confirmError,
+                      inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
                       borderColor: _confirmCtrl.text.isNotEmpty ? (_isMatch ? const Color(0x6610B981) : const Color(0x66EF4444)) : null,
                       suffix: IconButton(
                         icon: Icon(_obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF9CA3AF), size: 20),
@@ -251,10 +318,17 @@ class _RegisterState extends State<Register> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Terms Checkbox
+                    // Terms Checkbox (Requires reading Terms & Privacy first)
                     InkWell(
                       borderRadius: BorderRadius.circular(6),
-                      onTap: () => setState(() => _agreeTerms = !_agreeTerms),
+                      onTap: () {
+                        if (!_agreeTerms) {
+                          // Redirect user to Terms & Privacy page to read to the bottom!
+                          _openTermsPrivacy();
+                        } else {
+                          setState(() => _agreeTerms = false);
+                        }
+                      },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
@@ -374,37 +448,77 @@ class _RegisterState extends State<Register> {
     Widget? suffix,
     Color? borderColor,
     TextInputType type = TextInputType.text,
+    String? errorText,
+    List<TextInputFormatter>? inputFormatters,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor ?? const Color(0xFF3B4150)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFF9CA3AF), size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: ctrl,
-              obscureText: obscure,
-              keyboardType: type,
-              style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter'),
-              cursorColor: const Color(0xFFFA6144),
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                border: InputBorder.none,
-                hintText: hint,
-                hintStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 13.5, fontFamily: 'Inter'),
-              ),
+    final hasError = errorText != null && errorText.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF323846),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: hasError
+                  ? const Color(0xFFEF4444)
+                  : (borderColor ?? const Color(0xFF3B4150)),
+              width: hasError ? 1.4 : 1.0,
             ),
           ),
-          if (suffix != null) suffix,
-        ],
-      ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: hasError ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: ctrl,
+                  obscureText: obscure,
+                  keyboardType: type,
+                  inputFormatters: inputFormatters,
+                  style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter'),
+                  cursorColor: const Color(0xFFFA6144),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    border: InputBorder.none,
+                    hintText: hint,
+                    hintStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 13.5, fontFamily: 'Inter'),
+                  ),
+                ),
+              ),
+              if (suffix != null) suffix,
+            ],
+          ),
+        ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, size: 13, color: Color(0xFFEF4444)),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    errorText,
+                    style: const TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -446,6 +560,8 @@ class _RegisterState extends State<Register> {
           _reqItem(isMet: _hasUpperLower, label: 'Includes uppercase & lowercase letters'),
           const SizedBox(height: 5),
           _reqItem(isMet: _hasNumSymbol, label: 'Includes at least one number and special symbol (#, !, @)'),
+          const SizedBox(height: 5),
+          _reqItem(isMet: _hasNoSpace && _pwdCtrl.text.isNotEmpty, label: 'Cannot contain spaces'),
         ],
       ),
     );

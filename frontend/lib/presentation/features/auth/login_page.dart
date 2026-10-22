@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/utils/page_transitions.dart';
+import '../../../core/utils/top_toast.dart';
 import 'regist_page.dart';
 
 class Login extends StatefulWidget {
@@ -15,11 +17,20 @@ class _LoginState extends State<Login> {
   bool _rememberMe = false;
   bool _obscurePassword = true;
 
+  String? _usernameError;
+  String? _passwordError;
+
   @override
   void initState() {
     super.initState();
     _usernameController = TextEditingController(text: 'Yoga Perkakas');
     _passwordController = TextEditingController(text: 'password123');
+    _usernameController.addListener(() {
+      if (_usernameError != null) setState(() => _usernameError = null);
+    });
+    _passwordController.addListener(() {
+      if (_passwordError != null) setState(() => _passwordError = null);
+    });
   }
 
   @override
@@ -31,25 +42,33 @@ class _LoginState extends State<Login> {
 
   void _handleSignIn() {
     final username = _usernameController.text.trim();
-    final password = _passwordController.text.trim();
+    final password = _passwordController.text;
 
-    if (username.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Username dan Password tidak boleh kosong!'),
-          backgroundColor: Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    String? userErr;
+    String? pwdErr;
+
+    if (username.isEmpty) {
+      userErr = 'Username or email is required';
+    }
+    if (password.isEmpty) {
+      pwdErr = 'Password is required';
+    } else if (password.contains(' ')) {
+      pwdErr = 'Password cannot contain spaces';
+    }
+
+    setState(() {
+      _usernameError = userErr;
+      _passwordError = pwdErr;
+    });
+
+    if (userErr != null || pwdErr != null) {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Berhasil masuk sebagai $username!'),
-        backgroundColor: const Color(0xFFFA6144),
-        behavior: SnackBarBehavior.floating,
-      ),
+    showTopToast(
+      context,
+      'Successfully signed in as $username!',
+      type: ToastType.success,
     );
   }
 
@@ -174,18 +193,18 @@ class _LoginState extends State<Login> {
                           decoration: ShapeDecoration(
                             color: const Color(0xFF323846),
                             shape: RoundedRectangleBorder(
-                              side: const BorderSide(
-                                width: 1,
-                                color: Color(0xFF3B4150),
+                              side: BorderSide(
+                                width: _usernameError != null ? 1.4 : 1,
+                                color: _usernameError != null ? const Color(0xFFEF4444) : const Color(0xFF3B4150),
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.person_outline,
-                                color: Color(0xFF9CA3AF),
+                                color: _usernameError != null ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
@@ -215,6 +234,27 @@ class _LoginState extends State<Login> {
                             ],
                           ),
                         ),
+                        if (_usernameError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6, left: 4),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded, size: 13, color: Color(0xFFEF4444)),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(
+                                    _usernameError!,
+                                    style: const TextStyle(
+                                      color: Color(0xFFEF4444),
+                                      fontSize: 12,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         const SizedBox(height: 18),
 
                         // Password Field
@@ -233,18 +273,18 @@ class _LoginState extends State<Login> {
                           decoration: ShapeDecoration(
                             color: const Color(0xFF323846),
                             shape: RoundedRectangleBorder(
-                              side: const BorderSide(
-                                width: 1,
-                                color: Color(0xFF3B4150),
+                              side: BorderSide(
+                                width: _passwordError != null ? 1.4 : 1,
+                                color: _passwordError != null ? const Color(0xFFEF4444) : const Color(0xFF3B4150),
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.lock_outline,
-                                color: Color(0xFF9CA3AF),
+                                color: _passwordError != null ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
@@ -252,6 +292,7 @@ class _LoginState extends State<Login> {
                                 child: TextField(
                                   controller: _passwordController,
                                   obscureText: _obscurePassword,
+                                  inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
@@ -292,6 +333,27 @@ class _LoginState extends State<Login> {
                             ],
                           ),
                         ),
+                        if (_passwordError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6, left: 4),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded, size: 13, color: Color(0xFFEF4444)),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(
+                                    _passwordError!,
+                                    style: const TextStyle(
+                                      color: Color(0xFFEF4444),
+                                      fontSize: 12,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         const SizedBox(height: 18),
 
                         // Checkbox & Forgot Password Row
@@ -357,11 +419,10 @@ class _LoginState extends State<Login> {
                               InkWell(
                                 borderRadius: BorderRadius.circular(4),
                                 onTap: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Halaman reset password akan segera tersedia'),
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
+                                  showTopToast(
+                                    context,
+                                    'Password reset feature will be available soon.',
+                                    type: ToastType.info,
                                   );
                                 },
                                 child: const Padding(

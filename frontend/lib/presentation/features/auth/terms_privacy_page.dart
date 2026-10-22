@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/top_toast.dart';
 
 class TermsPrivacyPage extends StatefulWidget {
   const TermsPrivacyPage({super.key});
@@ -8,20 +9,63 @@ class TermsPrivacyPage extends StatefulWidget {
 }
 
 class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
+  final ScrollController _scrollController = ScrollController();
+  bool _hasScrolledToBottom = false;
   bool _hasAgreed = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.maxScrollExtent <= 10) {
+        // If content fits completely on large screens without scrolling
+        setState(() => _hasScrolledToBottom = true);
+      }
+    });
+  }
+
+  void _onScroll() {
+    if (!_hasScrolledToBottom && _scrollController.hasClients) {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 40) {
+        setState(() => _hasScrolledToBottom = true);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   void _onAccept() {
+    if (!_hasScrolledToBottom) {
+      showTopToast(
+        context,
+        'Please scroll and read all the terms down to the bottom first.',
+        type: ToastType.warning,
+      );
+      return;
+    }
     if (!_hasAgreed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-            'Centang kotak persetujuan terlebih dahulu.',
-            style: TextStyle(fontFamily: 'Inter', color: Colors.white),
-          ),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+      showTopToast(
+        context,
+        'Please check the agreement box first.',
+        type: ToastType.error,
       );
       return;
     }
@@ -83,18 +127,29 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                         decoration: BoxDecoration(
-                          color: const Color(0x2610B981),
+                          color: _hasScrolledToBottom ? const Color(0x2610B981) : const Color(0x26F59E0B),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0x4C10B981)),
+                          border: Border.all(color: _hasScrolledToBottom ? const Color(0x4C10B981) : const Color(0x4CF59E0B)),
                         ),
-                        child: const Text(
-                          'v1.2 Active',
-                          style: TextStyle(
-                            color: Color(0xFF6EE7B7),
-                            fontSize: 11,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _hasScrolledToBottom ? Icons.check_circle_outline_rounded : Icons.arrow_downward_rounded,
+                              size: 12,
+                              color: _hasScrolledToBottom ? const Color(0xFF6EE7B7) : const Color(0xFFFBBF24),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _hasScrolledToBottom ? 'Read Complete' : 'Scroll to Read',
+                              style: TextStyle(
+                                color: _hasScrolledToBottom ? const Color(0xFF6EE7B7) : const Color(0xFFFBBF24),
+                                fontSize: 11,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -136,6 +191,7 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                 // Scrollable Content directly on page (No card container)
                 Expanded(
                   child: SingleChildScrollView(
+                    controller: _scrollController,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,14 +302,53 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
 
                 // Bottom Action Bar
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Quick Scroll to bottom button if not reached yet
+                      if (!_hasScrolledToBottom)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InkWell(
+                            onTap: _scrollToBottom,
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF323846),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFF4B5563)),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.arrow_downward_rounded, size: 14, color: Color(0xFFFA6144)),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Scroll down to read all terms',
+                                    style: TextStyle(color: Color(0xFFD1D5DB), fontSize: 11.5, fontFamily: 'Inter', fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
                       // Checkbox Agreement
                       InkWell(
                         borderRadius: BorderRadius.circular(6),
-                        onTap: () => setState(() => _hasAgreed = !_hasAgreed),
+                        onTap: () {
+                          if (!_hasScrolledToBottom) {
+                            showTopToast(
+                              context,
+                              'Please scroll and read all the terms down to the bottom first.',
+                              type: ToastType.warning,
+                            );
+                            return;
+                          }
+                          setState(() => _hasAgreed = !_hasAgreed);
+                        },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Row(
@@ -263,26 +358,38 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                                 width: 18,
                                 height: 18,
                                 decoration: BoxDecoration(
-                                  color: _hasAgreed ? const Color(0xFFFA6144) : const Color(0xFF323846),
+                                  color: _hasAgreed
+                                      ? const Color(0xFFFA6144)
+                                      : _hasScrolledToBottom
+                                          ? const Color(0xFF323846)
+                                          : const Color(0xFF222630),
                                   borderRadius: BorderRadius.circular(5),
                                   border: Border.all(
-                                    color: _hasAgreed ? const Color(0xFFFA6144) : const Color(0xFF4B5563),
+                                    color: _hasAgreed
+                                        ? const Color(0xFFFA6144)
+                                        : _hasScrolledToBottom
+                                            ? const Color(0xFF4B5563)
+                                            : const Color(0xFF374151),
                                     width: 1.5,
                                   ),
                                 ),
                                 child: _hasAgreed
                                     ? const Icon(Icons.check, size: 13, color: Colors.white)
-                                    : null,
+                                    : !_hasScrolledToBottom
+                                        ? const Icon(Icons.lock_outline_rounded, size: 11, color: Color(0xFF6B7280))
+                                        : null,
                               ),
                               const SizedBox(width: 10),
-                              const Expanded(
+                              Expanded(
                                 child: Text(
-                                  'I have read and agree to the Terms of Service & Privacy Policy.',
+                                  _hasScrolledToBottom
+                                      ? 'I have read and agree to the Terms of Service & Privacy Policy.'
+                                      : 'Read all the way to the bottom to unlock agreement.',
                                   style: TextStyle(
-                                    color: Color(0xFFD1D5DB),
+                                    color: _hasScrolledToBottom ? const Color(0xFFD1D5DB) : const Color(0xFF8E95A5),
                                     fontSize: 12,
                                     fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w400,
+                                    fontWeight: _hasScrolledToBottom ? FontWeight.w500 : FontWeight.w400,
                                   ),
                                 ),
                               ),
@@ -323,10 +430,10 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                             child: SizedBox(
                               height: 44,
                               child: ElevatedButton(
-                                onPressed: _onAccept,
+                                onPressed: (_hasScrolledToBottom && _hasAgreed) ? _onAccept : _onAccept,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: _hasAgreed ? const Color(0xFFFA6144) : const Color(0xFF323846),
-                                  elevation: _hasAgreed ? 4 : 0,
+                                  backgroundColor: (_hasScrolledToBottom && _hasAgreed) ? const Color(0xFFFA6144) : const Color(0xFF323846),
+                                  elevation: (_hasScrolledToBottom && _hasAgreed) ? 4 : 0,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
                                 child: Row(
@@ -335,7 +442,7 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                                     Text(
                                       'Accept & Continue',
                                       style: TextStyle(
-                                        color: _hasAgreed ? Colors.white : const Color(0xFF9CA3AF),
+                                        color: (_hasScrolledToBottom && _hasAgreed) ? Colors.white : const Color(0xFF9CA3AF),
                                         fontSize: 13,
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w700,
@@ -345,7 +452,7 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                                     Icon(
                                       Icons.arrow_forward_rounded,
                                       size: 15,
-                                      color: _hasAgreed ? Colors.white : const Color(0xFF9CA3AF),
+                                      color: (_hasScrolledToBottom && _hasAgreed) ? Colors.white : const Color(0xFF9CA3AF),
                                     ),
                                   ],
                                 ),
