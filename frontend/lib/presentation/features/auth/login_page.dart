@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/page_transitions.dart';
+import 'regist_page.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -455,10 +457,10 @@ class _LoginState extends State<Login> {
                               ),
                               InkWell(
                                 onTap: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Halaman pendaftaran akan segera tersedia'),
-                                      behavior: SnackBarBehavior.floating,
+                                  Navigator.push(
+                                    context,
+                                    AuthSlideFadeRoute(
+                                      page: const Register(),
                                     ),
                                   );
                                 },
