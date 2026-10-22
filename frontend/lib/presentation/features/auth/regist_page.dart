@@ -373,14 +373,14 @@ class _RegisterState extends State<Register> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(12),
                         onTap: _isLoading ? null : _handleRegister,
                         child: Ink(
                           width: double.infinity,
-                          height: 52,
+                          height: 50,
                           decoration: BoxDecoration(
                             color: const Color(0xFFFA6144),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                             boxShadow: const [
                               BoxShadow(color: Color(0x59EF4444), blurRadius: 18, offset: Offset(0, 8)),
                             ],
@@ -415,12 +415,6 @@ class _RegisterState extends State<Register> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-
-                    // Footer
-                    const Center(
-                      child: Text('IMPAL Group 7 • Telkom University © 2026', style: TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontFamily: 'Inter')),
-                    ),
                   ],
                 );
 
@@ -435,36 +429,101 @@ class _RegisterState extends State<Register> {
                     child: topNavBar,
                   ),
                   Expanded(
-                    child: Center(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 440),
-                          child: contentColumn,
-                        ),
-                      ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                              maxWidth: 440,
+                            ),
+                            child: IntrinsicHeight(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  contentColumn,
+                                  const Spacer(),
+                                  const Padding(
+                                    padding: EdgeInsets.only(bottom: 24, top: 16),
+                                    child: Center(
+                                      child: Text(
+                                        'IMPAL Group 7 • Telkom University © 2026',
+                                        style: TextStyle(
+                                          color: Color(0xFF6B7280),
+                                          fontSize: 11,
+                                          fontFamily: 'Inter',
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
               )
-            : Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF282D37),
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: const [
-                          BoxShadow(color: Color(0x66000000), blurRadius: 18, offset: Offset(0, 10), spreadRadius: -2),
-                        ],
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
                       ),
-                      child: contentColumn,
+                      child: IntrinsicHeight(
+                        child: Column(
+                          children: [
+                            const Spacer(),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 440),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF282D37),
+                                      borderRadius: BorderRadius.circular(28),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x66000000),
+                                          blurRadius: 18,
+                                          offset: Offset(0, 10),
+                                          spreadRadius: -2,
+                                        ),
+                                      ],
+                                    ),
+                                    child: contentColumn,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 24, top: 12),
+                              child: Center(
+                                child: Text(
+                                  'IMPAL Group 7 • Telkom University © 2026',
+                                  style: TextStyle(
+                                    color: Color(0xFF6B7280),
+                                    fontSize: 11,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
       ),
     );
@@ -490,7 +549,8 @@ class _RegisterState extends State<Register> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             color: const Color(0xFF323846),
             borderRadius: BorderRadius.circular(12),
@@ -502,6 +562,7 @@ class _RegisterState extends State<Register> {
             ),
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(
                 icon,
@@ -524,7 +585,7 @@ class _RegisterState extends State<Register> {
                   cursorColor: const Color(0xFFFA6144),
                   decoration: InputDecoration(
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    contentPadding: EdgeInsets.zero,
                     border: InputBorder.none,
                     hintText: hint,
                     hintStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 13.5, fontFamily: 'Inter'),

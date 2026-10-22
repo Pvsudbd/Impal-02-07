@@ -451,22 +451,6 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
                         ],
                       ),
                     ),
-
-                    const SizedBox(height: 36),
-
-                    // Telkom University Footer
-                    const Center(
-                      child: Text(
-                        'IMPAL Group 7 • Telkom University © 2026',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontSize: 11,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
                   ],
                 );
 
@@ -481,44 +465,108 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
                     child: topNavBar,
                   ),
                   Expanded(
-                    child: Center(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 440),
-                          child: contentColumn,
-                        ),
-                      ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                              maxWidth: 440,
+                            ),
+                            child: IntrinsicHeight(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  contentColumn,
+                                  const Spacer(),
+                                  const Padding(
+                                    padding: EdgeInsets.only(bottom: 24, top: 16),
+                                    child: Center(
+                                      child: Text(
+                                        'IMPAL Group 7 • Telkom University © 2026',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Color(0xFF6B7280),
+                                          fontSize: 11,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
               )
-            : Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-                      decoration: ShapeDecoration(
-                        color: const Color(0xFF282D37),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        shadows: const [
-                          BoxShadow(
-                            color: Color(0x66000000),
-                            blurRadius: 20,
-                            offset: Offset(0, 10),
-                            spreadRadius: -2,
-                          )
-                        ],
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
                       ),
-                      child: contentColumn,
+                      child: IntrinsicHeight(
+                        child: Column(
+                          children: [
+                            const Spacer(),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 440),
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+                                    decoration: ShapeDecoration(
+                                      color: const Color(0xFF282D37),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(28),
+                                      ),
+                                      shadows: const [
+                                        BoxShadow(
+                                          color: Color(0x66000000),
+                                          blurRadius: 20,
+                                          offset: Offset(0, 10),
+                                          spreadRadius: -2,
+                                        )
+                                      ],
+                                    ),
+                                    child: contentColumn,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 24, top: 12),
+                              child: Center(
+                                child: Text(
+                                  'IMPAL Group 7 • Telkom University © 2026',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Color(0xFF6B7280),
+                                    fontSize: 11,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
       ),
     );
