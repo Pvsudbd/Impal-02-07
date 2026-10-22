@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/utils/page_transitions.dart';
 import 'login_page.dart';
+import 'terms_privacy_page.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -114,6 +115,16 @@ class _RegisterState extends State<Register> {
     }
   }
 
+  Future<void> _openTermsPrivacy() async {
+    final agreed = await Navigator.push<bool>(
+      context,
+      AuthFadeRoute(page: const TermsPrivacyPage()),
+    );
+    if (agreed == true && mounted) {
+      setState(() => _agreeTerms = true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -134,7 +145,7 @@ class _RegisterState extends State<Register> {
                         color: const Color(0xFF282D37),
                         borderRadius: BorderRadius.circular(28),
                         boxShadow: const [
-                          BoxShadow(color: Color(0x66000000), blurRadius: 40, offset: Offset(0, 20), spreadRadius: -4),
+                          BoxShadow(color: Color(0x66000000), blurRadius: 18, offset: Offset(0, 10), spreadRadius: -2),
                         ],
                       ),
                 child: Column(
@@ -247,12 +258,11 @@ class _RegisterState extends State<Register> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Container(
                               width: 18,
                               height: 18,
-                              margin: const EdgeInsets.only(top: 2),
                               decoration: BoxDecoration(
                                 color: _agreeTerms ? const Color(0xFFFA6144) : const Color(0xFF323846),
                                 borderRadius: BorderRadius.circular(5),
@@ -262,20 +272,28 @@ class _RegisterState extends State<Register> {
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: Wrap(
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  const Text('I agree to the ', style: TextStyle(color: Color(0xFF8E95A5), fontSize: 12, fontFamily: 'Inter')),
-                                  InkWell(
-                                    onTap: () => _showToast('Ketentuan Layanan Smart Task Manager'),
-                                    child: const Text('Terms of Service', style: TextStyle(color: Color(0xFFFF7D65), fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Inter')),
-                                  ),
-                                  const Text(' and acknowledge the ', style: TextStyle(color: Color(0xFF8E95A5), fontSize: 12, fontFamily: 'Inter')),
-                                  InkWell(
-                                    onTap: () => _showToast('Kebijakan Privasi Smart Task Manager'),
-                                    child: const Text('Privacy Policy.', style: TextStyle(color: Color(0xFFFF7D65), fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Inter')),
-                                  ),
-                                ],
+                              child: Text.rich(
+                                TextSpan(
+                                  style: const TextStyle(color: Color(0xFF8E95A5), fontSize: 12, fontFamily: 'Inter', height: 1.35),
+                                  children: [
+                                    const TextSpan(text: 'I agree to the '),
+                                    WidgetSpan(
+                                      alignment: PlaceholderAlignment.middle,
+                                      child: InkWell(
+                                        onTap: _openTermsPrivacy,
+                                        child: const Text('Terms of Service', style: TextStyle(color: Color(0xFFFF7D65), fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Inter')),
+                                      ),
+                                    ),
+                                    const TextSpan(text: ' and acknowledge the '),
+                                    WidgetSpan(
+                                      alignment: PlaceholderAlignment.middle,
+                                      child: InkWell(
+                                        onTap: _openTermsPrivacy,
+                                        child: const Text('Privacy Policy.', style: TextStyle(color: Color(0xFFFF7D65), fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Inter')),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -437,15 +455,24 @@ class _RegisterState extends State<Register> {
     return Row(
       children: [
         Container(
-          width: 15,
-          height: 15,
+          width: 16,
+          height: 16,
           decoration: BoxDecoration(
             color: isMet ? const Color(0x3310B981) : const Color(0xFF383F4D),
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: isMet ? const Color(0x6610B981) : const Color(0xFF4B5563)),
           ),
           alignment: Alignment.center,
-          child: Icon(isMet ? Icons.check : Icons.circle, size: isMet ? 10 : 3.5, color: isMet ? const Color(0xFF10B981) : const Color(0xFF6B7280)),
+          child: isMet
+              ? const Icon(Icons.check, size: 10, color: Color(0xFF10B981))
+              : Container(
+                  width: 4,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6B7280),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
         ),
         const SizedBox(width: 8),
         Expanded(child: Text(label, style: TextStyle(color: isMet ? const Color(0xFFD1D5DB) : const Color(0xFF6B7280), fontSize: 11, fontFamily: 'Inter'))),

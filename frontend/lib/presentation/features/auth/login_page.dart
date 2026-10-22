@@ -87,9 +87,9 @@ class _LoginState extends State<Login> {
                         shadows: const [
                           BoxShadow(
                             color: Color(0x66000000),
-                            blurRadius: 40,
-                            offset: Offset(0, 20),
-                            spreadRadius: -4,
+                            blurRadius: 18,
+                            offset: Offset(0, 10),
+                            spreadRadius: -2,
                           )
                         ],
                       ),

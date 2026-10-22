@@ -9,22 +9,20 @@ class AuthFadeRoute<T> extends PageRouteBuilder<T> {
   AuthFadeRoute({
     required this.page,
     this.fromRight,
-    Duration duration = const Duration(milliseconds: 250),
-    Duration reverseDuration = const Duration(milliseconds: 200),
+    Duration duration = const Duration(milliseconds: 140),
+    Duration reverseDuration = const Duration(milliseconds: 100),
     super.settings,
   }) : super(
           pageBuilder: (context, animation, secondaryAnimation) => page,
           transitionDuration: duration,
           reverseTransitionDuration: reverseDuration,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final curvedAnimation = CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeInOut,
-              reverseCurve: Curves.easeInOut,
-            );
-
             return FadeTransition(
-              opacity: curvedAnimation,
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOut,
+                reverseCurve: Curves.easeIn,
+              ),
               child: child,
             );
           },
