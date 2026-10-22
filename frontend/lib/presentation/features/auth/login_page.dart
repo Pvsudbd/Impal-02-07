@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
+import 'forgot_password_page.dart';
 import 'regist_page.dart';
 
 class Login extends StatefulWidget {
@@ -419,10 +420,9 @@ class _LoginState extends State<Login> {
                               InkWell(
                                 borderRadius: BorderRadius.circular(4),
                                 onTap: () {
-                                  showTopToast(
+                                  Navigator.push(
                                     context,
-                                    'Password reset feature will be available soon.',
-                                    type: ToastType.info,
+                                    AuthFadeRoute(page: const ForgotPassword()),
                                   );
                                 },
                                 child: const Padding(
