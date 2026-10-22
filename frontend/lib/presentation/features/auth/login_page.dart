@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
+import '../dashboard/home_page.dart';
 import 'forgot_password_page.dart';
 import 'regist_page.dart';
 
@@ -71,6 +73,21 @@ class _LoginState extends State<Login> {
       'Successfully signed in as $username!',
       type: ToastType.success,
     );
+
+    final finalUser = username.isNotEmpty ? username : 'Jarvis';
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('is_logged_in', true);
+      prefs.setString('auth_user', finalUser);
+    });
+
+    Navigator.pushReplacement(
+      context,
+      AuthFadeRoute(
+        page: HomePage(
+          userName: finalUser,
+        ),
+      ),
+    );
   }
 
   @override
@@ -81,14 +98,18 @@ class _LoginState extends State<Login> {
     return Scaffold(
       backgroundColor: isMobile ? const Color(0xFF282D37) : const Color(0xFF1E222B),
       body: SafeArea(
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Column(
-                children: [
-                  if (!isMobile) const Spacer(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      const Spacer(),
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: isMobile ? 20 : 16,
@@ -581,12 +602,14 @@ class _LoginState extends State<Login> {
           ),
         ),
       ),
-    ],
-  ),
-),
-],
-),
-),
-);
-}
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
