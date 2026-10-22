@@ -5,6 +5,7 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
 import 'reset_password_page.dart';
+import 'pop_up_recovery_code.dart';
 
 class VerificationCodePage extends StatefulWidget {
   final String destination;
@@ -84,10 +85,10 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
       _otpError = null;
     });
     _startCountdownTimer();
-    showTopToast(
+    RecoveryCodeSentDialog.show(
       context,
-      'A new 6-digit code has been dispatched to ${widget.destination}',
-      type: ToastType.info,
+      destination: widget.destination,
+      autoCloseSeconds: 2,
     );
   }
 

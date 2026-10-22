@@ -4,6 +4,7 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
 import 'verification_code_page.dart';
+import 'pop_up_recovery_code.dart';
 
 enum RecoveryMethod { email, sms }
 
@@ -121,11 +122,13 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
     setState(() => _isLoading = false);
 
-    showTopToast(
+    await RecoveryCodeSentDialog.show(
       context,
-      'Recovery instructions sent to $destination!',
-      type: ToastType.success,
+      destination: destination,
+      autoCloseSeconds: 2,
     );
+
+    if (!mounted) return;
 
     Navigator.push(
       context,

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
+import 'pop_up_password_updated.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -122,11 +123,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
     setState(() => _isLoading = false);
 
-    showTopToast(
+    await PasswordUpdatedDialog.show(
       context,
-      'Password successfully reset! You can now sign in.',
-      type: ToastType.success,
+      autoCloseSeconds: 2,
     );
+
+    if (!mounted) return;
 
     Navigator.pushAndRemoveUntil(
       context,

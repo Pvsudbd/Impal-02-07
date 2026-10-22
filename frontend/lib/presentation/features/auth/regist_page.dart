@@ -4,6 +4,7 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
 import 'terms_privacy_page.dart';
+import 'pop_up_account_created.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -143,10 +144,18 @@ class _RegisterState extends State<Register> {
     }
 
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 700), () {
+    Future.delayed(const Duration(milliseconds: 700), () async {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      _showToast('Registration successful for $name! Please Sign In.');
+
+      await AccountCreatedDialog.show(
+        context,
+        name: name,
+        email: email,
+        autoCloseSeconds: 2,
+      );
+
+      if (!mounted) return;
       Navigator.pushReplacement(context, AuthFadeRoute(page: const Login()));
     });
   }
