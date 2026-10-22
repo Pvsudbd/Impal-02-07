@@ -81,55 +81,52 @@ class _LoginState extends State<Login> {
     return Scaffold(
       backgroundColor: isMobile ? const Color(0xFF282D37) : const Color(0xFF1E222B),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
-                child: IntrinsicHeight(
-                  child: Column(
-                    children: [
-                      if (!isMobile) const Spacer(),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isMobile ? 20 : 16,
-                          vertical: isMobile ? 20 : 32,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Column(
+                children: [
+                  if (!isMobile) const Spacer(),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 20 : 16,
+                      vertical: isMobile ? 20 : 32,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: 440,
                         ),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              maxWidth: 440,
+                        child: RepaintBoundary(
+                          child: Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isMobile ? 0 : 28,
+                              vertical: isMobile ? 0 : 36,
                             ),
-                            child: Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isMobile ? 0 : 28,
-                                vertical: isMobile ? 0 : 36,
-                              ),
-                              decoration: isMobile
-                                  ? null
-                                  : ShapeDecoration(
-                                      color: const Color(0xFF282D37),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(28),
-                                      ),
-                                      shadows: const [
-                                        BoxShadow(
-                                          color: Color(0x66000000),
-                                          blurRadius: 18,
-                                          offset: Offset(0, 10),
-                                          spreadRadius: -2,
-                                        )
-                                      ],
+                            decoration: isMobile
+                                ? null
+                                : ShapeDecoration(
+                                    color: const Color(0xFF282D37),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(28),
                                     ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  // Header & Logo
+                                    shadows: const [
+                                      BoxShadow(
+                                        color: Color(0x66000000),
+                                        blurRadius: 18,
+                                        offset: Offset(0, 10),
+                                        spreadRadius: -2,
+                                      )
+                                    ],
+                                  ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Header & Logo
                     Container(
                       width: 64,
                       height: 64,
@@ -567,28 +564,27 @@ class _LoginState extends State<Login> {
                 ),
               ),
             ),
-          ), // closes Center
-        ), // closes Padding
-        const Spacer(),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 24, top: 12),
-          child: Text(
-            'IMPAL Group 7 • Telkom University © 2026',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF6B7280),
-              fontSize: 11,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
-            ),
           ),
         ),
-      ],
-    ),
+      ),
+      const Spacer(),
+      const Padding(
+        padding: EdgeInsets.only(bottom: 24, top: 12),
+        child: Text(
+          'IMPAL Group 7 • Telkom University © 2026',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xFF6B7280),
+            fontSize: 11,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ),
+    ],
   ),
 ),
-);
-},
+],
 ),
 ),
 );
