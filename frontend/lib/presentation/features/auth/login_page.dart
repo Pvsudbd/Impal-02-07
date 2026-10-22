@@ -459,7 +459,7 @@ class _LoginState extends State<Login> {
                                 onTap: () {
                                   Navigator.push(
                                     context,
-                                    AuthSlideFadeRoute(
+                                    AuthFadeRoute(
                                       page: const Register(),
                                     ),
                                   );
