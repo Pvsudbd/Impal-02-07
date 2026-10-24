@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import '../auth/login_page.dart';
+import '../jadwal/jadwal_page.dart';
 
 /// Aliases for flexibility
 typedef Home = HomePage;
@@ -323,8 +324,11 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Today's schedule",
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              "Today's schedule",
           style: TextStyle(
             color: Colors.white,
             fontSize: 18,
@@ -332,6 +336,24 @@ class _HomePageState extends State<HomePage> {
             fontWeight: FontWeight.w700,
             letterSpacing: -0.04,
           ),
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const JadwalPage()),
+                );
+              },
+              child: const Text(
+                'See all',
+                style: TextStyle(
+                  color: Color(0xFFFF826E),
+                  fontSize: 12,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         ..._schedules.map((schedule) => _buildScheduleCard(schedule)),
@@ -340,7 +362,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildScheduleCard(ScheduleItem schedule) {
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const JadwalPage()),
+        );
+      },
+      child: Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFF323846),
@@ -454,6 +482,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -969,7 +998,11 @@ class _HomePageState extends State<HomePage> {
     } else if (index == 2) {
       showTopToast(context, 'Kelompok section');
     } else if (index == 3) {
-      showTopToast(context, 'Schedule section');
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const JadwalPage()),
+      ).then((_) {
+        if (mounted) setState(() => _currentTab = 0);
+      });
     }
   }
 
