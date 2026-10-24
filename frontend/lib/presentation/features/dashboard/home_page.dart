@@ -187,15 +187,15 @@ class _HomePageState extends State<HomePage> {
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               _buildHeader(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildTodayScheduleSection(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildCategoriesSection(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildOngoingTaskSection(),
             ]),
           ),
@@ -366,12 +366,14 @@ class _HomePageState extends State<HomePage> {
               ? todayList.take(2).toList()
               : repoSchedules.take(2).toList();
 
-          for (final s in itemsToShow) {
-            cards.add(_buildRepoScheduleCard(s));
+          for (int i = 0; i < itemsToShow.length; i++) {
+            final isLast = i == itemsToShow.length - 1;
+            cards.add(_buildRepoScheduleCard(itemsToShow[i], isLast: isLast));
           }
         } else {
-          for (final s in _schedules) {
-            cards.add(_buildScheduleCard(s));
+          for (int i = 0; i < _schedules.length; i++) {
+            final isLast = i == _schedules.length - 1;
+            cards.add(_buildScheduleCard(_schedules[i], isLast: isLast));
           }
         }
 
@@ -407,7 +409,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             ...cards,
           ],
         );
@@ -415,11 +417,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildRepoScheduleCard(ScheduleModel schedule) {
+  Widget _buildRepoScheduleCard(ScheduleModel schedule, {bool isLast = false}) {
     return GestureDetector(
       onTap: () => _onTabSelected(3),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
         width: double.infinity,
         decoration: BoxDecoration(
           color: const Color(0xFF323846),
@@ -427,8 +429,8 @@ class _HomePageState extends State<HomePage> {
           boxShadow: const [
             BoxShadow(
               color: Color(0x33000000),
-              blurRadius: 12,
-              offset: Offset(0, 4),
+              blurRadius: 10,
+              offset: Offset(0, 3),
             ),
           ],
         ),
@@ -443,7 +445,7 @@ class _HomePageState extends State<HomePage> {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -487,7 +489,7 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                       if (schedule.location != null && schedule.location!.isNotEmpty) ...[
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           schedule.location!,
                           style: const TextStyle(
@@ -498,7 +500,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           Container(
@@ -538,11 +540,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildScheduleCard(ScheduleItem schedule) {
+  Widget _buildScheduleCard(ScheduleItem schedule, {bool isLast = false}) {
     return GestureDetector(
       onTap: () => _onTabSelected(3),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
         width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFF323846),
@@ -550,8 +552,8 @@ class _HomePageState extends State<HomePage> {
         boxShadow: const [
           BoxShadow(
             color: Color(0x33000000),
-            blurRadius: 12,
-            offset: Offset(0, 4),
+            blurRadius: 10,
+            offset: Offset(0, 3),
           ),
         ],
       ),
@@ -568,7 +570,7 @@ class _HomePageState extends State<HomePage> {
             // Card Content
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -608,7 +610,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     // Location info
                     Text(
                       schedule.location,
@@ -619,7 +621,7 @@ class _HomePageState extends State<HomePage> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     // Time with Clock Icon
                     Row(
                       children: [
@@ -675,7 +677,7 @@ class _HomePageState extends State<HomePage> {
             letterSpacing: -0.2,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Row(
           children: [
             ..._categories.map((cat) {
@@ -697,7 +699,7 @@ class _HomePageState extends State<HomePage> {
                 },
                 child: Container(
                   width: 44,
-                  height: 68,
+                  height: 58,
                   decoration: BoxDecoration(
                     color: const Color(0xFF323846),
                     borderRadius: BorderRadius.circular(16),
@@ -722,13 +724,13 @@ class _HomePageState extends State<HomePage> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         onTap: () => _onCategorySelected(category.name),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: isSelected ? const Color(0xFF3D4556) : const Color(0xFF323846),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected ? const Color(0xFFFF7D65) : Colors.transparent,
               width: 1.5,
@@ -748,7 +750,7 @@ class _HomePageState extends State<HomePage> {
                 category.name,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 15,
+                  fontSize: 14.5,
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w700,
                 ),
@@ -758,7 +760,7 @@ class _HomePageState extends State<HomePage> {
                 category.count,
                 style: const TextStyle(
                   color: Color(0xFF8E95A5),
-                  fontSize: 12,
+                  fontSize: 11.5,
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w500,
                 ),
@@ -809,9 +811,9 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         ..._tasks.map((task) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.only(bottom: 10),
               child: RepaintBoundary(child: _buildTaskCard(task)),
             )),
       ],
@@ -821,15 +823,15 @@ class _HomePageState extends State<HomePage> {
   Widget _buildTaskCard(TaskItem task) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
         color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
             color: Color(0x33000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            blurRadius: 8,
+            offset: Offset(0, 3),
           ),
         ],
       ),
@@ -846,7 +848,7 @@ class _HomePageState extends State<HomePage> {
                   task.title,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 14.8,
+                    fontSize: 14.5,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
@@ -855,7 +857,7 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                 decoration: BoxDecoration(
                   color: task.dueColor,
                   borderRadius: BorderRadius.circular(999),
@@ -875,7 +877,7 @@ class _HomePageState extends State<HomePage> {
 
           // Subtitle if available
           if (task.subtitle != null) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               task.subtitle!,
               style: const TextStyle(
@@ -889,7 +891,7 @@ class _HomePageState extends State<HomePage> {
 
           // Team members label if members exist
           if (task.members != null && task.members!.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             const Text(
               'Team members',
               style: TextStyle(
@@ -901,7 +903,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           // Row 2: Avatars / Progress & Deadline
           Row(
@@ -917,14 +919,14 @@ class _HomePageState extends State<HomePage> {
               // Circular Progress Indicator (if task has progress e.g. 76%)
               if (task.progress != null)
                 SizedBox(
-                  width: 44,
-                  height: 44,
+                  width: 38,
+                  height: 38,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       CircularProgressIndicator(
                         value: task.progress,
-                        strokeWidth: 3.5,
+                        strokeWidth: 3.0,
                         backgroundColor: const Color(0xFF282D37),
                         valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF60A5FA)),
                       ),
@@ -943,7 +945,7 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
           // Deadline Row with Clock
           Row(
@@ -975,7 +977,7 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
           // Tags Row
           Wrap(
