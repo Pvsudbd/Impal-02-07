@@ -1,0 +1,7 @@
+# Dart
+.dart_tool/
+.packages
+build/
+
+# Environment secrets
+.env
