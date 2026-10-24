@@ -1,186 +1,185 @@
 import 'package:flutter/material.dart';
 
-/// Pop up dialog for making / confirming schedule creation
+/// Pixel-perfect confirmation dialog before creating a new schedule
 class PopUpMakeSchedule extends StatelessWidget {
-  const PopUpMakeSchedule({super.key});
+  final VoidCallback? onCancel;
+  final VoidCallback? onConfirm;
+
+  const PopUpMakeSchedule({
+    super.key,
+    this.onCancel,
+    this.onConfirm,
+  });
+
+  /// Convenient helper to show this dialog as a centered modal with smooth entrance animation.
+  static Future<bool?> show(BuildContext context) {
+    return showGeneralDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'PopUpMakeSchedule',
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (ctx, anim1, anim2) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: PopUpMakeSchedule(
+            onCancel: () => Navigator.of(ctx).pop(false),
+            onConfirm: () => Navigator.of(ctx).pop(true),
+          ),
+        ),
+      ),
+      transitionBuilder: (ctx, anim, secondaryAnim, child) {
+        return FadeTransition(
+          opacity: anim,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.90, end: 1.0).animate(
+              CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 336.61,
-          padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 21),
-          clipBehavior: Clip.antiAlias,
-          decoration: ShapeDecoration(
-            color: const Color(0xFF323846),
-            shape: RoundedRectangleBorder(
-              side: const BorderSide(
-                width: 1,
-                color: Color(0xFF3B4150),
-              ),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            shadows: [
-              const BoxShadow(
-                color: const Color(0x99000000),
-                blurRadius: 35,
-                offset: const Offset(0, 25),
-                spreadRadius: -5,
-              )
-            ],
+    return Container(
+      width: 336,
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF323846),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF3B4150), width: 1),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x99000000),
+            blurRadius: 35,
+            offset: Offset(0, 20),
+            spreadRadius: -5,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            spacing: 12,
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFA6144),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x55FA6144),
+                  blurRadius: 18,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.calendar_today_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Make Schedule?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 19,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Make sure your schedule is correct. Schedule that\nyou make will appear on your schedule page.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFFD1D5DB),
+              fontSize: 12,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w400,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 22),
+          Row(
             children: [
-              Container(
-                width: 60,
-                height: 62,
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: ShapeDecoration(
-                        color: const Color(0xFFFA6144) /* Prim */,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        shadows: [
-                          const BoxShadow(
-                            color: const Color(0xFFFA6144),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                            spreadRadius: 0,
-                          )
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 26,
-                            height: 26,
-                            clipBehavior: Clip.antiAlias,
-                            decoration: const BoxDecoration(),
-                            child: const Stack(),
-                          ),
-                        ],
+              Expanded(
+                child: SizedBox(
+                  height: 46,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8E95A5),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(
-                width: 192.15,
-                child: const Text(
-                  'Make Schedule?',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 19,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.30,
+                    onPressed: () {
+                      if (onCancel != null) {
+                        onCancel!();
+                      } else {
+                        Navigator.of(context).maybePop(false);
+                      }
+                    },
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.only(left: 8.30, right: 8.31),
-                child: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'make sure your schedule is correct.Schedule that \nyou make willappear at schedule page',
-                      textAlign: TextAlign.center,
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 46,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFA6144),
+                      elevation: 4,
+                      shadowColor: const Color(0x66FA6144),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {
+                      if (onConfirm != null) {
+                        onConfirm!();
+                      } else {
+                        Navigator.of(context).maybePop(true);
+                      }
+                    },
+                    child: const Text(
+                      'Make',
                       style: TextStyle(
-                        color: Color(0xFFD1D5DB),
-                        fontSize: 12,
+                        color: Colors.white,
+                        fontSize: 15,
                         fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                        height: 1.45,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              Container(
-                width: double.infinity,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  spacing: 10,
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 46,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-                        decoration: ShapeDecoration(
-                          color: const Color(0xFF8E95A5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Cancel',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        height: 46,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-                        decoration: ShapeDecoration(
-                          color: const Color(0xFFFA6144) /* Prim */,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Make',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

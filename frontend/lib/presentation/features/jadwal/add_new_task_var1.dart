@@ -1,879 +1,721 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/top_toast.dart';
+import 'models/schedule_model.dart';
+import 'models/schedule_repository.dart';
+import 'pop_up_make_schedule.dart';
+import 'pop_up_schedule_updated.dart';
 
-/// Alias for backwards compatibility
+/// Aliases for backwards compatibility
 typedef AddNewTask = AddNewTaskVar1;
+typedef AddNewSchedule = AddNewTaskVar1;
 
-/// Add new task screen (Variation 1)
+/// Add new task / schedule screen (Variation 1 - External by default)
 class AddNewTaskVar1 extends StatelessWidget {
-  const AddNewTaskVar1({super.key});
+  final String initialType;
+
+  const AddNewTaskVar1({
+    super.key,
+    this.initialType = 'External',
+  });
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 390,
-          clipBehavior: Clip.antiAlias,
-          decoration: ShapeDecoration(
-            color: const Color(0xFF282D37),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(36),
+    return AddNewTaskPage(initialType: initialType);
+  }
+}
+
+/// Full interactive Add New Schedule page
+class AddNewTaskPage extends StatefulWidget {
+  final String initialType;
+
+  const AddNewTaskPage({
+    super.key,
+    this.initialType = 'External',
+  });
+
+  @override
+  State<AddNewTaskPage> createState() => _AddNewTaskPageState();
+}
+
+class _AddNewTaskPageState extends State<AddNewTaskPage> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _titleController;
+  late final TextEditingController _courseController;
+  late final TextEditingController _locationController;
+  late final TextEditingController _notesController;
+
+  late String _selectedType;
+  late DateTime _selectedDate;
+  late TimeOfDay _startTime;
+  late TimeOfDay _endTime;
+  bool _repeat = false;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedType = widget.initialType;
+    _selectedDate = DateTime.now().add(const Duration(days: 1));
+    _startTime = const TimeOfDay(hour: 9, minute: 30);
+    _endTime = const TimeOfDay(hour: 11, minute: 30);
+
+    _titleController = TextEditingController(
+      text: _selectedType == 'External' ? 'Meet Impal Kelompok 7' : 'UBXCCB2 - BAHASA INDONESIA',
+    );
+    _courseController = TextEditingController(
+      text: 'SSIF-04-REG • Software Testing & Implementation',
+    );
+    _locationController = TextEditingController(
+      text: _selectedType == 'External' ? 'Google Meet / Discord' : 'KTT B-106 • SSIF-04-REG-GAB02',
+    );
+    _notesController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _courseController.dispose();
+    _locationController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  String _formatDate(DateTime dt) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final dayName = days[dt.weekday - 1];
+    final monthName = months[dt.month - 1];
+    return '$dayName ${dt.day} $monthName ${dt.year}';
+  }
+
+  String _formatTimeOfDay(TimeOfDay tod) {
+    final hour = tod.hour.toString().padLeft(2, '0');
+    final minute = tod.minute.toString().padLeft(2, '0');
+    return '$hour:$minute WIB';
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFFFA6144),
+              onPrimary: Colors.white,
+              surface: Color(0xFF282D37),
+              onSurface: Colors.white,
             ),
-            shadows: [
-              const BoxShadow(
-                color: const Color(0x8C000000),
-                blurRadius: 50,
-                offset: const Offset(0, 25),
-                spreadRadius: -12,
-              )
-            ],
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Color(0xFF282D37),
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 390,
-                height: 744,
-                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 22),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
+  Future<void> _pickStartTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _startTime,
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFFFA6144),
+              onPrimary: Colors.white,
+              surface: Color(0xFF282D37),
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _startTime = picked);
+    }
+  }
+
+  Future<void> _pickEndTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _endTime,
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFFFA6144),
+              onPrimary: Colors.white,
+              surface: Color(0xFF282D37),
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _endTime = picked);
+    }
+  }
+
+  Future<void> _handleSave() async {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      TopToast.show(
+        context,
+        message: 'Please enter a task title',
+        type: ToastType.warning,
+      );
+      return;
+    }
+
+    final confirmed = await PopUpMakeSchedule.show(context);
+    if (confirmed != true) return;
+
+    setState(() => _isSubmitting = true);
+
+    final startHour = _startTime.hour.toString().padLeft(2, '0');
+    final startMin = _startTime.minute.toString().padLeft(2, '0');
+    final endHour = _endTime.hour.toString().padLeft(2, '0');
+    final endMin = _endTime.minute.toString().padLeft(2, '0');
+
+    final newSchedule = ScheduleModel(
+      id: 'sch_${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      type: _selectedType,
+      course: _selectedType == 'Lecture' ? _courseController.text.trim() : null,
+      location: _locationController.text.trim().isNotEmpty ? _locationController.text.trim() : null,
+      status: 'Upcoming',
+      date: _selectedDate,
+      timeStart: '$startHour:$startMin',
+      timeEnd: '$endHour:$endMin',
+      notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+      repeat: _repeat,
+    );
+
+    await ScheduleRepository().addSchedule(newSchedule);
+
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+      await PopUpScheduleUpdated.show(
+        context,
+        title: 'Schedule Created',
+        message: 'Your schedule has been created.\nSee your changes on your Schedule page.',
+      );
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
+    final content = Scaffold(
+      backgroundColor: const Color(0xFF282D37),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF282D37),
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        title: const Text(
+          'Add New Schedule',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: const BoxDecoration(
+                color: Color(0xFF323846),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Text(
+                  'JS',
+                  style: TextStyle(
+                    color: Color(0xFF8E95A5),
+                    fontSize: 13,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Center(
+            child: Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 410),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF323846),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFF3B4150), width: 1),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x66000000),
+                    blurRadius: 25,
+                    offset: Offset(0, 15),
+                    spreadRadius: -4,
+                  ),
+                ],
+              ),
+              child: Form(
+                key: _formKey,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  spacing: 22,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 390,
-                      height: 28,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      clipBehavior: Clip.antiAlias,
-                      decoration: const BoxDecoration(color: Color(0xFF282D37)),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const Text(
-                            '08:12',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Text(
-                            '● 4G  ▰',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                    const Text(
+                      'Schedule Details',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    Container(
-                      width: 350,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        spacing: 166,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            spacing: 5,
+                    const SizedBox(height: 18),
+
+                    // Task Title
+                    _buildLabel('Task Title'),
+                    const SizedBox(height: 6),
+                    _buildTextField(
+                      controller: _titleController,
+                      hintText: 'e.g. Meet Impal Kelompok 7',
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Schedule Type
+                    _buildLabel('Schedule Type'),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTypeChip(
+                            label: 'External',
+                            isSelected: _selectedType == 'External',
+                            onTap: () {
+                              setState(() {
+                                _selectedType = 'External';
+                                if (_locationController.text.contains('KTT')) {
+                                  _locationController.text = 'Google Meet / Discord';
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildTypeChip(
+                            label: 'Lecture',
+                            isSelected: _selectedType == 'Lecture',
+                            onTap: () {
+                              setState(() {
+                                _selectedType = 'Lecture';
+                                if (_locationController.text.contains('Google Meet')) {
+                                  _locationController.text = 'KTT B-106 • SSIF-04-REG-GAB02';
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Course field (visible for Lecture)
+                    if (_selectedType == 'Lecture') ...[
+                      _buildLabel('Course / Mata Kuliah'),
+                      const SizedBox(height: 6),
+                      _buildTextField(
+                        controller: _courseController,
+                        hintText: 'SSIF-04-REG • Software Testing & Implementation',
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Location / Room
+                    _buildLabel('Location / Room'),
+                    const SizedBox(height: 6),
+                    _buildTextField(
+                      controller: _locationController,
+                      hintText: _selectedType == 'Lecture'
+                          ? 'KTT B-106 • SSIF-04-REG-GAB02'
+                          : 'Google Meet / Discord / Offline',
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Date & Repeat
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildLabel('Date'),
+                        GestureDetector(
+                          onTap: () => setState(() => _repeat = !_repeat),
+                          child: Row(
                             children: [
                               Container(
-                                width: 34,
-                                height: 34,
-                                clipBehavior: Clip.antiAlias,
-                                decoration: const BoxDecoration(),
-                                child: const Stack(),
+                                width: 18,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: _repeat ? const Color(0xFFFA6144) : const Color(0xFF282D37),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: _repeat ? const Color(0xFFFA6144) : const Color(0xFF3B4150),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: _repeat
+                                    ? const Icon(Icons.check, color: Colors.white, size: 13)
+                                    : null,
                               ),
+                              const SizedBox(width: 6),
                               const Text(
-                                'Back',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
+                                'Repeat weekly',
+                                style: TextStyle(
+                                  color: Color(0xFFD1D5DB),
+                                  fontSize: 12,
                                   fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w400,
                                 ),
                               ),
                             ],
                           ),
-                          Container(
-                            width: 44,
-                            height: 44,
-                            clipBehavior: Clip.antiAlias,
-                            decoration: ShapeDecoration(
-                              color: const Color(0xFF323846),
-                              shape: RoundedRectangleBorder(
-                                side: const BorderSide(
-                                  width: 1,
-                                  color: Color(0xFF323846),
-                                ),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'JS',
-                                  style: TextStyle(
-                                    color: Color(0xFF8E95A5),
-                                    fontSize: 14,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      width: 352,
-                      padding: const EdgeInsets.all(20),
-                      decoration: ShapeDecoration(
-                        color: const Color(0xFF323846),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
                         ),
-                      ),
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            left: 0,
-                            top: 0,
-                            child: Container(
-                              width: 352,
-                              height: 505,
-                              decoration: ShapeDecoration(
-                                color: Colors.white.withValues(alpha: 0),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            width: double.infinity,
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              spacing: 151.61,
-                              children: [
-                                const Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Add New Schedule',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 19,
-                                        fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: double.infinity,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              spacing: 5,
-                              children: [
-                                Container(
-                                  width: double.infinity,
-                                  child: const Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                        width: 312,
-                                        child: Text(
-                                          'Task Title',
-                                          style: TextStyle(
-                                            color: Color(0xFFD1D5DB),
-                                            fontSize: 12,
-                                            fontFamily: 'Inter',
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  width: double.infinity,
-                                  height: 42,
-                                  padding: const EdgeInsets.all(12),
-                                  clipBehavior: Clip.antiAlias,
-                                  decoration: ShapeDecoration(
-                                    color: const Color(0xFF282D37),
-                                    shape: RoundedRectangleBorder(
-                                      side: const BorderSide(
-                                        width: 1,
-                                        color: Color(0xFF282D37),
-                                      ),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        width: double.infinity,
-                                        clipBehavior: Clip.antiAlias,
-                                        decoration: const BoxDecoration(),
-                                        child: const Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment: MainAxisAlignment.start,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const SizedBox(
-                                              width: 286,
-                                              child: const Text(
-                                                'Meet Impal Kelompok 7',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 13,
-                                                  fontFamily: 'Inter',
-                                                  fontWeight: FontWeight.w400,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 312,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              spacing: 5,
-                              children: [
-                                const Text(
-                                  'Schedule Type',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Color(0xFFD1D5DB),
-                                    fontSize: 12,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                Container(
-                                  width: double.infinity,
-                                  clipBehavior: Clip.antiAlias,
-                                  decoration: const BoxDecoration(),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    spacing: 8,
-                                    children: [
-                                      Expanded(
-                                        child: Container(
-                                          height: 38,
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                          clipBehavior: Clip.antiAlias,
-                                          decoration: ShapeDecoration(
-                                            color: const Color(0xFFFA6144) /* Primary */,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            spacing: 10,
-                                            children: [
-                                              const Text(
-                                                'External',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12,
-                                                  fontFamily: 'Inter',
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Container(
-                                          height: 38,
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                          clipBehavior: Clip.antiAlias,
-                                          decoration: ShapeDecoration(
-                                            color: const Color(0xFF282D37),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            spacing: 10,
-                                            children: [
-                                              const Text(
-                                                'Lecture',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12,
-                                                  fontFamily: 'Inter',
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: double.infinity,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              spacing: 5,
-                              children: [
-                                Container(
-                                  width: 312,
-                                  height: 58,
-                                  child: Stack(
-                                    children: [
-                                      Positioned(
-                                        left: 0,
-                                        top: 0,
-                                        child: Container(
-                                          width: 312,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              const Text(
-                                                'Date',
-                                                style: TextStyle(
-                                                  color: Color(0xFFD1D5DB),
-                                                  fontSize: 12,
-                                                  fontFamily: 'Inter',
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                              Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                spacing: 4,
-                                                children: [
-                                                  Container(
-                                                    width: 16,
-                                                    height: 16,
-                                                    child: Stack(
-                                                      children: [
-                                                        Positioned(
-                                                          left: 0,
-                                                          top: 0,
-                                                          child: Container(
-                                                            width: 16,
-                                                            height: 16,
-                                                            decoration: ShapeDecoration(
-                                                              color: const Color(0xFF323846),
-                                                              shape: RoundedRectangleBorder(
-                                                                side: const BorderSide(
-                                                                  width: 1,
-                                                                  color: Color(0xFF3B4150),
-                                                                ),
-                                                                borderRadius: BorderRadius.circular(2.50),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const Text(
-                                                    'Repeat',
-                                                    style: TextStyle(
-                                                      color: Color(0xFFD1D5DB),
-                                                      fontSize: 12,
-                                                      fontFamily: 'Inter',
-                                                      fontWeight: FontWeight.w400,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        left: 0,
-                                        top: 20,
-                                        child: Container(
-                                          width: 312,
-                                          height: 38,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            mainAxisAlignment: MainAxisAlignment.start,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            spacing: 8,
-                                            children: [
-                                              Expanded(
-                                                child: Container(
-                                                  height: 38,
-                                                  decoration: ShapeDecoration(
-                                                    color: const Color(0xFF282D37),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(10),
-                                                    ),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    mainAxisAlignment: MainAxisAlignment.center,
-                                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                                    spacing: 6,
-                                                    children: [
-                                                      Container(
-                                                        width: 12,
-                                                        height: 12,
-                                                        clipBehavior: Clip.antiAlias,
-                                                        decoration: const BoxDecoration(),
-                                                        child: const Stack(),
-                                                      ),
-                                                      const Column(
-                                                        mainAxisSize: MainAxisSize.min,
-                                                        mainAxisAlignment: MainAxisAlignment.start,
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            'Sat 18 Oct 2026',
-                                                            style: TextStyle(
-                                                              color: Color(0xFF8E95A5),
-                                                              fontSize: 12,
-                                                              fontFamily: 'Inter',
-                                                              fontWeight: FontWeight.w400,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: double.infinity,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              spacing: 5,
-                              children: [
-                                Container(
-                                  width: double.infinity,
-                                  child: const Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                        width: 312,
-                                        child: Text(
-                                          'Time Start - End',
-                                          style: TextStyle(
-                                            color: Color(0xFFD1D5DB),
-                                            fontSize: 12,
-                                            fontFamily: 'Inter',
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: -0.02,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  width: double.infinity,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    spacing: 8,
-                                    children: [
-                                      Expanded(
-                                        child: Container(
-                                          height: 38,
-                                          decoration: ShapeDecoration(
-                                            color: const Color(0xFF282D37),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            spacing: 6,
-                                            children: [
-                                              Container(
-                                                width: 12,
-                                                height: 12,
-                                                clipBehavior: Clip.antiAlias,
-                                                decoration: const BoxDecoration(),
-                                                child: const Stack(),
-                                              ),
-                                              const Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment: MainAxisAlignment.start,
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    '23:59 WIB',
-                                                    style: TextStyle(
-                                                      color: Color(0xFF8E95A5),
-                                                      fontSize: 12,
-                                                      fontFamily: 'Inter',
-                                                      fontWeight: FontWeight.w400,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Container(
-                                          height: 38,
-                                          decoration: ShapeDecoration(
-                                            color: const Color(0xFF282D37),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            spacing: 6,
-                                            children: [
-                                              Container(
-                                                width: 12,
-                                                height: 12,
-                                                clipBehavior: Clip.antiAlias,
-                                                decoration: const BoxDecoration(),
-                                                child: const Stack(),
-                                              ),
-                                              const Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment: MainAxisAlignment.start,
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    '23:59 WIB',
-                                                    style: TextStyle(
-                                                      color: Color(0xFF8E95A5),
-                                                      fontSize: 12,
-                                                      fontFamily: 'Inter',
-                                                      fontWeight: FontWeight.w400,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: double.infinity,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              spacing: 5,
-                              children: [
-                                Container(
-                                  width: double.infinity,
-                                  child: const Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                        width: 312,
-                                        child: Text(
-                                          'Notes & Instructions',
-                                          style: TextStyle(
-                                            color: Color(0xFFD1D5DB),
-                                            fontSize: 12,
-                                            fontFamily: 'Inter',
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                ConstrainedBox(
-                                  constraints: const BoxConstraints(minHeight: 54),
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.only(
-                                      top: 10,
-                                      left: 14,
-                                      right: 14,
-                                      bottom: 26,
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    decoration: ShapeDecoration(
-                                      color: const Color(0xFF282D37),
-                                      shape: RoundedRectangleBorder(
-                                        side: const BorderSide(
-                                          width: 1,
-                                          color: Color(0xFF282D37),
-                                        ),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      mainAxisAlignment: MainAxisAlignment.start,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          width: double.infinity,
-                                          child: const Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            mainAxisAlignment: MainAxisAlignment.start,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              SizedBox(
-                                                width: 282,
-                                                child: Text(
-                                                  'Add assignment details or links here...',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF757575),
-                                                    fontSize: 13,
-                                                    fontFamily: 'Inter',
-                                                    fontWeight: FontWeight.w400,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: double.infinity,
-                            height: 48,
-                            decoration: ShapeDecoration(
-                              color: const Color(0xFFFA6144) /* Primary */,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              shadows: [
-                                const BoxShadow(
-                                  color: const Color(0x59EF4444),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 8),
-                                  spreadRadius: 0,
-                                )
-                              ],
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              spacing: 8,
-                              children: [
-                                const Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    const Text(
-                                      'Create Schedule',
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 390,
-                height: 100,
-                child: Stack(
-                  children: [
-                    Positioned(
-                      left: 0,
-                      top: 20,
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: _pickDate,
+                      borderRadius: BorderRadius.circular(10),
                       child: Container(
-                        width: 390,
-                        height: 80,
-                        decoration: const ShapeDecoration(
-                          color: Color(0xFF323846),
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: const BorderRadius.only(
-                              topLeft: const Radius.circular(5),
-                              topRight: const Radius.circular(5),
-                              bottomLeft: const Radius.circular(30),
-                              bottomRight: const Radius.circular(30),
-                            ),
-                          ),
+                        height: 44,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF282D37),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF3B4150), width: 1),
                         ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 123,
-                      top: 0,
-                      child: Container(
-                        width: 58,
-                        height: 58,
-                        decoration: const ShapeDecoration(
-                          gradient: LinearGradient(
-                            begin: const Alignment(0.50, -0.00),
-                            end: const Alignment(0.50, 1.00),
-                            colors: [Color(0xFFFD7357), Color(0xFFFA6144)],
-                          ),
-                          shape: const OvalBorder(),
-                          shadows: [
-                            const BoxShadow(
-                              color: const Color(0x58FA6144),
-                              blurRadius: 18,
-                              offset: const Offset(0, 8),
-                              spreadRadius: 0,
-                            )
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today_rounded,
+                              color: Color(0xFF8E95A5),
+                              size: 16,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              _formatDate(_selectedDate),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Spacer(),
+                            const Icon(
+                              Icons.arrow_drop_down,
+                              color: Color(0xFF8E95A5),
+                            ),
                           ],
                         ),
                       ),
                     ),
-                    Positioned(
-                      left: 140,
-                      top: 16,
-                      child: Container(
-                        width: 24,
-                        height: 24,
-                        clipBehavior: Clip.antiAlias,
-                        decoration: const BoxDecoration(),
-                        child: const Stack(),
-                      ),
-                    ),
-                    Positioned(
-                      left: 57,
-                      top: 41,
-                      child: Container(
-                        width: 24,
-                        height: 24,
-                        clipBehavior: Clip.antiAlias,
-                        decoration: const BoxDecoration(),
-                        child: const Stack(),
-                      ),
-                    ),
-                    Positioned(
-                      left: 225,
-                      top: 41,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        spacing: 60,
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: const BoxDecoration(
-                              image: const DecorationImage(
-                                image: const NetworkImage("https://placehold.co/24x24"),
-                                fit: BoxFit.contain,
+                    const SizedBox(height: 16),
+
+                    // Time Start - End
+                    _buildLabel('Time Start - End'),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: _pickStartTime,
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              height: 44,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF282D37),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFF3B4150), width: 1),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.access_time_rounded,
+                                    color: Color(0xFF8E95A5),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _formatTimeOfDay(_startTime),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12.5,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          Container(
-                            width: 24,
-                            height: 24,
-                            clipBehavior: Clip.antiAlias,
-                            decoration: const BoxDecoration(),
-                            child: const Stack(),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: InkWell(
+                            onTap: _pickEndTime,
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              height: 44,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF282D37),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFF3B4150), width: 1),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.access_time_rounded,
+                                    color: Color(0xFF8E95A5),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _formatTimeOfDay(_endTime),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12.5,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Notes & Instructions
+                    _buildLabel('Notes & Instructions'),
+                    const SizedBox(height: 6),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF282D37),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF3B4150), width: 1),
+                      ),
+                      child: TextFormField(
+                        controller: _notesController,
+                        maxLines: 3,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        decoration: const InputDecoration(
+                          hintText: 'Add assignment details, room links, or topics here...',
+                          hintStyle: TextStyle(color: Color(0xFF757575), fontSize: 13),
+                          contentPadding: EdgeInsets.all(12),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Submit Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFA6144),
+                          elevation: 6,
+                          shadowColor: const Color(0x77FA6144),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: _isSubmitting ? null : _handleSave,
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Add Schedule',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
-      ],
+      ),
+    );
+
+    if (isMobile) {
+      return content;
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF1E222B),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 410,
+                maxHeight: 844,
+              ),
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF282D37),
+                  borderRadius: BorderRadius.circular(36),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x8C000000),
+                      blurRadius: 40,
+                      offset: Offset(0, 20),
+                      spreadRadius: -6,
+                    ),
+                  ],
+                ),
+                child: content,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: Color(0xFFD1D5DB),
+        fontSize: 12,
+        fontFamily: 'Inter',
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.02,
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hintText,
+  }) {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: const Color(0xFF282D37),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF3B4150), width: 1),
+      ),
+      child: TextFormField(
+        controller: controller,
+        style: const TextStyle(color: Colors.white, fontSize: 13),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: const TextStyle(color: Color(0xFF757575), fontSize: 13),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          border: InputBorder.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFA6144) : const Color(0xFF282D37),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFA6144) : const Color(0xFF3B4150),
+            width: 1,
+          ),
+          boxShadow: isSelected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x44FA6144),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontFamily: 'Inter',
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ),
     );
   }
 }

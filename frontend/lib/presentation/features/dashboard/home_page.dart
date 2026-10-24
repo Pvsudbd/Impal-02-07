@@ -5,6 +5,8 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import '../auth/login_page.dart';
 import '../jadwal/jadwal_page.dart';
+import '../jadwal/models/schedule_model.dart';
+import '../jadwal/models/schedule_repository.dart';
 
 /// Aliases for flexibility
 typedef Home = HomePage;
@@ -28,6 +30,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    ScheduleRepository().init();
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('is_logged_in', true);
       prefs.setString('auth_user', widget.userName);
@@ -321,43 +324,61 @@ class _HomePageState extends State<HomePage> {
 
   // Section 1: Today's schedule
   Widget _buildTodayScheduleSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return ValueListenableBuilder<List<ScheduleModel>>(
+      valueListenable: ScheduleRepository().schedulesNotifier,
+      builder: (context, schedules, _) {
+        final now = DateTime.now();
+        final todayList = schedules.where((s) {
+          return s.date.year == now.year &&
+              s.date.month == now.month &&
+              s.date.day == now.day;
+        }).toList();
+
+        final itemsToShow = todayList.isNotEmpty
+            ? todayList.map((m) => ScheduleItem.fromModel(m)).toList()
+            : _schedules;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Today's schedule",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.04,
-          ),
-            ),
-            GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const JadwalPage()),
-                );
-              },
-              child: const Text(
-                'See all',
-                style: TextStyle(
-                  color: Color(0xFFFF826E),
-                  fontSize: 12,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w600,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Today's schedule",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.04,
+                  ),
                 ),
-              ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => JadwalPage(userName: widget.userName),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'See all',
+                    style: TextStyle(
+                      color: Color(0xFFFF826E),
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 12),
+            ...itemsToShow.map((schedule) => _buildScheduleCard(schedule)),
           ],
-        ),
-        const SizedBox(height: 12),
-        ..._schedules.map((schedule) => _buildScheduleCard(schedule)),
-      ],
+        );
+      },
     );
   }
 
@@ -1212,6 +1233,15 @@ class ScheduleItem {
     required this.location,
     required this.time,
   });
+
+  factory ScheduleItem.fromModel(ScheduleModel model) {
+    return ScheduleItem(
+      courseCode: model.title,
+      status: model.status,
+      location: model.location ?? model.course ?? '',
+      time: model.formattedTime,
+    );
+  }
 }
 
 class CategoryItem {
