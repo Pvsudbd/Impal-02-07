@@ -500,7 +500,7 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
                     ),
                     const SizedBox(height: 3),
                     const Text(
-                      'Jadwal Kuliah',
+                      'Schedule',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Color(0xFFFF7D65),
