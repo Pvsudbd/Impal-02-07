@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/utils/page_transitions.dart';
+import '../../../core/utils/top_toast.dart';
+import '../dashboard/home_page.dart';
+import 'forgot_password_page.dart';
+import 'regist_page.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -13,11 +20,20 @@ class _LoginState extends State<Login> {
   bool _rememberMe = false;
   bool _obscurePassword = true;
 
+  String? _usernameError;
+  String? _passwordError;
+
   @override
   void initState() {
     super.initState();
-    _usernameController = TextEditingController(text: 'Yoga Perkakas');
-    _passwordController = TextEditingController(text: 'password123');
+    _usernameController = TextEditingController();
+    _passwordController = TextEditingController();
+    _usernameController.addListener(() {
+      if (_usernameError != null) setState(() => _usernameError = null);
+    });
+    _passwordController.addListener(() {
+      if (_passwordError != null) setState(() => _passwordError = null);
+    });
   }
 
   @override
@@ -29,24 +45,47 @@ class _LoginState extends State<Login> {
 
   void _handleSignIn() {
     final username = _usernameController.text.trim();
-    final password = _passwordController.text.trim();
+    final password = _passwordController.text;
 
-    if (username.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Username dan Password tidak boleh kosong!'),
-          backgroundColor: Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    String? userErr;
+    String? pwdErr;
+
+    if (username.isEmpty) {
+      userErr = 'Username or email is required';
+    }
+    if (password.isEmpty) {
+      pwdErr = 'Password is required';
+    } else if (password.contains(' ')) {
+      pwdErr = 'Password cannot contain spaces';
+    }
+
+    setState(() {
+      _usernameError = userErr;
+      _passwordError = pwdErr;
+    });
+
+    if (userErr != null || pwdErr != null) {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Berhasil masuk sebagai $username!'),
-        backgroundColor: const Color(0xFFFA6144),
-        behavior: SnackBarBehavior.floating,
+    showTopToast(
+      context,
+      'Successfully signed in as $username!',
+      type: ToastType.success,
+    );
+
+    final finalUser = username.isNotEmpty ? username : 'Jarvis';
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('is_logged_in', true);
+      prefs.setString('auth_user', finalUser);
+    });
+
+    Navigator.pushReplacement(
+      context,
+      AuthFadeRoute(
+        page: HomePage(
+          userName: finalUser,
+        ),
       ),
     );
   }
@@ -59,43 +98,56 @@ class _LoginState extends State<Login> {
     return Scaffold(
       backgroundColor: isMobile ? const Color(0xFF282D37) : const Color(0xFF1E222B),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: isMobile ? 24 : 16,
-              vertical: isMobile ? 24 : 32,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 440,
-              ),
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 0 : 28,
-                  vertical: isMobile ? 0 : 36,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
                 ),
-                decoration: isMobile
-                    ? null
-                    : ShapeDecoration(
-                        color: const Color(0xFF282D37),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      const Spacer(),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 20 : 16,
+                      vertical: isMobile ? 20 : 32,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: 440,
                         ),
-                        shadows: const [
-                          BoxShadow(
-                            color: Color(0x66000000),
-                            blurRadius: 40,
-                            offset: Offset(0, 20),
-                            spreadRadius: -4,
-                          )
-                        ],
-                      ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Header & Logo
+                        child: RepaintBoundary(
+                          child: Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isMobile ? 0 : 28,
+                              vertical: isMobile ? 0 : 36,
+                            ),
+                            decoration: isMobile
+                                ? null
+                                : ShapeDecoration(
+                                    color: const Color(0xFF282D37),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(28),
+                                    ),
+                                    shadows: const [
+                                      BoxShadow(
+                                        color: Color(0x66000000),
+                                        blurRadius: 18,
+                                        offset: Offset(0, 10),
+                                        spreadRadius: -2,
+                                      )
+                                    ],
+                                  ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Header & Logo
                     Container(
                       width: 64,
                       height: 64,
@@ -168,28 +220,31 @@ class _LoginState extends State<Login> {
                         ),
                         const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
                           decoration: ShapeDecoration(
                             color: const Color(0xFF323846),
                             shape: RoundedRectangleBorder(
-                              side: const BorderSide(
-                                width: 1,
-                                color: Color(0xFF3B4150),
+                              side: BorderSide(
+                                width: _usernameError != null ? 1.4 : 1,
+                                color: _usernameError != null ? const Color(0xFFEF4444) : const Color(0xFF3B4150),
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const Icon(
-                                Icons.person_outline,
-                                color: Color(0xFF9CA3AF),
+                              Icon(
+                                Icons.person_outline_rounded,
+                                color: _usernameError != null ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: TextField(
                                   controller: _usernameController,
+                                  onTap: TopToast.dismiss,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
@@ -204,7 +259,7 @@ class _LoginState extends State<Login> {
                                     hintText: 'Enter username or email',
                                     hintStyle: TextStyle(
                                       color: Color(0xFF6B7280),
-                                      fontSize: 14,
+                                      fontSize: 13.5,
                                       fontFamily: 'Inter',
                                     ),
                                   ),
@@ -213,6 +268,27 @@ class _LoginState extends State<Login> {
                             ],
                           ),
                         ),
+                        if (_usernameError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6, left: 4),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded, size: 13, color: Color(0xFFEF4444)),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(
+                                    _usernameError!,
+                                    style: const TextStyle(
+                                      color: Color(0xFFEF4444),
+                                      fontSize: 12,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         const SizedBox(height: 18),
 
                         // Password Field
@@ -227,22 +303,24 @@ class _LoginState extends State<Login> {
                         ),
                         const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
                           decoration: ShapeDecoration(
                             color: const Color(0xFF323846),
                             shape: RoundedRectangleBorder(
-                              side: const BorderSide(
-                                width: 1,
-                                color: Color(0xFF3B4150),
+                              side: BorderSide(
+                                width: _passwordError != null ? 1.4 : 1,
+                                color: _passwordError != null ? const Color(0xFFEF4444) : const Color(0xFF3B4150),
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const Icon(
-                                Icons.lock_outline,
-                                color: Color(0xFF9CA3AF),
+                              Icon(
+                                Icons.lock_outline_rounded,
+                                color: _passwordError != null ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
@@ -250,6 +328,10 @@ class _LoginState extends State<Login> {
                                 child: TextField(
                                   controller: _passwordController,
                                   obscureText: _obscurePassword,
+                                  enableInteractiveSelection: false,
+                                  contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
+                                  onTap: TopToast.dismiss,
+                                  inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
@@ -259,12 +341,12 @@ class _LoginState extends State<Login> {
                                   cursorColor: const Color(0xFFFA6144),
                                   decoration: const InputDecoration(
                                     isDense: true,
-                                    contentPadding: EdgeInsets.symmetric(vertical: 6),
+                                    contentPadding: EdgeInsets.zero,
                                     border: InputBorder.none,
-                                    hintText: 'Enter password',
+                                    hintText: 'Enter your password',
                                     hintStyle: TextStyle(
                                       color: Color(0xFF6B7280),
-                                      fontSize: 14,
+                                      fontSize: 13.5,
                                       fontFamily: 'Inter',
                                     ),
                                   ),
@@ -273,7 +355,7 @@ class _LoginState extends State<Login> {
                               IconButton(
                                 splashRadius: 18,
                                 padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
+                                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
                                 icon: Icon(
                                   _obscurePassword
                                       ? Icons.visibility_off_outlined
@@ -290,18 +372,37 @@ class _LoginState extends State<Login> {
                             ],
                           ),
                         ),
+                        if (_passwordError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6, left: 4),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded, size: 13, color: Color(0xFFEF4444)),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(
+                                    _passwordError!,
+                                    style: const TextStyle(
+                                      color: Color(0xFFEF4444),
+                                      fontSize: 12,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         const SizedBox(height: 18),
 
                         // Checkbox & Forgot Password Row
-                        SizedBox(
-                          width: double.infinity,
-                          child: Wrap(
-                            alignment: WrapAlignment.spaceBetween,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            runSpacing: 8,
-                            children: [
-                              // Clickable Remember Me Checkbox
-                              InkWell(
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Clickable Remember Me Checkbox
+                            Flexible(
+                              child: InkWell(
                                 borderRadius: BorderRadius.circular(6),
                                 onTap: () {
                                   setState(() {
@@ -337,46 +438,48 @@ class _LoginState extends State<Login> {
                                             : null,
                                       ),
                                       const SizedBox(width: 8),
-                                      const Text(
-                                        'Remember my account',
-                                        style: TextStyle(
-                                          color: Color(0xFFD1D5DB),
-                                          fontSize: 12,
-                                          fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w400,
+                                      const Flexible(
+                                        child: Text(
+                                          'Remember me',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: Color(0xFFD1D5DB),
+                                            fontSize: 12,
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w400,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
+                            ),
+                            const SizedBox(width: 8),
 
-                              // Forgot Password Link
-                              InkWell(
-                                borderRadius: BorderRadius.circular(4),
-                                onTap: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Halaman reset password akan segera tersedia'),
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
-                                  );
-                                },
-                                child: const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 4),
-                                  child: Text(
-                                    'Forgot password?',
-                                    style: TextStyle(
-                                      color: Color(0xFFFF7D65),
-                                      fontSize: 12,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                            // Forgot Password Link
+                            InkWell(
+                              borderRadius: BorderRadius.circular(4),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  AuthFadeRoute(page: const ForgotPassword()),
+                                );
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 4),
+                                child: Text(
+                                  'Forgot password?',
+                                  style: TextStyle(
+                                    color: Color(0xFFFF7D65),
+                                    fontSize: 12,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 24),
 
@@ -384,15 +487,15 @@ class _LoginState extends State<Login> {
                         Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                             onTap: _handleSignIn,
                             child: Ink(
                               width: double.infinity,
-                              height: 52,
+                              height: 50,
                               decoration: ShapeDecoration(
                                 color: const Color(0xFFFA6144) /* Primary */,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                                 shadows: const [
                                   BoxShadow(
@@ -455,10 +558,10 @@ class _LoginState extends State<Login> {
                               ),
                               InkWell(
                                 onTap: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Halaman pendaftaran akan segera tersedia'),
-                                      behavior: SnackBarBehavior.floating,
+                                  Navigator.push(
+                                    context,
+                                    AuthFadeRoute(
+                                      page: const Register(),
                                     ),
                                   );
                                 },
@@ -478,24 +581,33 @@ class _LoginState extends State<Login> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 32),
-
-                    // Footer Copyright
-                    const Text(
-                      'IMPAL Group 7 • Telkom University © 2026',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF6B7280),
-                        fontSize: 11,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
                   ],
                 ),
               ),
             ),
           ),
+        ),
+      ),
+      const Spacer(),
+      const Padding(
+        padding: EdgeInsets.only(bottom: 24, top: 12),
+        child: Text(
+          'IMPAL Group 7 • Telkom University © 2026',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xFF6B7280),
+            fontSize: 11,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
