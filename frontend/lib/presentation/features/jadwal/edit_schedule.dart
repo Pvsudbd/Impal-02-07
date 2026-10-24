@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
 import 'pop_up_konfirmasi_edit.dart';
-import 'pop_up_schedule_updated.dart';
 import 'pop_up_konfirmasi_delete.dart';
-import 'pop_up_schedule_deleted.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 /// Aliases for backwards compatibility
 typedef EditScheduleVar1 = EditSchedule;
@@ -200,7 +199,7 @@ class _EditScheduleState extends State<EditSchedule> {
     await ScheduleRepository().updateSchedule(updated);
 
     if (mounted) {
-      PopUpScheduleUpdated.show(context);
+      PopUpPemberitahuan.scheduleUpdated(context);
       Navigator.of(context).pop(true);
     }
   }
@@ -212,7 +211,7 @@ class _EditScheduleState extends State<EditSchedule> {
     await ScheduleRepository().deleteSchedule(widget.schedule.id);
 
     if (mounted) {
-      PopUpScheduleDeleted.show(context);
+      PopUpPemberitahuan.scheduleDeleted(context);
       Navigator.of(context).pop(true);
     }
   }

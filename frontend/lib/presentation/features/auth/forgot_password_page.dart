@@ -4,7 +4,7 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
 import 'verification_code_page.dart';
-import 'pop_up_recovery_code.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 enum RecoveryMethod { email, sms }
 
@@ -122,10 +122,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
     setState(() => _isLoading = false);
 
-    await RecoveryCodeSentDialog.show(
+    PopUpPemberitahuan.recoveryCodeSent(
       context,
       destination: destination,
-      autoCloseSeconds: 2,
     );
 
     if (!mounted) return;

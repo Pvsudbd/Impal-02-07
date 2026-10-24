@@ -4,7 +4,7 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
 import 'terms_privacy_page.dart';
-import 'pop_up_account_created.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -148,12 +148,8 @@ class _RegisterState extends State<Register> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      await AccountCreatedDialog.show(
-        context,
-        name: name,
-        email: email,
-        autoCloseSeconds: 2,
-      );
+      PopUpPemberitahuan.accountCreated(context, name: name);
+      await Future.delayed(const Duration(milliseconds: 500));
 
       if (!mounted) return;
       Navigator.pushReplacement(context, AuthFadeRoute(page: const Login()));

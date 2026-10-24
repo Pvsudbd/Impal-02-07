@@ -5,7 +5,7 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
 import 'reset_password_page.dart';
-import 'pop_up_recovery_code.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 class VerificationCodePage extends StatefulWidget {
   final String destination;
@@ -85,10 +85,9 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
       _otpError = null;
     });
     _startCountdownTimer();
-    RecoveryCodeSentDialog.show(
+    PopUpPemberitahuan.recoveryCodeSent(
       context,
       destination: widget.destination,
-      autoCloseSeconds: 2,
     );
   }
 

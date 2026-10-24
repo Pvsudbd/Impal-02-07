@@ -5,7 +5,7 @@ import 'models/schedule_repository.dart';
 import 'add_new_schedule.dart';
 import 'edit_schedule.dart';
 import 'pop_up_konfirmasi_delete.dart';
-import 'pop_up_schedule_deleted.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 /// Aliases for backwards compatibility
 typedef JadwalKuliah = SchedulePage;
@@ -326,7 +326,7 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
     if (confirmed == true) {
       await _repo.deleteSchedule(item.id);
       if (mounted) {
-        PopUpScheduleDeleted.show(context);
+        PopUpPemberitahuan.scheduleDeleted(context);
       }
     }
   }

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
-import 'pop_up_password_updated.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -123,10 +123,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
     setState(() => _isLoading = false);
 
-    await PasswordUpdatedDialog.show(
-      context,
-      autoCloseSeconds: 2,
-    );
+    PopUpPemberitahuan.passwordUpdated(context);
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (!mounted) return;
 

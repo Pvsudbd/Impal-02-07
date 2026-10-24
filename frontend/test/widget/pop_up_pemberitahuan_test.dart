@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:impal_smart_todolist/presentation/features/auth/pop_up_account_created.dart';
-import 'package:impal_smart_todolist/presentation/features/auth/pop_up_password_updated.dart';
-import 'package:impal_smart_todolist/presentation/features/auth/pop_up_recovery_code.dart';
+import 'package:impal_smart_todolist/presentation/common_widgets/pop_up_pemberitahuan.dart';
 
 void main() {
   testWidgets('PopUpPemberitahuan displays correctly as widget', (tester) async {
@@ -23,7 +21,7 @@ void main() {
     expect(find.byIcon(Icons.check_circle_outline_rounded), findsOneWidget);
   });
 
-  testWidgets('AccountCreatedDialog displays Account Created notification with positive green color', (tester) async {
+  testWidgets('PopUpPemberitahuan.accountCreated displays Account Created notification with positive green color', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -31,7 +29,7 @@ void main() {
             builder: (context) {
               return ElevatedButton(
                 onPressed: () {
-                  AccountCreatedDialog.show(context, name: 'Budi');
+                  PopUpPemberitahuan.accountCreated(context, name: 'Budi');
                 },
                 child: const Text('Create Account'),
               );
@@ -53,7 +51,7 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('PasswordUpdatedDialog displays Password Updated notification with positive green color', (tester) async {
+  testWidgets('PopUpPemberitahuan.passwordUpdated displays Password Updated notification with positive green color', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -61,7 +59,7 @@ void main() {
             builder: (context) {
               return ElevatedButton(
                 onPressed: () {
-                  PasswordUpdatedDialog.show(context);
+                  PopUpPemberitahuan.passwordUpdated(context);
                 },
                 child: const Text('Update Password'),
               );
@@ -83,7 +81,7 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('RecoveryCodeSentDialog displays Recovery Code Sent notification with positive green color', (tester) async {
+  testWidgets('PopUpPemberitahuan.recoveryCodeSent displays Recovery Code Sent notification with positive green color', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -91,7 +89,7 @@ void main() {
             builder: (context) {
               return ElevatedButton(
                 onPressed: () {
-                  RecoveryCodeSentDialog.show(context, destination: 'user@test.com');
+                  PopUpPemberitahuan.recoveryCodeSent(context, destination: 'user@test.com');
                 },
                 child: const Text('Send Recovery'),
               );

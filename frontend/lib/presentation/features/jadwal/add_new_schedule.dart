@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
 import 'pop_up_make_schedule.dart';
-import 'pop_up_pemberitahuan.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 /// Aliases for backwards compatibility
 typedef AddNewScheduleVar1 = AddNewSchedule;
