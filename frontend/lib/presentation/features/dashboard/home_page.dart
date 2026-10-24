@@ -1001,13 +1001,11 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
 
-                    const SizedBox(height: 8),
-
-                    // Assignee: Avatars + Team members (for group) or Personal chip (for individual)
-                    if (isGroup)
-                      _buildAvatarStack(task.members!)
-                    else
-                      _buildPersonalAssignee(),
+                    // Team members (only for group tasks)
+                    if (isGroup) ...[
+                      const SizedBox(height: 8),
+                      _buildAvatarStack(task.members!),
+                    ],
 
                     // Progress Bar (if task has progress e.g. 76%)
                     if (task.progress != null) ...[
@@ -1170,42 +1168,6 @@ class _HomePageState extends State<HomePage> {
         Text(
           '${colors.length} members',
           style: const TextStyle(
-            color: Color(0xFF8E95A5),
-            fontSize: 11,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPersonalAssignee() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            color: const Color(0xFF778BEB).withValues(alpha: 0.2),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: const Color(0xFF778BEB).withValues(alpha: 0.4),
-              width: 1.5,
-            ),
-          ),
-          alignment: Alignment.center,
-          child: const Icon(
-            Icons.person_rounded,
-            size: 11.5,
-            color: Color(0xFF778BEB),
-          ),
-        ),
-        const SizedBox(width: 7),
-        const Text(
-          'Personal',
-          style: TextStyle(
             color: Color(0xFF8E95A5),
             fontSize: 11,
             fontFamily: 'Inter',

@@ -93,10 +93,10 @@ Aplikasi **IMPAL** menerapkan **8-Point Grid System** secara ketat dengan **4-po
   - **Card Inner Padding**: `EdgeInsets.fromLTRB(16, 13, 16, 13)`.
   - **Jarak Antar Task Card**: `10px` (`margin: EdgeInsets.only(bottom: isLast ? 0 : 10)`).
   - **Title ke Subtitle**: `SizedBox(height: 3)`.
-  - **Header/Subtitle ke Assignee**: `SizedBox(height: 8)`.
+  - **Header/Subtitle ke Content/Assignee**: `SizedBox(height: 8)`.
   - **Assignee Row**:
     - **Kelompok**: Avatar stack (diameter `22px`, overlap `14px`, border `1.5px` serasi warna background kartu, ikon person putih transparan) + label teks `${count} members`.
-    - **Personal**: Chip personal terpadu (lingkaran indigo `22px` + ikon person indigo + label `Personal`). Menghilangkan lubang kosong/blank gap.
+    - **Personal**: Tidak menampilkan profil atau avatar karena tugas ditujukan untuk diri sendiri, menjaga card tetap ringkas, bersih, dan nyaman dibaca tanpa redundansi visual.
   - **Progress Bar**: Jika task memiliki progres, menggunakan **Linear Progress Bar** modern (`minHeight: 5`, `borderRadius: 999`, indikator persentase teks di kanan) menggantikan spinner lingkaran 38px yang sebelumnya memakan ruang. Jarak atas `SizedBox(height: 9)`.
   - **Assignee/Progress ke Deadline**: `SizedBox(height: 8)`.
   - **Deadline Row**: Icon jam dengan circular backdrop adaptif (urgent: coral `0.20` opacity, normal: gray `0.15` opacity) + teks deadline.
