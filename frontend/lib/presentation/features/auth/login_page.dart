@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
 import 'forgot_password_page.dart';
 import 'regist_page.dart';
@@ -68,10 +69,9 @@ class _LoginState extends State<Login> {
       return;
     }
 
-    showTopToast(
+    PopUpPemberitahuan.loginSuccess(
       context,
-      'Successfully signed in as $username!',
-      type: ToastType.success,
+      username: username,
     );
 
     final finalUser = username.isNotEmpty ? username : 'Jarvis';
@@ -289,7 +289,7 @@ class _LoginState extends State<Login> {
                               ],
                             ),
                           ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 16),
 
                         // Password Field
                         const Text(
@@ -393,7 +393,7 @@ class _LoginState extends State<Login> {
                               ],
                             ),
                           ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 16),
 
                         // Checkbox & Forgot Password Row
                         Row(
@@ -491,7 +491,7 @@ class _LoginState extends State<Login> {
                             onTap: _handleSignIn,
                             child: Ink(
                               width: double.infinity,
-                              height: 50,
+                              height: 48,
                               decoration: ShapeDecoration(
                                 color: const Color(0xFFFA6144) /* Primary */,
                                 shape: RoundedRectangleBorder(
@@ -514,9 +514,10 @@ class _LoginState extends State<Login> {
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 15,
+                                      fontSize: 14,
                                       fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.15,
                                     ),
                                   ),
                                   SizedBox(width: 8),
@@ -525,9 +526,9 @@ class _LoginState extends State<Login> {
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 15,
+                                      fontSize: 14,
                                       fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],

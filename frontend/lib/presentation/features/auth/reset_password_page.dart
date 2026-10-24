@@ -312,7 +312,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         onTap: _isLoading ? null : _handleSavePassword,
                         child: Ink(
                           width: double.infinity,
-                          height: 50,
+                          height: 48,
                           decoration: BoxDecoration(
                             color: const Color(0xFFFA6144),
                             borderRadius: BorderRadius.circular(12),
@@ -338,9 +338,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                                     'Save Password & Sign In',
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 15,
+                                      fontSize: 14,
                                       fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.15,
                                     ),
                                   ),
                           ),
@@ -348,7 +349,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 20),
 
                     // Remember your previous password? Back to Sign In
                     Center(

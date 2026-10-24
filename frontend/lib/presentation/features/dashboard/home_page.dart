@@ -4,6 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import '../auth/login_page.dart';
+import '../jadwal/schedule_page.dart';
+import '../jadwal/models/schedule_model.dart';
+import '../jadwal/models/schedule_repository.dart';
 
 /// Aliases for flexibility
 typedef Home = HomePage;
@@ -27,6 +30,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    ScheduleRepository().init();
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('is_logged_in', true);
       prefs.setString('auth_user', widget.userName);
@@ -178,26 +182,52 @@ class _HomePageState extends State<HomePage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
+    final dashboardContent = CustomScrollView(
+      key: const ValueKey('home_dashboard_scroll'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              _buildHeader(),
+              const SizedBox(height: 24),
+              _buildTodayScheduleSection(),
+              const SizedBox(height: 24),
+              _buildCategoriesSection(),
+              const SizedBox(height: 24),
+              _buildOngoingTaskSection(),
+            ]),
+          ),
+        ),
+      ],
+    );
+
     final homeContent = Stack(
       children: [
-        CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  _buildHeader(),
-                  const SizedBox(height: 22),
-                  _buildTodayScheduleSection(),
-                  const SizedBox(height: 24),
-                  _buildCategoriesSection(),
-                  const SizedBox(height: 24),
-                  _buildOngoingTaskSection(),
-                ]),
-              ),
-            ),
-          ],
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 320),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            final isSchedule = _currentTab == 3;
+            final offset = Tween<Offset>(
+              begin: isSchedule ? const Offset(0.20, 0) : const Offset(-0.20, 0),
+              end: Offset.zero,
+            ).animate(animation);
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(position: offset, child: child),
+            );
+          },
+          child: _currentTab == 3
+              ? ScheduleContentView(
+                  key: const ValueKey('schedule_tab_content'),
+                  userName: widget.userName,
+                  showBackButton: true,
+                  onBack: () => setState(() => _currentTab = 0),
+                )
+              : dashboardContent,
         ),
         Positioned(
           left: 0,
@@ -320,22 +350,181 @@ class _HomePageState extends State<HomePage> {
 
   // Section 1: Today's schedule
   Widget _buildTodayScheduleSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Today's schedule",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.04,
+    return ValueListenableBuilder<List<ScheduleModel>>(
+      valueListenable: ScheduleRepository().schedulesNotifier,
+      builder: (context, repoSchedules, _) {
+        final List<Widget> cards = [];
+        if (repoSchedules.isNotEmpty) {
+          final top = repoSchedules.take(2).toList();
+          for (final s in top) {
+            cards.add(_buildRepoScheduleCard(s));
+          }
+        } else {
+          for (final s in _schedules) {
+            cards.add(_buildScheduleCard(s));
+          }
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Expanded(
+                  child: Text(
+                    "Today's schedule",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.04,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _onTabSelected(3),
+                  child: const Text(
+                    'See all',
+                    style: TextStyle(
+                      color: Color(0xFFFF826E),
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...cards,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRepoScheduleCard(ScheduleModel schedule) {
+    return GestureDetector(
+      onTap: () => _onTabSelected(3),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFF323846),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: 5,
+                color: schedule.accentColor,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              schedule.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: schedule.status.toLowerCase() == 'ongoing'
+                                  ? const Color(0xFFFF826E)
+                                  : const Color(0xFF3B4150),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              schedule.status,
+                              style: TextStyle(
+                                color: schedule.status.toLowerCase() == 'ongoing'
+                                    ? Colors.white
+                                    : const Color(0xFF8E95A5),
+                                fontSize: 10,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (schedule.location != null && schedule.location!.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          schedule.location!,
+                          style: const TextStyle(
+                            color: Color(0xFF8E95A5),
+                            fontSize: 11,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: schedule.accentColor.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.access_time_filled_rounded,
+                              size: 10,
+                              color: schedule.accentColor,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            schedule.formattedTime,
+                            style: const TextStyle(
+                              color: Color(0xFF8E95A5),
+                              fontSize: 11,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
-        ..._schedules.map((schedule) => _buildScheduleCard(schedule)),
-      ],
+      ),
     );
   }
 
@@ -479,7 +668,7 @@ class _HomePageState extends State<HomePage> {
               final isSelected = _selectedCategory == cat.name;
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.only(right: 12),
                   child: _buildCategoryCard(cat, isSelected),
                 ),
               );
@@ -522,7 +711,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(18),
         onTap: () => _onCategorySelected(category.name),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: isSelected ? const Color(0xFF3D4556) : const Color(0xFF323846),
             borderRadius: BorderRadius.circular(18),
@@ -968,8 +1157,6 @@ class _HomePageState extends State<HomePage> {
       showTopToast(context, 'Tasks section');
     } else if (index == 2) {
       showTopToast(context, 'Kelompok section');
-    } else if (index == 3) {
-      showTopToast(context, 'Schedule section');
     }
   }
 

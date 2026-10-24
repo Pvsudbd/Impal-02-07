@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/utils/top_toast.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 class TermsPrivacyPage extends StatefulWidget {
   const TermsPrivacyPage({super.key});
@@ -54,18 +54,18 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
 
   void _onAccept() {
     if (!_hasScrolledToBottom) {
-      showTopToast(
+      PopUpPemberitahuan.warning(
         context,
-        'Please scroll and read all the terms down to the bottom first.',
-        type: ToastType.warning,
+        title: 'Read Terms First',
+        message: 'Please scroll and read all the terms down to the bottom first.',
       );
       return;
     }
     if (!_hasAgreed) {
-      showTopToast(
+      PopUpPemberitahuan.warning(
         context,
-        'Please check the agreement box first.',
-        type: ToastType.error,
+        title: 'Agreement Required',
+        message: 'Please check the agreement box first.',
       );
       return;
     }
@@ -340,10 +340,10 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                         borderRadius: BorderRadius.circular(6),
                         onTap: () {
                           if (!_hasScrolledToBottom) {
-                            showTopToast(
+                            PopUpPemberitahuan.warning(
                               context,
-                              'Please scroll and read all the terms down to the bottom first.',
-                              type: ToastType.warning,
+                              title: 'Read Terms First',
+                              message: 'Please scroll and read all the terms down to the bottom first.',
                             );
                             return;
                           }
@@ -397,7 +397,7 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
 
                       // Buttons
                       Row(
@@ -416,7 +416,8 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                                   'Decline',
                                   style: TextStyle(
                                     color: Color(0xFFD1D5DB),
-                                    fontSize: 13,
+                                    fontSize: 13.5,
+                                    letterSpacing: 0.1,
                                     fontFamily: 'Inter',
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -443,9 +444,10 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                                       'Accept & Continue',
                                       style: TextStyle(
                                         color: (_hasScrolledToBottom && _hasAgreed) ? Colors.white : const Color(0xFF9CA3AF),
-                                        fontSize: 13,
+                                        fontSize: 13.5,
                                         fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w700,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.1,
                                       ),
                                     ),
                                     const SizedBox(width: 6),
