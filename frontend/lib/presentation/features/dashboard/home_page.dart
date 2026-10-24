@@ -355,8 +355,18 @@ class _HomePageState extends State<HomePage> {
       builder: (context, repoSchedules, _) {
         final List<Widget> cards = [];
         if (repoSchedules.isNotEmpty) {
-          final top = repoSchedules.take(2).toList();
-          for (final s in top) {
+          final now = DateTime.now();
+          final todayList = repoSchedules.where((s) {
+            return s.date.year == now.year &&
+                s.date.month == now.month &&
+                s.date.day == now.day;
+          }).toList();
+
+          final itemsToShow = todayList.isNotEmpty
+              ? todayList.take(2).toList()
+              : repoSchedules.take(2).toList();
+
+          for (final s in itemsToShow) {
             cards.add(_buildRepoScheduleCard(s));
           }
         } else {
@@ -529,8 +539,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildScheduleCard(ScheduleItem schedule) {
-    return Container(
-      width: double.infinity,
+    return GestureDetector(
+      onTap: () => _onTabSelected(3),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFF323846),
         borderRadius: BorderRadius.circular(16),
@@ -643,6 +656,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -1366,6 +1380,15 @@ class ScheduleItem {
     required this.location,
     required this.time,
   });
+
+  factory ScheduleItem.fromModel(ScheduleModel model) {
+    return ScheduleItem(
+      courseCode: model.title,
+      status: model.status,
+      location: model.location ?? model.course ?? '',
+      time: model.formattedTime,
+    );
+  }
 }
 
 class CategoryItem {

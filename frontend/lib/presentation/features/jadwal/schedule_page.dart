@@ -629,7 +629,7 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 12, top: 8),
+          padding: const EdgeInsets.only(bottom: 12, top: 16),
           child: Text(
             dateHeader,
             style: const TextStyle(
@@ -642,7 +642,6 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
           ),
         ),
         ...items.map((item) => _buildScheduleCard(item)),
-        const SizedBox(height: 6),
       ],
     );
   }
@@ -654,7 +653,7 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
         isUpcoming ? const Color(0xFF8E95A5) : schedule.accentColor;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF323846),
         borderRadius: BorderRadius.circular(12),
@@ -679,7 +678,7 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
             // Content
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
+                padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
