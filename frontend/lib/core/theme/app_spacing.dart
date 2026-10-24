@@ -32,14 +32,23 @@ abstract class AppSpacing {
   /// Padding standar satu halaman layar mobile: Left 20, Top 16, Right 20, Bottom 110 (navbar)
   static const EdgeInsets pagePadding = EdgeInsets.fromLTRB(lg, md, lg, 110.0);
 
+  /// Padding standar halaman dashboard home: Left 20, Top 14, Right 20, Bottom 96 (navbar)
+  static const EdgeInsets homePagePadding = EdgeInsets.fromLTRB(lg, 14.0, lg, 96.0);
+
   /// Padding standar halaman auth form
   static const EdgeInsets authPagePadding = EdgeInsets.symmetric(horizontal: lg, vertical: md);
 
   /// Padding dalam Schedule Card
   static const EdgeInsets cardPadding = EdgeInsets.fromLTRB(md, sm, 14.0, sm);
 
-  /// Margin bawah antar Card dalam list
-  static const EdgeInsets cardMarginBottom = EdgeInsets.only(bottom: sm);
+  /// Margin bawah antar Card dalam list (kecuali item terakhir)
+  static const EdgeInsets cardMarginBottom = EdgeInsets.only(bottom: 10.0);
+
+  /// Padding dalam Category Card di Dashboard Home
+  static const EdgeInsets homeCategoryCardPadding = EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0);
+
+  /// Padding dalam Task Card di Dashboard Home
+  static const EdgeInsets homeTaskCardPadding = EdgeInsets.symmetric(horizontal: md, vertical: 13.0);
 
   /// Padding dalam Pop-up Konfirmasi Modal
   static const EdgeInsets dialogPadding = EdgeInsets.symmetric(horizontal: lg, vertical: xl);
@@ -55,6 +64,12 @@ abstract class AppSpacing {
   static const Widget vGapLG = SizedBox(height: lg);
   static const Widget vGapXL = SizedBox(height: xl);
   static const Widget vGapXXL = SizedBox(height: xxl);
+
+  /// Jarak vertikal standar antar section di Dashboard Home (16px)
+  static const Widget vGapHomeSection = SizedBox(height: md);
+
+  /// Jarak vertikal judul section ke konten card di Dashboard Home (10px)
+  static const Widget vGapHomeHeaderToContent = SizedBox(height: 10.0);
 
   static const Widget hGapXXS = SizedBox(width: xxs);
   static const Widget hGapXS = SizedBox(width: xs);

@@ -71,13 +71,30 @@ Aplikasi **IMPAL** menerapkan **8-Point Grid System** secara ketat dengan **4-po
 - **Card Inner Padding**: `EdgeInsets.fromLTRB(16, 12, 14, 12)` (Kiri 16px, Atas 12px, Kanan 14px, Bawah 12px).
 
 #### 2. Dashboard Home Page (`home_page.dart`)
-- **Page Outer Padding**: `EdgeInsets.fromLTRB(20, 16, 20, 110)`.
-- **Header ke Today's Schedule Section**: `SizedBox(height: 24)` (Token `xl`).
-- **Today's Schedule ke Categories Section**: `SizedBox(height: 24)` (Token `xl`).
-- **Categories ke Ongoing Tasks Section**: `SizedBox(height: 24)` (Token `xl`).
-- **Section Title ke Content Cards**: `SizedBox(height: 12)` (Token `sm`).
-- **Category Card Padding**: `EdgeInsets.symmetric(horizontal: 16, vertical: 14)`.
-- **Category Card Gap**: `Padding(padding: EdgeInsets.only(right: 12))`.
+- **Page Outer Padding**: `EdgeInsets.fromLTRB(20, 14, 20, 96)` (Margin horizontal 20px, top 14px, bottom 96px untuk clearance floating navbar).
+- **Section to Section Gap**: `SizedBox(height: 16)` (Token `md` - jarak standar konsisten 16px antara *Header*, *Today's Schedule*, *Categories*, dan *Ongoing Task*).
+- **Section Title ke Content Cards**: `SizedBox(height: 10)` (Jarak ketat dan terhubung antara judul section ke card pertama).
+- **Aturan Item Terakhir (`isLast`)**: Card terakhir pada daftar jadwal atau task **tidak boleh** memiliki margin bawah (`margin: EdgeInsets.only(bottom: isLast ? 0 : 10)`), untuk mencegah akumulasi jarak ganda yang renggang (*gap stacking* 36px).
+- **Today's Schedule Card**:
+  - Inner Padding: `EdgeInsets.fromLTRB(16, 12, 14, 12)` (Presisi dan serasi dengan Schedule Page).
+  - Jarak Antar Card: `10px` (`EdgeInsets.only(bottom: 10)`).
+  - Title ke Lokasi: `SizedBox(height: 4)`.
+  - Lokasi ke Waktu: `SizedBox(height: 8)`.
+- **Categories Section**:
+  - Card Inner Padding: `EdgeInsets.symmetric(horizontal: 14, vertical: 12)`.
+  - Card Border Radius: `BorderRadius.circular(16)`.
+  - Jarak Antar Card Kategori: `12px` (`EdgeInsets.only(right: 12)`).
+  - Tombol Tambah Kategori (*Add Button*): Ukuran `44px` × `58px`, `borderRadius: 16`, sejajar presisi dengan card kategori.
+- **Ongoing Task Card**:
+  - Card Inner Padding: `EdgeInsets.symmetric(horizontal: 16, vertical: 13)`.
+  - Card Border Radius: `BorderRadius.circular(18)`.
+  - Jarak Antar Task Card: `10px` (`EdgeInsets.only(bottom: 10)`).
+  - Title ke Subtitle: `SizedBox(height: 3)`.
+  - Subtitle ke Team Members Label: `SizedBox(height: 6)`.
+  - Team Members Label ke Avatar/Progress Row: `SizedBox(height: 6)`.
+  - Circular Progress Indicator: Ukuran `38px` × `38px`, `strokeWidth: 3.0`.
+  - Avatar Row ke Deadline: `SizedBox(height: 8)`.
+  - Deadline ke Tags: `SizedBox(height: 8)`.
 
 #### 3. Auth Pages (`login_page.dart`, `regist_page.dart`, `forgot_password_page.dart`, `reset_password_page.dart`, `verification_code_page.dart`)
 - **Desktop Container Padding**: `EdgeInsets.symmetric(horizontal: 24, vertical: 28)`.
