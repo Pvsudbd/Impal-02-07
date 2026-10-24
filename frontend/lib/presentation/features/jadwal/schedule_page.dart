@@ -418,20 +418,23 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   _buildHeader(),
-                  const SizedBox(height: 20),
-                  _buildFilterBar(),
                   const SizedBox(height: 16),
+                  _buildFilterBar(),
+                  const SizedBox(height: 14),
                   _buildAddScheduleButton(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 14),
                   if (grouped.isEmpty)
                     _buildEmptyState()
                   else
-                    ...grouped.entries.map((entry) {
-                      return _buildScheduleGroup(entry.key, entry.value);
+                    ...grouped.entries.toList().asMap().entries.map((indexedEntry) {
+                      final index = indexedEntry.key;
+                      final entry = indexedEntry.value;
+                      return _buildScheduleGroup(entry.key, entry.value,
+                          isFirstGroup: index == 0);
                     }),
                 ]),
               ),
@@ -624,12 +627,13 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
     );
   }
 
-  Widget _buildScheduleGroup(String dateHeader, List<ScheduleModel> items) {
+  Widget _buildScheduleGroup(String dateHeader, List<ScheduleModel> items,
+      {bool isFirstGroup = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 12, top: 16),
+          padding: EdgeInsets.only(top: isFirstGroup ? 4 : 14, bottom: 8),
           child: Text(
             dateHeader,
             style: const TextStyle(
@@ -641,19 +645,20 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
             ),
           ),
         ),
-        ...items.map((item) => _buildScheduleCard(item)),
+        for (int i = 0; i < items.length; i++)
+          _buildScheduleCard(items[i], isLast: i == items.length - 1),
       ],
     );
   }
 
-  Widget _buildScheduleCard(ScheduleModel schedule) {
+  Widget _buildScheduleCard(ScheduleModel schedule, {bool isLast = false}) {
     final isOngoing = schedule.status.toLowerCase() == 'ongoing';
     final isUpcoming = schedule.status.toLowerCase() == 'upcoming';
     final accentColor =
         isUpcoming ? const Color(0xFF8E95A5) : schedule.accentColor;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
       decoration: BoxDecoration(
         color: const Color(0xFF323846),
         borderRadius: BorderRadius.circular(12),
@@ -844,7 +849,7 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
 
   Widget _buildEmptyState() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
       child: Center(
         child: Column(
           children: [

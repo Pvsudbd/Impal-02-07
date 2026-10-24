@@ -62,13 +62,14 @@ Aplikasi **IMPAL** menerapkan **8-Point Grid System** secara ketat dengan **4-po
 ### B. Aturan Spacing Spesifik Per Halaman
 
 #### 1. Schedule Page (`schedule_page.dart`)
-- **Page Outer Padding**: `EdgeInsets.fromLTRB(20, 16, 20, 110)` (Margin horizontal 20px, bottom 110px untuk floating navigation bar).
-- **Header ke Filter Bar**: `SizedBox(height: 20)` (Token `lg`).
-- **Filter Bar ke Tombol Add Schedule**: `SizedBox(height: 16)` (Token `md`).
-- **Tombol Add Schedule ke Card List**: `SizedBox(height: 24)` (Token `xl`).
-- **Date Header Padding**: `EdgeInsets.only(top: 16, bottom: 12)`.
-- **Card Spacing**: `margin: EdgeInsets.only(bottom: 12)` (Token `sm`).
+- **Page Outer Padding**: `EdgeInsets.fromLTRB(20, 14, 20, 96)` (Margin horizontal 20px, top 14px, bottom 96px untuk clearance floating navbar, serasi dengan Home Dashboard).
+- **Header ke Filter Bar**: `SizedBox(height: 16)` (Token `md` - 16px).
+- **Filter Bar ke Tombol Add Schedule**: `SizedBox(height: 14)` (14px).
+- **Tombol Add Schedule ke Card List**: `SizedBox(height: 14)` (14px pemisah tombol ke grup tanggal).
+- **Date Header Padding**: `EdgeInsets.only(top: isFirstGroup ? 4 : 14, bottom: 8)` (Menghilangkan jarak kosong berlebih 40px, menghubungkan tanggal langsung dengan item).
+- **Card Spacing**: `margin: EdgeInsets.only(bottom: isLast ? 0 : 10)` (Item terakhir tanpa margin bawah).
 - **Card Inner Padding**: `EdgeInsets.fromLTRB(16, 12, 14, 12)` (Kiri 16px, Atas 12px, Kanan 14px, Bawah 12px).
+- **Empty State Padding**: `EdgeInsets.symmetric(vertical: 28, horizontal: 20)` (Kompak dan tidak mendorong layar terlalu jauh ke bawah).
 
 #### 2. Dashboard Home Page (`home_page.dart`)
 - **Page Outer Padding**: `EdgeInsets.fromLTRB(20, 14, 20, 96)` (Margin horizontal 20px, top 14px, bottom 96px untuk clearance floating navbar).
