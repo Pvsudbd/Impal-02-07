@@ -77,8 +77,9 @@ Aplikasi **IMPAL** menerapkan **8-Point Grid System** secara ketat dengan **4-po
 - **Section Title ke Content Cards**: `SizedBox(height: 10)` (Jarak ketat dan terhubung antara judul section ke card pertama).
 - **Aturan Item Terakhir (`isLast`)**: Card terakhir pada daftar jadwal atau task **tidak boleh** memiliki margin bawah (`margin: EdgeInsets.only(bottom: isLast ? 0 : 10)`), untuk mencegah akumulasi jarak ganda yang renggang (*gap stacking* 36px).
 - **Today's Schedule Card**:
+  - **Single Item (1 Jadwal)**: Lebar `width: double.infinity` (mengisi penuh kontainer layar tanpa scroll).
+  - **Multi Item (> 1 Jadwal)**: Menggunakan horizontal scroll ke kanan (`SingleChildScrollView(scrollDirection: Axis.horizontal)`), lebar kartu `285px`, jarak antar kartu `12px` (`EdgeInsets.only(right: isLast ? 0 : 12)`). Mendukung drag mouse/touchpad via `ScrollConfiguration`.
   - Inner Padding: `EdgeInsets.fromLTRB(16, 12, 14, 12)` (Presisi dan serasi dengan Schedule Page).
-  - Jarak Antar Card: `10px` (`EdgeInsets.only(bottom: 10)`).
   - Title ke Lokasi: `SizedBox(height: 4)`.
   - Lokasi ke Waktu: `SizedBox(height: 8)`.
 - **Categories Section**:

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/page_transitions.dart';
@@ -353,7 +354,9 @@ class _HomePageState extends State<HomePage> {
     return ValueListenableBuilder<List<ScheduleModel>>(
       valueListenable: ScheduleRepository().schedulesNotifier,
       builder: (context, repoSchedules, _) {
-        final List<Widget> cards = [];
+        final List<Widget> cardWidgets = [];
+        bool isHorizontal = false;
+
         if (repoSchedules.isNotEmpty) {
           final now = DateTime.now();
           final todayList = repoSchedules.where((s) {
@@ -362,19 +365,70 @@ class _HomePageState extends State<HomePage> {
                 s.date.day == now.day;
           }).toList();
 
-          final itemsToShow = todayList.isNotEmpty
-              ? todayList.take(2).toList()
-              : repoSchedules.take(2).toList();
+          final itemsToShow = todayList.isNotEmpty ? todayList : repoSchedules;
+          isHorizontal = itemsToShow.length > 1;
 
           for (int i = 0; i < itemsToShow.length; i++) {
             final isLast = i == itemsToShow.length - 1;
-            cards.add(_buildRepoScheduleCard(itemsToShow[i], isLast: isLast));
+            cardWidgets.add(_buildRepoScheduleCard(
+              itemsToShow[i],
+              isHorizontal: isHorizontal,
+              isLast: isLast,
+            ));
           }
-        } else {
+        } else if (_schedules.isNotEmpty) {
+          isHorizontal = _schedules.length > 1;
           for (int i = 0; i < _schedules.length; i++) {
             final isLast = i == _schedules.length - 1;
-            cards.add(_buildScheduleCard(_schedules[i], isLast: isLast));
+            cardWidgets.add(_buildScheduleCard(
+              _schedules[i],
+              isHorizontal: isHorizontal,
+              isLast: isLast,
+            ));
           }
+        }
+
+        Widget scheduleContent;
+        if (cardWidgets.isEmpty) {
+          scheduleContent = Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF323846),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            alignment: Alignment.center,
+            child: const Text(
+              'No schedules for today',
+              style: TextStyle(
+                color: Color(0xFF8E95A5),
+                fontSize: 13,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          );
+        } else if (isHorizontal) {
+          scheduleContent = ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.trackpad,
+              },
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              clipBehavior: Clip.none,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: cardWidgets,
+              ),
+            ),
+          );
+        } else {
+          scheduleContent = cardWidgets.first;
         }
 
         return Column(
@@ -410,19 +464,26 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const SizedBox(height: 10),
-            ...cards,
+            scheduleContent,
           ],
         );
       },
     );
   }
 
-  Widget _buildRepoScheduleCard(ScheduleModel schedule, {bool isLast = false}) {
+  Widget _buildRepoScheduleCard(
+    ScheduleModel schedule, {
+    bool isHorizontal = false,
+    bool isLast = false,
+  }) {
     return GestureDetector(
       onTap: () => _onTabSelected(3),
       child: Container(
-        margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
-        width: double.infinity,
+        margin: EdgeInsets.only(
+          right: isHorizontal ? (isLast ? 0 : 12) : 0,
+          bottom: !isHorizontal ? (isLast ? 0 : 10) : 0,
+        ),
+        width: isHorizontal ? 285 : double.infinity,
         decoration: BoxDecoration(
           color: const Color(0xFF323846),
           borderRadius: BorderRadius.circular(16),
@@ -448,6 +509,7 @@ class _HomePageState extends State<HomePage> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -456,6 +518,8 @@ class _HomePageState extends State<HomePage> {
                           Expanded(
                             child: Text(
                               schedule.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
@@ -492,6 +556,8 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(height: 4),
                         Text(
                           schedule.location!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Color(0xFF8E95A5),
                             fontSize: 11,
@@ -540,125 +606,137 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildScheduleCard(ScheduleItem schedule, {bool isLast = false}) {
+  Widget _buildScheduleCard(
+    ScheduleItem schedule, {
+    bool isHorizontal = false,
+    bool isLast = false,
+  }) {
     return GestureDetector(
       onTap: () => _onTabSelected(3),
       child: Container(
-        margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
-        width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Left primary colored accent stripe
-            Container(
-              width: 5,
-              color: const Color(0xFFFF826E),
-            ),
-            // Card Content
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title & Ongoing Badge
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            schedule.courseCode,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF826E),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            schedule.status,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    // Location info
-                    Text(
-                      schedule.location,
-                      style: const TextStyle(
-                        color: Color(0xFF8E95A5),
-                        fontSize: 11,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Time with Clock Icon
-                    Row(
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFF7D65),
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.access_time_filled_rounded,
-                            size: 10,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          schedule.time,
-                          style: const TextStyle(
-                            color: Color(0xFF8E95A5),
-                            fontSize: 11,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+        margin: EdgeInsets.only(
+          right: isHorizontal ? (isLast ? 0 : 12) : 0,
+          bottom: !isHorizontal ? (isLast ? 0 : 10) : 0,
+        ),
+        width: isHorizontal ? 285 : double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFF323846),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 10,
+              offset: Offset(0, 3),
             ),
           ],
         ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left primary colored accent stripe
+              Container(
+                width: 5,
+                color: const Color(0xFFFF826E),
+              ),
+              // Card Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Title & Ongoing Badge
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              schedule.courseCode,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF826E),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              schedule.status,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      // Location info
+                      Text(
+                        schedule.location,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF8E95A5),
+                          fontSize: 11,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Time with Clock Icon
+                      Row(
+                        children: [
+                          Container(
+                            width: 16,
+                            height: 16,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFF7D65),
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.access_time_filled_rounded,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            schedule.time,
+                            style: const TextStyle(
+                              color: Color(0xFF8E95A5),
+                              fontSize: 11,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-    ),
     );
   }
 
