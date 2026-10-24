@@ -88,15 +88,20 @@ Aplikasi **IMPAL** menerapkan **8-Point Grid System** secara ketat dengan **4-po
   - Jarak Antar Card Kategori: `12px` (`EdgeInsets.only(right: 12)`).
   - Tombol Tambah Kategori (*Add Button*): Ukuran `44px` × `58px`, `borderRadius: 16`, sejajar presisi dengan card kategori.
 - **Ongoing Task Card**:
-  - Card Inner Padding: `EdgeInsets.symmetric(horizontal: 16, vertical: 13)`.
-  - Card Border Radius: `BorderRadius.circular(18)`.
-  - Jarak Antar Task Card: `10px` (`EdgeInsets.only(bottom: 10)`).
-  - Title ke Subtitle: `SizedBox(height: 3)`.
-  - Subtitle ke Team Members Label: `SizedBox(height: 6)`.
-  - Team Members Label ke Avatar/Progress Row: `SizedBox(height: 6)`.
-  - Circular Progress Indicator: Ukuran `38px` × `38px`, `strokeWidth: 3.0`.
-  - Avatar Row ke Deadline: `SizedBox(height: 8)`.
-  - Deadline ke Tags: `SizedBox(height: 8)`.
+  - **Left Accent Stripe**: Lebar `5px` sebagai identitas visual instan (Urgent: Coral `0xFFFF826E`, Kelompok: Soft Purple `0xFF786FA6`, Personal: Indigo `0xFF778BEB`).
+  - **Card Border Radius**: `BorderRadius.circular(16)` (Presisi dan serasi dengan Schedule Card dan Categories).
+  - **Card Inner Padding**: `EdgeInsets.fromLTRB(16, 13, 16, 13)`.
+  - **Jarak Antar Task Card**: `10px` (`margin: EdgeInsets.only(bottom: isLast ? 0 : 10)`).
+  - **Title ke Subtitle**: `SizedBox(height: 3)`.
+  - **Header/Subtitle ke Assignee**: `SizedBox(height: 8)`.
+  - **Assignee Row**:
+    - **Kelompok**: Avatar stack (diameter `22px`, overlap `14px`, border `1.5px` serasi warna background kartu, ikon person putih transparan) + label teks `${count} members`.
+    - **Personal**: Chip personal terpadu (lingkaran indigo `22px` + ikon person indigo + label `Personal`). Menghilangkan lubang kosong/blank gap.
+  - **Progress Bar**: Jika task memiliki progres, menggunakan **Linear Progress Bar** modern (`minHeight: 5`, `borderRadius: 999`, indikator persentase teks di kanan) menggantikan spinner lingkaran 38px yang sebelumnya memakan ruang. Jarak atas `SizedBox(height: 9)`.
+  - **Assignee/Progress ke Deadline**: `SizedBox(height: 8)`.
+  - **Deadline Row**: Icon jam dengan circular backdrop adaptif (urgent: coral `0.20` opacity, normal: gray `0.15` opacity) + teks deadline.
+  - **Deadline ke Tags**: `SizedBox(height: 8)`.
+  - **Tags**: Pill modern tanpa border tajam (`padding: EdgeInsets.symmetric(horizontal: 9, vertical: 3.5)`, `borderRadius: 6`, `color: tag.bg.withValues(alpha: 0.18)`, teks `tag.bg`, `fontSize: 10.5`, `fontWeight: 600`). Standardisasi kapitalisasi label (`Kelompok`, `Personal`, `Figma`, `Code`).
 
 #### 3. Auth Pages (`login_page.dart`, `regist_page.dart`, `forgot_password_page.dart`, `reset_password_page.dart`, `verification_code_page.dart`)
 - **Desktop Container Padding**: `EdgeInsets.symmetric(horizontal: 24, vertical: 28)`.
