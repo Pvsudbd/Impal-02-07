@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
+import '../../../data/datasources/auth_remote_datasource.dart';
 import '../dashboard/home_page.dart';
 import 'forgot_password_page.dart';
 import 'regist_page.dart';
@@ -19,6 +20,7 @@ class _LoginState extends State<Login> {
   late final TextEditingController _passwordController;
   bool _rememberMe = false;
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   String? _usernameError;
   String? _passwordError;
@@ -43,14 +45,14 @@ class _LoginState extends State<Login> {
     super.dispose();
   }
 
-  void _handleSignIn() {
-    final username = _usernameController.text.trim();
+  Future<void> _handleSignIn() async {
+    final email = _usernameController.text.trim();
     final password = _passwordController.text;
 
     String? userErr;
     String? pwdErr;
 
-    if (username.isEmpty) {
+    if (email.isEmpty) {
       userErr = 'Username or email is required';
     }
     if (password.isEmpty) {
@@ -64,30 +66,44 @@ class _LoginState extends State<Login> {
       _passwordError = pwdErr;
     });
 
-    if (userErr != null || pwdErr != null) {
-      return;
+    if (userErr != null || pwdErr != null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await AuthRemoteDatasource.login(
+        email: email,
+        password: password,
+      );
+
+      final token = result['token'] as String;
+      final user = result['user'] as Map<String, dynamic>;
+      final userName = user['name'] as String? ?? email;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', true);
+      await prefs.setString('auth_token', token);
+      await prefs.setString('auth_user', userName);
+
+      if (!mounted) return;
+
+      showTopToast(
+        context,
+        'Selamat datang, $userName!',
+        type: ToastType.success,
+      );
+
+      Navigator.pushReplacement(
+        context,
+        AuthFadeRoute(page: HomePage(userName: userName)),
+      );
+    } on Exception catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      showTopToast(context, msg, type: ToastType.error);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    showTopToast(
-      context,
-      'Successfully signed in as $username!',
-      type: ToastType.success,
-    );
-
-    final finalUser = username.isNotEmpty ? username : 'Jarvis';
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setBool('is_logged_in', true);
-      prefs.setString('auth_user', finalUser);
-    });
-
-    Navigator.pushReplacement(
-      context,
-      AuthFadeRoute(
-        page: HomePage(
-          userName: finalUser,
-        ),
-      ),
-    );
   }
 
   @override
@@ -488,12 +504,14 @@ class _LoginState extends State<Login> {
                           color: Colors.transparent,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
-                            onTap: _handleSignIn,
+                            onTap: _isLoading ? null : _handleSignIn,
                             child: Ink(
                               width: double.infinity,
                               height: 50,
                               decoration: ShapeDecoration(
-                                color: const Color(0xFFFA6144) /* Primary */,
+                                color: _isLoading
+                                    ? const Color(0x99FA6144)
+                                    : const Color(0xFFFA6144),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -506,31 +524,40 @@ class _LoginState extends State<Login> {
                                   )
                                 ],
                               ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'Sign In to Dashboard',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 15,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    '➔',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 15,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
+                              child: Center(
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'Sign In to Dashboard',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 15,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            '➔',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 15,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                               ),
                             ),
                           ),
