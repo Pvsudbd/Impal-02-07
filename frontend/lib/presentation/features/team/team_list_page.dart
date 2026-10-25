@@ -498,9 +498,9 @@ class _TeamListContentViewState extends State<TeamListContentView> {
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 100),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              // 1. Header (Greeting + User Profile Initials)
+              // 1. Header (Greeting + Subtitle + User Profile Initials)
               _buildHeader(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // 2. Team's Schedule Section
               _buildTeamScheduleSection(),
@@ -516,66 +516,96 @@ class _TeamListContentViewState extends State<TeamListContentView> {
   }
 
   Widget _buildHeader() {
+    final initials = _getUserInitials(widget.userName);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (widget.showBackButton) ...[
-              InkWell(
-                onTap: widget.onBack,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF323846),
+        Expanded(
+          child: Row(
+            children: [
+              if (widget.showBackButton) ...[
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap:
+                        widget.onBack ?? () => Navigator.of(context).maybePop(),
                     borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF323846),
+                        borderRadius: BorderRadius.circular(10),
+                        border:
+                            Border.all(color: const Color(0xFF3B4150), width: 1),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white,
-                    size: 16,
-                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Hi ${widget.userName}',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    const Text(
+                      'Team List',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Color(0xFFFF7D65),
+                        fontSize: 12.5,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.15,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
             ],
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Hi ${widget.userName}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
+        const SizedBox(width: 12),
         Container(
-          width: 44,
-          height: 44,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
             color: const Color(0xFF323846),
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFF323846), width: 1),
+            border: Border.all(color: const Color(0xFF3B4150), width: 1),
           ),
           alignment: Alignment.center,
           child: Text(
-            _getUserInitials(widget.userName),
+            initials,
             style: const TextStyle(
               color: Color(0xFF8E95A5),
-              fontSize: 14,
+              fontSize: 13.5,
               fontFamily: 'Inter',
               fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
             ),
           ),
         ),

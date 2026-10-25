@@ -33,6 +33,12 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF282D37),
         fontFamily: 'Inter',
       ),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: initialHome,
     );
   }

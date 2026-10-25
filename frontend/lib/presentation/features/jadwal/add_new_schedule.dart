@@ -3,6 +3,7 @@ import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
 import 'pop_up_make_schedule.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
+import '../../common_widgets/impal_time_picker_dialog.dart';
 
 /// Aliases for backwards compatibility
 typedef AddNewScheduleVar1 = AddNewSchedule;
@@ -93,23 +94,10 @@ class _AddNewScheduleState extends State<AddNewSchedule> {
   }
 
   Future<void> _selectStartTime() async {
-    final picked = await showTimePicker(
+    final picked = await showImpalTimePicker(
       context: context,
       initialTime: _startTime,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFFFA6144),
-              onPrimary: Colors.white,
-              surface: Color(0xFF282D37),
-              onSurface: Colors.white,
-            ),
-            dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF282D37)),
-          ),
-          child: child!,
-        );
-      },
+      title: 'Select Start Time',
     );
     if (picked != null) {
       setState(() => _startTime = picked);
@@ -117,23 +105,10 @@ class _AddNewScheduleState extends State<AddNewSchedule> {
   }
 
   Future<void> _selectEndTime() async {
-    final picked = await showTimePicker(
+    final picked = await showImpalTimePicker(
       context: context,
       initialTime: _endTime,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFFFA6144),
-              onPrimary: Colors.white,
-              surface: Color(0xFF282D37),
-              onSurface: Colors.white,
-            ),
-            dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF282D37)),
-          ),
-          child: child!,
-        );
-      },
+      title: 'Select End Time',
     );
     if (picked != null) {
       setState(() => _endTime = picked);
@@ -157,7 +132,7 @@ class _AddNewScheduleState extends State<AddNewSchedule> {
               : _titleController.text.trim()),
       location: _locationController.text.trim().isNotEmpty
           ? _locationController.text.trim()
-          : 'Ruang Kelas',
+          : 'Classroom',
       status: 'Upcoming',
       date: _selectedDate,
       timeStart: _formatTime(_startTime),

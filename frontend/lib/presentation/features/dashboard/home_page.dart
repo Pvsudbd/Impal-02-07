@@ -209,18 +209,13 @@ class _HomePageState extends State<HomePage> {
     final homeContent = Stack(
       children: [
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 320),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
+          duration: const Duration(milliseconds: 260),
+          switchInCurve: Curves.easeInOut,
+          switchOutCurve: Curves.easeInOut,
           transitionBuilder: (child, animation) {
-            final isSchedule = _currentTab == 3;
-            final offset = Tween<Offset>(
-              begin: isSchedule ? const Offset(0.20, 0) : const Offset(-0.20, 0),
-              end: Offset.zero,
-            ).animate(animation);
             return FadeTransition(
               opacity: animation,
-              child: SlideTransition(position: offset, child: child),
+              child: child,
             );
           },
           child: _currentTab == 3

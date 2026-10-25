@@ -244,7 +244,7 @@ class _SchedulePageState extends State<SchedulePage> {
     } else if (index == 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Kelompok section'), duration: Duration(seconds: 1)),
+            content: Text('Teams section'), duration: Duration(seconds: 1)),
       );
     } else if (index == 3) {
       setState(() => _currentTab = 3);
@@ -362,13 +362,13 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
     final tomorrow = today.add(const Duration(days: 1));
 
     final dayNames = [
-      'Senin',
-      'Selasa',
-      'Rabu',
-      'Kamis',
-      'Jumat',
-      'Sabtu',
-      'Minggu'
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
     ];
     final monthNames = [
       'Jan',
@@ -391,7 +391,7 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
       if (d.isAtSameMomentAs(today)) {
         header = 'Today ${d.day} ${monthNames[d.month - 1]}';
       } else if (d.isAtSameMomentAs(tomorrow)) {
-        header = 'Besok ${d.day} ${monthNames[d.month - 1]}';
+        header = 'Tomorrow ${d.day} ${monthNames[d.month - 1]}';
       } else {
         final dayName = dayNames[d.weekday - 1];
         header = '$dayName ${d.day} ${monthNames[d.month - 1]}';
@@ -445,10 +445,17 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
     );
   }
 
+  String _getUserInitials(String name) {
+    if (name.trim().isEmpty) return 'JS';
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
+  }
+
   Widget _buildHeader() {
-    final initials = widget.userName.length >= 2
-        ? widget.userName.substring(0, 2).toUpperCase()
-        : 'JS';
+    final initials = _getUserInitials(widget.userName);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -458,24 +465,27 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
           child: Row(
             children: [
               if (widget.showBackButton) ...[
-                InkWell(
-                  onTap:
-                      widget.onBack ?? () => Navigator.of(context).maybePop(),
-                  borderRadius: BorderRadius.circular(999),
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF323846),
-                      borderRadius: BorderRadius.circular(999),
-                      border:
-                          Border.all(color: const Color(0xFF3B4150), width: 1),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white,
-                        size: 16,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap:
+                        widget.onBack ?? () => Navigator.of(context).maybePop(),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF323846),
+                        borderRadius: BorderRadius.circular(10),
+                        border:
+                            Border.all(color: const Color(0xFF3B4150), width: 1),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                       ),
                     ),
                   ),
@@ -485,13 +495,14 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       'Hi ${widget.userName}',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
+                        fontSize: 22,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.3,
@@ -504,7 +515,7 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Color(0xFFFF7D65),
-                        fontSize: 12,
+                        fontSize: 12.5,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.15,
@@ -516,25 +527,24 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
             ],
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Container(
           width: 42,
           height: 42,
           decoration: BoxDecoration(
             color: const Color(0xFF323846),
-            borderRadius: BorderRadius.circular(999),
+            shape: BoxShape.circle,
             border: Border.all(color: const Color(0xFF3B4150), width: 1),
           ),
-          child: Center(
-            child: Text(
-              initials,
-              style: const TextStyle(
-                color: Color(0xFF8E95A5),
-                fontSize: 13.5,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.2,
-              ),
+          alignment: Alignment.center,
+          child: Text(
+            initials,
+            style: const TextStyle(
+              color: Color(0xFF8E95A5),
+              fontSize: 13.5,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
             ),
           ),
         ),

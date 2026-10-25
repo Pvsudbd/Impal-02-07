@@ -27,7 +27,7 @@ Semua tombol di dalam aplikasi **IMPAL** diserasikan ke dalam tier standar berik
 | **Primary Page CTA** | **`48px`** | **`12px`** | `14px` (`w600` SemiBold) | `+0.15` | Full width, Bg `#FA6144`, Shadow blur 14-18, offset (0, 4-8) | `Sign In`, `Create Student Account`, `Verify Code`, `Add Schedule`, `Save Changes`, `Create Schedule` |
 | **Modal / Dialog Buttons** | **`44px`** | **`10px`** | `13.5px` (`w600` SemiBold) | `+0.1` | Side-by-side (`Cancel` Outlined / Flat `#8E95A5` & `Confirm` `#FA6144`) | `Cancel`, `Delete`, `Save`, `Make`, `Decline`, `Accept & Continue` |
 | **Segment / Filter Pills** | **`25px`** | **`6px`** | `11.5px` (`w600`/`w500`) | `+0.1` | Compact pill, Height 1.0, Bg aktif `#FA6144` / non-aktif `#323846` | Tab filter `All`, `Today`, `Week`, `Month` |
-| **Circle Icon Buttons** | **`38px` × `38px`** | **`999px`** | Icon `16px` | - | Circular container, Bg `#323846`, Border 1px `#3B4150` | Tombol Back halaman, tombol dismiss |
+| **Square Back Button** | **`38px` × `38px`** | **`10px`** | Icon `16px` | - | Rounded square, Bg `#323846`, Border 1px `#3B4150` | Tombol Back halaman (Header Schedule & Team List) |
 | **Card Action Icons** | **`22px` × `22px`** | **`6px`** | Icon `15px` | - | Padding 3.5, color `#8E95A5` | Quick Edit & Quick Delete di card schedule |
 
 ### Aturan & Filosofi Desain Tombol:

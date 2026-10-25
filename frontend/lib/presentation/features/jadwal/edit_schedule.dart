@@ -4,6 +4,7 @@ import 'models/schedule_repository.dart';
 import 'pop_up_konfirmasi_edit.dart';
 import 'pop_up_konfirmasi_delete.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
+import '../../common_widgets/impal_time_picker_dialog.dart';
 
 /// Aliases for backwards compatibility
 typedef EditScheduleVar1 = EditSchedule;
@@ -61,7 +62,8 @@ class _EditScheduleState extends State<EditSchedule> {
 
   TimeOfDay _parseTime(String str, TimeOfDay fallback) {
     try {
-      final parts = str.split(':');
+      final clean = str.trim();
+      final parts = clean.contains(':') ? clean.split(':') : clean.split('.');
       if (parts.length >= 2) {
         return TimeOfDay(
           hour: int.parse(parts[0].trim()),
@@ -122,23 +124,10 @@ class _EditScheduleState extends State<EditSchedule> {
   }
 
   Future<void> _selectStartTime() async {
-    final picked = await showTimePicker(
+    final picked = await showImpalTimePicker(
       context: context,
       initialTime: _startTime,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFFFA6144),
-              onPrimary: Colors.white,
-              surface: Color(0xFF282D37),
-              onSurface: Colors.white,
-            ),
-            dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF282D37)),
-          ),
-          child: child!,
-        );
-      },
+      title: 'Select Start Time',
     );
     if (picked != null) {
       setState(() => _startTime = picked);
@@ -146,23 +135,10 @@ class _EditScheduleState extends State<EditSchedule> {
   }
 
   Future<void> _selectEndTime() async {
-    final picked = await showTimePicker(
+    final picked = await showImpalTimePicker(
       context: context,
       initialTime: _endTime,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFFFA6144),
-              onPrimary: Colors.white,
-              surface: Color(0xFF282D37),
-              onSurface: Colors.white,
-            ),
-            dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF282D37)),
-          ),
-          child: child!,
-        );
-      },
+      title: 'Select End Time',
     );
     if (picked != null) {
       setState(() => _endTime = picked);
@@ -186,7 +162,7 @@ class _EditScheduleState extends State<EditSchedule> {
               : _titleController.text.trim()),
       location: _locationController.text.trim().isNotEmpty
           ? _locationController.text.trim()
-          : 'Ruang Kelas',
+          : 'Classroom',
       date: _selectedDate,
       timeStart: _formatTime(_startTime),
       timeEnd: _formatTime(_endTime),
