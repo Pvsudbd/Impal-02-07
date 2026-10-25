@@ -11,6 +11,7 @@ import 'package:impal_smart_todolist/presentation/common_widgets/impal_time_pick
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_date_picker_dialog.dart';
 import 'package:impal_smart_todolist/presentation/features/team/pop_up_create_team.dart';
 import 'package:impal_smart_todolist/presentation/features/team/pop_up_join_team.dart';
+import 'package:impal_smart_todolist/presentation/features/team/dashboard_team_page.dart';
 
 void main() {
   testWidgets('Login page renders properly', (WidgetTester tester) async {
@@ -1002,7 +1003,132 @@ void main() {
     await tester.drag(horizontalScrollFinder, const Offset(-150, 0));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('DashboardTeamPage renders properly and displays header, code, schedules, and tasks', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: DashboardTeamPage(
+        userName: 'Jarvis',
+        teamName: 'Kelompok IMPAL',
+        teamCode: '7X29',
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verifikasi Header & Info Tim
+    expect(find.text('Hi Jarvis'), findsOneWidget);
+    expect(find.text('Kelompok IMPAL'), findsOneWidget);
+    expect(find.text('7X29'), findsOneWidget);
+
+    // Verifikasi Section Header
+    expect(find.text("Team's Schedule"), findsOneWidget);
+    expect(find.text('Team Task'), findsOneWidget);
+
+    // Verifikasi Default Task
+    expect(find.text('Membuat ui page kelompok'), findsOneWidget);
+    expect(find.text('Membuat ui page home'), findsOneWidget);
+    expect(find.text('Membuat ui form tugas'), findsOneWidget);
+  });
+
+  testWidgets('DashboardTeamPage copies invite code and displays PopUpPemberitahuan when tapped', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: DashboardTeamPage(
+        userName: 'Jarvis',
+        teamName: 'Kelompok IMPAL',
+        teamCode: '7X29',
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Temukan tombol/badge kode tim
+    final copyCodeFinder = find.byKey(const ValueKey('team_dashboard_copy_code_button'));
+    expect(copyCodeFinder, findsOneWidget);
+
+    // Tekan tombol kode tim
+    await tester.tap(copyCodeFinder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Verifikasi PopUpPemberitahuan muncul
+    expect(find.text('Code Copied'), findsOneWidget);
+    expect(find.text('Invite code "7X29" copied to clipboard.'), findsOneWidget);
+
+    // Biarkan auto-dismiss selesai
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('DashboardTeamPage allows creating a new team task via dialog', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: DashboardTeamPage(
+        userName: 'Jarvis',
+        teamName: 'Kelompok IMPAL',
+        teamCode: '7X29',
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Temukan tombol + Create Task
+    final createTaskButton = find.byKey(const ValueKey('dashboard_create_task_button'));
+    expect(createTaskButton, findsOneWidget);
+
+    await tester.ensureVisible(createTaskButton);
+    await tester.tap(createTaskButton);
+    await tester.pumpAndSettle();
+
+    // Verifikasi Dialog Add Task muncul
+    expect(find.text('Create Team Task'), findsOneWidget);
+
+    // Isi task title
+    final titleField = find.widgetWithText(TextField, 'Task Title (e.g. Slicing UI)');
+    expect(titleField, findsOneWidget);
+    await tester.enterText(titleField, 'Implementasi Automated Testing');
+
+    // Tap tombol Add Task di dialog
+    final submitButton = find.text('Add Task');
+    expect(submitButton, findsOneWidget);
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
+
+    // Verifikasi task baru sekarang ada di daftar
+    expect(find.text('Implementasi Automated Testing'), findsOneWidget);
+  });
+
+  testWidgets('TeamListPage navigates to DashboardTeamPage on team card tap', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: TeamListPage(userName: 'Jarvis'),
+    ));
+    await tester.pumpAndSettle();
+
+    // Cari kartu tim "Kelompok - IMPAL"
+    final teamCard = find.text('Kelompok - IMPAL');
+    expect(teamCard, findsOneWidget);
+
+    await tester.tap(teamCard);
+    await tester.pumpAndSettle();
+
+    // Verifikasi sekarang berada di DashboardTeamPage
+    expect(find.byType(DashboardTeamPage), findsOneWidget);
+    expect(find.text("Team's Schedule"), findsOneWidget);
+    expect(find.text('Team Task'), findsOneWidget);
+  });
 }
+
 
 
 

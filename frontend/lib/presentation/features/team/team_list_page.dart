@@ -1,11 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../../../core/utils/top_toast.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
 import '../jadwal/schedule_form_page.dart';
 import '../jadwal/schedule_page.dart';
+import 'dashboard_team_page.dart';
 import 'pop_up_create_team.dart';
 import 'pop_up_join_team.dart';
 
@@ -1050,7 +1050,16 @@ class _TeamListContentViewState extends State<TeamListContentView> {
   Widget _buildTeamCard(TeamModel team) {
     return InkWell(
       onTap: () {
-        showTopToast(context, 'Selected ${team.name}');
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => DashboardTeamPage(
+              userName: widget.userName,
+              teamName: team.name,
+              teamCode: '7X29',
+              memberColors: team.memberColors,
+            ),
+          ),
+        );
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
