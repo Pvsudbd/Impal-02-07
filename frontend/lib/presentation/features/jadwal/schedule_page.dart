@@ -403,6 +403,25 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
       map[header]!.add(item);
     }
 
+    for (final key in map.keys) {
+      map[key]!.sort((a, b) {
+        int statusWeight(String s) {
+          final st = s.toLowerCase();
+          if (st == 'completed') return 0;
+          if (st == 'ongoing') return 1;
+          return 2;
+        }
+
+        final wA = statusWeight(a.status);
+        final wB = statusWeight(b.status);
+        if (wA != wB) return wA.compareTo(wB);
+
+        final dtA = a.startDateTime ?? DateTime(2000);
+        final dtB = b.startDateTime ?? DateTime(2000);
+        return dtA.compareTo(dtB);
+      });
+    }
+
     return map;
   }
 

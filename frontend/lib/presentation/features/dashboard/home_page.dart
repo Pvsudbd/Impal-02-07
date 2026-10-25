@@ -358,9 +358,7 @@ class _HomePageState extends State<HomePage> {
     return ValueListenableBuilder<List<ScheduleModel>>(
       valueListenable: ScheduleRepository().schedulesNotifier,
       builder: (context, repoSchedules, _) {
-        final List<Widget> cardWidgets = [];
-        bool isHorizontal = false;
-
+        final List<ScheduleModel> rawItems;
         if (repoSchedules.isNotEmpty) {
           final now = DateTime.now();
           final todayList = repoSchedules.where((s) {
@@ -369,19 +367,34 @@ class _HomePageState extends State<HomePage> {
                 s.date.day == now.day;
           }).toList();
 
-          final itemsToShow = todayList.isNotEmpty ? todayList : repoSchedules;
-          isHorizontal = itemsToShow.length > 1;
+          rawItems = todayList.isNotEmpty ? todayList : repoSchedules;
+        } else {
+          rawItems = [];
+        }
 
-          for (int i = 0; i < itemsToShow.length; i++) {
-            final isLast = i == itemsToShow.length - 1;
-            cardWidgets.add(_buildRepoScheduleCard(
-              itemsToShow[i],
-              isHorizontal: isHorizontal,
-              isLast: isLast,
-            ));
+        // Sort items: Completed -> Ongoing -> Upcoming, then chronologically by start time
+        final sortedItems = List<ScheduleModel>.from(rawItems);
+        sortedItems.sort((a, b) {
+          int statusWeight(String s) {
+            final st = s.toLowerCase();
+            if (st == 'completed') return 0;
+            if (st == 'ongoing') return 1;
+            return 2;
           }
-        } else if (_schedules.isNotEmpty) {
-          isHorizontal = _schedules.length > 1;
+
+          final wA = statusWeight(a.status);
+          final wB = statusWeight(b.status);
+          if (wA != wB) return wA.compareTo(wB);
+
+          final dtA = a.startDateTime ?? DateTime(2000);
+          final dtB = b.startDateTime ?? DateTime(2000);
+          return dtA.compareTo(dtB);
+        });
+
+        Widget scheduleContent;
+        if (sortedItems.isEmpty && _schedules.isNotEmpty) {
+          final isHorizontal = _schedules.length > 1;
+          final cardWidgets = <Widget>[];
           for (int i = 0; i < _schedules.length; i++) {
             final isLast = i == _schedules.length - 1;
             cardWidgets.add(_buildScheduleCard(
@@ -390,10 +403,28 @@ class _HomePageState extends State<HomePage> {
               isLast: isLast,
             ));
           }
-        }
-
-        Widget scheduleContent;
-        if (cardWidgets.isEmpty) {
+          scheduleContent = isHorizontal
+              ? ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.trackpad,
+                    },
+                  ),
+                  child: SingleChildScrollView(
+                    key: const ValueKey('today_schedules_horizontal_scroll'),
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    clipBehavior: Clip.none,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: cardWidgets,
+                    ),
+                  ),
+                )
+              : cardWidgets.first;
+        } else if (sortedItems.isEmpty) {
           scheduleContent = Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -412,27 +443,24 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           );
-        } else if (isHorizontal) {
-          scheduleContent = ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context).copyWith(
-              dragDevices: {
-                PointerDeviceKind.touch,
-                PointerDeviceKind.mouse,
-                PointerDeviceKind.trackpad,
-              },
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              clipBehavior: Clip.none,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: cardWidgets,
-              ),
-            ),
+        } else if (sortedItems.length == 1) {
+          scheduleContent = _buildRepoScheduleCard(
+            sortedItems.first,
+            isHorizontal: false,
+            isLast: true,
           );
         } else {
-          scheduleContent = cardWidgets.first;
+          scheduleContent = _HorizontalScheduleList(
+            key: const ValueKey('home_today_schedule_list'),
+            schedules: sortedItems,
+            cardBuilder: (schedule, {bool isHorizontal = true, bool isLast = false}) {
+              return _buildRepoScheduleCard(
+                schedule,
+                isHorizontal: isHorizontal,
+                isLast: isLast,
+              );
+            },
+          );
         }
 
         return Column(
@@ -1643,4 +1671,119 @@ class TaskTag {
     required this.bg,
     required this.text,
   });
+}
+
+class _HorizontalScheduleList extends StatefulWidget {
+  final List<ScheduleModel> schedules;
+  final Widget Function(ScheduleModel schedule, {bool isHorizontal, bool isLast}) cardBuilder;
+
+  const _HorizontalScheduleList({
+    super.key,
+    required this.schedules,
+    required this.cardBuilder,
+  });
+
+  @override
+  State<_HorizontalScheduleList> createState() => _HorizontalScheduleListState();
+}
+
+class _HorizontalScheduleListState extends State<_HorizontalScheduleList> {
+  late ScrollController _scrollController;
+  int _targetIndex = 0;
+
+  int _findTargetIndex(List<ScheduleModel> items) {
+    // 1. Prioritize 'ongoing' schedule so it appears first on home
+    final ongoingIndex = items.indexWhere(
+      (s) => s.status.toLowerCase() == 'ongoing',
+    );
+    if (ongoingIndex != -1) return ongoingIndex;
+
+    // 2. Fallback to first 'upcoming' schedule if no ongoing schedule is currently active
+    final upcomingIndex = items.indexWhere(
+      (s) => s.status.toLowerCase() == 'upcoming',
+    );
+    if (upcomingIndex != -1) return upcomingIndex;
+
+    return 0;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _targetIndex = _findTargetIndex(widget.schedules);
+    final initialOffset = _targetIndex > 0 ? _targetIndex * 297.0 : 0.0;
+    _scrollController = ScrollController(initialScrollOffset: initialOffset);
+
+    if (_targetIndex > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          final max = _scrollController.position.maxScrollExtent;
+          final target = (_targetIndex * 297.0).clamp(0.0, max);
+          if ((_scrollController.offset - target).abs() > 1.0) {
+            _scrollController.jumpTo(target);
+          }
+        }
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _HorizontalScheduleList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final newTarget = _findTargetIndex(widget.schedules);
+    final listChanged = widget.schedules.length != oldWidget.schedules.length ||
+        newTarget != _targetIndex;
+
+    if (listChanged && newTarget > 0) {
+      _targetIndex = newTarget;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          final max = _scrollController.position.maxScrollExtent;
+          final target = (_targetIndex * 297.0).clamp(0.0, max);
+          _scrollController.animateTo(
+            target,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(
+        dragDevices: {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.trackpad,
+        },
+      ),
+      child: SingleChildScrollView(
+        key: const ValueKey('today_schedules_horizontal_scroll'),
+        controller: _scrollController,
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        clipBehavior: Clip.none,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (int i = 0; i < widget.schedules.length; i++)
+              widget.cardBuilder(
+                widget.schedules[i],
+                isHorizontal: true,
+                isLast: i == widget.schedules.length - 1,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

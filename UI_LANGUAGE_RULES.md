@@ -80,3 +80,14 @@ Whenever creating or modifying UI elements, widgets, dialogs, or text copy in th
 - **Dynamic Calculation in Models & Forms**:
   - In `ScheduleModel`, the `status` getter computes dynamically using `calculateStatus(...)` so schedules automatically transition as real time passes.
   - In `EditSchedule` and `AddNewSchedule`, selecting or modifying date/time immediately recalculates and reflects the new automatic status with an `'Auto-determined'` indicator.
+
+---
+
+## 5. Home Page Today's Schedule Carousel Ordering & Focus Rules
+- **Chronological & Status Ordering**:
+  - Today's schedules in `HomePage` must strictly be arranged in the sequence: `Completed` -> `Ongoing` -> `Upcoming` (and within each status group, sorted chronologically by start time).
+- **Initial Focus on Ongoing**:
+  - When the user opens the Home page, the horizontal carousel must automatically focus/scroll to the currently active (`Ongoing`) schedule card.
+  - The user can scroll to the left to view past `Completed` schedules.
+  - The user can scroll to the right to view future `Upcoming` schedules.
+  - If there is no `Ongoing` schedule currently active, it focuses on the first `Upcoming` schedule (or index 0).

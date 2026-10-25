@@ -580,5 +580,68 @@ void main() {
     expect(find.text('Completed'), findsWidgets);
     expect(find.text('Ongoing'), findsWidgets);
   });
+
+  testWidgets("Today's schedule on HomePage displays Completed -> Ongoing -> Upcoming and focuses on Ongoing card", (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final now = DateTime.now();
+    String fmt(DateTime dt) =>
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+    // Provide 3 schedules in arbitrary order: Upcoming, Completed, Ongoing
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 'home_up',
+        title: 'Upcoming Evening Class',
+        type: 'Lecture',
+        date: now,
+        timeStart: fmt(now.add(const Duration(hours: 3))),
+        timeEnd: fmt(now.add(const Duration(hours: 5))),
+      ),
+      ScheduleModel(
+        id: 'home_comp',
+        title: 'Completed Morning Class',
+        type: 'Lecture',
+        date: now,
+        timeStart: fmt(now.subtract(const Duration(hours: 4))),
+        timeEnd: fmt(now.subtract(const Duration(hours: 2))),
+      ),
+      ScheduleModel(
+        id: 'home_ong',
+        title: 'Ongoing Noon Class',
+        type: 'Lecture',
+        date: now,
+        timeStart: fmt(now.subtract(const Duration(minutes: 30))),
+        timeEnd: fmt(now.add(const Duration(minutes: 60))),
+      ),
+    ];
+
+    await tester.pumpWidget(const MaterialApp(
+      home: HomePage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify Ongoing Noon Class is rendered
+    expect(find.text('Ongoing Noon Class'), findsOneWidget);
+
+    // Check horizontal scroll controller offset points to the Ongoing card (index 1 -> 297.0)
+    final scrollFinder = find.byKey(const ValueKey('today_schedules_horizontal_scroll'));
+    expect(scrollFinder, findsOneWidget);
+    final SingleChildScrollView scrollView = tester.widget(scrollFinder);
+    expect(scrollView.controller, isNotNull);
+    expect(scrollView.controller!.offset, 297.0);
+
+    // User can scroll to the left (drag right) to view Completed Morning Class
+    await tester.drag(scrollFinder, const Offset(600, 0));
+    await tester.pumpAndSettle();
+    expect(scrollView.controller!.offset, lessThanOrEqualTo(50.0));
+
+    // User can scroll to the right (drag left) to view Upcoming Evening Class
+    await tester.drag(scrollFinder, const Offset(-600, 0));
+    await tester.pumpAndSettle();
+    expect(scrollView.controller!.offset, greaterThan(200.0));
+  });
 }
 
