@@ -2006,5 +2006,93 @@ void main() {
     expect(find.text('STANDUP KELOMPOK IMPAL'), findsOneWidget);
     expect(find.text('Today • 09:30 - 11:30 WIB'), findsOneWidget);
   });
+
+  testWidgets('MeetingFormPage (PopUpCreateMeeting) operates as a full page with AppBar, back navigation, and delete action', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
+
+    final existingMeeting = ScheduleModel(
+      id: 'page_meet_edit_1',
+      title: 'Sprint Planning Impal',
+      type: 'Meeting',
+      location: 'Discord Stage',
+      notes: 'Prepare user stories',
+      date: DateTime(2026, 10, 25),
+      timeStart: '13:00',
+      timeEnd: '14:30',
+      repeat: true,
+    );
+    ScheduleRepository().schedulesNotifier.value = [existingMeeting];
+
+    // 1. Test Create Page mode via Navigator.push
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(
+        builder: (ctx) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(ctx).push(
+                MaterialPageRoute(builder: (_) => const MeetingFormPage()),
+              ),
+              child: const Text('Open Meeting Page'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open Meeting Page'));
+    await tester.pumpAndSettle();
+
+    // Verify AppBar and Scaffold Page structure
+    expect(find.text('Create Meeting'), findsWidgets);
+    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byKey(const ValueKey('delete_meeting_button')), findsNothing); // No delete in create mode
+
+    // Tap back button in AppBar
+    await tester.tap(find.byKey(const ValueKey('close_create_meeting_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Open Meeting Page'), findsOneWidget);
+
+    // 2. Test Edit Page mode with delete action
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(
+        builder: (ctx) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => PopUpCreateMeeting.showEdit(
+                ctx,
+                existingSchedule: existingMeeting,
+              ),
+              child: const Text('Open Edit Meeting Page'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open Edit Meeting Page'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Meeting'), findsOneWidget);
+    expect(find.byKey(const ValueKey('delete_meeting_button')), findsOneWidget);
+
+    // Tap delete button in AppBar -> Confirmation Dialog pops up
+    await tester.tap(find.byKey(const ValueKey('delete_meeting_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete Meeting?'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+
+    // Confirm deletion
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    // Verify meeting was removed from repository
+    expect(ScheduleRepository().getById('page_meet_edit_1'), isNull);
+  });
 }
 
