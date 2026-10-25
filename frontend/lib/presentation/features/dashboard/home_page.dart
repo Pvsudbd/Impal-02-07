@@ -231,6 +231,7 @@ class _HomePageState extends State<HomePage> {
                       userName: widget.userName,
                       showBackButton: true,
                       onBack: () => setState(() => _currentTab = 0),
+                      onOpenSchedule: () => setState(() => _currentTab = 3),
                     )
                   : dashboardContent),
         ),
@@ -562,29 +563,64 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                            decoration: BoxDecoration(
-                              color: schedule.status.toLowerCase() == 'ongoing'
-                                  ? const Color(0xFFFF826E)
-                                  : schedule.status.toLowerCase() == 'completed'
-                                      ? const Color(0xFF10B981)
-                                      : const Color(0xFF3B4150),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              schedule.status,
-                              style: TextStyle(
-                                color: (schedule.status.toLowerCase() == 'ongoing' ||
-                                        schedule.status.toLowerCase() == 'completed')
-                                    ? Colors.white
-                                    : const Color(0xFF8E95A5),
-                                fontSize: 10,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
+                          if (schedule.status.toLowerCase() == 'ongoing')
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF826E),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: const Text(
+                                'Ongoing',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9.5,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.25,
+                                ),
+                              ),
+                            )
+                          else if (schedule.status.toLowerCase() == 'completed')
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: const Text(
+                                'Completed',
+                                style: TextStyle(
+                                  color: Color(0xFF10B981),
+                                  fontSize: 9.5,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.25,
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: const Text(
+                                'Upcoming',
+                                style: TextStyle(
+                                  color: Color(0xFF8E95A5),
+                                  fontSize: 9.5,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.25,
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                       if (schedule.location != null && schedule.location!.isNotEmpty) ...[
@@ -703,22 +739,64 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF826E),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              schedule.status,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
+                          if (schedule.status.toLowerCase() == 'ongoing')
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF826E),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: const Text(
+                                'Ongoing',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9.5,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.25,
+                                ),
+                              ),
+                            )
+                          else if (schedule.status.toLowerCase() == 'completed')
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: const Text(
+                                'Completed',
+                                style: TextStyle(
+                                  color: Color(0xFF10B981),
+                                  fontSize: 9.5,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.25,
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                schedule.status,
+                                style: const TextStyle(
+                                  color: Color(0xFF8E95A5),
+                                  fontSize: 9.5,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.25,
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 4),

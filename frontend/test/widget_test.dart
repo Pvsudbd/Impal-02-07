@@ -9,6 +9,8 @@ import 'package:impal_smart_todolist/presentation/features/team/team_list_page.d
 import 'package:impal_smart_todolist/presentation/features/jadwal/schedule_form_page.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_time_picker_dialog.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_date_picker_dialog.dart';
+import 'package:impal_smart_todolist/presentation/features/team/pop_up_create_team.dart';
+import 'package:impal_smart_todolist/presentation/features/team/pop_up_join_team.dart';
 
 void main() {
   testWidgets('Login page renders properly', (WidgetTester tester) async {
@@ -85,6 +87,7 @@ void main() {
     tester.view.physicalSize = const Size(1080, 1920);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
 
     final now = DateTime.now();
     ScheduleRepository().schedulesNotifier.value = [
@@ -141,6 +144,7 @@ void main() {
     tester.view.physicalSize = const Size(1080, 1920);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
+    ScheduleRepository().resetToDefault();
 
     await tester.pumpWidget(const MaterialApp(
       home: TeamListPage(),
@@ -727,5 +731,278 @@ void main() {
     expect(find.text('Schedule Title'), findsOneWidget);
     expect(find.text('Course'), findsNothing);
   });
+
+  testWidgets('PopUpCreateTeam dialog opens, supports input, code generation, and creation', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    CreateTeamResult? result;
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () async {
+              result = await PopUpCreateTeam.show(
+                context,
+                initialCode: '7X29',
+              );
+            },
+            child: const Text('Open Create Team'),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Open popup
+    await tester.tap(find.text('Open Create Team'));
+    await tester.pumpAndSettle();
+
+    // Check title, fields, and initial invite code
+    expect(find.text('Create Team'), findsWidgets);
+    expect(find.text('Team Name'), findsOneWidget);
+    expect(find.text('Description (Optional)'), findsOneWidget);
+    expect(find.text('Team Invite Code'), findsOneWidget);
+    expect(find.text('7X29'), findsOneWidget);
+    expect(find.text('Generate New'), findsOneWidget);
+    expect(find.text('Copy'), findsOneWidget);
+
+    // Tap 'Generate New' to change code
+    await tester.tap(find.text('Generate New'));
+    await tester.pumpAndSettle();
+
+    // Old code 7X29 should be replaced by a newly generated code
+    expect(find.text('7X29'), findsNothing);
+
+    // Tap 'Copy' button
+    await tester.tap(find.text('Copy'));
+    await tester.pumpAndSettle();
+    expect(find.text('Copied!'), findsOneWidget);
+
+    // Enter team name
+    await tester.enterText(find.byType(TextField).first, 'Kelompok Flutter');
+    await tester.pumpAndSettle();
+
+    // Submit
+    await tester.tap(find.byKey(const ValueKey('create_team_submit_button')));
+    await tester.pumpAndSettle();
+
+    // Popup closed and result returned
+    expect(result, isNotNull);
+    expect(result!.name, 'Kelompok Flutter');
+    expect(result!.inviteCode.isNotEmpty, isTrue);
+  });
+
+  testWidgets('PopUpJoinTeam dialog opens, enters code, and submits code', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    String? joinedCode;
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () async {
+              joinedCode = await PopUpJoinTeam.show(context);
+            },
+            child: const Text('Open Join Team'),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Open popup
+    await tester.tap(find.text('Open Join Team'));
+    await tester.pumpAndSettle();
+
+    // Check elements
+    expect(find.text('Join Team'), findsWidgets);
+    expect(find.text('Enter Code'), findsOneWidget);
+    expect(find.text('Become Member'), findsOneWidget);
+
+    // Enter invite code
+    await tester.enterText(find.byType(TextField), 'IMPAL-99');
+    await tester.pumpAndSettle();
+
+    // Tap 'Become Member'
+    await tester.tap(find.byKey(const ValueKey('join_team_submit_button')));
+    await tester.pumpAndSettle();
+
+    // Popup closed and code returned
+    expect(joinedCode, 'IMPAL-99');
+  });
+
+  testWidgets('TeamListPage action buttons open PopUpJoinTeam and PopUpCreateTeam', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: TeamListPage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Tap '+ Create Team'
+    await tester.tap(find.text('+ Create Team'));
+    await tester.pumpAndSettle();
+
+    // PopUpCreateTeam is shown
+    expect(find.text('Create Team'), findsWidgets);
+    expect(find.text('Team Name'), findsOneWidget);
+
+    // Close via (x) close icon
+    await tester.tap(find.byKey(const ValueKey('close_create_team_button')));
+    await tester.pumpAndSettle();
+
+    // Tap 'Join Team'
+    await tester.tap(find.text('Join Team'));
+    await tester.pumpAndSettle();
+
+    // PopUpJoinTeam is shown
+    expect(find.text('Join Team'), findsWidgets);
+    expect(find.text('Become Member'), findsOneWidget);
+
+    // Close via (x) close icon
+    await tester.tap(find.byKey(const ValueKey('close_join_team_button')));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('TeamListPage team schedule connects dynamically to ScheduleRepository and updates reactively', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
+
+    final now = DateTime.now();
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 'team_meeting_1',
+        title: 'SPRINT RETROSPECTIVE IMPAL',
+        type: 'External',
+        location: 'Ruang Lab 2 TULT',
+        date: now,
+        timeStart: '14:00',
+        timeEnd: '16:00',
+      ),
+    ];
+
+    await tester.pumpWidget(const MaterialApp(
+      home: TeamListPage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify dynamic schedule title, location, and time from repository
+    expect(find.text("Team's Schedule"), findsOneWidget);
+    expect(find.text('SPRINT RETROSPECTIVE IMPAL'), findsOneWidget);
+    expect(find.text('Ruang Lab 2 TULT'), findsOneWidget);
+    expect(find.text('Today 14:00 WIB'), findsOneWidget);
+    expect(find.byIcon(Icons.edit_outlined), findsWidgets);
+
+    // Update repository reactively with another title
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 'team_meeting_1',
+        title: 'SCRUM DAILY KELOMPOK 7',
+        type: 'External',
+        location: 'Google Meet',
+        date: now.add(const Duration(days: 1)),
+        timeStart: '20:00',
+        timeEnd: '21:00',
+      ),
+    ];
+    await tester.pumpAndSettle();
+
+    // Verify UI immediately updated with new title and location
+    expect(find.text('SCRUM DAILY KELOMPOK 7'), findsOneWidget);
+    expect(find.text('Google Meet'), findsOneWidget);
+    expect(find.text('Tomorrow 20:00 WIB'), findsOneWidget);
+
+    // Tap schedule card to open ScheduleFormPage in edit mode
+    await tester.tap(find.text('SCRUM DAILY KELOMPOK 7'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Schedule'), findsOneWidget);
+    expect(find.text('SCRUM DAILY KELOMPOK 7'), findsWidgets);
+
+    // Pop back to TeamListPage
+    Navigator.of(tester.element(find.text('Edit Schedule'))).pop();
+    await tester.pumpAndSettle();
+
+    // Tap 'See all' to navigate to Schedule view
+    await tester.tap(find.byKey(const ValueKey('team_schedule_see_all')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('team_page_schedule_tab_content')), findsOneWidget);
+  });
+
+  testWidgets("Team's schedule scrolls horizontally when > 1 items and filters strictly for team meetings", (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final now = DateTime.now();
+
+    // Skenario: ada 1 jadwal kuliah IMPAL (Lecture) dan 2 jadwal meeting tim (External / Meeting)
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 'sch_lecture_impal',
+        title: 'Praktikum Software Testing IMPAL',
+        type: 'Lecture', // Kuliah - TIDAK BOLEH muncul di Team's Schedule
+        course: 'Software Testing IMPAL',
+        location: 'Lab 3 TULT',
+        date: now,
+        timeStart: '09:00',
+        timeEnd: '11:00',
+      ),
+      ScheduleModel(
+        id: 'team_meet_1',
+        title: 'Meeting Sprint 2 Kelompok IMPAL',
+        type: 'External', // Meeting tim 1
+        location: 'Discord - Voice Channel 1',
+        date: now,
+        timeStart: '13:00',
+        timeEnd: '14:30',
+      ),
+      ScheduleModel(
+        id: 'team_meet_2',
+        title: 'Diskusi Teknis Backend & Frontend Team',
+        type: 'External', // Meeting tim 2
+        location: 'Google Meet',
+        date: now,
+        timeStart: '19:00',
+        timeEnd: '20:30',
+      ),
+    ];
+
+    await tester.pumpWidget(const MaterialApp(
+      home: TeamListPage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // 1. Verifikasi jadwal kuliah Praktikum IMPAL TIDAK muncul di Team's Schedule
+    expect(find.text('Praktikum Software Testing IMPAL'), findsNothing);
+
+    // 2. Verifikasi kedua meeting tim muncul
+    expect(find.text('Meeting Sprint 2 Kelompok IMPAL'), findsOneWidget);
+    expect(find.text('Diskusi Teknis Backend & Frontend Team'), findsOneWidget);
+
+    // 3. Verifikasi SingleChildScrollView scroll horizontal tersedia
+    final horizontalScrollFinder = find.byKey(const ValueKey('team_schedules_horizontal_scroll'));
+    expect(horizontalScrollFinder, findsOneWidget);
+
+    final SingleChildScrollView scrollView = tester.widget(horizontalScrollFinder);
+    expect(scrollView.scrollDirection, Axis.horizontal);
+
+    // 4. Verifikasi scroll gesture horizontal bekerja tanpa error
+    await tester.drag(horizontalScrollFinder, const Offset(-150, 0));
+    await tester.pumpAndSettle();
+  });
 }
+
+
 

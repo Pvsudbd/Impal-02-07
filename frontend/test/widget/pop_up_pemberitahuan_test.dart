@@ -197,4 +197,99 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('PopUpPemberitahuan.codeCopied displays Code Copied notification with green color', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  PopUpPemberitahuan.codeCopied(context, code: '7X29');
+                },
+                child: const Text('Copy Code'),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Copy Code'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Code Copied'), findsOneWidget);
+    expect(find.text('Invite code "7X29" copied to clipboard.'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('PopUpPemberitahuan.teamCreated displays Team Created notification with green color', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  PopUpPemberitahuan.teamCreated(
+                    context,
+                    teamName: 'Kelompok IMPAL',
+                    inviteCode: 'IMPAL-07',
+                  );
+                },
+                child: const Text('Create Team'),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Create Team'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Team Created'), findsOneWidget);
+    expect(find.text('Team "Kelompok IMPAL" created! Invite code: IMPAL-07'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('PopUpPemberitahuan.teamJoined displays Team Joined notification with green color', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  PopUpPemberitahuan.teamJoined(
+                    context,
+                    teamName: 'Kelompok IMPAL',
+                  );
+                },
+                child: const Text('Join Team'),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Join Team'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Team Joined'), findsOneWidget);
+    expect(find.text('You have successfully joined team "Kelompok IMPAL".'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
 }
+

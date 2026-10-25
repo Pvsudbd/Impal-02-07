@@ -11,7 +11,7 @@ class ScheduleRepository {
   static const String _storageKey = 'saved_schedules_v1';
 
   final ValueNotifier<List<ScheduleModel>> schedulesNotifier =
-      ValueNotifier<List<ScheduleModel>>([]);
+      ValueNotifier<List<ScheduleModel>>(_defaultSchedules);
 
   bool _initialized = false;
 
@@ -65,6 +65,27 @@ class ScheduleRepository {
     await _persist();
   }
 
+  void resetToDefault() {
+    schedulesNotifier.value = _defaultSchedules;
+  }
+
+  static ScheduleModel get defaultTeamSchedule {
+    final now = DateTime.now();
+    return ScheduleModel(
+      id: 'sch_3',
+      title: 'MEETING IMPAL',
+      type: 'External',
+      location: 'Discord - Group IMPAL',
+      status: 'Upcoming',
+      date: now.add(const Duration(days: 1)),
+      timeStart: '19:00',
+      timeEnd: '20:30',
+      timeZone: 'WIB',
+      notes: 'Diskusi kelanjutan integrasi frontend dan backend sprint 2',
+      repeat: false,
+    );
+  }
+
   Future<void> _persist() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -86,8 +107,6 @@ class ScheduleRepository {
     final morningEnd = now.subtract(const Duration(hours: 1));
     final ongoingStart = now.subtract(const Duration(minutes: 30));
     final ongoingEnd = now.add(const Duration(minutes: 90));
-    final upcomingStart = now.add(const Duration(hours: 2));
-    final upcomingEnd = now.add(const Duration(hours: 4));
 
     return [
       ScheduleModel(
@@ -116,18 +135,7 @@ class ScheduleRepository {
         notes: 'Praktikum Unit Testing & Integration Testing Flutter',
         repeat: true,
       ),
-      ScheduleModel(
-        id: 'sch_3',
-        title: 'Meet Impal Kelompok 7',
-        type: 'External',
-        location: 'Google Meet / Discord Kelompok 7',
-        status: 'Upcoming',
-        date: now,
-        timeStart: fmt(upcomingStart),
-        timeEnd: fmt(upcomingEnd),
-        notes: 'Diskusi kelanjutan integrasi frontend dan backend sprint 2',
-        repeat: false,
-      ),
+      defaultTeamSchedule,
       ScheduleModel(
         id: 'sch_4',
         title: 'Mentoring Proyek Impal',

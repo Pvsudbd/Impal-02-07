@@ -8,17 +8,35 @@ import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../common_widgets/impal_time_picker_dialog.dart';
 import '../../common_widgets/impal_date_picker_dialog.dart';
 
+/// Aliases for backwards compatibility
+typedef AddNewSchedule = ScheduleFormPage;
+typedef EditSchedule = ScheduleFormPage;
+typedef AddNewScheduleVar1 = ScheduleFormPage;
+typedef AddNewScheduleVar2 = ScheduleFormPage;
+typedef AddNewTask = ScheduleFormPage;
+typedef AddNewTaskVar1 = ScheduleFormPage;
+typedef AddNewTaskVar2 = ScheduleFormPage;
+typedef EditScheduleVar1 = ScheduleFormPage;
+typedef EditScheduleVar2 = ScheduleFormPage;
+typedef EditTask = ScheduleFormPage;
+typedef EditTaskVar1 = ScheduleFormPage;
+typedef EditTaskVar2 = ScheduleFormPage;
+typedef Edittask = ScheduleFormPage;
+typedef EdittaskVar2 = ScheduleFormPage;
+
 /// Unified screen for adding or editing a schedule.
 /// When [schedule] is provided, this page operates in Edit mode.
 /// When [schedule] is null, it operates in Create / Add mode.
 class ScheduleFormPage extends StatefulWidget {
   final ScheduleModel? schedule;
   final DateTime? initialDate;
+  final String? initialType;
 
   const ScheduleFormPage({
     super.key,
     this.schedule,
     this.initialDate,
+    this.initialType,
   });
 
   bool get isEdit => schedule != null;
@@ -53,9 +71,9 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       _startTime = _parseTime(s.timeStart, const TimeOfDay(hour: 9, minute: 30));
       _endTime = _parseTime(s.timeEnd, const TimeOfDay(hour: 11, minute: 30));
     } else {
-      _selectedType = 'Lecture';
+      _selectedType = widget.initialType ?? 'Lecture';
       _selectedDate = widget.initialDate ?? DateTime.now();
-      _repeatWeekly = true;
+      _repeatWeekly = _selectedType == 'Lecture';
       _startTime = const TimeOfDay(hour: 9, minute: 30);
       _endTime = const TimeOfDay(hour: 11, minute: 30);
     }
@@ -90,7 +108,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
   }
 
   String _formatDate(DateTime d) {
-    final months = [
+    const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
@@ -647,3 +665,5 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
     );
   }
 }
+
+

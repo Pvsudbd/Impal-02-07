@@ -233,6 +233,61 @@ class PopUpPemberitahuan extends StatefulWidget {
     );
   }
 
+  // --- Team Preset Notifications ---
+
+  /// Preset notification when a team invite code is copied to clipboard (Positif -> Hijau).
+  static void codeCopied(BuildContext context, {String? code}) {
+    show(
+      context,
+      title: 'Code Copied',
+      message: code != null && code.trim().isNotEmpty
+          ? 'Invite code "$code" copied to clipboard.'
+          : 'Team invite code has been copied to clipboard.',
+      icon: Icons.content_copy_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a team is successfully created (Positif -> Hijau).
+  static void teamCreated(BuildContext context, {required String teamName, String? inviteCode}) {
+    show(
+      context,
+      title: 'Team Created',
+      message: inviteCode != null && inviteCode.trim().isNotEmpty
+          ? 'Team "$teamName" created! Invite code: $inviteCode'
+          : 'Team "$teamName" has been successfully created.',
+      icon: Icons.group_add_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a user successfully joins a team (Positif -> Hijau).
+  static void teamJoined(BuildContext context, {String? teamName, String? inviteCode}) {
+    final message = teamName != null && teamName.trim().isNotEmpty
+        ? 'You have successfully joined team "$teamName".'
+        : (inviteCode != null && inviteCode.trim().isNotEmpty
+            ? 'Successfully joined team with code "$inviteCode".'
+            : 'You have successfully joined the team.');
+    show(
+      context,
+      title: 'Team Joined',
+      message: message,
+      icon: Icons.how_to_reg_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification for team-related warnings or validation (Warning/Negatif -> Orange).
+  static void teamWarning(BuildContext context, {required String title, required String message}) {
+    show(
+      context,
+      title: title,
+      message: message,
+      icon: Icons.warning_amber_rounded,
+      iconBgColor: negativeColor,
+    );
+  }
+
   static void _removeEntry() {
     if (_activeState != null && _activeState!.mounted) {
       _activeState!.dismiss();

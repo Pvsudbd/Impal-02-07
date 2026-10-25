@@ -1,5 +1,13 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../core/utils/top_toast.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
+import '../jadwal/models/schedule_model.dart';
+import '../jadwal/models/schedule_repository.dart';
+import '../jadwal/schedule_form_page.dart';
+import '../jadwal/schedule_page.dart';
+import 'pop_up_create_team.dart';
+import 'pop_up_join_team.dart';
 
 /// Aliases for backwards compatibility with Figma export & routes
 typedef ListKelompok = TeamListPage;
@@ -26,6 +34,12 @@ class _TeamListPageState extends State<TeamListPage> {
   int _currentTab = 2; // Team / Kelompok tab index
 
   @override
+  void initState() {
+    super.initState();
+    ScheduleRepository().init();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (!widget.isStandalone) {
       return TeamListContentView(
@@ -39,17 +53,37 @@ class _TeamListPageState extends State<TeamListPage> {
 
     final content = Stack(
       children: [
-        TeamListContentView(
-          userName: widget.userName,
-          showBackButton:
-              Navigator.of(context).canPop() || widget.onBackToHome != null,
-          onBack: () {
-            if (widget.onBackToHome != null) {
-              widget.onBackToHome!();
-            } else if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            }
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 260),
+          switchInCurve: Curves.easeInOut,
+          switchOutCurve: Curves.easeInOut,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
           },
+          child: _currentTab == 3
+              ? ScheduleContentView(
+                  key: const ValueKey('team_page_schedule_tab_content'),
+                  userName: widget.userName,
+                  showBackButton: true,
+                  onBack: () => setState(() => _currentTab = 2),
+                )
+              : TeamListContentView(
+                  key: const ValueKey('team_page_list_content'),
+                  userName: widget.userName,
+                  showBackButton:
+                      Navigator.of(context).canPop() || widget.onBackToHome != null,
+                  onBack: () {
+                    if (widget.onBackToHome != null) {
+                      widget.onBackToHome!();
+                    } else if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  onOpenSchedule: () => setState(() => _currentTab = 3),
+                ),
         ),
         Positioned(
           left: 0,
@@ -261,12 +295,14 @@ class TeamListContentView extends StatefulWidget {
   final String userName;
   final bool showBackButton;
   final VoidCallback? onBack;
+  final VoidCallback? onOpenSchedule;
 
   const TeamListContentView({
     super.key,
     this.userName = 'Jarvis',
     this.showBackButton = false,
     this.onBack,
+    this.onOpenSchedule,
   });
 
   @override
@@ -274,6 +310,73 @@ class TeamListContentView extends StatefulWidget {
 }
 
 class _TeamListContentViewState extends State<TeamListContentView> {
+  @override
+  void initState() {
+    super.initState();
+    ScheduleRepository().init();
+  }
+
+  void _openSchedulePage() {
+    if (widget.onOpenSchedule != null) {
+      widget.onOpenSchedule!();
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SchedulePage(
+            userName: widget.userName,
+            isStandalone: true,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _openEditSchedule(ScheduleModel schedule) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ScheduleFormPage(
+          schedule: schedule,
+        ),
+      ),
+    );
+  }
+
+  void _openAddTeamSchedule() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const ScheduleFormPage(
+          initialType: 'External',
+        ),
+      ),
+    );
+  }
+
+  String _formatScheduleTime(ScheduleModel schedule) {
+    final now = DateTime.now();
+    final scheduleDate =
+        DateTime(schedule.date.year, schedule.date.month, schedule.date.day);
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    String dayPrefix;
+    if (scheduleDate == today) {
+      dayPrefix = 'Today';
+    } else if (scheduleDate == tomorrow) {
+      dayPrefix = 'Tomorrow';
+    } else if (scheduleDate == yesterday) {
+      dayPrefix = 'Yesterday';
+    } else {
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      dayPrefix = '${schedule.date.day} ${months[schedule.date.month - 1]}';
+    }
+
+    return '$dayPrefix ${schedule.timeStart} ${schedule.timeZone}';
+  }
+
   final List<TeamModel> _teams = [
     const TeamModel(
       id: '1',
@@ -326,165 +429,33 @@ class _TeamListContentViewState extends State<TeamListContentView> {
     return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
   }
 
-  void _showJoinTeamDialog() {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF282D37),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Join Team',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter invite code or team link:',
-              style: TextStyle(
-                color: Color(0xFF8E95A5),
-                fontSize: 12.5,
-                fontFamily: 'Inter',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'e.g. IMPAL-2026',
-                hintStyle: const TextStyle(color: Color(0xFF606775), fontSize: 13),
-                filled: true,
-                fillColor: const Color(0xFF323846),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF8E95A5))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFA6144),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            ),
-            onPressed: () {
-              final code = controller.text.trim();
-              Navigator.pop(ctx);
-              if (code.isNotEmpty) {
-                showTopToast(context, 'Joined team "$code" successfully!');
-              }
-            },
-            child: const Text('Join', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+  void _showJoinTeamDialog() async {
+    final code = await PopUpJoinTeam.show(context);
+    if (!mounted || code == null || code.trim().isEmpty) return;
+    PopUpPemberitahuan.teamJoined(context, inviteCode: code);
   }
 
-  void _showCreateTeamDialog() {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF282D37),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Create Team',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter your team or project name:',
-              style: TextStyle(
-                color: Color(0xFF8E95A5),
-                fontSize: 12.5,
-                fontFamily: 'Inter',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'e.g. Kelompok - RPL',
-                hintStyle: const TextStyle(color: Color(0xFF606775), fontSize: 13),
-                filled: true,
-                fillColor: const Color(0xFF323846),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-            ),
+  void _showCreateTeamDialog() async {
+    final result = await PopUpCreateTeam.show(context);
+    if (!mounted || result == null || result.name.trim().isEmpty) return;
+    setState(() {
+      _teams.insert(
+        0,
+        TeamModel(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: result.name,
+          memberColors: const [
+            Color(0xFFF3A683),
+            Color(0xFF786FA6),
+            Color(0xFF63CDDA),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF8E95A5))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFA6144),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            ),
-            onPressed: () {
-              final name = controller.text.trim();
-              Navigator.pop(ctx);
-              if (name.isNotEmpty) {
-                setState(() {
-                  _teams.insert(
-                    0,
-                    TeamModel(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      name: name,
-                      memberColors: const [
-                        Color(0xFFF3A683),
-                        Color(0xFF786FA6),
-                        Color(0xFF63CDDA),
-                      ],
-                    ),
-                  );
-                });
-                showTopToast(context, 'Team "$name" created!');
-              }
-            },
-            child: const Text('Create', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      );
+    });
+    PopUpPemberitahuan.teamCreated(
+      context,
+      teamName: result.name,
+      inviteCode: result.inviteCode,
     );
   }
 
@@ -614,42 +585,251 @@ class _TeamListContentViewState extends State<TeamListContentView> {
   }
 
   Widget _buildTeamScheduleSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Team's Schedule",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.2,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: const Color(0xFF323846),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 10,
-                offset: Offset(0, 3),
+    return ValueListenableBuilder<List<ScheduleModel>>(
+      valueListenable: ScheduleRepository().schedulesNotifier,
+      builder: (context, allSchedules, _) {
+        // Filter schedules that belong strictly to team meetings (NO lectures, NO exams)
+        final rawTeamSchedules = allSchedules.where((s) {
+          final type = s.type.trim().toLowerCase();
+
+          // Jadwal perkuliahan (Lecture) BUKAN meeting team
+          if (type == 'lecture') return false;
+
+          // Jika tipe eksplisit team atau meeting
+          if (type == 'team' ||
+              type == 'team meeting' ||
+              type == 'meeting' ||
+              type == 'rapat' ||
+              type == 'group') {
+            return true;
+          }
+
+          final t = s.title.toLowerCase();
+          final n = (s.notes ?? '').toLowerCase();
+          final loc = (s.location ?? '').toLowerCase();
+
+          // Exclude kata-kata ujian atau kuis
+          if (t.contains('ujian') ||
+              t.contains('uts') ||
+              t.contains('uas') ||
+              t.contains('kuis')) {
+            return false;
+          }
+
+          // Cek kata kunci meeting / rapat / diskusi / tim / mentoring
+          final hasMeetingKeyword = t.contains('meet') ||
+              t.contains('rapat') ||
+              t.contains('diskusi') ||
+              t.contains('team') ||
+              t.contains('tim') ||
+              t.contains('kelompok') ||
+              t.contains('mentoring') ||
+              t.contains('briefing') ||
+              t.contains('standup') ||
+              t.contains('sync') ||
+              t.contains('sprint') ||
+              t.contains('evaluasi') ||
+              t.contains('koordinasi') ||
+              n.contains('meet') ||
+              n.contains('rapat') ||
+              n.contains('diskusi') ||
+              n.contains('kelompok') ||
+              n.contains('mentoring') ||
+              n.contains('sprint') ||
+              loc.contains('group') ||
+              loc.contains('tim') ||
+              loc.contains('team') ||
+              loc.contains('discord') ||
+              loc.contains('meet') ||
+              loc.contains('zoom');
+
+          if (hasMeetingKeyword) return true;
+
+          // Jadwal eksternal kegiatan tim
+          if (type == 'external') {
+            return true;
+          }
+
+          return false;
+        }).toList();
+
+        final teamSchedules = rawTeamSchedules;
+
+        // Sort by status priority: Ongoing (0) -> Upcoming (1) -> Completed (2)
+        // Then by startDateTime
+        teamSchedules.sort((a, b) {
+          int statusWeight(String s) {
+            final st = s.toLowerCase();
+            if (st == 'ongoing') return 0;
+            if (st == 'upcoming') return 1;
+            return 2;
+          }
+
+          final wA = statusWeight(a.status);
+          final wB = statusWeight(b.status);
+          if (wA != wB) return wA.compareTo(wB);
+
+          final dtA = a.startDateTime ?? DateTime(2000);
+          final dtB = b.startDateTime ?? DateTime(2000);
+          return dtA.compareTo(dtB);
+        });
+
+        Widget scheduleContent;
+        if (teamSchedules.isEmpty) {
+          scheduleContent = _buildEmptyTeamSchedule();
+        } else if (teamSchedules.length == 1) {
+          scheduleContent = _buildTeamScheduleCard(
+            teamSchedules.first,
+            isHorizontal: false,
+            isLast: true,
+          );
+        } else {
+          scheduleContent = ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.trackpad,
+              },
+            ),
+            child: SingleChildScrollView(
+              key: const ValueKey('team_schedules_horizontal_scroll'),
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              clipBehavior: Clip.none,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (int i = 0; i < teamSchedules.length; i++)
+                    _buildTeamScheduleCard(
+                      teamSchedules[i],
+                      isHorizontal: true,
+                      isLast: i == teamSchedules.length - 1,
+                    ),
+                ],
               ),
-            ],
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  "Team's Schedule",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                GestureDetector(
+                  key: const ValueKey('team_schedule_see_all'),
+                  onTap: _openSchedulePage,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                    child: Text(
+                      'See all',
+                      style: TextStyle(
+                        color: Color(0xFFFF826E),
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            scheduleContent,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyTeamSchedule() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF323846),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'No team schedules yet',
+            style: TextStyle(
+              color: Color(0xFF8E95A5),
+              fontSize: 13,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          clipBehavior: Clip.antiAlias,
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: _openAddTeamSchedule,
+            child: const Text(
+              '+ Add Team Schedule',
+              style: TextStyle(
+                color: Color(0xFFFF826E),
+                fontSize: 12.5,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeamScheduleCard(
+    ScheduleModel schedule, {
+    bool isHorizontal = false,
+    bool isLast = false,
+  }) {
+    final isOngoing = schedule.status.toLowerCase() == 'ongoing';
+    final isCompleted = schedule.status.toLowerCase() == 'completed';
+    final accentColor = schedule.accentColor;
+
+    return Container(
+      width: isHorizontal ? 285 : double.infinity,
+      margin: EdgeInsets.only(
+        right: isHorizontal ? (isLast ? 0 : 12) : 0,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF323846),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openEditSchedule(schedule),
           child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Left gray accent stripe from Figma
+                // Left accent stripe
                 Container(
                   width: 5,
-                  color: const Color(0xFF8E95A5),
+                  color: accentColor,
                 ),
                 Expanded(
                   child: Padding(
@@ -657,52 +837,110 @@ class _TeamListContentViewState extends State<TeamListContentView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'MEETING IMPAL',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14.5,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Discord - Group IMPAL',
-                          style: TextStyle(
-                            color: Color(0xFF8E95A5),
-                            fontSize: 11,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF8E95A5).withValues(alpha: 0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                Icons.access_time_filled_rounded,
-                                size: 10,
-                                color: Color(0xFF8E95A5),
+                            Expanded(
+                              child: Text(
+                                schedule.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14.5,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.2,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            const Text(
-                              'Tomorrow 19:00 WIB',
-                              style: TextStyle(
-                                color: Color(0xFF8E95A5),
-                                fontSize: 11,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2.5,
                               ),
+                              decoration: BoxDecoration(
+                                color: isOngoing
+                                    ? const Color(0xFFFF826E)
+                                    : (isCompleted
+                                        ? const Color(0xFF10B981).withValues(alpha: 0.18)
+                                        : const Color(0xFF8E95A5).withValues(alpha: 0.15)),
+                                borderRadius: BorderRadius.circular(999),
+                                border: isCompleted
+                                    ? Border.all(
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                        width: 0.8,
+                                      )
+                                    : null,
+                              ),
+                              child: Text(
+                                schedule.status,
+                                style: TextStyle(
+                                  color: isOngoing
+                                      ? Colors.white
+                                      : (isCompleted
+                                          ? const Color(0xFF10B981)
+                                          : const Color(0xFF8E95A5)),
+                                  fontSize: 9.5,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.25,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (schedule.location != null && schedule.location!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            schedule.location!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF8E95A5),
+                              fontSize: 11,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: accentColor.withValues(alpha: 0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    Icons.access_time_filled_rounded,
+                                    size: 10,
+                                    color: accentColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _formatScheduleTime(schedule),
+                                  style: const TextStyle(
+                                    color: Color(0xFF8E95A5),
+                                    fontSize: 11,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Icon(
+                              Icons.edit_outlined,
+                              color: Color(0xFF8E95A5),
+                              size: 14,
                             ),
                           ],
                         ),
@@ -714,7 +952,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 
