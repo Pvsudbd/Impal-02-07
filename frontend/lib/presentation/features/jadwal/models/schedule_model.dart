@@ -29,7 +29,7 @@ class ScheduleModel {
     this.repeat = false,
   });
 
-  /// Automatically computes the schedule status ('Ongoing', 'Upcoming', 'Completed')
+  /// Automatically computes the schedule status ('Ongoing', 'Upcoming', 'Overdue')
   /// based on [date], [timeStart], [timeEnd], and [DateTime.now()].
   String get status => calculateStatus(
         date: date,
@@ -48,7 +48,7 @@ class ScheduleModel {
   /// Pure static method to calculate status given date and time range:
   /// - 'Ongoing' if current date & time is within [startDateTime, endDateTime]
   /// - 'Upcoming' if date & time has not arrived yet (in the future)
-  /// - 'Completed' if date & time has already passed
+  /// - 'Overdue' if date & time has already passed
   static String calculateStatus({
     required DateTime date,
     required String timeStart,
@@ -84,7 +84,7 @@ class ScheduleModel {
       if (current.isBefore(startDateTime)) {
         return 'Upcoming';
       } else if (current.isAfter(endDateTime)) {
-        return 'Completed';
+        return 'Overdue';
       } else {
         return 'Ongoing';
       }
@@ -92,7 +92,7 @@ class ScheduleModel {
       final today = DateTime(current.year, current.month, current.day);
       final scheduleDate = DateTime(date.year, date.month, date.day);
       if (scheduleDate.isBefore(today)) {
-        return 'Completed';
+        return 'Overdue';
       } else if (scheduleDate.isAfter(today)) {
         return 'Upcoming';
       }
@@ -214,8 +214,8 @@ class ScheduleModel {
     if (s == 'ongoing') {
       return const Color(0xFFFF826E); // Primary coral accent
     }
-    if (s == 'completed') {
-      return const Color(0xFF10B981); // Completed emerald green accent
+    if (s == 'overdue' || s == 'completed') {
+      return const Color(0xFF8E95A5); // Overdue slate gray accent (same as upcoming)
     }
     if (s == 'upcoming') {
       return const Color(0xFF8E95A5); // Upcoming slate accent
@@ -231,8 +231,8 @@ class ScheduleModel {
     if (s == 'ongoing') {
       return const Color(0xFFFF826E);
     }
-    if (s == 'completed') {
-      return const Color(0xFF10B981);
+    if (s == 'overdue' || s == 'completed' || s == 'upcoming') {
+      return const Color(0xFF8E95A5); // Overdue & Upcoming slate gray
     }
     return const Color(0xFF8E95A5);
   }

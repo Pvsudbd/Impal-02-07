@@ -13,8 +13,13 @@ import 'package:impal_smart_todolist/presentation/features/team/pop_up_create_te
 import 'package:impal_smart_todolist/presentation/features/team/pop_up_join_team.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_bottom_nav_bar.dart';
 import 'package:impal_smart_todolist/presentation/features/team/dashboard_team_page.dart';
+import 'package:impal_smart_todolist/presentation/features/team/pop_up_create_meeting.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
   testWidgets('Login page renders properly', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 1920);
     tester.view.devicePixelRatio = 1.0;
@@ -447,10 +452,10 @@ void main() {
     expect(pickedDate!.day, 15);
   });
 
-  test('ScheduleModel calculates ongoing, upcoming, and completed status automatically based on current time', () {
+  test('ScheduleModel calculates ongoing, upcoming, and overdue status automatically based on current time', () {
     final baseDate = DateTime(2026, 10, 25);
 
-    // 1. Past schedule on the same day -> Completed
+    // 1. Past schedule on the same day -> Overdue
     final completedSchedule = ScheduleModel(
       id: 'c1',
       title: 'Completed Test',
@@ -459,10 +464,10 @@ void main() {
       timeStart: '08:00',
       timeEnd: '10:00',
     );
-    // At 11:00 on the same date, schedule should be Completed
+    // At 11:00 on the same date, schedule should be Overdue
     expect(
       completedSchedule.getStatusAt(DateTime(2026, 10, 25, 11, 0)),
-      'Completed',
+      'Overdue',
     );
 
     // 2. Currently occurring schedule -> Ongoing
@@ -495,7 +500,7 @@ void main() {
       'Upcoming',
     );
 
-    // 4. Past date -> Completed
+    // 4. Past date -> Overdue
     final pastDateSchedule = ScheduleModel(
       id: 'pd1',
       title: 'Past Date Test',
@@ -506,7 +511,7 @@ void main() {
     );
     expect(
       pastDateSchedule.getStatusAt(DateTime(2026, 10, 25, 11, 0)),
-      'Completed',
+      'Overdue',
     );
 
     // 5. Future date -> Upcoming
@@ -542,14 +547,14 @@ void main() {
       overnightSchedule.getStatusAt(DateTime(2026, 10, 26, 0, 30)),
       'Ongoing',
     );
-    // At 01:30 next day -> Completed
+    // At 01:30 next day -> Overdue
     expect(
       overnightSchedule.getStatusAt(DateTime(2026, 10, 26, 1, 30)),
-      'Completed',
+      'Overdue',
     );
   });
 
-  testWidgets('Schedule card displays Completed with green pill and Ongoing with coral pill', (WidgetTester tester) async {
+  testWidgets('Schedule card displays Overdue with gray pill and Ongoing with coral pill', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 1920);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -582,11 +587,25 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Completed'), findsWidgets);
+    expect(find.text('Overdue'), findsWidgets);
     expect(find.text('Ongoing'), findsWidgets);
+
+    // Overdue pill uses gray (0xFF8E95A5) matching Upcoming
+    final overdueText = tester.widget<Text>(find.text('Overdue').first);
+    expect(overdueText.style?.color, const Color(0xFF8E95A5));
+
+    // Ongoing pill uses coral (0xFFFF826E) background and white text
+    final ongoingText = tester.widget<Text>(find.text('Ongoing').first);
+    expect(ongoingText.style?.color, Colors.white);
+    final ongoingContainerFinder = find.ancestor(
+      of: find.text('Ongoing').first,
+      matching: find.byType(Container),
+    ).first;
+    final ongoingContainer = tester.widget<Container>(ongoingContainerFinder);
+    expect((ongoingContainer.decoration as BoxDecoration).color, const Color(0xFFFF826E));
   });
 
-  testWidgets("Today's schedule on HomePage displays Completed -> Ongoing -> Upcoming and focuses on Ongoing card", (WidgetTester tester) async {
+  testWidgets("Today's schedule on HomePage displays Ongoing -> Upcoming -> Overdue and focuses on Ongoing card", (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 1920);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -595,7 +614,7 @@ void main() {
     String fmt(DateTime dt) =>
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
-    // Provide 3 schedules in arbitrary order: Upcoming, Completed, Ongoing
+    // Provide 3 schedules in arbitrary order: Upcoming, Overdue, Ongoing
     ScheduleRepository().schedulesNotifier.value = [
       ScheduleModel(
         id: 'home_up',
@@ -607,7 +626,7 @@ void main() {
       ),
       ScheduleModel(
         id: 'home_comp',
-        title: 'Completed Morning Class',
+        title: 'Overdue Morning Class',
         type: 'Lecture',
         date: now,
         timeStart: fmt(now.subtract(const Duration(hours: 4))),
@@ -628,22 +647,17 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // Verify Ongoing Noon Class is rendered
+    // Verify Ongoing Noon Class is rendered at the front
     expect(find.text('Ongoing Noon Class'), findsOneWidget);
 
-    // Check horizontal scroll controller offset points to the Ongoing card (index 1 -> 297.0)
+    // Check horizontal scroll controller offset points to the Ongoing card at the front (0.0)
     final scrollFinder = find.byKey(const ValueKey('today_schedules_horizontal_scroll'));
     expect(scrollFinder, findsOneWidget);
     final SingleChildScrollView scrollView = tester.widget(scrollFinder);
     expect(scrollView.controller, isNotNull);
-    expect(scrollView.controller!.offset, 297.0);
+    expect(scrollView.controller!.offset, 0.0);
 
-    // User can scroll to the left (drag right) to view Completed Morning Class
-    await tester.drag(scrollFinder, const Offset(600, 0));
-    await tester.pumpAndSettle();
-    expect(scrollView.controller!.offset, lessThanOrEqualTo(50.0));
-
-    // User can scroll to the right (drag left) to view Upcoming Evening Class
+    // User can scroll to the right (drag left) to view upcoming and overdue schedules
     await tester.drag(scrollFinder, const Offset(-600, 0));
     await tester.pumpAndSettle();
     expect(scrollView.controller!.offset, greaterThan(200.0));
@@ -924,15 +938,15 @@ void main() {
     expect(find.text('Google Meet'), findsOneWidget);
     expect(find.text('Tomorrow 20:00 WIB'), findsOneWidget);
 
-    // Tap schedule card to open ScheduleFormPage in edit mode
+    // Tap schedule card to open PopUpCreateMeeting in edit mode
     await tester.tap(find.text('SCRUM DAILY KELOMPOK 7'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Edit Schedule'), findsOneWidget);
+    expect(find.text('Edit Meeting'), findsOneWidget);
     expect(find.text('SCRUM DAILY KELOMPOK 7'), findsWidgets);
 
     // Pop back to TeamListPage
-    Navigator.of(tester.element(find.text('Edit Schedule'))).pop();
+    Navigator.of(tester.element(find.text('Edit Meeting'))).pop();
     await tester.pumpAndSettle();
 
     // Tap 'See all' to navigate to Schedule view
@@ -1269,4 +1283,198 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text("Today's schedule"), findsOneWidget);
   });
+
+  testWidgets('PopUpCreateMeeting renders properly, validates name, and creates meeting schedule', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
+
+    ScheduleModel? createdResult;
+
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(
+        builder: (ctx) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () async {
+                createdResult = await PopUpCreateMeeting.show(
+                  ctx,
+                  teamName: 'Kelompok IMPAL',
+                );
+              },
+              child: const Text('Open Modal'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // 1. Buka popup
+    await tester.tap(find.text('Open Modal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create Meeting'), findsWidgets);
+    expect(find.text('Meeting Name'), findsOneWidget);
+    expect(find.text('Location'), findsOneWidget);
+    expect(find.text('Description (Optional)'), findsOneWidget);
+    expect(find.text('Date & Time'), findsOneWidget);
+
+    // 2. Klik submit tanpa mengisi nama -> validasi muncul
+    await tester.tap(find.byKey(const ValueKey('create_meeting_submit_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Meeting Name Required'), findsOneWidget);
+
+    // Let the validation notification finish dismissing
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+
+    // 3. Masukkan nama meeting, lokasi, dan deskripsi
+    await tester.enterText(
+      find.byKey(const ValueKey('create_meeting_name_input')),
+      'Sprint Review IMPAL',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('create_meeting_location_input')),
+      'Google Meet - Room 4',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('create_meeting_desc_input')),
+      'Review progres UI dan arsitektur',
+    );
+    await tester.pumpAndSettle();
+
+    // 4. Tekan Submit
+    await tester.tap(find.byKey(const ValueKey('create_meeting_submit_button')));
+    await tester.pumpAndSettle();
+
+    // Dialog tertutup dan model berhasil dibuat
+    expect(createdResult, isNotNull);
+    expect(createdResult!.title, equals('Sprint Review IMPAL'));
+    expect(createdResult!.location, equals('Google Meet - Room 4'));
+    expect(createdResult!.notes, equals('Review progres UI dan arsitektur'));
+    expect(createdResult!.type, equals('Meeting'));
+  });
+
+  testWidgets('PopUpCreateMeeting.showEdit renders Edit Meeting and updates existing meeting', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    ScheduleModel? editedResult;
+    final existing = ScheduleModel(
+      id: 'existing_meet_1',
+      title: 'Old Title',
+      type: 'Meeting',
+      location: 'Old Room',
+      notes: 'Old Notes',
+      date: DateTime(2026, 10, 25),
+      timeStart: '10:00',
+      timeEnd: '11:00',
+    );
+    ScheduleRepository().schedulesNotifier.value = [existing];
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (ctx) => ElevatedButton(
+            onPressed: () async {
+              editedResult = await PopUpCreateMeeting.showEdit(
+                ctx,
+                existingSchedule: existing,
+              );
+            },
+            child: const Text('Open Edit Modal'),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open Edit Modal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Meeting'), findsWidgets);
+    expect(find.text('Save Changes'), findsOneWidget);
+    expect(find.text('Old Title'), findsOneWidget);
+    expect(find.text('Old Room'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('create_meeting_name_input')),
+      'New Edited Title',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('create_meeting_location_input')),
+      'New Edited Room',
+    );
+    await tester.tap(find.byKey(const ValueKey('create_meeting_submit_button')));
+    await tester.pumpAndSettle();
+
+    expect(editedResult, isNotNull);
+    expect(editedResult!.title, equals('New Edited Title'));
+    expect(editedResult!.location, equals('New Edited Room'));
+    expect(ScheduleRepository().getById('existing_meet_1')?.title, 'New Edited Title');
+  });
+
+  testWidgets('DashboardTeamPage + Create Meeting button opens PopUpCreateMeeting', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: DashboardTeamPage(
+          teamName: 'Kelompok IMPAL',
+          teamCode: '7X29',
+          isStandalone: false,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Pastikan tombol + Create Meeting ada
+    final createBtn = find.byKey(const ValueKey('dashboard_create_meeting_button'));
+    expect(createBtn, findsOneWidget);
+
+    await tester.tap(createBtn);
+    await tester.pumpAndSettle();
+
+    // Dialog Create Meeting terbuka
+    expect(find.text('Meeting Name'), findsOneWidget);
+    expect(find.byKey(const ValueKey('close_create_meeting_button')), findsOneWidget);
+
+    // Tutup dialog
+    await tester.tap(find.byKey(const ValueKey('close_create_meeting_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('close_create_meeting_button')), findsNothing);
+  });
+
+  testWidgets('TeamListPage spacing and action buttons work properly', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: TeamListPage(isStandalone: true),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verifikasi tombol Join Team & Create Team
+    expect(find.byKey(const ValueKey('team_list_join_team_button')), findsOneWidget);
+    expect(find.byKey(const ValueKey('team_list_create_team_button')), findsOneWidget);
+
+    // Tap Join Team membuka PopUpJoinTeam
+    await tester.tap(find.byKey(const ValueKey('team_list_join_team_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Become Member'), findsOneWidget);
+
+    // Tutup popup
+    await tester.tap(find.byKey(const ValueKey('close_join_team_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Become Member'), findsNothing);
+  });
 }
+

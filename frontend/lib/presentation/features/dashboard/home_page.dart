@@ -387,14 +387,14 @@ class _HomePageState extends State<HomePage> {
           rawItems = [];
         }
 
-        // Sort items: Completed -> Ongoing -> Upcoming, then chronologically by start time
+        // Sort items: Ongoing -> Upcoming -> Overdue, then chronologically by start time
         final sortedItems = List<ScheduleModel>.from(rawItems);
         sortedItems.sort((a, b) {
           int statusWeight(String s) {
             final st = s.toLowerCase();
-            if (st == 'completed') return 0;
-            if (st == 'ongoing') return 1;
-            return 2;
+            if (st == 'ongoing') return 0;
+            if (st == 'upcoming') return 1;
+            return 2; // Overdue / Completed
           }
 
           final wA = statusWeight(a.status);
@@ -595,21 +595,22 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
                             )
-                          else if (schedule.status.toLowerCase() == 'completed')
+                          else if (schedule.status.toLowerCase() == 'overdue' ||
+                              schedule.status.toLowerCase() == 'completed')
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                                color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(999),
                                 border: Border.all(
-                                  color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
                                   width: 0.8,
                                 ),
                               ),
                               child: const Text(
-                                'Completed',
+                                'Overdue',
                                 style: TextStyle(
-                                  color: Color(0xFF10B981),
+                                  color: Color(0xFF8E95A5),
                                   fontSize: 9.5,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
@@ -623,6 +624,10 @@ class _HomePageState extends State<HomePage> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
+                                  width: 0.8,
+                                ),
                               ),
                               child: const Text(
                                 'Upcoming',
@@ -771,21 +776,22 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
                             )
-                          else if (schedule.status.toLowerCase() == 'completed')
+                          else if (schedule.status.toLowerCase() == 'overdue' ||
+                              schedule.status.toLowerCase() == 'completed')
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                                color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(999),
                                 border: Border.all(
-                                  color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
                                   width: 0.8,
                                 ),
                               ),
                               child: const Text(
-                                'Completed',
+                                'Overdue',
                                 style: TextStyle(
-                                  color: Color(0xFF10B981),
+                                  color: Color(0xFF8E95A5),
                                   fontSize: 9.5,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
@@ -799,6 +805,10 @@ class _HomePageState extends State<HomePage> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
+                                  width: 0.8,
+                                ),
                               ),
                               child: Text(
                                 schedule.status,

@@ -547,7 +547,7 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
 
   Widget _buildScheduleCard(ScheduleModel schedule, {bool isLast = false}) {
     final isOngoing = schedule.status.toLowerCase() == 'ongoing';
-    final isCompleted = schedule.status.toLowerCase() == 'completed';
+    final isOverdue = schedule.status.toLowerCase() == 'overdue' || schedule.status.toLowerCase() == 'completed';
     final accentColor = schedule.accentColor;
 
     return Container(
@@ -617,22 +617,22 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
                               ),
                             ),
                           )
-                        else if (isCompleted)
+                        else if (isOverdue)
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2.5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                              color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
                                 width: 0.8,
                               ),
                             ),
                             child: const Text(
-                              'Completed',
+                              'Overdue',
                               style: TextStyle(
-                                color: Color(0xFF10B981),
+                                color: Color(0xFF8E95A5),
                                 fontSize: 9.5,
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w600,
@@ -648,6 +648,11 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
                               color: const Color(0xFF8E95A5)
                                   .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: const Color(0xFF8E95A5)
+                                    .withValues(alpha: 0.35),
+                                width: 0.8,
+                              ),
                             ),
                             child: const Text(
                               'Upcoming',

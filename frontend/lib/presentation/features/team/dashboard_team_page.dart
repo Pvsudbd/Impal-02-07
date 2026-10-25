@@ -6,8 +6,8 @@ import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
 import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
-import '../jadwal/schedule_form_page.dart';
 import '../jadwal/schedule_page.dart';
+import 'pop_up_create_meeting.dart';
 
 /// Aliases for backward compatibility with Figma export & routes
 typedef DashboardKelompok = DashboardTeamPage;
@@ -131,24 +131,25 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     } catch (_) {}
   }
 
-  void _openCreateMeeting() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ScheduleFormPage(
-          initialType: 'External',
-        ),
-      ),
+  Future<void> _openCreateMeeting() async {
+    final result = await PopUpCreateMeeting.show(
+      context,
+      teamName: widget.teamName,
     );
+    if (result != null && mounted) {
+      PopUpPemberitahuan.scheduleCreated(context);
+    }
   }
 
-  void _openEditSchedule(ScheduleModel schedule) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ScheduleFormPage(
-          schedule: schedule,
-        ),
-      ),
+  Future<void> _openEditSchedule(ScheduleModel schedule) async {
+    final result = await PopUpCreateMeeting.showEdit(
+      context,
+      schedule: schedule,
+      teamName: widget.teamName,
     );
+    if (result != null && mounted) {
+      PopUpPemberitahuan.scheduleUpdated(context);
+    }
   }
 
   void _showCreateTaskDialog() {
@@ -647,31 +648,44 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     return ValueListenableBuilder<List<ScheduleModel>>(
       valueListenable: ScheduleRepository().schedulesNotifier,
       builder: (context, allSchedules, _) {
-        // Filter strictly for team meetings (no lectures)
+        // Filter strictly for team meetings (no lectures or generic external tasks)
         final teamSchedules = allSchedules.where((s) {
           final type = s.type.trim().toLowerCase();
           if (type == 'lecture') return false;
-          if (type == 'team' ||
-              type == 'meeting' ||
+          final isExplicitMeeting = type == 'meeting' ||
               type == 'team meeting' ||
-              type == 'rapat') {
-            return true;
-          }
+              type == 'rapat' ||
+              type == 'team';
           final t = s.title.toLowerCase();
           final n = (s.notes ?? '').toLowerCase();
           final loc = (s.location ?? '').toLowerCase();
-          return t.contains('meet') ||
-              t.contains('team') ||
-              t.contains('tim') ||
-              t.contains('kelompok') ||
-              t.contains('mentoring') ||
+          final hasMeetingKeyword = t.contains('meet') ||
               t.contains('rapat') ||
               n.contains('meet') ||
-              n.contains('team') ||
-              loc.contains('group') ||
-              loc.contains('discord') ||
-              type == 'external';
+              loc.contains('meet') ||
+              loc.contains('zoom') ||
+              loc.contains('google meet');
+          return isExplicitMeeting || hasMeetingKeyword;
         }).toList();
+
+        // Sort items: Ongoing (0) -> Upcoming (1) -> Overdue (2)
+        // Then chronologically by start time (09:00 before 10:00)
+        teamSchedules.sort((a, b) {
+          int statusWeight(String s) {
+            final st = s.toLowerCase();
+            if (st == 'ongoing') return 0;
+            if (st == 'upcoming') return 1;
+            return 2;
+          }
+
+          final wA = statusWeight(a.status);
+          final wB = statusWeight(b.status);
+          if (wA != wB) return wA.compareTo(wB);
+
+          final dtA = a.startDateTime ?? DateTime(2000);
+          final dtB = b.startDateTime ?? DateTime(2000);
+          return dtA.compareTo(dtB);
+        });
 
         Widget scheduleContent;
         if (teamSchedules.isEmpty) {
@@ -828,31 +842,8 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            // Status Pill matching schedule_page style
-                            if (schedule.status.toLowerCase() == 'completed')
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2.5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF10B981).withValues(alpha: 0.18),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: const Color(0xFF10B981).withValues(alpha: 0.4),
-                                    width: 0.8,
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Completed',
-                                  style: TextStyle(
-                                    color: Color(0xFF10B981),
-                                    fontSize: 9.5,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.25,
-                                  ),
-                                ),
-                              )
-                            else if (schedule.status.toLowerCase() == 'ongoing')
+                            // Status Pill matching schedule_page style (Overdue gray, Ongoing coral, Upcoming gray)
+                            if (schedule.status.toLowerCase() == 'ongoing')
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 2.5),
@@ -871,6 +862,30 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                                   ),
                                 ),
                               )
+                            else if (schedule.status.toLowerCase() == 'overdue' ||
+                                schedule.status.toLowerCase() == 'completed')
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Overdue',
+                                  style: TextStyle(
+                                    color: Color(0xFF8E95A5),
+                                    fontSize: 9.5,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.25,
+                                  ),
+                                ),
+                              )
                             else
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -878,6 +893,10 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
+                                    width: 0.8,
+                                  ),
                                 ),
                                 child: const Text(
                                   'Upcoming',

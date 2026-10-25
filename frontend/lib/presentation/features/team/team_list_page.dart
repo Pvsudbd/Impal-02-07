@@ -4,9 +4,9 @@ import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
-import '../jadwal/schedule_form_page.dart';
 import '../jadwal/schedule_page.dart';
 import 'dashboard_team_page.dart';
+import 'pop_up_create_meeting.dart';
 import 'pop_up_create_team.dart';
 import 'pop_up_join_team.dart';
 
@@ -216,24 +216,21 @@ class _TeamListContentViewState extends State<TeamListContentView> {
     }
   }
 
-  void _openEditSchedule(ScheduleModel schedule) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ScheduleFormPage(
-          schedule: schedule,
-        ),
-      ),
+  void _openEditSchedule(ScheduleModel schedule) async {
+    final result = await PopUpCreateMeeting.showEdit(
+      context,
+      schedule: schedule,
     );
+    if (result != null && mounted) {
+      PopUpPemberitahuan.scheduleUpdated(context);
+    }
   }
 
-  void _openAddTeamSchedule() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ScheduleFormPage(
-          initialType: 'External',
-        ),
-      ),
-    );
+  void _openAddTeamSchedule() async {
+    final result = await PopUpCreateMeeting.show(context);
+    if (result != null && mounted) {
+      PopUpPemberitahuan.scheduleCreated(context);
+    }
   }
 
   String _formatScheduleTime(ScheduleModel schedule) {
@@ -528,20 +525,13 @@ class _TeamListContentViewState extends State<TeamListContentView> {
               loc.contains('meet') ||
               loc.contains('zoom');
 
-          if (hasMeetingKeyword) return true;
-
-          // Jadwal eksternal kegiatan tim
-          if (type == 'external') {
-            return true;
-          }
-
-          return false;
+          return hasMeetingKeyword;
         }).toList();
 
         final teamSchedules = rawTeamSchedules;
 
-        // Sort by status priority: Ongoing (0) -> Upcoming (1) -> Completed (2)
-        // Then by startDateTime
+        // Sort by status priority: Ongoing (0) -> Upcoming (1) -> Overdue (2)
+        // Then by startDateTime chronologically
         teamSchedules.sort((a, b) {
           int statusWeight(String s) {
             final st = s.toLowerCase();
@@ -683,7 +673,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
     bool isLast = false,
   }) {
     final isOngoing = schedule.status.toLowerCase() == 'ongoing';
-    final isCompleted = schedule.status.toLowerCase() == 'completed';
+    final isOverdue = schedule.status.toLowerCase() == 'overdue' || schedule.status.toLowerCase() == 'completed';
     final accentColor = schedule.accentColor;
 
     return Container(
@@ -748,25 +738,23 @@ class _TeamListContentViewState extends State<TeamListContentView> {
                               decoration: BoxDecoration(
                                 color: isOngoing
                                     ? const Color(0xFFFF826E)
-                                    : (isCompleted
-                                        ? const Color(0xFF10B981).withValues(alpha: 0.18)
-                                        : const Color(0xFF8E95A5).withValues(alpha: 0.15)),
+                                    : const Color(0xFF8E95A5).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(999),
-                                border: isCompleted
-                                    ? Border.all(
-                                        color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                border: isOngoing
+                                    ? null
+                                    : Border.all(
+                                        color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
                                         width: 0.8,
-                                      )
-                                    : null,
+                                      ),
                               ),
                               child: Text(
-                                schedule.status,
+                                isOngoing
+                                    ? 'Ongoing'
+                                    : (isOverdue ? 'Overdue' : 'Upcoming'),
                                 style: TextStyle(
                                   color: isOngoing
                                       ? Colors.white
-                                      : (isCompleted
-                                          ? const Color(0xFF10B981)
-                                          : const Color(0xFF8E95A5)),
+                                      : const Color(0xFF8E95A5),
                                   fontSize: 9.5,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
@@ -864,6 +852,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
               children: [
                 // Join Team Button
                 InkWell(
+                  key: const ValueKey('team_list_join_team_button'),
                   onTap: _showJoinTeamDialog,
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
@@ -894,10 +883,11 @@ class _TeamListContentViewState extends State<TeamListContentView> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
 
                 // Create Team Button
                 InkWell(
+                  key: const ValueKey('team_list_create_team_button'),
                   onTap: _showCreateTeamDialog,
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
@@ -921,7 +911,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
             ),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
 
         // Team Cards List
         for (int i = 0; i < _teams.length; i++) ...[
@@ -933,27 +923,29 @@ class _TeamListContentViewState extends State<TeamListContentView> {
   }
 
   Widget _buildTeamCard(TeamModel team) {
-    return InkWell(
-      onTap: () {
-        if (widget.onTeamSelected != null) {
-          widget.onTeamSelected!(team);
-        } else {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => DashboardTeamPage(
-                userName: widget.userName,
-                teamName: team.name,
-                teamCode: '7X29',
-                memberColors: team.memberColors,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          if (widget.onTeamSelected != null) {
+            widget.onTeamSelected!(team);
+          } else {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => DashboardTeamPage(
+                  userName: widget.userName,
+                  teamName: team.name,
+                  teamCode: '7X29',
+                  memberColors: team.memberColors,
+                ),
               ),
-            ),
-          );
-        }
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
+            );
+          }
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: const Color(0xFF323846),
           borderRadius: BorderRadius.circular(16),
@@ -988,13 +980,14 @@ class _TeamListContentViewState extends State<TeamListContentView> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 8),
             _buildAvatarStack(team.memberColors),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildAvatarStack(List<Color> colors) {
     const double size = 24.0;

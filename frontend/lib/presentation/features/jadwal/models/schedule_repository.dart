@@ -41,6 +41,14 @@ class ScheduleRepository {
 
   List<ScheduleModel> get schedules => schedulesNotifier.value;
 
+  ScheduleModel? getById(String id) {
+    try {
+      return schedulesNotifier.value.firstWhere((s) => s.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> addSchedule(ScheduleModel item) async {
     final current = List<ScheduleModel>.from(schedulesNotifier.value);
     current.insert(0, item);
@@ -115,7 +123,7 @@ class ScheduleRepository {
         type: 'Lecture',
         course: 'UBXCCB2 • BAHASA INDONESIA',
         location: 'KTT B-106 • SSIF-04-REG-GAB02',
-        status: 'Completed',
+        status: 'Overdue',
         date: now,
         timeStart: fmt(morningStart),
         timeEnd: fmt(morningEnd),
