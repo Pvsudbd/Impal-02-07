@@ -317,6 +317,36 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.isStandalone) {
+      return CustomScrollView(
+        key: const ValueKey('dashboard_team_scroll_view'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                // 1. Header (Greeting + User Profile Initials)
+                _buildHeader(),
+                const SizedBox(height: 16),
+
+                // 2. Team Info (Name, Member Avatars, Copy Code)
+                _buildTeamInfoBar(),
+                const SizedBox(height: 16),
+
+                // 3. Team's Schedule Section
+                _buildTeamScheduleSection(),
+                const SizedBox(height: 16),
+
+                // 4. Team Task Section
+                _buildTeamTaskSection(),
+              ]),
+            ),
+          ),
+        ],
+      );
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
@@ -408,7 +438,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
 
   Widget _buildHeader() {
     final initials = _getUserInitials(widget.userName);
-    final canPop = Navigator.of(context).canPop() || widget.onBack != null;
+    final canPop = !widget.isStandalone || Navigator.of(context).canPop() || widget.onBack != null;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

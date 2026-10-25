@@ -9,6 +9,7 @@ import '../jadwal/schedule_page.dart';
 import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
 import '../team/team_list_page.dart';
+import '../team/dashboard_team_page.dart';
 
 /// Aliases for flexibility
 typedef Home = HomePage;
@@ -28,6 +29,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _currentTab = 0;
   String _selectedCategory = 'All';
+  TeamModel? _selectedTeam;
 
   @override
   void initState() {
@@ -226,13 +228,24 @@ class _HomePageState extends State<HomePage> {
                   onBack: () => setState(() => _currentTab = 0),
                 )
               : (_currentTab == 2
-                  ? TeamListContentView(
-                      key: const ValueKey('team_tab_content'),
-                      userName: widget.userName,
-                      showBackButton: true,
-                      onBack: () => setState(() => _currentTab = 0),
-                      onOpenSchedule: () => setState(() => _currentTab = 3),
-                    )
+                  ? (_selectedTeam != null
+                      ? DashboardTeamPage(
+                          key: ValueKey('team_dashboard_${_selectedTeam!.id}'),
+                          userName: widget.userName,
+                          teamName: _selectedTeam!.name,
+                          teamCode: '7X29',
+                          memberColors: _selectedTeam!.memberColors,
+                          isStandalone: false,
+                          onBack: () => setState(() => _selectedTeam = null),
+                        )
+                      : TeamListContentView(
+                          key: const ValueKey('team_tab_content'),
+                          userName: widget.userName,
+                          showBackButton: true,
+                          onBack: () => setState(() => _currentTab = 0),
+                          onOpenSchedule: () => setState(() => _currentTab = 3),
+                          onTeamSelected: (team) => setState(() => _selectedTeam = team),
+                        ))
                   : dashboardContent),
         ),
         Positioned(
@@ -1360,7 +1373,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onTabSelected(int index) {
-    setState(() => _currentTab = index);
+    setState(() {
+      if (index == 2 || _selectedTeam != null) {
+        _selectedTeam = null;
+      }
+      _currentTab = index;
+    });
     if (index == 1) {
       showTopToast(context, 'Tasks section');
     }

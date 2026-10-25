@@ -179,6 +179,7 @@ class TeamListContentView extends StatefulWidget {
   final bool showBackButton;
   final VoidCallback? onBack;
   final VoidCallback? onOpenSchedule;
+  final ValueChanged<TeamModel>? onTeamSelected;
 
   const TeamListContentView({
     super.key,
@@ -186,6 +187,7 @@ class TeamListContentView extends StatefulWidget {
     this.showBackButton = false,
     this.onBack,
     this.onOpenSchedule,
+    this.onTeamSelected,
   });
 
   @override
@@ -933,16 +935,20 @@ class _TeamListContentViewState extends State<TeamListContentView> {
   Widget _buildTeamCard(TeamModel team) {
     return InkWell(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => DashboardTeamPage(
-              userName: widget.userName,
-              teamName: team.name,
-              teamCode: '7X29',
-              memberColors: team.memberColors,
+        if (widget.onTeamSelected != null) {
+          widget.onTeamSelected!(team);
+        } else {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => DashboardTeamPage(
+                userName: widget.userName,
+                teamName: team.name,
+                teamCode: '7X29',
+                memberColors: team.memberColors,
+              ),
             ),
-          ),
-        );
+          );
+        }
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(

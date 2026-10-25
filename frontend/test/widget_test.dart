@@ -1219,4 +1219,54 @@ void main() {
     expect(find.text('All'), findsOneWidget);
     expect(find.text('Today'), findsOneWidget);
   });
+
+  testWidgets('Single Persistent Navigation Shell handles Team list to Dashboard Team, Schedule, and back seamlessly', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+    await tester.pumpAndSettle();
+
+    // 1. Pindah ke tab 2 (Teams)
+    await tester.tap(find.byIcon(Icons.groups_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Team List'), findsOneWidget);
+    expect(find.text('Kelompok - IMPAL'), findsOneWidget);
+
+    // 2. Pilih kartu Kelompok - IMPAL
+    await tester.tap(find.text('Kelompok - IMPAL'));
+    await tester.pumpAndSettle();
+
+    // Verifikasi berada di Dashboard Team tanpa reload navbar
+    expect(find.text('Team Dashboard'), findsOneWidget);
+    expect(find.text('7X29'), findsOneWidget);
+    expect(find.byType(ImpalBottomNavBar), findsOneWidget);
+
+    // 3. Tekan Schedule (Tab 3) pada navbar
+    await tester.tap(find.byIcon(Icons.calendar_month_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Schedule'), findsOneWidget);
+    expect(find.text('Add Schedule'), findsOneWidget);
+
+    // 4. Tekan Team (Tab 2) kembali -> selalu kembali ke Team List
+    await tester.tap(find.byIcon(Icons.groups_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Team List'), findsOneWidget);
+    expect(find.text('Kelompok - IMPAL'), findsOneWidget);
+
+    // 5. Buka kembali dashboard team, lalu uji tombol Back di header
+    await tester.tap(find.text('Kelompok - IMPAL'));
+    await tester.pumpAndSettle();
+    expect(find.text('Team Dashboard'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('Team List'), findsOneWidget);
+
+    // 6. Tekan Home (Tab 0) pada navbar
+    await tester.tap(find.byIcon(Icons.home_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text("Today's schedule"), findsOneWidget);
+  });
 }
