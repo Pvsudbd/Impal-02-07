@@ -75,6 +75,20 @@ class ScheduleRepository {
 
   static List<ScheduleModel> get _defaultSchedules {
     final now = DateTime.now();
+
+    String fmt(DateTime dt) {
+      final h = dt.hour.toString().padLeft(2, '0');
+      final m = dt.minute.toString().padLeft(2, '0');
+      return '$h:$m';
+    }
+
+    final morningStart = now.subtract(const Duration(hours: 3));
+    final morningEnd = now.subtract(const Duration(hours: 1));
+    final ongoingStart = now.subtract(const Duration(minutes: 30));
+    final ongoingEnd = now.add(const Duration(minutes: 90));
+    final upcomingStart = now.add(const Duration(hours: 2));
+    final upcomingEnd = now.add(const Duration(hours: 4));
+
     return [
       ScheduleModel(
         id: 'sch_1',
@@ -82,10 +96,10 @@ class ScheduleRepository {
         type: 'Lecture',
         course: 'UBXCCB2 • BAHASA INDONESIA',
         location: 'KTT B-106 • SSIF-04-REG-GAB02',
-        status: 'Ongoing',
+        status: 'Completed',
         date: now,
-        timeStart: '09:30',
-        timeEnd: '11:30',
+        timeStart: fmt(morningStart),
+        timeEnd: fmt(morningEnd),
         notes: 'Pertemuan 7: Penulisan Daftar Pustaka dan Sitasi',
         repeat: true,
       ),
@@ -95,10 +109,10 @@ class ScheduleRepository {
         type: 'Lecture',
         course: 'SSIF-04-REG • Software Testing & Implementation',
         location: 'Lab 3 • Gedung TULT 05.02',
-        status: 'Upcoming',
+        status: 'Ongoing',
         date: now,
-        timeStart: '13:30',
-        timeEnd: '15:30',
+        timeStart: fmt(ongoingStart),
+        timeEnd: fmt(ongoingEnd),
         notes: 'Praktikum Unit Testing & Integration Testing Flutter',
         repeat: true,
       ),
@@ -109,8 +123,8 @@ class ScheduleRepository {
         location: 'Google Meet / Discord Kelompok 7',
         status: 'Upcoming',
         date: now,
-        timeStart: '19:30',
-        timeEnd: '21:00',
+        timeStart: fmt(upcomingStart),
+        timeEnd: fmt(upcomingEnd),
         notes: 'Diskusi kelanjutan integrasi frontend dan backend sprint 2',
         repeat: false,
       ),

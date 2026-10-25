@@ -441,5 +441,144 @@ void main() {
     expect(pickedDate!.month, 7);
     expect(pickedDate!.day, 15);
   });
+
+  test('ScheduleModel calculates ongoing, upcoming, and completed status automatically based on current time', () {
+    final baseDate = DateTime(2026, 10, 25);
+
+    // 1. Past schedule on the same day -> Completed
+    final completedSchedule = ScheduleModel(
+      id: 'c1',
+      title: 'Completed Test',
+      type: 'Lecture',
+      date: baseDate,
+      timeStart: '08:00',
+      timeEnd: '10:00',
+    );
+    // At 11:00 on the same date, schedule should be Completed
+    expect(
+      completedSchedule.getStatusAt(DateTime(2026, 10, 25, 11, 0)),
+      'Completed',
+    );
+
+    // 2. Currently occurring schedule -> Ongoing
+    final ongoingSchedule = ScheduleModel(
+      id: 'o1',
+      title: 'Ongoing Test',
+      type: 'Lecture',
+      date: baseDate,
+      timeStart: '10:30',
+      timeEnd: '12:30',
+    );
+    // At 11:00, within 10:30 - 12:30
+    expect(
+      ongoingSchedule.getStatusAt(DateTime(2026, 10, 25, 11, 0)),
+      'Ongoing',
+    );
+
+    // 3. Future schedule on the same day -> Upcoming
+    final upcomingSchedule = ScheduleModel(
+      id: 'u1',
+      title: 'Upcoming Test',
+      type: 'Lecture',
+      date: baseDate,
+      timeStart: '14:00',
+      timeEnd: '16:00',
+    );
+    // At 11:00, before 14:00
+    expect(
+      upcomingSchedule.getStatusAt(DateTime(2026, 10, 25, 11, 0)),
+      'Upcoming',
+    );
+
+    // 4. Past date -> Completed
+    final pastDateSchedule = ScheduleModel(
+      id: 'pd1',
+      title: 'Past Date Test',
+      type: 'Lecture',
+      date: DateTime(2026, 10, 20),
+      timeStart: '10:00',
+      timeEnd: '12:00',
+    );
+    expect(
+      pastDateSchedule.getStatusAt(DateTime(2026, 10, 25, 11, 0)),
+      'Completed',
+    );
+
+    // 5. Future date -> Upcoming
+    final futureDateSchedule = ScheduleModel(
+      id: 'fd1',
+      title: 'Future Date Test',
+      type: 'Lecture',
+      date: DateTime(2026, 10, 30),
+      timeStart: '10:00',
+      timeEnd: '12:00',
+    );
+    expect(
+      futureDateSchedule.getStatusAt(DateTime(2026, 10, 25, 11, 0)),
+      'Upcoming',
+    );
+
+    // 6. Overnight schedule: 23:00 to 01:00 next day
+    final overnightSchedule = ScheduleModel(
+      id: 'on1',
+      title: 'Overnight Hackathon',
+      type: 'External',
+      date: baseDate,
+      timeStart: '23:00',
+      timeEnd: '01:00',
+    );
+    // At 23:30 same day -> Ongoing
+    expect(
+      overnightSchedule.getStatusAt(DateTime(2026, 10, 25, 23, 30)),
+      'Ongoing',
+    );
+    // At 00:30 next day -> Ongoing
+    expect(
+      overnightSchedule.getStatusAt(DateTime(2026, 10, 26, 0, 30)),
+      'Ongoing',
+    );
+    // At 01:30 next day -> Completed
+    expect(
+      overnightSchedule.getStatusAt(DateTime(2026, 10, 26, 1, 30)),
+      'Completed',
+    );
+  });
+
+  testWidgets('Schedule card displays Completed with green pill and Ongoing with coral pill', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final now = DateTime.now();
+    String fmt(DateTime dt) =>
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 't_comp',
+        title: 'Finished Lecture',
+        type: 'Lecture',
+        date: now,
+        timeStart: fmt(now.subtract(const Duration(hours: 3))),
+        timeEnd: fmt(now.subtract(const Duration(hours: 1))),
+      ),
+      ScheduleModel(
+        id: 't_ong',
+        title: 'Active Lecture',
+        type: 'Lecture',
+        date: now,
+        timeStart: fmt(now.subtract(const Duration(minutes: 30))),
+        timeEnd: fmt(now.add(const Duration(minutes: 30))),
+      ),
+    ];
+
+    await tester.pumpWidget(const MaterialApp(
+      home: SchedulePage(),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Completed'), findsWidgets);
+    expect(find.text('Ongoing'), findsWidgets);
+  });
 }
 

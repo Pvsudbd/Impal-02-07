@@ -663,9 +663,8 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
 
   Widget _buildScheduleCard(ScheduleModel schedule, {bool isLast = false}) {
     final isOngoing = schedule.status.toLowerCase() == 'ongoing';
-    final isUpcoming = schedule.status.toLowerCase() == 'upcoming';
-    final accentColor =
-        isUpcoming ? const Color(0xFF8E95A5) : schedule.accentColor;
+    final isCompleted = schedule.status.toLowerCase() == 'completed';
+    final accentColor = schedule.accentColor;
 
     return Container(
       margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
@@ -685,7 +684,7 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Left Accent Strip: Coral for ongoing, 8E95A5 for upcoming
+            // Left Accent Strip: Coral for ongoing, Emerald for completed, 8E95A5 for upcoming
             Container(
               width: 4,
               color: accentColor,
@@ -734,20 +733,41 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
                               ),
                             ),
                           )
+                        else if (isCompleted)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: const Text(
+                              'Completed',
+                              style: TextStyle(
+                                color: Color(0xFF10B981),
+                                fontSize: 9.5,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.25,
+                              ),
+                            ),
+                          )
                         else
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2.5),
                             decoration: BoxDecoration(
-                              color: isUpcoming
-                                  ? const Color(0xFF8E95A5)
-                                      .withValues(alpha: 0.15)
-                                  : const Color(0xFF3B4150),
+                              color: const Color(0xFF8E95A5)
+                                  .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: Text(
-                              schedule.status,
-                              style: const TextStyle(
+                            child: const Text(
+                              'Upcoming',
+                              style: TextStyle(
                                 color: Color(0xFF8E95A5),
                                 fontSize: 9.5,
                                 fontFamily: 'Inter',

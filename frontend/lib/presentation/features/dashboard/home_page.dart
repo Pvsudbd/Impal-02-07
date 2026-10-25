@@ -539,13 +539,16 @@ class _HomePageState extends State<HomePage> {
                             decoration: BoxDecoration(
                               color: schedule.status.toLowerCase() == 'ongoing'
                                   ? const Color(0xFFFF826E)
-                                  : const Color(0xFF3B4150),
+                                  : schedule.status.toLowerCase() == 'completed'
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFF3B4150),
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
                               schedule.status,
                               style: TextStyle(
-                                color: schedule.status.toLowerCase() == 'ongoing'
+                                color: (schedule.status.toLowerCase() == 'ongoing' ||
+                                        schedule.status.toLowerCase() == 'completed')
                                     ? Colors.white
                                     : const Color(0xFF8E95A5),
                                 fontSize: 10,

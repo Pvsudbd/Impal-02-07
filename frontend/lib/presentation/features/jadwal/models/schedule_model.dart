@@ -7,7 +7,6 @@ class ScheduleModel {
   final String type; // 'Lecture' or 'External'
   final String? course;
   final String? location;
-  final String status; // 'Ongoing', 'Upcoming', 'Completed'
   final DateTime date;
   final String timeStart; // '09:30'
   final String timeEnd; // '11:30'
@@ -21,7 +20,7 @@ class ScheduleModel {
     required this.type,
     this.course,
     this.location,
-    this.status = 'Upcoming',
+    String? status,
     required this.date,
     required this.timeStart,
     required this.timeEnd,
@@ -29,6 +28,113 @@ class ScheduleModel {
     this.notes,
     this.repeat = false,
   });
+
+  /// Automatically computes the schedule status ('Ongoing', 'Upcoming', 'Completed')
+  /// based on [date], [timeStart], [timeEnd], and [DateTime.now()].
+  String get status => calculateStatus(
+        date: date,
+        timeStart: timeStart,
+        timeEnd: timeEnd,
+      );
+
+  /// Evaluates status with an optional custom [now] time for testing or time-travel.
+  String getStatusAt([DateTime? now]) => calculateStatus(
+        date: date,
+        timeStart: timeStart,
+        timeEnd: timeEnd,
+        now: now,
+      );
+
+  /// Pure static method to calculate status given date and time range:
+  /// - 'Ongoing' if current date & time is within [startDateTime, endDateTime]
+  /// - 'Upcoming' if date & time has not arrived yet (in the future)
+  /// - 'Completed' if date & time has already passed
+  static String calculateStatus({
+    required DateTime date,
+    required String timeStart,
+    required String timeEnd,
+    DateTime? now,
+  }) {
+    final current = now ?? DateTime.now();
+    try {
+      final start = _parseTimeString(timeStart);
+      final end = _parseTimeString(timeEnd);
+
+      final startDateTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        start.hour,
+        start.minute,
+      );
+
+      var endDateTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        end.hour,
+        end.minute,
+      );
+
+      // Handle overnight schedules (e.g. 23:00 - 01:00)
+      if (endDateTime.isBefore(startDateTime)) {
+        endDateTime = endDateTime.add(const Duration(days: 1));
+      }
+
+      if (current.isBefore(startDateTime)) {
+        return 'Upcoming';
+      } else if (current.isAfter(endDateTime)) {
+        return 'Completed';
+      } else {
+        return 'Ongoing';
+      }
+    } catch (_) {
+      final today = DateTime(current.year, current.month, current.day);
+      final scheduleDate = DateTime(date.year, date.month, date.day);
+      if (scheduleDate.isBefore(today)) {
+        return 'Completed';
+      } else if (scheduleDate.isAfter(today)) {
+        return 'Upcoming';
+      }
+      return 'Ongoing';
+    }
+  }
+
+  static TimeOfDay _parseTimeString(String str) {
+    final clean = str.trim();
+    final parts = clean.contains(':') ? clean.split(':') : clean.split('.');
+    if (parts.length >= 2) {
+      return TimeOfDay(
+        hour: int.parse(parts[0].trim()),
+        minute: int.parse(parts[1].trim()),
+      );
+    }
+    return const TimeOfDay(hour: 0, minute: 0);
+  }
+
+  DateTime? get startDateTime {
+    try {
+      final start = _parseTimeString(timeStart);
+      return DateTime(date.year, date.month, date.day, start.hour, start.minute);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  DateTime? get endDateTime {
+    try {
+      final start = _parseTimeString(timeStart);
+      final end = _parseTimeString(timeEnd);
+      var endDt = DateTime(date.year, date.month, date.day, end.hour, end.minute);
+      final startDt = DateTime(date.year, date.month, date.day, start.hour, start.minute);
+      if (endDt.isBefore(startDt)) {
+        endDt = endDt.add(const Duration(days: 1));
+      }
+      return endDt;
+    } catch (_) {
+      return null;
+    }
+  }
 
   ScheduleModel copyWith({
     String? id,
@@ -50,7 +156,7 @@ class ScheduleModel {
       type: type ?? this.type,
       course: course ?? this.course,
       location: location ?? this.location,
-      status: status ?? this.status,
+      status: status,
       date: date ?? this.date,
       timeStart: timeStart ?? this.timeStart,
       timeEnd: timeEnd ?? this.timeEnd,
@@ -104,10 +210,14 @@ class ScheduleModel {
   String get formattedTime => '$timeStart - $timeEnd $timeZone';
 
   Color get accentColor {
-    if (status.toLowerCase() == 'ongoing') {
+    final s = status.toLowerCase();
+    if (s == 'ongoing') {
       return const Color(0xFFFF826E); // Primary coral accent
     }
-    if (status.toLowerCase() == 'upcoming') {
+    if (s == 'completed') {
+      return const Color(0xFF10B981); // Completed emerald green accent
+    }
+    if (s == 'upcoming') {
       return const Color(0xFF8E95A5); // Upcoming slate accent
     }
     if (type.toLowerCase() == 'lecture') {
@@ -117,8 +227,12 @@ class ScheduleModel {
   }
 
   Color get statusColor {
-    if (status.toLowerCase() == 'ongoing') {
+    final s = status.toLowerCase();
+    if (s == 'ongoing') {
       return const Color(0xFFFF826E);
+    }
+    if (s == 'completed') {
+      return const Color(0xFF10B981);
     }
     return const Color(0xFF8E95A5);
   }

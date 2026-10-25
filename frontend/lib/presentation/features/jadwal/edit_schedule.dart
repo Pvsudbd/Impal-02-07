@@ -59,6 +59,21 @@ class _EditScheduleState extends State<EditSchedule> {
 
     _startTime = _parseTime(s.timeStart, const TimeOfDay(hour: 9, minute: 30));
     _endTime = _parseTime(s.timeEnd, const TimeOfDay(hour: 11, minute: 30));
+    _selectedStatus = ScheduleModel.calculateStatus(
+      date: _selectedDate,
+      timeStart: _formatTime(_startTime),
+      timeEnd: _formatTime(_endTime),
+    );
+  }
+
+  void _syncAutoStatus() {
+    setState(() {
+      _selectedStatus = ScheduleModel.calculateStatus(
+        date: _selectedDate,
+        timeStart: _formatTime(_startTime),
+        timeEnd: _formatTime(_endTime),
+      );
+    });
   }
 
   TimeOfDay _parseTime(String str, TimeOfDay fallback) {
@@ -108,6 +123,7 @@ class _EditScheduleState extends State<EditSchedule> {
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
+      _syncAutoStatus();
     }
   }
 
@@ -119,6 +135,7 @@ class _EditScheduleState extends State<EditSchedule> {
     );
     if (picked != null) {
       setState(() => _startTime = picked);
+      _syncAutoStatus();
     }
   }
 
@@ -130,6 +147,7 @@ class _EditScheduleState extends State<EditSchedule> {
     );
     if (picked != null) {
       setState(() => _endTime = picked);
+      _syncAutoStatus();
     }
   }
 
@@ -139,10 +157,16 @@ class _EditScheduleState extends State<EditSchedule> {
     final confirmed = await PopUpKonfirmasiEdit.show(context);
     if (confirmed != true) return;
 
+    final autoStatus = ScheduleModel.calculateStatus(
+      date: _selectedDate,
+      timeStart: _formatTime(_startTime),
+      timeEnd: _formatTime(_endTime),
+    );
+
     final updated = widget.schedule.copyWith(
       title: _titleController.text.trim(),
       type: _selectedType,
-      status: _selectedStatus,
+      status: autoStatus,
       course: _selectedType == 'Lecture' && _courseController.text.trim().isNotEmpty
           ? _courseController.text.trim()
           : (_courseController.text.trim().isNotEmpty
@@ -223,13 +247,33 @@ class _EditScheduleState extends State<EditSchedule> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Status selector
-                    const Text(
-                      'Status',
-                      style: TextStyle(
-                        color: Color(0xFF8E95A5),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      children: [
+                        const Text(
+                          'Status',
+                          style: TextStyle(
+                            color: Color(0xFF8E95A5),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B4150),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Auto-determined',
+                            style: TextStyle(
+                              color: Color(0xFF8E95A5),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Row(

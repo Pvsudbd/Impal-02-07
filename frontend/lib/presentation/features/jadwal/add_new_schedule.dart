@@ -121,7 +121,11 @@ class _AddNewScheduleState extends State<AddNewSchedule> {
       location: _locationController.text.trim().isNotEmpty
           ? _locationController.text.trim()
           : 'Classroom',
-      status: 'Upcoming',
+      status: ScheduleModel.calculateStatus(
+        date: _selectedDate,
+        timeStart: _formatTime(_startTime),
+        timeEnd: _formatTime(_endTime),
+      ),
       date: _selectedDate,
       timeStart: _formatTime(_startTime),
       timeEnd: _formatTime(_endTime),

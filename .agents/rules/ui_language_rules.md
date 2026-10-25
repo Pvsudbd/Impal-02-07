@@ -64,3 +64,19 @@ Whenever creating or modifying UI elements, widgets, dialogs, or text copy in th
 - **Action Buttons**:
   - Dismiss: `'Cancel'` with `Color(0xFF8E95A5)` text, background `Color(0xFF282D37)`, border `Color(0xFF3B4150)`.
   - Confirm: `'Done'` with white text and coral button `Color(0xFFFA6144)`.
+
+---
+
+## 4. Automatic Schedule Status Determination Rules
+- **Automatic Status Calculation**:
+  - The status of any schedule must be calculated automatically based on current date and real-time clock:
+    - **Ongoing**: When the current date & time falls within `[startDateTime, endDateTime]` (e.g. today during lecture/event hours).
+    - **Upcoming**: When the schedule start date & time has not yet arrived (`now < startDateTime`).
+    - **Completed**: When the schedule end date & time has already passed (`now > endDateTime`).
+- **Visual Color Representation**:
+  - **Ongoing**: Coral accent `Color(0xFFFF826E)` (pill badge, border highlight, and icons).
+  - **Completed**: Emerald green accent `Color(0xFF10B981)` (pill badge, border highlight, and icons).
+  - **Upcoming**: Slate grey accent `Color(0xFF8E95A5)` with background `Color(0xFF3B4150)`.
+- **Dynamic Calculation in Models & Forms**:
+  - In `ScheduleModel`, the `status` getter computes dynamically using `calculateStatus(...)` so schedules automatically transition as real time passes.
+  - In `EditSchedule` and `AddNewSchedule`, selecting or modifying date/time immediately recalculates and reflects the new automatic status with an `'Auto-determined'` indicator.
