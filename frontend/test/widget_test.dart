@@ -5,6 +5,7 @@ import 'package:impal_smart_todolist/presentation/features/jadwal/schedule_page.
 import 'package:impal_smart_todolist/presentation/features/jadwal/models/schedule_model.dart';
 import 'package:impal_smart_todolist/presentation/features/jadwal/models/schedule_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
+import 'package:impal_smart_todolist/presentation/features/team/team_list_page.dart';
 
 void main() {
   testWidgets('Login page renders properly', (WidgetTester tester) async {
@@ -112,5 +113,63 @@ void main() {
       (widget) => widget is SingleChildScrollView && widget.scrollDirection == Axis.horizontal,
     );
     expect(horizontalScrollFinder, findsOneWidget);
+  });
+
+  testWidgets('Group task cards display CircularProgressIndicator instead of LinearProgressIndicator', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: HomePage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Group cards should have circular progress indicators
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    // Group cards should not render LinearProgressIndicator
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    // Progress percentages for both group cards should be found
+    expect(find.text('46%'), findsOneWidget);
+    expect(find.text('76%'), findsOneWidget);
+  });
+
+  testWidgets('TeamListPage / ListKelompok renders schedule, teams, and action buttons', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: TeamListPage(),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Team's Schedule"), findsOneWidget);
+    expect(find.text('MEETING IMPAL'), findsOneWidget);
+    expect(find.text('Discord - Group IMPAL'), findsOneWidget);
+    expect(find.text('Tomorrow 19:00 WIB'), findsOneWidget);
+    expect(find.text('Team'), findsOneWidget);
+    expect(find.text('Join Team'), findsOneWidget);
+    expect(find.text('+ Create Team'), findsOneWidget);
+    expect(find.text('Kelompok - IMPAL'), findsOneWidget);
+    expect(find.text('Kelompok - IUM'), findsOneWidget);
+  });
+
+  testWidgets('Tapping groups icon in HomePage smoothly switches to Team list view', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: HomePage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Tap groups icon (tab 2)
+    await tester.tap(find.byIcon(Icons.groups_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Team's Schedule"), findsOneWidget);
+    expect(find.text('Kelompok - IMPAL'), findsOneWidget);
   });
 }

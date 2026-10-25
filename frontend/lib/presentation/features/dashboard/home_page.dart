@@ -8,6 +8,7 @@ import '../auth/login_page.dart';
 import '../jadwal/schedule_page.dart';
 import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
+import '../team/team_list_page.dart';
 
 /// Aliases for flexibility
 typedef Home = HomePage;
@@ -60,6 +61,7 @@ class _HomePageState extends State<HomePage> {
       dueTextColor: Color(0xFF1E3A8A),
       isUrgent: false,
       members: [Color(0xFFF3A683), Color(0xFF786FA6), Color(0xFF63CDDA)],
+      progress: 0.46,
       deadline: 'Sat 11 Oct 2026, 23:59 WIB',
       tags: [
         TaskTag(label: 'Kelompok', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
@@ -228,7 +230,14 @@ class _HomePageState extends State<HomePage> {
                   showBackButton: true,
                   onBack: () => setState(() => _currentTab = 0),
                 )
-              : dashboardContent,
+              : (_currentTab == 2
+                  ? TeamListContentView(
+                      key: const ValueKey('team_tab_content'),
+                      userName: widget.userName,
+                      showBackButton: true,
+                      onBack: () => setState(() => _currentTab = 0),
+                    )
+                  : dashboardContent),
         ),
         Positioned(
           left: 0,
@@ -899,10 +908,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildTaskCard(TaskItem task, {bool isLast = false}) {
-    final isGroup = task.members != null && task.members!.isNotEmpty;
-    final accentColor = task.isUrgent
-        ? const Color(0xFFFF826E)
-        : (isGroup ? const Color(0xFF786FA6) : const Color(0xFF778BEB));
+    final isGroup = (task.members != null && task.members!.isNotEmpty) ||
+        task.tags.any((t) => t.label.toLowerCase() == 'kelompok');
+    final effectiveProgress = task.progress ?? (isGroup ? 0.46 : null);
 
     return Container(
       width: double.infinity,
@@ -919,188 +927,204 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            // Left colored accent indicator
-            Container(
-              width: 5,
-              color: accentColor,
-            ),
-            // Card Content
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Row 1: Title + Due Badge
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Text(
+            // Left Column: Title, Subtitle, Team members, Deadline, Tags
+            Padding(
+              padding: EdgeInsets.only(
+                right: (isGroup && effectiveProgress != null) ? 56 : 46,
+              ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Title
+                          Text(
                             task.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 14.5,
+                              fontSize: 15,
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.2,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 9, vertical: 3.5),
-                          decoration: BoxDecoration(
-                            color: task.isUrgent
-                                ? const Color(0xFFFF826E)
-                                : const Color(0xFF282D37),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: task.isUrgent
-                                  ? const Color(0xFFFF826E)
-                                  : const Color(0xFF434A59),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            task.dueBadge,
-                            style: TextStyle(
-                              color: task.isUrgent
-                                  ? Colors.white
-                                  : const Color(0xFF8E95A5),
-                              fontSize: 10,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
 
-                    // Subtitle if available
-                    if (task.subtitle != null && task.subtitle!.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        task.subtitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF8E95A5),
-                          fontSize: 11.5,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-
-                    // Team members (only for group tasks)
-                    if (isGroup) ...[
-                      const SizedBox(height: 8),
-                      _buildAvatarStack(task.members!),
-                    ],
-
-                    // Progress Bar (if task has progress e.g. 76%)
-                    if (task.progress != null) ...[
-                      const SizedBox(height: 9),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Progress',
-                            style: TextStyle(
-                              color: Color(0xFF8E95A5),
-                              fontSize: 11,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w500,
+                          // Subtitle if available
+                          if (task.subtitle != null && task.subtitle!.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              task.subtitle!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF8E95A5),
+                                fontSize: 11.5,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
+                          ],
+
+                          // Team members section (only for group tasks)
+                          if (isGroup && task.members != null && task.members!.isNotEmpty) ...[
+                            const SizedBox(height: 5),
+                            const Text(
+                              'Team members',
+                              style: TextStyle(
+                                color: Color(0xFF8E95A5),
+                                fontSize: 11,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            _buildAvatarStack(task.members!),
+                          ],
+
+                          // Linear progress bar for non-group tasks (if specified)
+                          if (!isGroup && task.progress != null) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Progress',
+                                  style: TextStyle(
+                                    color: Color(0xFF8E95A5),
+                                    fontSize: 11,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Text(
+                                  '${(task.progress! * 100).toInt()}%',
+                                  style: const TextStyle(
+                                    color: Color(0xFF60A5FA),
+                                    fontSize: 11,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: LinearProgressIndicator(
+                                value: task.progress,
+                                minHeight: 5,
+                                backgroundColor: const Color(0xFF282D37),
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF60A5FA)),
+                              ),
+                            ),
+                          ],
+
+                          const SizedBox(height: 8),
+
+                          // Deadline Row with Clock
+                          Row(
+                            children: [
+                              Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF826E).withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  Icons.access_time_filled_rounded,
+                                  size: 10,
+                                  color: Color(0xFFFF826E),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  task.deadline,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Color(0xFF8E95A5),
+                                    fontSize: 11,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            '${(task.progress! * 100).toInt()}%',
-                            style: const TextStyle(
-                              color: Color(0xFF60A5FA),
-                              fontSize: 11,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w700,
-                            ),
+
+                          const SizedBox(height: 7),
+
+                          // Tags row
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: task.tags.map((tag) => _buildTag(tag)).toList(),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 5),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          value: task.progress,
-                          minHeight: 5,
-                          backgroundColor: const Color(0xFF282D37),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                              Color(0xFF60A5FA)),
-                        ),
-                      ),
-                    ],
+                    ),
 
-                    const SizedBox(height: 8),
-
-                    // Deadline Row with Clock
-                    Row(
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: task.isUrgent
-                                ? const Color(0xFFFF826E).withValues(alpha: 0.2)
-                                : const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            Icons.access_time_filled_rounded,
-                            size: 10,
+                    // Top-Right Due Badge
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: task.isUrgent
+                              ? const Color(0xFFFF826E)
+                              : task.dueColor,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
                             color: task.isUrgent
                                 ? const Color(0xFFFF826E)
-                                : const Color(0xFF8E95A5),
+                                : task.dueColor.withValues(alpha: 0.5),
+                            width: 1,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          task.deadline,
+                        child: Text(
+                          task.dueBadge,
                           style: TextStyle(
                             color: task.isUrgent
-                                ? const Color(0xFFFF826E)
-                                : const Color(0xFF8E95A5),
-                            fontSize: 11,
+                                ? Colors.white
+                                : task.dueTextColor,
+                            fontSize: 10,
                             fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      ],
+                      ),
                     ),
 
-                    const SizedBox(height: 8),
-
-                    // Tags row
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: task.tags.map((tag) => _buildTag(tag)).toList(),
-                    ),
+                    // Vertically Centered Circular Progress for Group Tasks
+                    if (isGroup && effectiveProgress != null)
+                      Positioned(
+                        top: 0,
+                        bottom: 0,
+                        right: 0,
+                        child: Center(
+                          child: _buildCircularProgress(
+                            effectiveProgress,
+                            isUrgent: task.isUrgent,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+            );
+          }
 
   Widget _buildAvatarStack(List<Color> colors) {
     const double size = 22.0;
@@ -1108,82 +1132,106 @@ class _HomePageState extends State<HomePage> {
     final displayColors = colors.take(4).toList();
     final extraCount = colors.length - displayColors.length;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          height: size,
-          width: size +
-              (displayColors.length - 1 + (extraCount > 0 ? 1 : 0)) * overlap,
-          child: Stack(
-            children: [
-              for (int i = 0; i < displayColors.length; i++)
-                Positioned(
-                  left: i * overlap,
-                  child: Container(
-                    width: size,
-                    height: size,
-                    decoration: BoxDecoration(
-                      color: displayColors[i],
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: const Color(0xFF323846), width: 1.5),
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.person_rounded,
-                      size: 11.5,
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
+    return SizedBox(
+      height: size,
+      width: size +
+          (displayColors.length - 1 + (extraCount > 0 ? 1 : 0)) * overlap,
+      child: Stack(
+        children: [
+          for (int i = 0; i < displayColors.length; i++)
+            Positioned(
+              left: i * overlap,
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: displayColors[i],
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: const Color(0xFF323846), width: 1.5),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.person_rounded,
+                  size: 11.5,
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
+              ),
+            ),
+          if (extraCount > 0)
+            Positioned(
+              left: displayColors.length * overlap,
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF434A59),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: const Color(0xFF323846), width: 1.5),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '+$extraCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              if (extraCount > 0)
-                Positioned(
-                  left: displayColors.length * overlap,
-                  child: Container(
-                    width: size,
-                    height: size,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF434A59),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: const Color(0xFF323846), width: 1.5),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '+$extraCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCircularProgress(double progress, {bool isUrgent = false}) {
+    final percent = (progress * 100).toInt();
+    final progressColor = isUrgent
+        ? const Color(0xFFFF826E)
+        : const Color(0xFF55E6C1);
+
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: CircularProgressIndicator(
+              value: progress,
+              strokeWidth: 3.6,
+              strokeCap: StrokeCap.round,
+              backgroundColor: const Color(0xFF232834),
+              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+              semanticsLabel: 'Task progress: $percent%',
+            ),
           ),
-        ),
-        const SizedBox(width: 7),
-        Text(
-          '${colors.length} members',
-          style: const TextStyle(
-            color: Color(0xFF8E95A5),
-            fontSize: 11,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
+          Text(
+            '$percent%',
+            style: TextStyle(
+              color: progressColor,
+              fontSize: 11.5,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildTag(TaskTag tag) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: tag.bg.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(6),
+        color: tag.bg.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         tag.label,
@@ -1329,8 +1377,6 @@ class _HomePageState extends State<HomePage> {
     setState(() => _currentTab = index);
     if (index == 1) {
       showTopToast(context, 'Tasks section');
-    } else if (index == 2) {
-      showTopToast(context, 'Kelompok section');
     }
   }
 
