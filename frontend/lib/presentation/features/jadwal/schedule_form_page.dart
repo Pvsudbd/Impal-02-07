@@ -173,7 +173,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       final confirmed = await PopUpKonfirmasiEdit.show(context);
       if (confirmed != true) return;
 
-      final scheduleDate = _repeatWeekly ? widget.schedule!.date : _selectedDate;
+      final scheduleDate = _selectedDate;
       final autoStatus = ScheduleModel.calculateStatus(
         date: scheduleDate,
         timeStart: _formatTime(_startTime),
@@ -207,7 +207,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       final confirmed = await PopUpMakeSchedule.show(context);
       if (confirmed != true) return;
 
-      final scheduleDate = _repeatWeekly ? DateTime.now() : _selectedDate;
+      final scheduleDate = _selectedDate;
 
       final newSchedule = ScheduleModel(
         id: 'sch_${DateTime.now().millisecondsSinceEpoch}',
@@ -287,7 +287,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Schedule Type selector
+                    // 1. Schedule Type selector
                     const Text(
                       'Schedule Type',
                       style: TextStyle(
@@ -320,7 +320,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Unified Course (Lecture) / Schedule Title (External) field
+                    // 2. Course (Lecture) / Schedule Title (External) field
                     Text(
                       isLecture ? 'Course' : 'Schedule Title',
                       style: const TextStyle(
@@ -342,7 +342,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Room / Location
+                    // 3. Room / Location
                     const Text(
                       'Location / Room',
                       style: TextStyle(
@@ -361,95 +361,52 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Repeat Weekly Switch
-                    Container(
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF323846),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF3B4150)),
+                    // 4. Date Picker (Always visible)
+                    const Text(
+                      'Date',
+                      style: TextStyle(
+                        color: Color(0xFF8E95A5),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.repeat_rounded, color: Color(0xFF8E95A5), size: 18),
-                              SizedBox(width: 10),
-                              Text(
-                                'Repeat Weekly',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+                    ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: _selectDate,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 48,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF323846),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF3B4150)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today_rounded, color: Color(0xFF8E95A5), size: 18),
+                                const SizedBox(width: 10),
+                                Text(
+                                  _formatDate(_selectedDate),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          Transform.scale(
-                            scale: 0.82,
-                            child: Switch(
-                              value: _repeatWeekly,
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              activeThumbColor: const Color(0xFFFA6144),
-                              activeTrackColor: const Color(0xFFFA6144).withValues(alpha: 0.5),
-                              onChanged: (val) => setState(() => _repeatWeekly = val),
+                              ],
                             ),
-                          ),
-                        ],
+                            const Icon(Icons.edit_calendar_rounded, color: Color(0xFFFA6144), size: 18),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
 
-                    // Date Picker (Only shown when Repeat Weekly is OFF)
-                    if (!_repeatWeekly) ...[
-                      const Text(
-                        'Date',
-                        style: TextStyle(
-                          color: Color(0xFF8E95A5),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: _selectDate,
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          height: 48,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF323846),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF3B4150)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.calendar_today_rounded, color: Color(0xFF8E95A5), size: 18),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    _formatDate(_selectedDate),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const Icon(Icons.edit_calendar_rounded, color: Color(0xFFFA6144), size: 18),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Time Duration
+                    // 5. Time Duration
                     const Text(
                       'Time Duration',
                       style: TextStyle(
@@ -519,7 +476,48 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Notes
+                    // 6. Repeat Weekly Switch
+                    Container(
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF323846),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF3B4150)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.repeat_rounded, color: Color(0xFF8E95A5), size: 18),
+                              SizedBox(width: 10),
+                              Text(
+                                'Repeat Weekly',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Transform.scale(
+                            scale: 0.82,
+                            child: Switch(
+                              value: _repeatWeekly,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              activeThumbColor: const Color(0xFFFA6144),
+                              activeTrackColor: const Color(0xFFFA6144).withValues(alpha: 0.5),
+                              onChanged: (val) => setState(() => _repeatWeekly = val),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 7. Notes (Optional)
                     const Text(
                       'Notes (Optional)',
                       style: TextStyle(

@@ -159,6 +159,41 @@ class PopUpPemberitahuan extends StatefulWidget {
     );
   }
 
+  // --- Meeting Preset Notifications ---
+
+  /// Preset notification when a meeting is created (Positif -> Hijau).
+  static void meetingCreated(BuildContext context) {
+    show(
+      context,
+      title: 'Meeting Created',
+      message: 'Your meeting has been successfully created.',
+      icon: Icons.groups_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a meeting is updated (Positif -> Hijau).
+  static void meetingUpdated(BuildContext context) {
+    show(
+      context,
+      title: 'Meeting Updated',
+      message: 'Your meeting has been successfully updated.',
+      icon: Icons.check_circle_outline_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a meeting is deleted (Negatif -> Orange).
+  static void meetingDeleted(BuildContext context) {
+    show(
+      context,
+      title: 'Meeting Deleted',
+      message: 'Your meeting has been successfully removed.',
+      icon: Icons.delete_outline_rounded,
+      iconBgColor: negativeColor,
+    );
+  }
+
   // --- Auth Preset Notifications ---
 
   /// Preset notification when an account is registered (Positif -> Hijau).

@@ -4,6 +4,7 @@ import '../../common_widgets/impal_time_picker_dialog.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
+import '../jadwal/pop_up_konfirmasi_delete.dart';
 
 /// Aliases for backwards compatibility with Figma export & routes
 typedef FormCreateMeeting = PopUpCreateMeeting;
@@ -17,6 +18,8 @@ class PopUpCreateMeeting extends StatefulWidget {
   final String initialDescription;
   final DateTime? initialDate;
   final TimeOfDay? initialTime;
+  final TimeOfDay? initialEndTime;
+  final bool initialRepeatWeekly;
   final String? teamName;
   final ScheduleModel? existingSchedule;
   final ValueChanged<ScheduleModel>? onCreated;
@@ -29,6 +32,8 @@ class PopUpCreateMeeting extends StatefulWidget {
     this.initialDescription = '',
     this.initialDate,
     this.initialTime,
+    this.initialEndTime,
+    this.initialRepeatWeekly = false,
     this.teamName,
     this.existingSchedule,
     this.onCreated,
@@ -43,6 +48,8 @@ class PopUpCreateMeeting extends StatefulWidget {
     String initialDescription = '',
     DateTime? initialDate,
     TimeOfDay? initialTime,
+    TimeOfDay? initialEndTime,
+    bool initialRepeatWeekly = false,
     String? teamName,
     ValueChanged<ScheduleModel>? onCreated,
   }) {
@@ -55,6 +62,8 @@ class PopUpCreateMeeting extends StatefulWidget {
         initialDescription: initialDescription,
         initialDate: initialDate,
         initialTime: initialTime,
+        initialEndTime: initialEndTime,
+        initialRepeatWeekly: initialRepeatWeekly,
         teamName: teamName,
         onCreated: onCreated,
       ),
@@ -91,7 +100,9 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
   late final TextEditingController _locationController;
   late final TextEditingController _descController;
   late DateTime _selectedDate;
-  late TimeOfDay _selectedTime;
+  late TimeOfDay _startTime;
+  late TimeOfDay _endTime;
+  late bool _repeatWeekly;
 
   bool get isEdit => widget.existingSchedule != null;
 
@@ -104,7 +115,17 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
       _locationController = TextEditingController(text: existing.location ?? '');
       _descController = TextEditingController(text: existing.notes ?? '');
       _selectedDate = existing.date;
-      _selectedTime = _parseTimeOfDay(existing.timeStart);
+      _startTime = _parseTimeOfDay(existing.timeStart);
+      final parsedEnd = _parseTimeOfDay(existing.timeEnd);
+      if (parsedEnd.hour == _startTime.hour && parsedEnd.minute == _startTime.minute) {
+        _endTime = TimeOfDay(
+          hour: (_startTime.hour + 1) % 24,
+          minute: _startTime.minute,
+        );
+      } else {
+        _endTime = parsedEnd;
+      }
+      _repeatWeekly = existing.repeat;
     } else {
       _nameController = TextEditingController(text: widget.initialName);
       _locationController = TextEditingController(
@@ -114,11 +135,17 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
       );
       _descController = TextEditingController(text: widget.initialDescription);
       _selectedDate = widget.initialDate ?? DateTime.now();
-      _selectedTime = widget.initialTime ??
+      _startTime = widget.initialTime ??
           TimeOfDay(
             hour: (DateTime.now().hour + 1) % 24,
             minute: 0,
           );
+      _endTime = widget.initialEndTime ??
+          TimeOfDay(
+            hour: (_startTime.hour + 1) % 24,
+            minute: _startTime.minute,
+          );
+      _repeatWeekly = widget.initialRepeatWeekly;
     }
   }
 
@@ -174,14 +201,36 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
     }
   }
 
-  Future<void> _pickTime() async {
+  Future<void> _pickStartTime() async {
     final picked = await showImpalTimePicker(
       context: context,
-      initialTime: _selectedTime,
-      title: isEdit ? 'Select Meeting Time' : 'Select Meeting Time',
+      initialTime: _startTime,
+      title: 'Select Start Time',
     );
     if (picked != null && mounted) {
-      setState(() => _selectedTime = picked);
+      setState(() {
+        final durationHours = (_endTime.hour - _startTime.hour) % 24;
+        final durationMinutes = _endTime.minute - _startTime.minute;
+        _startTime = picked;
+        // Keep end time after start time if default duration was negative/zero
+        if (durationHours <= 0 && durationMinutes <= 0) {
+          _endTime = TimeOfDay(
+            hour: (picked.hour + 1) % 24,
+            minute: picked.minute,
+          );
+        }
+      });
+    }
+  }
+
+  Future<void> _pickEndTime() async {
+    final picked = await showImpalTimePicker(
+      context: context,
+      initialTime: _endTime,
+      title: 'Select End Time (Estimated)',
+    );
+    if (picked != null && mounted) {
+      setState(() => _endTime = picked);
     }
   }
 
@@ -197,27 +246,19 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
     }
 
     try {
-      final startH = _selectedTime.hour.toString().padLeft(2, '0');
-      final startM = _selectedTime.minute.toString().padLeft(2, '0');
-      final endHour = (_selectedTime.hour + 1) % 24;
-      final endH = endHour.toString().padLeft(2, '0');
+      final startH = _startTime.hour.toString().padLeft(2, '0');
+      final startM = _startTime.minute.toString().padLeft(2, '0');
+      final endH = _endTime.hour.toString().padLeft(2, '0');
+      final endM = _endTime.minute.toString().padLeft(2, '0');
 
-      final meetingDateTime = DateTime(
-        _selectedDate.year,
-        _selectedDate.month,
-        _selectedDate.day,
-        _selectedTime.hour,
-        _selectedTime.minute,
+      final timeStartStr = '$startH:$startM';
+      final timeEndStr = '$endH:$endM';
+
+      final status = ScheduleModel.calculateStatus(
+        date: _selectedDate,
+        timeStart: timeStartStr,
+        timeEnd: timeEndStr,
       );
-
-      final now = DateTime.now();
-      final endDateTime = meetingDateTime.add(const Duration(hours: 1));
-      String status = 'Upcoming';
-      if (now.isAfter(endDateTime)) {
-        status = 'Overdue';
-      } else if (now.isAfter(meetingDateTime) && now.isBefore(endDateTime)) {
-        status = 'Ongoing';
-      }
 
       final inputLoc = _locationController.text.trim();
       final loc = inputLoc.isNotEmpty
@@ -230,13 +271,14 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
         final updatedSchedule = widget.existingSchedule!.copyWith(
           title: name,
           type: 'Meeting',
-          timeStart: '$startH:$startM',
-          timeEnd: '$endH:$startM',
+          timeStart: timeStartStr,
+          timeEnd: timeEndStr,
           timeZone: 'WIB',
           location: loc,
           status: status,
           notes: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
           date: _selectedDate,
+          repeat: _repeatWeekly,
         );
 
         await ScheduleRepository().updateSchedule(updatedSchedule);
@@ -249,6 +291,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
         }
 
         if (mounted) {
+          PopUpPemberitahuan.meetingUpdated(context);
           Navigator.of(context).pop(updatedSchedule);
         }
       } else {
@@ -256,13 +299,14 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
           id: 'meeting_${DateTime.now().millisecondsSinceEpoch}',
           title: name,
           type: 'Meeting',
-          timeStart: '$startH:$startM',
-          timeEnd: '$endH:$startM',
+          timeStart: timeStartStr,
+          timeEnd: timeEndStr,
           timeZone: 'WIB',
           location: loc,
           status: status,
           notes: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
           date: _selectedDate,
+          repeat: _repeatWeekly,
         );
 
         await ScheduleRepository().addSchedule(newSchedule);
@@ -272,6 +316,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
         }
 
         if (mounted) {
+          PopUpPemberitahuan.meetingCreated(context);
           Navigator.of(context).pop(newSchedule);
         }
       }
@@ -285,6 +330,23 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
               : 'Failed to create meeting. Please try again.',
         );
       }
+    }
+  }
+
+  Future<void> _handleDeleteMeeting() async {
+    if (widget.existingSchedule == null) return;
+    final confirmed = await PopUpKonfirmasiDelete.show(
+      context,
+      title: 'Delete Meeting?',
+      message: 'Are you sure you want to delete this meeting? This action cannot be undone.',
+    );
+    if (confirmed != true) return;
+
+    await ScheduleRepository().deleteSchedule(widget.existingSchedule!.id);
+
+    if (mounted) {
+      PopUpPemberitahuan.meetingDeleted(context);
+      Navigator.of(context).pop(null);
     }
   }
 
@@ -315,7 +377,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header: Title & Close Button
+              // Header: Title, Delete & Close Button
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -334,26 +396,55 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  InkWell(
-                    key: const ValueKey('close_create_meeting_button'),
-                    onTap: () => Navigator.of(context).pop(),
-                    borderRadius: BorderRadius.circular(999),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: ShapeDecoration(
-                        color: const Color(0x33FA6144),
-                        shape: RoundedRectangleBorder(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isEdit) ...[
+                        InkWell(
+                          key: const ValueKey('delete_meeting_button'),
+                          onTap: _handleDeleteMeeting,
                           borderRadius: BorderRadius.circular(999),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: ShapeDecoration(
+                              color: const Color(0x33FA6144),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: Color(0xFFFA6144),
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      InkWell(
+                        key: const ValueKey('close_create_meeting_button'),
+                        onTap: () => Navigator.of(context).pop(),
+                        borderRadius: BorderRadius.circular(999),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: ShapeDecoration(
+                            color: const Color(0x33FA6144),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: Color(0xFFFA6144),
+                            size: 18,
+                          ),
                         ),
                       ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.close_rounded,
-                        color: Color(0xFFFA6144),
-                        size: 18,
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -514,91 +605,239 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                 ),
               ),
               const SizedBox(height: 6),
-              Row(
-                children: [
-                  // Date Picker Button
-                  Expanded(
-                    child: InkWell(
-                      key: const ValueKey('create_meeting_date_picker_button'),
-                      onTap: _pickDate,
+
+              // Date Picker Button (Full Width)
+              InkWell(
+                key: const ValueKey('create_meeting_date_picker_button'),
+                onTap: _pickDate,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: ShapeDecoration(
+                    color: const Color(0xFF282D37),
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        decoration: ShapeDecoration(
-                          color: const Color(0xFF282D37),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          _formatDate(_selectedDate),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                _formatDate(_selectedDate),
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w500,
-                                ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.calendar_month_rounded,
+                        color: Color(0xFF8E95A5),
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Time Row: Start Time & End Time (Estimated)
+              Row(
+                children: [
+                  // Start Time Picker
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Start Time',
+                          style: TextStyle(
+                            color: Color(0xFF8E95A5),
+                            fontSize: 12,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        InkWell(
+                          key: const ValueKey('create_meeting_time_picker_button'),
+                          onTap: _pickStartTime,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: ShapeDecoration(
+                              color: const Color(0xFF282D37),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            const Icon(
-                              Icons.calendar_month_rounded,
-                              color: Color(0xFF8E95A5),
-                              size: 16,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    _formatTime(_startTime),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.access_time_rounded,
+                                  color: Color(0xFF8E95A5),
+                                  size: 16,
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 8),
 
-                  // Time Picker Button
+                  // End Time (Estimated) Picker
                   Expanded(
-                    child: InkWell(
-                      key: const ValueKey('create_meeting_time_picker_button'),
-                      onTap: _pickTime,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        decoration: ShapeDecoration(
-                          color: const Color(0xFF282D37),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'End Time (Estimated)',
+                          style: TextStyle(
+                            color: Color(0xFF8E95A5),
+                            fontSize: 12,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                _formatTime(_selectedTime),
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w500,
-                                ),
+                        const SizedBox(height: 4),
+                        InkWell(
+                          key: const ValueKey('create_meeting_end_time_picker_button'),
+                          onTap: _pickEndTime,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: ShapeDecoration(
+                              color: const Color(0xFF282D37),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            const Icon(
-                              Icons.access_time_rounded,
-                              color: Color(0xFF8E95A5),
-                              size: 16,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    _formatTime(_endTime),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.timer_outlined,
+                                  color: Color(0xFF8E95A5),
+                                  size: 16,
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+
+              // Repeat Weekly Toggle Card
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: ShapeDecoration(
+                  color: const Color(0xFF282D37),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.repeat_rounded,
+                            color: Color(0xFF8E95A5),
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Repeat Weekly',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Recurs weekly',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Color(0xFF8E95A5),
+                                    fontSize: 11,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Transform.scale(
+                      scale: 0.85,
+                      child: Switch(
+                        key: const ValueKey('create_meeting_repeat_weekly_switch'),
+                        value: _repeatWeekly,
+                        activeThumbColor: const Color(0xFFFA6144),
+                        activeTrackColor: const Color(0xFFFA6144).withValues(alpha: 0.4),
+                        inactiveThumbColor: const Color(0xFF8E95A5),
+                        inactiveTrackColor: const Color(0xFF1F242D),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        onChanged: (val) {
+                          setState(() {
+                            _repeatWeekly = val;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
 

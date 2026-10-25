@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
+import '../../common_widgets/impal_schedule_card.dart';
 import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
 import 'schedule_form_page.dart';
 import 'pop_up_konfirmasi_delete.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
+import '../team/pop_up_create_meeting.dart';
 
 /// Aliases for backwards compatibility
 typedef JadwalKuliah = SchedulePage;
@@ -164,14 +166,49 @@ class ScheduleContentView extends StatefulWidget {
   State<ScheduleContentView> createState() => _ScheduleContentViewState();
 }
 
+class _ScheduleDateGroup {
+  final DateTime date;
+  final String header;
+  final bool isToday;
+  final List<ScheduleModel> items;
+
+  _ScheduleDateGroup({
+    required this.date,
+    required this.header,
+    required this.isToday,
+    required this.items,
+  });
+}
+
 class _ScheduleContentViewState extends State<ScheduleContentView> {
   final ScheduleRepository _repo = ScheduleRepository();
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _todayTargetKey = GlobalKey();
   String _selectedFilter = 'All'; // 'All', 'Today', 'Week', 'Month'
+  bool _didInitialScroll = false;
 
   @override
   void initState() {
     super.initState();
     _repo.init();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToTodayOrOngoing() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final ctx = _todayTargetKey.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   void _openAddSchedule() {
@@ -180,18 +217,36 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
     );
   }
 
-  void _openEditSchedule(ScheduleModel item) {
-    Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => ScheduleFormPage(schedule: item)),
-    );
+  void _openEditSchedule(ScheduleModel item) async {
+    if (item.type.trim().toLowerCase() == 'meeting') {
+      final res = await PopUpCreateMeeting.showEdit(context, existingSchedule: item);
+      if (res != null && mounted) {
+        PopUpPemberitahuan.meetingUpdated(context);
+      }
+    } else {
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => ScheduleFormPage(schedule: item)),
+      );
+    }
   }
 
   Future<void> _deleteSchedule(ScheduleModel item) async {
-    final confirmed = await PopUpKonfirmasiDelete.show(context);
+    final isMeeting = item.type.trim().toLowerCase() == 'meeting';
+    final confirmed = await PopUpKonfirmasiDelete.show(
+      context,
+      title: isMeeting ? 'Delete Meeting?' : 'Delete Schedule?',
+      message: isMeeting
+          ? 'Are you sure you want to delete this meeting? This action cannot be undone.'
+          : 'Are you sure you want to delete this schedule? This action cannot be undone.',
+    );
     if (confirmed == true) {
       await _repo.deleteSchedule(item.id);
       if (mounted) {
-        PopUpPemberitahuan.scheduleDeleted(context);
+        if (isMeeting) {
+          PopUpPemberitahuan.meetingDeleted(context);
+        } else {
+          PopUpPemberitahuan.scheduleDeleted(context);
+        }
       }
     }
   }
@@ -220,10 +275,10 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
     return list;
   }
 
-  Map<String, List<ScheduleModel>> _groupByDate(List<ScheduleModel> list) {
-    final map = <String, List<ScheduleModel>>{};
+  List<_ScheduleDateGroup> _groupByDate(List<ScheduleModel> list) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
     final tomorrow = today.add(const Duration(days: 1));
 
     final dayNames = [
@@ -250,29 +305,29 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
       'Dec'
     ];
 
+    // Group items by normalized date (year, month, day)
+    final dateMap = <DateTime, List<ScheduleModel>>{};
     for (final item in list) {
       final d = DateTime(item.date.year, item.date.month, item.date.day);
-      String header;
-      if (d.isAtSameMomentAs(today)) {
-        header = 'Today ${d.day} ${monthNames[d.month - 1]}';
-      } else if (d.isAtSameMomentAs(tomorrow)) {
-        header = 'Tomorrow ${d.day} ${monthNames[d.month - 1]}';
-      } else {
-        final dayName = dayNames[d.weekday - 1];
-        header = '$dayName ${d.day} ${monthNames[d.month - 1]}';
+      if (!dateMap.containsKey(d)) {
+        dateMap[d] = [];
       }
-
-      if (!map.containsKey(header)) {
-        map[header] = [];
-      }
-      map[header]!.add(item);
+      dateMap[d]!.add(item);
     }
 
-    for (final key in map.keys) {
-      map[key]!.sort((a, b) {
+    // Sort dates chronologically: past days (top) -> Today -> future days (bottom)
+    final sortedDates = dateMap.keys.toList()..sort((a, b) => a.compareTo(b));
+
+    final groups = <_ScheduleDateGroup>[];
+    for (final d in sortedDates) {
+      final items = dateMap[d]!;
+
+      // Sort items within this date: Overdue (0) -> Ongoing (1) -> Upcoming (2)
+      // Then chronologically by startDateTime
+      items.sort((a, b) {
         int statusWeight(String s) {
           final st = s.toLowerCase();
-          if (st == 'completed') return 0;
+          if (st == 'overdue' || st == 'completed') return 0;
           if (st == 'ongoing') return 1;
           return 2;
         }
@@ -285,9 +340,29 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
         final dtB = b.startDateTime ?? DateTime(2000);
         return dtA.compareTo(dtB);
       });
+
+      final isToday = d.isAtSameMomentAs(today);
+      String header;
+      if (isToday) {
+        header = 'Today ${d.day} ${monthNames[d.month - 1]}';
+      } else if (d.isAtSameMomentAs(yesterday)) {
+        header = 'Yesterday ${d.day} ${monthNames[d.month - 1]}';
+      } else if (d.isAtSameMomentAs(tomorrow)) {
+        header = 'Tomorrow ${d.day} ${monthNames[d.month - 1]}';
+      } else {
+        final dayName = dayNames[d.weekday - 1];
+        header = '$dayName ${d.day} ${monthNames[d.month - 1]}';
+      }
+
+      groups.add(_ScheduleDateGroup(
+        date: d,
+        header: header,
+        isToday: isToday,
+        items: items,
+      ));
     }
 
-    return map;
+    return groups;
   }
 
   @override
@@ -296,31 +371,73 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
       valueListenable: _repo.schedulesNotifier,
       builder: (context, allSchedules, _) {
         final filteredList = _filterSchedules(allSchedules);
-        final grouped = _groupByDate(filteredList);
+        final groups = _groupByDate(filteredList);
 
-        return CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
+        String? todayOngoingId;
+        bool hasTodayGroup = false;
+        for (final group in groups) {
+          if (group.isToday) {
+            hasTodayGroup = true;
+            for (final item in group.items) {
+              if (item.status.toLowerCase() == 'ongoing') {
+                todayOngoingId = item.id;
+                break;
+              }
+            }
+            break;
+          }
+        }
+
+        if (!_didInitialScroll) {
+          _didInitialScroll = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToTodayOrOngoing();
+          });
+        }
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              child: Column(
+                children: [
                   _buildHeader(),
                   const SizedBox(height: 16),
                   _buildFilterBar(),
                   const SizedBox(height: 14),
                   _buildAddScheduleButton(),
                   const SizedBox(height: 14),
-                  if (grouped.isEmpty)
-                    _buildEmptyState()
-                  else
-                    ...grouped.entries.toList().asMap().entries.map((indexedEntry) {
-                      final index = indexedEntry.key;
-                      final entry = indexedEntry.value;
-                      return _buildScheduleGroup(entry.key, entry.value,
-                          isFirstGroup: index == 0);
-                    }),
-                ]),
+                ],
+              ),
+            ),
+            Expanded(
+              child: CustomScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        if (groups.isEmpty)
+                          _buildEmptyState()
+                        else
+                          ...groups.asMap().entries.map((indexedEntry) {
+                            final index = indexedEntry.key;
+                            final group = indexedEntry.value;
+                            final shouldAttachHeaderKey =
+                                group.isToday && todayOngoingId == null && hasTodayGroup;
+                            return _buildScheduleGroup(
+                              group,
+                              isFirstGroup: index == 0,
+                              todayOngoingId: todayOngoingId,
+                              attachTodayHeaderKey: shouldAttachHeaderKey,
+                            );
+                          }),
+                      ]),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -521,15 +638,20 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
     );
   }
 
-  Widget _buildScheduleGroup(String dateHeader, List<ScheduleModel> items,
-      {bool isFirstGroup = false}) {
+  Widget _buildScheduleGroup(
+    _ScheduleDateGroup group, {
+    bool isFirstGroup = false,
+    String? todayOngoingId,
+    bool attachTodayHeaderKey = false,
+  }) {
     return Column(
+      key: attachTodayHeaderKey ? _todayTargetKey : null,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: EdgeInsets.only(top: isFirstGroup ? 4 : 14, bottom: 8),
           child: Text(
-            dateHeader,
+            group.header,
             style: const TextStyle(
               color: Color(0xFF8E95A5),
               fontSize: 13.5,
@@ -539,230 +661,15 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
             ),
           ),
         ),
-        for (int i = 0; i < items.length; i++)
-          _buildScheduleCard(items[i], isLast: i == items.length - 1),
-      ],
-    );
-  }
-
-  Widget _buildScheduleCard(ScheduleModel schedule, {bool isLast = false}) {
-    final isOngoing = schedule.status.toLowerCase() == 'ongoing';
-    final isOverdue = schedule.status.toLowerCase() == 'overdue' || schedule.status.toLowerCase() == 'completed';
-    final accentColor = schedule.accentColor;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x26000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
+        for (int i = 0; i < group.items.length; i++)
+          ImpalScheduleCard(
+            schedule: group.items[i],
+            isLast: i == group.items.length - 1,
+            targetKey: (group.items[i].id == todayOngoingId) ? _todayTargetKey : null,
+            onEdit: () => _openEditSchedule(group.items[i]),
+            onDelete: () => _deleteSchedule(group.items[i]),
           ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Left Accent Strip: Coral for ongoing, Emerald for completed, 8E95A5 for upcoming
-            Container(
-              width: 4,
-              color: accentColor,
-            ),
-            // Content
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header row: Title + Status
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            schedule.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13.5,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                              height: 1.25,
-                              letterSpacing: -0.1,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (isOngoing)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF826E),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: const Text(
-                              'Ongoing',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9.5,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.25,
-                              ),
-                            ),
-                          )
-                        else if (isOverdue)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-                                width: 0.8,
-                              ),
-                            ),
-                            child: const Text(
-                              'Overdue',
-                              style: TextStyle(
-                                color: Color(0xFF8E95A5),
-                                fontSize: 9.5,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.25,
-                              ),
-                            ),
-                          )
-                        else
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF8E95A5)
-                                  .withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: const Color(0xFF8E95A5)
-                                    .withValues(alpha: 0.35),
-                                width: 0.8,
-                              ),
-                            ),
-                            child: const Text(
-                              'Upcoming',
-                              style: TextStyle(
-                                color: Color(0xFF8E95A5),
-                                fontSize: 9.5,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.25,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (schedule.location != null &&
-                        schedule.location!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              schedule.location!,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFF8E95A5),
-                                fontSize: 11.5,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.05,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 6),
-                    // Time row & action icons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 15,
-                              height: 15,
-                              decoration: BoxDecoration(
-                                color: accentColor.withValues(alpha: 0.18),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  Icons.access_time_filled_rounded,
-                                  color: accentColor,
-                                  size: 10,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              schedule.formattedTime,
-                              style: const TextStyle(
-                                color: Color(0xFF8E95A5),
-                                fontSize: 11.5,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.05,
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Quick actions (Edit & Delete)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            InkWell(
-                              onTap: () => _openEditSchedule(schedule),
-                              borderRadius: BorderRadius.circular(6),
-                              child: const Padding(
-                                padding: EdgeInsets.all(3.5),
-                                child: Icon(
-                                  Icons.edit_outlined,
-                                  color: Color(0xFF8E95A5),
-                                  size: 15,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            InkWell(
-                              onTap: () => _deleteSchedule(schedule),
-                              borderRadius: BorderRadius.circular(6),
-                              child: const Padding(
-                                padding: EdgeInsets.all(3.5),
-                                child: Icon(
-                                  Icons.delete_outline_rounded,
-                                  color: Color(0xFF8E95A5),
-                                  size: 15,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
+import '../../common_widgets/impal_schedule_card.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
 import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
 import '../jadwal/schedule_page.dart';
+import '../jadwal/pop_up_konfirmasi_delete.dart';
 import 'pop_up_create_meeting.dart';
 
 /// Aliases for backward compatibility with Figma export & routes
@@ -137,7 +138,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       teamName: widget.teamName,
     );
     if (result != null && mounted) {
-      PopUpPemberitahuan.scheduleCreated(context);
+      PopUpPemberitahuan.meetingCreated(context);
     }
   }
 
@@ -148,7 +149,28 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       teamName: widget.teamName,
     );
     if (result != null && mounted) {
-      PopUpPemberitahuan.scheduleUpdated(context);
+      PopUpPemberitahuan.meetingUpdated(context);
+    }
+  }
+
+  Future<void> _deleteSchedule(ScheduleModel item) async {
+    final isMeeting = item.type.toLowerCase() == 'meeting';
+    final confirmed = await PopUpKonfirmasiDelete.show(
+      context,
+      title: isMeeting ? 'Delete Meeting?' : 'Delete Schedule?',
+      message: isMeeting
+          ? 'Are you sure you want to delete this meeting? This action cannot be undone.'
+          : 'Are you sure you want to delete this schedule? This action cannot be undone.',
+    );
+    if (confirmed == true) {
+      await ScheduleRepository().deleteSchedule(item.id);
+      if (mounted) {
+        if (isMeeting) {
+          PopUpPemberitahuan.meetingDeleted(context);
+        } else {
+          PopUpPemberitahuan.scheduleDeleted(context);
+        }
+      }
     }
   }
 
@@ -668,13 +690,14 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           return isExplicitMeeting || hasMeetingKeyword;
         }).toList();
 
-        // Sort items: Ongoing (0) -> Upcoming (1) -> Overdue (2)
+        // Sort items: Overdue (0) -> Ongoing (1) -> Upcoming (2)
+        // Or if Ongoing is absent: Overdue (0) -> Upcoming (2)
         // Then chronologically by start time (09:00 before 10:00)
         teamSchedules.sort((a, b) {
           int statusWeight(String s) {
             final st = s.toLowerCase();
-            if (st == 'ongoing') return 0;
-            if (st == 'upcoming') return 1;
+            if (st == 'overdue' || st == 'completed') return 0;
+            if (st == 'ongoing') return 1;
             return 2;
           }
 
@@ -689,43 +712,27 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
 
         Widget scheduleContent;
         if (teamSchedules.isEmpty) {
-          scheduleContent = _buildScheduleCard(
-            ScheduleRepository.defaultTeamSchedule,
+          scheduleContent = ImpalScheduleCard(
+            schedule: ScheduleRepository.defaultTeamSchedule,
             isHorizontal: false,
             isLast: true,
+            onEdit: () => _openEditSchedule(ScheduleRepository.defaultTeamSchedule),
+            onDelete: () => _deleteSchedule(ScheduleRepository.defaultTeamSchedule),
           );
         } else if (teamSchedules.length == 1) {
-          scheduleContent = _buildScheduleCard(
-            teamSchedules.first,
+          scheduleContent = ImpalScheduleCard(
+            schedule: teamSchedules.first,
             isHorizontal: false,
             isLast: true,
+            onEdit: () => _openEditSchedule(teamSchedules.first),
+            onDelete: () => _deleteSchedule(teamSchedules.first),
           );
         } else {
-          scheduleContent = ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context).copyWith(
-              dragDevices: {
-                PointerDeviceKind.touch,
-                PointerDeviceKind.mouse,
-                PointerDeviceKind.trackpad,
-              },
-            ),
-            child: SingleChildScrollView(
-              key: const ValueKey('team_dashboard_schedules_horizontal_scroll'),
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              clipBehavior: Clip.none,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (int i = 0; i < teamSchedules.length; i++)
-                    _buildScheduleCard(
-                      teamSchedules[i],
-                      isHorizontal: true,
-                      isLast: i == teamSchedules.length - 1,
-                    ),
-                ],
-              ),
-            ),
+          scheduleContent = ImpalHorizontalScheduleList(
+            scrollKey: const ValueKey('team_dashboard_schedules_horizontal_scroll'),
+            schedules: teamSchedules,
+            onEdit: _openEditSchedule,
+            onDelete: _deleteSchedule,
           );
         }
 
@@ -779,191 +786,6 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildScheduleCard(
-    ScheduleModel schedule, {
-    bool isHorizontal = false,
-    bool isLast = false,
-  }) {
-    return Container(
-      width: isHorizontal ? 285 : double.infinity,
-      margin: EdgeInsets.only(
-        right: isHorizontal ? (isLast ? 0 : 12) : 0,
-        bottom: !isHorizontal ? (isLast ? 0 : 10) : 0,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _openEditSchedule(schedule),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Left accent stripe
-                Container(
-                  width: 5,
-                  color: schedule.accentColor,
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                schedule.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14.5,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            // Status Pill matching schedule_page style (Overdue gray, Ongoing coral, Upcoming gray)
-                            if (schedule.status.toLowerCase() == 'ongoing')
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2.5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF826E),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: const Text(
-                                  'Ongoing',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9.5,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.25,
-                                  ),
-                                ),
-                              )
-                            else if (schedule.status.toLowerCase() == 'overdue' ||
-                                schedule.status.toLowerCase() == 'completed')
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2.5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-                                    width: 0.8,
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Overdue',
-                                  style: TextStyle(
-                                    color: Color(0xFF8E95A5),
-                                    fontSize: 9.5,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.25,
-                                  ),
-                                ),
-                              )
-                            else
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2.5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-                                    width: 0.8,
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Upcoming',
-                                  style: TextStyle(
-                                    color: Color(0xFF8E95A5),
-                                    fontSize: 9.5,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.25,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        if (schedule.location != null &&
-                            schedule.location!.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            schedule.location!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF8E95A5),
-                              fontSize: 11,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Container(
-                              width: 15,
-                              height: 15,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF8E95A5).withValues(alpha: 0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                Icons.access_time_filled_rounded,
-                                size: 9,
-                                color: Color(0xFF8E95A5),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              schedule.formattedTime,
-                              style: const TextStyle(
-                                color: Color(0xFF8E95A5),
-                                fontSize: 10.8,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 

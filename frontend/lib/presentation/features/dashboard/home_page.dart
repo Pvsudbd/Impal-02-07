@@ -4,12 +4,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
+import '../../common_widgets/impal_schedule_card.dart';
 import '../auth/login_page.dart';
 import '../jadwal/schedule_page.dart';
+import '../jadwal/schedule_form_page.dart';
+import '../jadwal/pop_up_konfirmasi_delete.dart';
 import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
 import '../team/team_list_page.dart';
 import '../team/dashboard_team_page.dart';
+import '../team/pop_up_create_meeting.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 /// Aliases for flexibility
 typedef Home = HomePage;
@@ -180,6 +185,37 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+
+  void _openEditSchedule(ScheduleModel item) async {
+    if (item.type.trim().toLowerCase() == 'meeting') {
+      await PopUpCreateMeeting.showEdit(context, existingSchedule: item);
+    } else {
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => ScheduleFormPage(schedule: item)),
+      );
+    }
+  }
+
+  Future<void> _deleteSchedule(ScheduleModel item) async {
+    final isMeeting = item.type.trim().toLowerCase() == 'meeting';
+    final confirmed = await PopUpKonfirmasiDelete.show(
+      context,
+      title: isMeeting ? 'Delete Meeting?' : 'Delete Schedule?',
+      message: isMeeting
+          ? 'Are you sure you want to delete this meeting? This action cannot be undone.'
+          : 'Are you sure you want to delete this schedule? This action cannot be undone.',
+    );
+    if (confirmed == true) {
+      await ScheduleRepository().deleteSchedule(item.id);
+      if (mounted) {
+        if (isMeeting) {
+          PopUpPemberitahuan.meetingDeleted(context);
+        } else {
+          PopUpPemberitahuan.scheduleDeleted(context);
+        }
+      }
+    }
   }
 
   @override
@@ -387,14 +423,16 @@ class _HomePageState extends State<HomePage> {
           rawItems = [];
         }
 
-        // Sort items: Ongoing -> Upcoming -> Overdue, then chronologically by start time
+        // Sort items: Overdue (0) -> Ongoing (1) -> Upcoming (2)
+        // Or if Ongoing is absent: Overdue (0) -> Upcoming (2)
+        // Then chronologically by start time
         final sortedItems = List<ScheduleModel>.from(rawItems);
         sortedItems.sort((a, b) {
           int statusWeight(String s) {
             final st = s.toLowerCase();
-            if (st == 'ongoing') return 0;
-            if (st == 'upcoming') return 1;
-            return 2; // Overdue / Completed
+            if (st == 'overdue' || st == 'completed') return 0;
+            if (st == 'ongoing') return 1;
+            return 2; // Upcoming
           }
 
           final wA = statusWeight(a.status);
@@ -465,16 +503,13 @@ class _HomePageState extends State<HomePage> {
             isLast: true,
           );
         } else {
-          scheduleContent = _HorizontalScheduleList(
+          scheduleContent = ImpalHorizontalScheduleList(
             key: const ValueKey('home_today_schedule_list'),
+            scrollKey: const ValueKey('today_schedules_horizontal_scroll'),
             schedules: sortedItems,
-            cardBuilder: (schedule, {bool isHorizontal = true, bool isLast = false}) {
-              return _buildRepoScheduleCard(
-                schedule,
-                isHorizontal: isHorizontal,
-                isLast: isLast,
-              );
-            },
+            onCardTap: (s) => _onTabSelected(3),
+            onEdit: (s) => _openEditSchedule(s),
+            onDelete: (s) => _deleteSchedule(s),
           );
         }
 
@@ -523,176 +558,13 @@ class _HomePageState extends State<HomePage> {
     bool isHorizontal = false,
     bool isLast = false,
   }) {
-    return GestureDetector(
+    return ImpalScheduleCard(
+      schedule: schedule,
+      isHorizontal: isHorizontal,
+      isLast: isLast,
       onTap: () => _onTabSelected(3),
-      child: Container(
-        margin: EdgeInsets.only(
-          right: isHorizontal ? (isLast ? 0 : 12) : 0,
-          bottom: !isHorizontal ? (isLast ? 0 : 10) : 0,
-        ),
-        width: isHorizontal ? 285 : double.infinity,
-        decoration: BoxDecoration(
-          color: const Color(0xFF323846),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 10,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                width: 5,
-                color: schedule.accentColor,
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              schedule.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          if (schedule.status.toLowerCase() == 'ongoing')
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFF826E),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: const Text(
-                                'Ongoing',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9.5,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.25,
-                                ),
-                              ),
-                            )
-                          else if (schedule.status.toLowerCase() == 'overdue' ||
-                              schedule.status.toLowerCase() == 'completed')
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-                                  width: 0.8,
-                                ),
-                              ),
-                              child: const Text(
-                                'Overdue',
-                                style: TextStyle(
-                                  color: Color(0xFF8E95A5),
-                                  fontSize: 9.5,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.25,
-                                ),
-                              ),
-                            )
-                          else
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-                                  width: 0.8,
-                                ),
-                              ),
-                              child: const Text(
-                                'Upcoming',
-                                style: TextStyle(
-                                  color: Color(0xFF8E95A5),
-                                  fontSize: 9.5,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.25,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      if (schedule.location != null && schedule.location!.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          schedule.location!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF8E95A5),
-                            fontSize: 11,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: schedule.accentColor.withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Icon(
-                              Icons.access_time_filled_rounded,
-                              size: 10,
-                              color: schedule.accentColor,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            schedule.formattedTime,
-                            style: const TextStyle(
-                              color: Color(0xFF8E95A5),
-                              fontSize: 11,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      onEdit: () => _openEditSchedule(schedule),
+      onDelete: () => _deleteSchedule(schedule),
     );
   }
 
@@ -1467,119 +1339,4 @@ class TaskTag {
     required this.bg,
     required this.text,
   });
-}
-
-class _HorizontalScheduleList extends StatefulWidget {
-  final List<ScheduleModel> schedules;
-  final Widget Function(ScheduleModel schedule, {bool isHorizontal, bool isLast}) cardBuilder;
-
-  const _HorizontalScheduleList({
-    super.key,
-    required this.schedules,
-    required this.cardBuilder,
-  });
-
-  @override
-  State<_HorizontalScheduleList> createState() => _HorizontalScheduleListState();
-}
-
-class _HorizontalScheduleListState extends State<_HorizontalScheduleList> {
-  late ScrollController _scrollController;
-  int _targetIndex = 0;
-
-  int _findTargetIndex(List<ScheduleModel> items) {
-    // 1. Prioritize 'ongoing' schedule so it appears first on home
-    final ongoingIndex = items.indexWhere(
-      (s) => s.status.toLowerCase() == 'ongoing',
-    );
-    if (ongoingIndex != -1) return ongoingIndex;
-
-    // 2. Fallback to first 'upcoming' schedule if no ongoing schedule is currently active
-    final upcomingIndex = items.indexWhere(
-      (s) => s.status.toLowerCase() == 'upcoming',
-    );
-    if (upcomingIndex != -1) return upcomingIndex;
-
-    return 0;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _targetIndex = _findTargetIndex(widget.schedules);
-    final initialOffset = _targetIndex > 0 ? _targetIndex * 297.0 : 0.0;
-    _scrollController = ScrollController(initialScrollOffset: initialOffset);
-
-    if (_targetIndex > 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          final max = _scrollController.position.maxScrollExtent;
-          final target = (_targetIndex * 297.0).clamp(0.0, max);
-          if ((_scrollController.offset - target).abs() > 1.0) {
-            _scrollController.jumpTo(target);
-          }
-        }
-      });
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _HorizontalScheduleList oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final newTarget = _findTargetIndex(widget.schedules);
-    final listChanged = widget.schedules.length != oldWidget.schedules.length ||
-        newTarget != _targetIndex;
-
-    if (listChanged && newTarget > 0) {
-      _targetIndex = newTarget;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          final max = _scrollController.position.maxScrollExtent;
-          final target = (_targetIndex * 297.0).clamp(0.0, max);
-          _scrollController.animateTo(
-            target,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-          );
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ScrollConfiguration(
-      behavior: ScrollConfiguration.of(context).copyWith(
-        dragDevices: {
-          PointerDeviceKind.touch,
-          PointerDeviceKind.mouse,
-          PointerDeviceKind.trackpad,
-        },
-      ),
-      child: SingleChildScrollView(
-        key: const ValueKey('today_schedules_horizontal_scroll'),
-        controller: _scrollController,
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        clipBehavior: Clip.none,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (int i = 0; i < widget.schedules.length; i++)
-              widget.cardBuilder(
-                widget.schedules[i],
-                isHorizontal: true,
-                isLast: i == widget.schedules.length - 1,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 }

@@ -2,20 +2,30 @@ import 'package:flutter/material.dart';
 
 /// Pop up dialog confirming schedule deletion
 class PopUpKonfirmasiDelete extends StatelessWidget {
+  final String title;
+  final String message;
   final VoidCallback? onConfirm;
   final VoidCallback? onCancel;
 
   const PopUpKonfirmasiDelete({
     super.key,
+    this.title = 'Delete Schedule?',
+    this.message = 'Are you sure you want to delete this schedule? This action cannot be undone.',
     this.onConfirm,
     this.onCancel,
   });
 
-  static Future<bool?> show(BuildContext context) {
+  static Future<bool?> show(
+    BuildContext context, {
+    String title = 'Delete Schedule?',
+    String message = 'Are you sure you want to delete this schedule? This action cannot be undone.',
+  }) {
     return showDialog<bool>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.65),
       builder: (ctx) => PopUpKonfirmasiDelete(
+        title: title,
+        message: message,
         onConfirm: () => Navigator.of(ctx).pop(true),
         onCancel: () => Navigator.of(ctx).pop(false),
       ),
@@ -73,10 +83,10 @@ class PopUpKonfirmasiDelete extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Delete Schedule?',
+            Text(
+              title,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontFamily: 'Inter',
@@ -85,10 +95,10 @@ class PopUpKonfirmasiDelete extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Are you sure you want to delete this schedule? This action cannot be undone.',
+            Text(
+              message,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Color(0xFFD1D5DB),
                 fontSize: 12.5,
                 fontFamily: 'Inter',
