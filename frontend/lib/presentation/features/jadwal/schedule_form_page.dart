@@ -65,8 +65,15 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
     super.initState();
     if (widget.schedule != null) {
       final s = widget.schedule!;
-      _selectedType = s.type;
-      _titleController.text = (s.type == 'Lecture' ? (s.course ?? s.title) : s.title);
+      final rawType = s.type.trim();
+      if (rawType.toLowerCase() == 'lecture') {
+        _selectedType = 'Lecture';
+      } else if (rawType.toLowerCase() == 'meeting') {
+        _selectedType = 'Meeting';
+      } else {
+        _selectedType = 'External';
+      }
+      _titleController.text = (_selectedType == 'Lecture' ? (s.course ?? s.title) : s.title);
       _locationController.text = s.location ?? '';
       _notesController.text = s.notes ?? '';
       _selectedDate = s.date;
@@ -74,10 +81,17 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       _startTime = _parseTime(s.timeStart, const TimeOfDay(hour: 9, minute: 30));
       _endTime = _parseTime(s.timeEnd, const TimeOfDay(hour: 11, minute: 30));
       _isTeamMeeting = (s.teamName != null && s.teamName!.isNotEmpty) ||
-          (s.type == 'Meeting' && (s.location?.toLowerCase().contains('team') == true));
+          (_selectedType == 'Meeting' && (s.location?.toLowerCase().contains('team') == true));
       _teamController.text = s.teamName ?? '';
     } else {
-      _selectedType = widget.initialType ?? 'Lecture';
+      final rawType = (widget.initialType ?? 'Lecture').trim();
+      if (rawType.toLowerCase() == 'lecture') {
+        _selectedType = 'Lecture';
+      } else if (rawType.toLowerCase() == 'meeting') {
+        _selectedType = 'Meeting';
+      } else {
+        _selectedType = 'External';
+      }
       _selectedDate = widget.initialDate ?? DateTime.now();
       _repeatWeekly = _selectedType == 'Lecture';
       _startTime = const TimeOfDay(hour: 9, minute: 30);
@@ -304,11 +318,14 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
         backgroundColor: const Color(0xFF282D37),
         elevation: 0,
         leading: IconButton(
+          key: const ValueKey('close_create_meeting_button'),
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: Text(
-          isEdit ? 'Edit Schedule' : 'Add Schedule',
+          isEdit
+              ? (_selectedType == 'Meeting' ? 'Edit Meeting' : 'Edit Schedule')
+              : (_selectedType == 'Meeting' ? 'Create Meeting' : 'Add Schedule'),
           style: const TextStyle(
             color: Colors.white,
             fontSize: 18,
@@ -320,8 +337,9 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
         actions: [
           if (isEdit) ...[
             IconButton(
+              key: const ValueKey('delete_meeting_button'),
               icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFA6144)),
-              tooltip: 'Delete Schedule',
+              tooltip: _selectedType == 'Meeting' ? 'Delete Meeting' : 'Delete Schedule',
               onPressed: _deleteSchedule,
             ),
             const SizedBox(width: 8),
@@ -404,6 +422,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                     ),
                     const SizedBox(height: 8),
                     _buildTextField(
+                      key: isMeeting ? const ValueKey('create_meeting_name_input') : null,
                       controller: _titleController,
                       hint: isLecture
                           ? 'e.g. SSIF-04-REG • Software Testing & Implementation'
@@ -622,6 +641,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                     ),
                     const SizedBox(height: 8),
                     _buildTextField(
+                      key: isMeeting ? const ValueKey('create_meeting_location_input') : null,
                       controller: _locationController,
                       hint: isLecture
                           ? 'e.g. KTT B-106 • SSIF-04-REG-GAB02'
@@ -776,6 +796,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                           Transform.scale(
                             scale: 0.82,
                             child: Switch(
+                              key: isMeeting ? const ValueKey('create_meeting_repeat_weekly_switch') : null,
                               value: _repeatWeekly,
                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               activeThumbColor: const Color(0xFFFA6144),
@@ -799,6 +820,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                     ),
                     const SizedBox(height: 8),
                     _buildTextField(
+                      key: isMeeting ? const ValueKey('create_meeting_desc_input') : null,
                       controller: _notesController,
                       hint: 'Add reminders, assignment info, or topics...',
                       maxLines: 3,
@@ -810,6 +832,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                       width: double.infinity,
                       height: 48,
                       child: ElevatedButton(
+                        key: isMeeting ? const ValueKey('create_meeting_submit_button') : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFA6144),
                           foregroundColor: Colors.white,
@@ -891,6 +914,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
   }
 
   Widget _buildTextField({
+    Key? key,
     required TextEditingController controller,
     required String hint,
     IconData? prefixIcon,
@@ -899,6 +923,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
     String? Function(String?)? validator,
   }) {
     return TextFormField(
+      key: key,
       controller: controller,
       maxLines: maxLines,
       onChanged: onChanged,

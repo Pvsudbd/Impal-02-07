@@ -6,7 +6,6 @@ import 'models/schedule_repository.dart';
 import 'schedule_form_page.dart';
 import 'pop_up_konfirmasi_delete.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
-import '../team/pop_up_create_meeting.dart';
 
 /// Aliases for backwards compatibility
 typedef JadwalKuliah = SchedulePage;
@@ -218,16 +217,9 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
   }
 
   void _openEditSchedule(ScheduleModel item) async {
-    if (item.type.trim().toLowerCase() == 'meeting') {
-      final res = await PopUpCreateMeeting.showEdit(context, existingSchedule: item);
-      if (res != null && mounted) {
-        PopUpPemberitahuan.meetingUpdated(context);
-      }
-    } else {
-      await Navigator.of(context).push<bool>(
-        MaterialPageRoute(builder: (_) => ScheduleFormPage(schedule: item)),
-      );
-    }
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ScheduleFormPage(schedule: item)),
+    );
   }
 
   Future<void> _deleteSchedule(ScheduleModel item) async {

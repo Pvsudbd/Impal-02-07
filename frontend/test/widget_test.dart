@@ -2094,5 +2094,65 @@ void main() {
     // Verify meeting was removed from repository
     expect(ScheduleRepository().getById('page_meet_edit_1'), isNull);
   });
+
+  testWidgets('SchedulePage editing meeting allows changing schedule type to External or Lecture', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
+
+    final now = DateTime.now();
+    final meetingSchedule = ScheduleModel(
+      id: 'sch_edit_type_test',
+      title: 'Meeting Koordinasi UI',
+      type: 'Meeting',
+      location: 'Zoom Room 1',
+      date: now,
+      timeStart: '10:00',
+      timeEnd: '11:00',
+    );
+    ScheduleRepository().schedulesNotifier.value = [meetingSchedule];
+
+    await tester.pumpWidget(const MaterialApp(
+      home: SchedulePage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify meeting appears on SchedulePage
+    expect(find.text('Meeting Koordinasi UI'), findsOneWidget);
+
+    // Tap edit button on the schedule card
+    final editBtn = find.byIcon(Icons.edit_outlined).first;
+    await tester.tap(editBtn);
+    await tester.pumpAndSettle();
+
+    // Verify ScheduleFormPage opens with Meeting selected
+    expect(find.text('Edit Meeting'), findsWidgets);
+    expect(find.text('Meeting'), findsOneWidget);
+    expect(find.text('External'), findsOneWidget);
+    expect(find.text('Lecture'), findsOneWidget);
+
+    // Switch schedule type to External
+    await tester.tap(find.text('External'));
+    await tester.pumpAndSettle();
+
+    // Verify AppBar title changed to Edit Schedule
+    expect(find.text('Edit Schedule'), findsOneWidget);
+
+    // Tap Save Changes
+    final submitBtn = find.widgetWithText(ElevatedButton, 'Save Changes');
+    await tester.tap(submitBtn);
+    await tester.pumpAndSettle();
+
+    // PopUpKonfirmasiEdit appears -> confirm
+    expect(find.text('Edit Schedule?'), findsOneWidget);
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    // Verify type was changed to External in ScheduleRepository
+    final updated = ScheduleRepository().getById('sch_edit_type_test');
+    expect(updated, isNotNull);
+    expect(updated!.type, equals('External'));
+  });
 }
 
