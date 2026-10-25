@@ -1,5 +1,5 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../common_widgets/impal_bottom_nav_bar.dart';
 import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
 import 'schedule_form_page.dart';
@@ -118,113 +118,9 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   Widget _buildBottomNavBar() {
-    const double barTop = 18.0;
-    const double totalHeight = 86.0;
-    const double circleDiameter = 54.0;
-    const double circleRadius = circleDiameter / 2;
-    const double circleCenterY = 29.0;
-    const double notchRadius = 33.0;
-
-    return SizedBox(
-      height: totalHeight,
-      child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(end: _currentTab.toDouble()),
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOutCubic,
-        builder: (context, animValue, child) {
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              final tabWidth = width / 4;
-              final activeCenterX = (animValue + 0.5) * tabWidth;
-
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  CustomPaint(
-                    size: Size(width, totalHeight),
-                    painter: _ScoopedNavBarPainter(
-                      centerX: activeCenterX,
-                      barTop: barTop,
-                      circleCenterY: circleCenterY,
-                      notchRadius: notchRadius,
-                      barColor: const Color(0xFF323846),
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    top: barTop,
-                    height: 68.0,
-                    child: Row(
-                      children: List.generate(4, (index) {
-                        final tabDistance = (animValue - index).abs();
-                        final opacity = tabDistance.clamp(0.0, 1.0);
-
-                        return Expanded(
-                          child: InkWell(
-                            onTap: () => _onTabSelected(index),
-                            splashColor: Colors.transparent,
-                            highlightColor: Colors.transparent,
-                            child: Center(
-                              child: Opacity(
-                                opacity: opacity,
-                                child: Icon(
-                                  _getInactiveIcon(index),
-                                  color: const Color(0xFF8E95A5),
-                                  size: 24,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                  Positioned(
-                    left: activeCenterX - circleRadius,
-                    top: 2.0,
-                    child: GestureDetector(
-                      onTap: () => _onTabSelected(_currentTab),
-                      child: Container(
-                        width: circleDiameter,
-                        height: circleDiameter,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Color(0xFFFF7253),
-                              Color(0xFFFA6144),
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFA6144)
-                                  .withValues(alpha: 0.50),
-                              blurRadius: 18,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Icon(
-                            _getActiveIcon(_currentTab),
-                            color: Colors.white,
-                            size: 26,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      ),
+    return ImpalBottomNavBar(
+      currentTab: _currentTab,
+      onTabSelected: _onTabSelected,
     );
   }
 
@@ -247,36 +143,6 @@ class _SchedulePageState extends State<SchedulePage> {
       );
     } else if (index == 3) {
       setState(() => _currentTab = 3);
-    }
-  }
-
-  IconData _getActiveIcon(int index) {
-    switch (index) {
-      case 0:
-        return Icons.home_rounded;
-      case 1:
-        return Icons.checklist_rounded;
-      case 2:
-        return Icons.groups_rounded;
-      case 3:
-        return Icons.calendar_month_rounded;
-      default:
-        return Icons.calendar_month_rounded;
-    }
-  }
-
-  IconData _getInactiveIcon(int index) {
-    switch (index) {
-      case 0:
-        return Icons.home_outlined;
-      case 1:
-        return Icons.checklist_rounded;
-      case 2:
-        return Icons.groups_outlined;
-      case 3:
-        return Icons.calendar_month_outlined;
-      default:
-        return Icons.calendar_month_outlined;
     }
   }
 }
@@ -938,103 +804,5 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
         ),
       ),
     );
-  }
-}
-
-class _ScoopedNavBarPainter extends CustomPainter {
-  final double centerX;
-  final double barTop;
-  final double circleCenterY;
-  final double notchRadius;
-  final Color barColor;
-
-  const _ScoopedNavBarPainter({
-    required this.centerX,
-    required this.barTop,
-    required this.circleCenterY,
-    required this.notchRadius,
-    required this.barColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const double left = 0;
-    final double right = size.width;
-    final double top = barTop;
-    final double bottom = size.height;
-    const double cr = 5.0;
-
-    final double R = notchRadius;
-    const double r = 10.0;
-    final double dY = (top + r) - circleCenterY;
-    final double distSq = (R + r) * (R + r) - dY * dY;
-    final double dX = distSq > 0 ? math.sqrt(distSq) : R;
-
-    final double ratio = R / (R + r);
-    final Offset pTanLeft =
-        Offset(centerX - dX * ratio, circleCenterY + dY * ratio);
-    final Offset pTanRight =
-        Offset(centerX + dX * ratio, circleCenterY + dY * ratio);
-    final double leftShoulderX = (centerX - dX).clamp(left + cr, right - cr);
-    final double rightShoulderX = (centerX + dX).clamp(left + cr, right - cr);
-
-    final Path path = Path();
-    path.moveTo(left, top + cr);
-    path.quadraticBezierTo(left, top, left + cr, top);
-
-    if (leftShoulderX > left + cr) {
-      path.lineTo(leftShoulderX, top);
-      path.quadraticBezierTo(
-        leftShoulderX + (centerX - leftShoulderX) * 0.35,
-        top,
-        pTanLeft.dx,
-        pTanLeft.dy,
-      );
-    } else {
-      path.lineTo(pTanLeft.dx, pTanLeft.dy);
-    }
-
-    final Rect notchRect = Rect.fromCircle(
-      center: Offset(centerX, circleCenterY),
-      radius: R,
-    );
-    final double startAngle =
-        math.atan2(pTanLeft.dy - circleCenterY, pTanLeft.dx - centerX);
-    final double endAngle =
-        math.atan2(pTanRight.dy - circleCenterY, pTanRight.dx - centerX);
-    double sweep = endAngle - startAngle;
-    if (sweep < 0) sweep += 2 * math.pi;
-
-    path.arcTo(notchRect, startAngle, sweep, false);
-
-    if (rightShoulderX < right - cr) {
-      path.quadraticBezierTo(
-        rightShoulderX - (rightShoulderX - centerX) * 0.35,
-        top,
-        rightShoulderX,
-        top,
-      );
-      path.lineTo(right - cr, top);
-    } else {
-      path.lineTo(right - cr, top);
-    }
-
-    path.quadraticBezierTo(right, top, right, top + cr);
-    path.lineTo(right, bottom);
-    path.lineTo(left, bottom);
-    path.close();
-
-    final Paint paint = Paint()
-      ..color = barColor
-      ..style = PaintingStyle.fill;
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _ScoopedNavBarPainter oldDelegate) {
-    return oldDelegate.centerX != centerX ||
-        oldDelegate.barColor != barColor ||
-        oldDelegate.notchRadius != notchRadius;
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
@@ -140,138 +141,20 @@ class _TeamListPageState extends State<TeamListPage> {
   }
 
   Widget _buildBottomNavBar() {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    const double barTop = 26.0;
-    const double circleTop = 2.0;
-    const double circleDiameter = 54.0;
-    const double circleRadius = circleDiameter / 2;
-    const double circleCenterY = circleTop + circleRadius;
-    const double gap = 6.0;
-    const double notchRadius = circleRadius + gap;
-    final totalHeight = barTop + 68.0 + bottomPadding;
-
-    return SizedBox(
-      height: totalHeight,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final tabWidth = width / 4;
-          final activeCenterX = (_currentTab + 0.5) * tabWidth;
-
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              CustomPaint(
-                size: Size(width, totalHeight),
-                painter: _ScoopedNavBarPainter(
-                  centerX: activeCenterX,
-                  barTop: barTop,
-                  circleCenterY: circleCenterY,
-                  notchRadius: notchRadius,
-                  barColor: const Color(0xFF323846),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                top: barTop,
-                height: 68.0,
-                child: Row(
-                  children: List.generate(4, (index) {
-                    final isCurrent = index == _currentTab;
-                    return Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          if (index == 0) {
-                            if (widget.onBackToHome != null) {
-                              widget.onBackToHome!();
-                            } else if (Navigator.of(context).canPop()) {
-                              Navigator.of(context).pop();
-                            }
-                          } else {
-                            setState(() => _currentTab = index);
-                          }
-                        },
-                        splashColor: Colors.transparent,
-                        highlightColor: Colors.transparent,
-                        child: Center(
-                          child: Opacity(
-                            opacity: isCurrent ? 0.0 : 1.0,
-                            child: Icon(
-                              _getInactiveIcon(index),
-                              color: const Color(0xFF8E95A5),
-                              size: 24,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-              Positioned(
-                left: activeCenterX - circleRadius,
-                top: circleTop,
-                width: circleDiameter,
-                height: circleDiameter,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0xFFFD7357), Color(0xFFFA6144)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x66FA6144),
-                        blurRadius: 18,
-                        offset: Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Icon(
-                      _getActiveIcon(_currentTab),
-                      color: Colors.white,
-                      size: 26,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+    return ImpalBottomNavBar(
+      currentTab: _currentTab,
+      onTabSelected: (index) {
+        if (index == 0) {
+          if (widget.onBackToHome != null) {
+            widget.onBackToHome!();
+          } else if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        } else {
+          setState(() => _currentTab = index);
+        }
+      },
     );
-  }
-
-  IconData _getActiveIcon(int index) {
-    switch (index) {
-      case 0:
-        return Icons.home_rounded;
-      case 1:
-        return Icons.checklist_rounded;
-      case 2:
-        return Icons.groups_rounded;
-      case 3:
-      default:
-        return Icons.calendar_month_rounded;
-    }
-  }
-
-  IconData _getInactiveIcon(int index) {
-    switch (index) {
-      case 0:
-        return Icons.home_outlined;
-      case 1:
-        return Icons.checklist_outlined;
-      case 2:
-        return Icons.groups_outlined;
-      case 3:
-      default:
-        return Icons.calendar_month_outlined;
-    }
   }
 }
 
@@ -466,7 +349,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 100),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               // 1. Header (Greeting + Subtitle + User Profile Initials)
@@ -475,7 +358,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
 
               // 2. Team's Schedule Section
               _buildTeamScheduleSection(),
-              const SizedBox(height: 22),
+              const SizedBox(height: 16),
 
               // 3. Team List Section (with Join & Create actions)
               _buildTeamsSection(),
@@ -747,7 +630,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             scheduleContent,
           ],
         );
@@ -761,7 +644,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
         color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
@@ -808,7 +691,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
       ),
       decoration: BoxDecoration(
         color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(
             color: Color(0x33000000),
@@ -833,7 +716,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1164,81 +1047,5 @@ class _TeamListContentViewState extends State<TeamListContentView> {
         ],
       ),
     );
-  }
-}
-
-class _ScoopedNavBarPainter extends CustomPainter {
-  final double centerX;
-  final double barTop;
-  final double circleCenterY;
-  final double notchRadius;
-  final Color barColor;
-
-  const _ScoopedNavBarPainter({
-    required this.centerX,
-    required this.barTop,
-    required this.circleCenterY,
-    required this.notchRadius,
-    required this.barColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const double left = 0;
-    final double right = size.width;
-    final double top = barTop;
-    final double bottom = size.height;
-    const double cr = 5.0;
-
-    final double R = notchRadius;
-    const double r = 10.0;
-    final double h = top - circleCenterY;
-
-    final double dSq = (R + r) * (R + r) - (h + r) * (h + r);
-    final double d = dSq > 0 ? dSq : 0;
-    final double actualD = d > 0 ? d.clamp(0.0, 10000.0) : 0.0;
-
-    final double notchLeft = centerX - (actualD > 0 ? 33.0 : 33.0);
-    final double notchRight = centerX + (actualD > 0 ? 33.0 : 33.0);
-
-    final path = Path()
-      ..moveTo(left, top + cr)
-      ..arcToPoint(Offset(left + cr, top), radius: const Radius.circular(cr))
-      ..lineTo(notchLeft - r, top)
-      ..arcToPoint(
-        Offset(notchLeft, top + 4),
-        radius: const Radius.circular(r),
-        clockwise: false,
-      )
-      ..arcToPoint(
-        Offset(notchRight, top + 4),
-        radius: Radius.circular(R),
-        clockwise: false,
-      )
-      ..arcToPoint(
-        Offset(notchRight + r, top),
-        radius: const Radius.circular(r),
-        clockwise: false,
-      )
-      ..lineTo(right - cr, top)
-      ..arcToPoint(Offset(right, top + cr), radius: const Radius.circular(cr))
-      ..lineTo(right, bottom)
-      ..lineTo(left, bottom)
-      ..close();
-
-    final paint = Paint()
-      ..color = barColor
-      ..style = PaintingStyle.fill;
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _ScoopedNavBarPainter oldDelegate) {
-    return oldDelegate.centerX != centerX ||
-        oldDelegate.barTop != barTop ||
-        oldDelegate.circleCenterY != circleCenterY ||
-        oldDelegate.notchRadius != notchRadius ||
-        oldDelegate.barColor != barColor;
   }
 }

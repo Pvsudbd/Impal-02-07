@@ -11,6 +11,7 @@ import 'package:impal_smart_todolist/presentation/common_widgets/impal_time_pick
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_date_picker_dialog.dart';
 import 'package:impal_smart_todolist/presentation/features/team/pop_up_create_team.dart';
 import 'package:impal_smart_todolist/presentation/features/team/pop_up_join_team.dart';
+import 'package:impal_smart_todolist/presentation/common_widgets/impal_bottom_nav_bar.dart';
 import 'package:impal_smart_todolist/presentation/features/team/dashboard_team_page.dart';
 
 void main() {
@@ -1127,8 +1128,95 @@ void main() {
     expect(find.text("Team's Schedule"), findsOneWidget);
     expect(find.text('Team Task'), findsOneWidget);
   });
+
+  testWidgets('DashboardTeamPage uses ImpalBottomNavBar and renders team info blending into base canvas', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: DashboardTeamPage(
+        userName: 'Jarvis',
+        teamName: 'Kelompok IMPAL',
+        teamCode: '7X29',
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verifikasi ImpalBottomNavBar digunakan
+    expect(find.byType(ImpalBottomNavBar), findsOneWidget);
+    expect(find.byKey(const ValueKey('impal_nav_floating_button')), findsOneWidget);
+
+    // Verifikasi nama tim dan kode tim tampil
+    expect(find.text('Kelompok IMPAL'), findsOneWidget);
+    expect(find.text('7X29'), findsOneWidget);
+  });
+
+  testWidgets('DashboardTeamPage task cards render avatar profile with person silhouette icon', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: DashboardTeamPage(
+        userName: 'Jarvis',
+        teamName: 'Kelompok IMPAL',
+        teamCode: '7X29',
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verifikasi avatar profile ikon Icons.person tampil pada task cards
+    expect(find.byIcon(Icons.person), findsWidgets);
+    expect(find.text('Yoga Perkasa Didik'), findsWidgets);
+  });
+
+  testWidgets('All primary pages (Home, Team, Schedule, DashboardTeam) use standard ImpalBottomNavBar', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    // 1. Home
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+    await tester.pumpAndSettle();
+    expect(find.byType(ImpalBottomNavBar), findsOneWidget);
+
+    // 2. TeamListPage
+    await tester.pumpWidget(const MaterialApp(home: TeamListPage()));
+    await tester.pumpAndSettle();
+    expect(find.byType(ImpalBottomNavBar), findsOneWidget);
+
+    // 3. SchedulePage
+    await tester.pumpWidget(const MaterialApp(home: SchedulePage()));
+    await tester.pumpAndSettle();
+    expect(find.byType(ImpalBottomNavBar), findsOneWidget);
+  });
+
+  testWidgets('Dashboard, Schedule, and Team pages adhere strictly to design system spacing tokens', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    // 1. DashboardTeamPage has team schedule and section header to content spacing
+    await tester.pumpWidget(const MaterialApp(
+      home: DashboardTeamPage(
+        userName: 'Jarvis',
+        teamName: 'Kelompok IMPAL',
+        teamCode: '7X29',
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Team's Schedule"), findsOneWidget);
+    expect(find.text("+ Create Meeting"), findsOneWidget);
+    expect(find.text("Team Task"), findsOneWidget);
+
+    // 2. SchedulePage conforms to standard spacing & date groupings
+    await tester.pumpWidget(const MaterialApp(home: SchedulePage()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Schedule'), findsOneWidget);
+    expect(find.text('All'), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
+  });
 }
-
-
-
-

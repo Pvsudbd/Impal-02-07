@@ -1,9 +1,9 @@
-import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
+import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../auth/login_page.dart';
 import '../jadwal/schedule_page.dart';
 import '../jadwal/models/schedule_model.dart';
@@ -330,21 +330,22 @@ class _HomePageState extends State<HomePage> {
             borderRadius: BorderRadius.circular(999),
             onTap: _showLogoutDialog,
             child: Container(
-              width: 44,
-              height: 44,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 color: const Color(0xFF323846),
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF434A59), width: 1.5),
+                border: Border.all(color: const Color(0xFF3B4150), width: 1),
               ),
               alignment: Alignment.center,
               child: Text(
                 initials,
                 style: const TextStyle(
                   color: Color(0xFF8E95A5),
-                  fontSize: 14,
+                  fontSize: 13.5,
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
                 ),
               ),
             ),
@@ -519,7 +520,7 @@ class _HomePageState extends State<HomePage> {
         width: isHorizontal ? 285 : double.infinity,
         decoration: BoxDecoration(
           color: const Color(0xFF323846),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: const [
             BoxShadow(
               color: Color(0x33000000),
@@ -692,7 +693,7 @@ class _HomePageState extends State<HomePage> {
         width: isHorizontal ? 285 : double.infinity,
         decoration: BoxDecoration(
           color: const Color(0xFF323846),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: const [
             BoxShadow(
               color: Color(0x33000000),
@@ -1350,130 +1351,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Scooped Bottom Navigation Bar matching Screenshot 2026-10-22 211916.png
+  // Scooped Bottom Navigation Bar using standard ImpalBottomNavBar
   Widget _buildBottomNavBar() {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    const double barTop = 26.0;
-    const double circleTop = 2.0;
-    const double circleDiameter = 54.0;
-    const double circleRadius = circleDiameter / 2; // 27.0
-    const double circleCenterY = circleTop + circleRadius; // 29.0
-    const double gap = 6.0; // 6 px gap wider than the circle
-    const double notchRadius = circleRadius + gap; // 33.0 (concentric to circle)
-    final totalHeight = barTop + 68.0 + bottomPadding;
-
-    return SizedBox(
-      height: totalHeight,
-      child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(end: _currentTab.toDouble()),
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOutCubic,
-        builder: (context, animValue, child) {
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              final tabWidth = width / 4;
-              final activeCenterX = (animValue + 0.5) * tabWidth;
-
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // 1. Scooped Navbar Background
-                  CustomPaint(
-                    size: Size(width, totalHeight),
-                    painter: _ScoopedNavBarPainter(
-                      centerX: activeCenterX,
-                      barTop: barTop,
-                      circleCenterY: circleCenterY,
-                      notchRadius: notchRadius,
-                      barColor: const Color(0xFF323846),
-                    ),
-                  ),
-
-                  // 2. Inactive Tab Icons
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    top: barTop,
-                    height: 68.0,
-                    child: Row(
-                      children: List.generate(4, (index) {
-                        final tabDistance = (animValue - index).abs();
-                        final opacity = (tabDistance).clamp(0.0, 1.0);
-
-                        return Expanded(
-                          child: InkWell(
-                            onTap: () => _onTabSelected(index),
-                            splashColor: Colors.transparent,
-                            highlightColor: Colors.transparent,
-                            child: Center(
-                              child: Opacity(
-                                opacity: opacity,
-                                child: Icon(
-                                  _getInactiveIcon(index),
-                                  color: const Color(0xFF8E95A5),
-                                  size: 24,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-
-                  // 3. Protruding Floating Coral Circle Button (nestled in scoop without overshooting)
-                  Positioned(
-                    left: activeCenterX - circleRadius,
-                    top: 2.0, // Bottom sits at 56.0, scoop trough at 58.0 cradles it with 2px gap
-                    child: GestureDetector(
-                      onTap: () => _onTabSelected(_currentTab),
-                      child: Container(
-                        width: circleDiameter,
-                        height: circleDiameter,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Color(0xFFFF7253),
-                              Color(0xFFFA6144),
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFA6144).withValues(alpha: 0.50),
-                              blurRadius: 18,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 200),
-                            transitionBuilder: (child, animation) => FadeTransition(
-                              opacity: animation,
-                              child: ScaleTransition(scale: animation, child: child),
-                            ),
-                            child: Icon(
-                              _getActiveIcon(_currentTab),
-                              key: ValueKey<int>(_currentTab),
-                              color: Colors.white,
-                              size: 26,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      ),
+    return ImpalBottomNavBar(
+      currentTab: _currentTab,
+      onTabSelected: _onTabSelected,
     );
   }
 
@@ -1482,198 +1364,6 @@ class _HomePageState extends State<HomePage> {
     if (index == 1) {
       showTopToast(context, 'Tasks section');
     }
-  }
-
-  IconData _getActiveIcon(int index) {
-    switch (index) {
-      case 0:
-        return Icons.home_rounded;
-      case 1:
-        return Icons.checklist_rounded;
-      case 2:
-        return Icons.groups_rounded;
-      case 3:
-        return Icons.calendar_month_rounded;
-      default:
-        return Icons.home_rounded;
-    }
-  }
-
-  IconData _getInactiveIcon(int index) {
-    switch (index) {
-      case 0:
-        return Icons.home_outlined;
-      case 1:
-        return Icons.checklist_rounded;
-      case 2:
-        return Icons.groups_outlined;
-      case 3:
-        return Icons.calendar_month_outlined;
-      default:
-        return Icons.home_outlined;
-    }
-  }
-}
-
-class _ScoopedNavBarPainter extends CustomPainter {
-  final double centerX;
-  final double barTop;
-  final double circleCenterY;
-  final double notchRadius;
-  final Color barColor;
-
-  const _ScoopedNavBarPainter({
-    required this.centerX,
-    required this.barTop,
-    required this.circleCenterY,
-    required this.notchRadius,
-    required this.barColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const double left = 0;
-    final double right = size.width;
-    final double top = barTop;
-    final double bottom = size.height;
-    const double cr = 5.0; // 5 px corner radius on top navbar edges
-
-    final double R = notchRadius; // 33.0 (concentric to 27.0 radius circle, exactly 6px gap)
-    const double r = 10.0; // smooth, gentle shoulder transition radius
-    final double dY = (top + r) - circleCenterY;
-    final double distSq = (R + r) * (R + r) - dY * dY;
-    final double dX = distSq > 0 ? math.sqrt(distSq) : R;
-
-    final double ratio = R / (R + r);
-    final Offset pTanLeft = Offset(centerX - dX * ratio, circleCenterY + dY * ratio);
-    final Offset pTanRight = Offset(centerX + dX * ratio, circleCenterY + dY * ratio);
-    final double leftShoulderX = (centerX - dX).clamp(left + cr, right - cr);
-    final double rightShoulderX = (centerX + dX).clamp(left + cr, right - cr);
-
-    // 1. Recessed pocket behind the scoop (matches scaffold background so scrolled items don't bleed through)
-    final pocketPath = Path()
-      ..moveTo(leftShoulderX, top)
-      ..arcToPoint(
-        pTanLeft,
-        radius: const Radius.circular(r),
-        clockwise: true,
-      )
-      ..arcToPoint(
-        pTanRight,
-        radius: Radius.circular(R),
-        clockwise: false,
-      )
-      ..arcToPoint(
-        Offset(rightShoulderX, top),
-        radius: const Radius.circular(r),
-        clockwise: true,
-      )
-      ..close();
-
-    final pocketPaint = Paint()
-      ..color = const Color(0xFF282D37)
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(pocketPath, pocketPaint);
-
-    // 2. Build full navbar body path with circular cutout concentric to the button
-    final path = Path();
-    path.moveTo(left, bottom);
-    path.lineTo(left, top + cr);
-
-    // Top-left corner (5px)
-    path.arcToPoint(
-      Offset(left + cr, top),
-      radius: const Radius.circular(cr),
-    );
-    path.lineTo(leftShoulderX, top);
-
-    // Smooth shoulder down into circular arc cupping the circle with 6px gap
-    path.arcToPoint(
-      pTanLeft,
-      radius: const Radius.circular(r),
-      clockwise: true,
-    );
-    path.arcToPoint(
-      pTanRight,
-      radius: Radius.circular(R),
-      clockwise: false,
-    );
-    path.arcToPoint(
-      Offset(rightShoulderX, top),
-      radius: const Radius.circular(r),
-      clockwise: true,
-    );
-
-    // Line to top-right corner (5px)
-    path.lineTo(right - cr, top);
-    path.arcToPoint(
-      Offset(right, top + cr),
-      radius: const Radius.circular(cr),
-    );
-
-    path.lineTo(right, bottom);
-    path.lineTo(left, bottom);
-    path.close();
-
-    // 3. Elevation drop shadow along navbar top contour
-    canvas.drawShadow(
-      path,
-      Colors.black.withValues(alpha: 0.35),
-      14.0,
-      false,
-    );
-
-    // 4. Fill navbar body
-    final paint = Paint()
-      ..color = barColor
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(path, paint);
-
-    // 5. Subtle refined top contour highlight
-    final topContour = Path();
-    topContour.moveTo(left, top + cr);
-    topContour.arcToPoint(
-      Offset(left + cr, top),
-      radius: const Radius.circular(cr),
-    );
-    topContour.lineTo(leftShoulderX, top);
-
-    topContour.arcToPoint(
-      pTanLeft,
-      radius: const Radius.circular(r),
-      clockwise: true,
-    );
-    topContour.arcToPoint(
-      pTanRight,
-      radius: Radius.circular(R),
-      clockwise: false,
-    );
-    topContour.arcToPoint(
-      Offset(rightShoulderX, top),
-      radius: const Radius.circular(r),
-      clockwise: true,
-    );
-
-    topContour.lineTo(right - cr, top);
-    topContour.arcToPoint(
-      Offset(right, top + cr),
-      radius: const Radius.circular(cr),
-    );
-
-    final contourPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.08)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    canvas.drawPath(topContour, contourPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _ScoopedNavBarPainter oldDelegate) {
-    return oldDelegate.centerX != centerX ||
-        oldDelegate.barTop != barTop ||
-        oldDelegate.circleCenterY != circleCenterY ||
-        oldDelegate.notchRadius != notchRadius ||
-        oldDelegate.barColor != barColor;
   }
 }
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
 import '../jadwal/models/schedule_model.dart';
@@ -325,20 +327,20 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 110),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   // 1. Header (Greeting + User Profile Initials)
                   _buildHeader(),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
 
                   // 2. Team Info (Name, Member Avatars, Copy Code)
                   _buildTeamInfoBar(),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 16),
 
                   // 3. Team's Schedule Section
                   _buildTeamScheduleSection(),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 16),
 
                   // 4. Team Task Section
                   _buildTeamTaskSection(),
@@ -478,8 +480,8 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         ),
         const SizedBox(width: 12),
         Container(
-          width: 44,
-          height: 44,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
             color: const Color(0xFF323846),
             shape: BoxShape.circle,
@@ -490,7 +492,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
             initials,
             style: const TextStyle(
               color: Color(0xFF8E95A5),
-              fontSize: 14,
+              fontSize: 13.5,
               fontFamily: 'Inter',
               fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
@@ -501,26 +503,36 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     );
   }
 
-  Widget _buildTeamInfoBar() {
+  Widget _buildAvatarCircle(Color bgColor, {double size = 28}) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
+        color: bgColor,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: const Color(0xFF282D37),
+          width: 2,
+        ),
       ),
+      child: Center(
+        child: Icon(
+          Icons.person,
+          size: size * 0.60,
+          color: Colors.white.withValues(alpha: 0.95),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTeamInfoBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Left: Team name & Overlapping Avatars
+          // Left: Team name & Overlapping Avatars (blended with base background)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -532,34 +544,23 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
+                    fontSize: 20,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.04,
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Overlapping avatar circles
+                // Overlapping avatar circles with person silhouettes
                 SizedBox(
-                  height: 26,
+                  height: 28,
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
                       for (int i = 0; i < widget.memberColors.length; i++)
                         Positioned(
-                          left: i * 19.0,
-                          child: Container(
-                            width: 25,
-                            height: 25,
-                            decoration: BoxDecoration(
-                              color: widget.memberColors[i],
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFF323846),
-                                width: 2,
-                              ),
-                            ),
-                          ),
+                          left: i * 20.0,
+                          child: _buildAvatarCircle(widget.memberColors[i], size: 28),
                         ),
                     ],
                   ),
@@ -575,7 +576,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
             behavior: HitTestBehavior.opaque,
             onTap: _copyTeamCode,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: const Color(0xFF282D37),
                 borderRadius: BorderRadius.circular(8),
@@ -642,9 +643,47 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
               type == 'external';
         }).toList();
 
-        final displaySchedule = teamSchedules.isNotEmpty
-            ? teamSchedules.first
-            : ScheduleRepository.defaultTeamSchedule;
+        Widget scheduleContent;
+        if (teamSchedules.isEmpty) {
+          scheduleContent = _buildScheduleCard(
+            ScheduleRepository.defaultTeamSchedule,
+            isHorizontal: false,
+            isLast: true,
+          );
+        } else if (teamSchedules.length == 1) {
+          scheduleContent = _buildScheduleCard(
+            teamSchedules.first,
+            isHorizontal: false,
+            isLast: true,
+          );
+        } else {
+          scheduleContent = ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.trackpad,
+              },
+            ),
+            child: SingleChildScrollView(
+              key: const ValueKey('team_dashboard_schedules_horizontal_scroll'),
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              clipBehavior: Clip.none,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (int i = 0; i < teamSchedules.length; i++)
+                    _buildScheduleCard(
+                      teamSchedules[i],
+                      isHorizontal: true,
+                      isLast: i == teamSchedules.length - 1,
+                    ),
+                ],
+              ),
+            ),
+          );
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -690,21 +729,29 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            // Schedule Card
-            _buildScheduleCard(displaySchedule),
+            const SizedBox(height: 10),
+            // Schedule Card / Horizontal Scroll
+            scheduleContent,
           ],
         );
       },
     );
   }
 
-  Widget _buildScheduleCard(ScheduleModel schedule) {
+  Widget _buildScheduleCard(
+    ScheduleModel schedule, {
+    bool isHorizontal = false,
+    bool isLast = false,
+  }) {
     return Container(
-      width: double.infinity,
+      width: isHorizontal ? 285 : double.infinity,
+      margin: EdgeInsets.only(
+        right: isHorizontal ? (isLast ? 0 : 12) : 0,
+        bottom: !isHorizontal ? (isLast ? 0 : 10) : 0,
+      ),
       decoration: BoxDecoration(
         color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: const [
           BoxShadow(
             color: Color(0x33000000),
@@ -729,7 +776,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -916,11 +963,11 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         // Task Cards List
         for (int i = 0; i < _tasks.length; i++) ...[
           _buildTaskCard(_tasks[i]),
-          if (i < _tasks.length - 1) const SizedBox(height: 12),
+          if (i < _tasks.length - 1) const SizedBox(height: 10),
         ],
       ],
     );
@@ -1054,25 +1101,36 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           Row(
             children: [
               Container(
-                width: 25,
-                height: 25,
+                width: 26,
+                height: 26,
                 decoration: BoxDecoration(
                   color: task.assigneeColor,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFF323846),
-                    width: 2,
+                    color: const Color(0xFF434A59),
+                    width: 1.5,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.person,
+                    size: 16,
+                    color: Colors.white.withValues(alpha: 0.95),
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
-              Text(
-                task.assignedTo,
-                style: const TextStyle(
-                  color: Color(0xFF8E95A5),
-                  fontSize: 11,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  task.assignedTo,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFCBD5E1),
+                    fontSize: 12,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -1085,100 +1143,9 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   // --- Bottom Navigation Bar ---
 
   Widget _buildBottomNavBar() {
-    return Container(
-      height: 94,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final barWidth = constraints.maxWidth;
-          final tabWidth = barWidth / 4;
-          final activeCenterX = tabWidth * _currentTab + (tabWidth / 2);
-          const circleDiameter = 54.0;
-          const circleRadius = circleDiameter / 2;
-          const barHeight = 64.0;
-          const circleTop = 2.0;
-
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 12,
-                child: Container(
-                  height: barHeight,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF323846),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 16,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: List.generate(4, (index) {
-                      final isActive = _currentTab == index;
-                      return Expanded(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _onTabSelected(index),
-                            borderRadius: BorderRadius.circular(24),
-                            child: Center(
-                              child: Opacity(
-                                opacity: isActive ? 0.0 : 1.0,
-                                child: Icon(
-                                  _getInactiveIcon(index),
-                                  color: const Color(0xFF8E95A5),
-                                  size: 24,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              ),
-              // Floating Active Icon Indicator
-              Positioned(
-                left: activeCenterX - circleRadius,
-                top: circleTop,
-                width: circleDiameter,
-                height: circleDiameter,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0xFFFD7357), Color(0xFFFA6144)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x66FA6144),
-                        blurRadius: 18,
-                        offset: Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Icon(
-                      _getActiveIcon(_currentTab),
-                      color: Colors.white,
-                      size: 26,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+    return ImpalBottomNavBar(
+      currentTab: _currentTab,
+      onTabSelected: _onTabSelected,
     );
   }
 
@@ -1207,34 +1174,6 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           ),
         ),
       );
-    }
-  }
-
-  IconData _getActiveIcon(int index) {
-    switch (index) {
-      case 0:
-        return Icons.home_rounded;
-      case 1:
-        return Icons.checklist_rounded;
-      case 2:
-        return Icons.groups_rounded;
-      case 3:
-      default:
-        return Icons.calendar_month_rounded;
-    }
-  }
-
-  IconData _getInactiveIcon(int index) {
-    switch (index) {
-      case 0:
-        return Icons.home_outlined;
-      case 1:
-        return Icons.checklist_outlined;
-      case 2:
-        return Icons.groups_outlined;
-      case 3:
-      default:
-        return Icons.calendar_month_outlined;
     }
   }
 }
