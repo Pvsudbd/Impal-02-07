@@ -1,5 +1,7 @@
 import '../../config/db.dart';
 
+typedef Student = StudentModel;
+
 class StudentModel {
   final String idStudent;
   final String name;

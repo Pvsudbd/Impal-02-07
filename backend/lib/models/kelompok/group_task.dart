@@ -1,5 +1,5 @@
 import 'group_sub_task.dart';
-import 'student.dart';
+import '../auth/student_model.dart';
 
 class GroupTask {
   String _groupTaskId;

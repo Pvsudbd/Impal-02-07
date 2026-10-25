@@ -1,6 +1,6 @@
-import '../models/agenda.dart';
-import '../models/task.dart';
-import '../models/study_group.dart';
+import '../../models/agenda/agenda.dart';
+import '../../models/task/task.dart';
+import '../../models/kelompok/study_group.dart';
 
 class DashboardController {
   // Skeleton method untuk menyuplai data ke antarmuka Dashboard
