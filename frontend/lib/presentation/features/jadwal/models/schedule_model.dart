@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 class ScheduleModel {
   final String id;
   final String title;
-  final String type; // 'Lecture' or 'External'
+  final String type; // 'Lecture', 'Meeting', or 'External'
   final String? course;
+  final String? teamName;
   final String? location;
   final DateTime date;
   final String timeStart; // '09:30'
@@ -19,6 +20,7 @@ class ScheduleModel {
     required this.title,
     required this.type,
     this.course,
+    this.teamName,
     this.location,
     String? status,
     required this.date,
@@ -141,6 +143,7 @@ class ScheduleModel {
     String? title,
     String? type,
     String? course,
+    String? teamName,
     String? location,
     String? status,
     DateTime? date,
@@ -155,6 +158,7 @@ class ScheduleModel {
       title: title ?? this.title,
       type: type ?? this.type,
       course: course ?? this.course,
+      teamName: teamName ?? this.teamName,
       location: location ?? this.location,
       status: status,
       date: date ?? this.date,
@@ -172,6 +176,7 @@ class ScheduleModel {
       'title': title,
       'type': type,
       'course': course,
+      'teamName': teamName,
       'location': location,
       'status': status,
       'date': date.toIso8601String(),
@@ -189,6 +194,7 @@ class ScheduleModel {
       title: map['title'] ?? '',
       type: map['type'] ?? 'Lecture',
       course: map['course'],
+      teamName: map['teamName'],
       location: map['location'],
       status: map['status'] ?? 'Upcoming',
       date: map['date'] != null
@@ -222,6 +228,9 @@ class ScheduleModel {
     }
     if (type.toLowerCase() == 'lecture') {
       return const Color(0xFFFF826E);
+    }
+    if (type.toLowerCase() == 'meeting') {
+      return const Color(0xFF786FA6); // Meeting purple accent
     }
     return const Color(0xFF8FC7FF); // External blue accent
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
+import '../team/models/team_repository.dart';
 import 'pop_up_make_schedule.dart';
 import 'pop_up_konfirmasi_edit.dart';
 import 'pop_up_konfirmasi_delete.dart';
@@ -48,10 +49,12 @@ class ScheduleFormPage extends StatefulWidget {
 class _ScheduleFormPageState extends State<ScheduleFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
+  final _teamController = TextEditingController();
   final _locationController = TextEditingController();
   final _notesController = TextEditingController();
 
   String _selectedType = 'Lecture';
+  bool _isTeamMeeting = false;
   late DateTime _selectedDate;
   TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 30);
   TimeOfDay _endTime = const TimeOfDay(hour: 11, minute: 30);
@@ -70,12 +73,17 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       _repeatWeekly = s.repeat;
       _startTime = _parseTime(s.timeStart, const TimeOfDay(hour: 9, minute: 30));
       _endTime = _parseTime(s.timeEnd, const TimeOfDay(hour: 11, minute: 30));
+      _isTeamMeeting = (s.teamName != null && s.teamName!.isNotEmpty) ||
+          (s.type == 'Meeting' && (s.location?.toLowerCase().contains('team') == true));
+      _teamController.text = s.teamName ?? '';
     } else {
       _selectedType = widget.initialType ?? 'Lecture';
       _selectedDate = widget.initialDate ?? DateTime.now();
       _repeatWeekly = _selectedType == 'Lecture';
       _startTime = const TimeOfDay(hour: 9, minute: 30);
       _endTime = const TimeOfDay(hour: 11, minute: 30);
+      _isTeamMeeting = false;
+      _teamController.text = '';
     }
   }
 
@@ -96,6 +104,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
   @override
   void dispose() {
     _titleController.dispose();
+    _teamController.dispose();
     _locationController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -152,13 +161,24 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
 
   Future<void> _deleteSchedule() async {
     if (widget.schedule == null) return;
-    final confirmed = await PopUpKonfirmasiDelete.show(context);
+    final isMeeting = _selectedType == 'Meeting' || widget.schedule!.type == 'Meeting';
+    final confirmed = await PopUpKonfirmasiDelete.show(
+      context,
+      title: isMeeting ? 'Delete Meeting?' : 'Delete Schedule',
+      message: isMeeting
+          ? 'Are you sure you want to delete this meeting? This action cannot be undone.'
+          : 'Are you sure you want to delete this schedule? This action cannot be undone.',
+    );
     if (confirmed != true) return;
 
     await ScheduleRepository().deleteSchedule(widget.schedule!.id);
 
     if (mounted) {
-      PopUpPemberitahuan.scheduleDeleted(context);
+      if (isMeeting) {
+        PopUpPemberitahuan.meetingDeleted(context);
+      } else {
+        PopUpPemberitahuan.scheduleDeleted(context);
+      }
       Navigator.of(context).pop(true);
     }
   }
@@ -167,7 +187,26 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final isEdit = widget.isEdit;
+    final isMeeting = _selectedType == 'Meeting';
     final enteredText = _titleController.text.trim();
+    final teamNameValue = (isMeeting && _isTeamMeeting && _teamController.text.trim().isNotEmpty)
+        ? _teamController.text.trim()
+        : null;
+
+    String defaultLocation;
+    if (_selectedType == 'Lecture') {
+      defaultLocation = 'Classroom';
+    } else if (isMeeting) {
+      defaultLocation = teamNameValue != null
+          ? 'Team $teamNameValue / Online'
+          : 'Online / Google Meet';
+    } else {
+      defaultLocation = 'Online / Meeting';
+    }
+
+    final locationValue = _locationController.text.trim().isNotEmpty
+        ? _locationController.text.trim()
+        : defaultLocation;
 
     if (isEdit) {
       final confirmed = await PopUpKonfirmasiEdit.show(context);
@@ -185,9 +224,8 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
         type: _selectedType,
         status: autoStatus,
         course: _selectedType == 'Lecture' ? enteredText : null,
-        location: _locationController.text.trim().isNotEmpty
-            ? _locationController.text.trim()
-            : (_selectedType == 'Lecture' ? 'Classroom' : 'Online / Meeting'),
+        teamName: teamNameValue,
+        location: locationValue,
         date: scheduleDate,
         timeStart: _formatTime(_startTime),
         timeEnd: _formatTime(_endTime),
@@ -200,7 +238,11 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       await ScheduleRepository().updateSchedule(updated);
 
       if (mounted) {
-        PopUpPemberitahuan.scheduleUpdated(context);
+        if (isMeeting) {
+          PopUpPemberitahuan.meetingUpdated(context);
+        } else {
+          PopUpPemberitahuan.scheduleUpdated(context);
+        }
         Navigator.of(context).pop(true);
       }
     } else {
@@ -214,9 +256,8 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
         title: enteredText,
         type: _selectedType,
         course: _selectedType == 'Lecture' ? enteredText : null,
-        location: _locationController.text.trim().isNotEmpty
-            ? _locationController.text.trim()
-            : (_selectedType == 'Lecture' ? 'Classroom' : 'Online / Meeting'),
+        teamName: teamNameValue,
+        location: locationValue,
         status: ScheduleModel.calculateStatus(
           date: scheduleDate,
           timeStart: _formatTime(_startTime),
@@ -234,7 +275,11 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       await ScheduleRepository().addSchedule(newSchedule);
 
       if (mounted) {
-        PopUpPemberitahuan.scheduleCreated(context);
+        if (isMeeting) {
+          PopUpPemberitahuan.meetingCreated(context);
+        } else {
+          PopUpPemberitahuan.scheduleCreated(context);
+        }
         Navigator.of(context).pop(true);
       }
     }
@@ -244,6 +289,14 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
   Widget build(BuildContext context) {
     final isEdit = widget.isEdit;
     final isLecture = _selectedType == 'Lecture';
+    final isMeeting = _selectedType == 'Meeting';
+
+    final joinedTeams = TeamRepository().joinedTeamNames;
+    final currentQuery = _teamController.text.trim().toLowerCase();
+    final teamSuggestions = joinedTeams.where((t) {
+      if (currentQuery.isEmpty) return true;
+      return t.toLowerCase().contains(currentQuery);
+    }).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFF282D37),
@@ -304,25 +357,45 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                             title: 'Lecture',
                             icon: Icons.school_rounded,
                             isSelected: isLecture,
-                            onTap: () => setState(() => _selectedType = 'Lecture'),
+                            onTap: () => setState(() {
+                              _selectedType = 'Lecture';
+                              _repeatWeekly = true;
+                            }),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildTypeButton(
+                            title: 'Meeting',
+                            icon: Icons.groups_rounded,
+                            isSelected: isMeeting,
+                            onTap: () => setState(() {
+                              _selectedType = 'Meeting';
+                              _repeatWeekly = false;
+                            }),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: _buildTypeButton(
                             title: 'External',
                             icon: Icons.event_rounded,
-                            isSelected: !isLecture,
-                            onTap: () => setState(() => _selectedType = 'External'),
+                            isSelected: !isLecture && !isMeeting,
+                            onTap: () => setState(() {
+                              _selectedType = 'External';
+                              _repeatWeekly = false;
+                            }),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
 
-                    // 2. Course (Lecture) / Schedule Title (External) field
+                    // 2. Course / Meeting Title / Schedule Title field
                     Text(
-                      isLecture ? 'Course' : 'Schedule Title',
+                      isLecture
+                          ? 'Course'
+                          : (isMeeting ? 'Meeting Title' : 'Schedule Title'),
                       style: const TextStyle(
                         color: Color(0xFF8E95A5),
                         fontSize: 13,
@@ -334,15 +407,211 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                       controller: _titleController,
                       hint: isLecture
                           ? 'e.g. SSIF-04-REG • Software Testing & Implementation'
-                          : 'e.g. Meet Impal Kelompok 7',
-                      prefixIcon: isLecture ? Icons.school_outlined : Icons.menu_book_rounded,
-                      validator: (val) => val == null || val.trim().isEmpty
-                          ? (isLecture ? 'Please enter course name' : 'Please enter schedule title')
-                          : null,
+                          : (isMeeting
+                              ? 'e.g. Weekly Standup Kelompok IMPAL'
+                              : 'e.g. Meet Impal Kelompok 7'),
+                      prefixIcon: isLecture
+                          ? Icons.school_outlined
+                          : (isMeeting
+                              ? Icons.groups_outlined
+                              : Icons.event_note_rounded),
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) {
+                          if (isLecture) return 'Please enter course name';
+                          if (isMeeting) return 'Please enter meeting title';
+                          return 'Please enter schedule title';
+                        }
+                        return null;
+                      },
                     ),
+
+                    // 3. Team Meeting Checkbox & Autocomplete / free typing
+                    if (isMeeting) ...[
+                      const SizedBox(height: 12),
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _isTeamMeeting = !_isTeamMeeting;
+                            if (!_isTeamMeeting) {
+                              _teamController.clear();
+                            }
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: Checkbox(
+                                  value: _isTeamMeeting,
+                                  activeColor: const Color(0xFFFA6144),
+                                  checkColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  side: const BorderSide(
+                                    color: Color(0xFF8E95A5),
+                                    width: 1.5,
+                                  ),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _isTeamMeeting = val ?? false;
+                                      if (!_isTeamMeeting) {
+                                        _teamController.clear();
+                                      }
+                                    });
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Team Meeting',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (_isTeamMeeting) ...[
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Team Name',
+                          style: TextStyle(
+                            color: Color(0xFF8E95A5),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildTextField(
+                          controller: _teamController,
+                          hint: 'Type team name (e.g. Kelompok - IMPAL)',
+                          prefixIcon: Icons.group_work_rounded,
+                          onChanged: (_) => setState(() {}),
+                          validator: (val) {
+                            if (_selectedType == 'Meeting' && _isTeamMeeting) {
+                              if (val == null || val.trim().isEmpty) {
+                                return 'Please enter or select a team name';
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                        if (teamSuggestions.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF232832),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFF3B4150),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.touch_app_rounded,
+                                      color: Color(0xFFFA6144),
+                                      size: 14,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Joined Teams (Tap to select):',
+                                      style: TextStyle(
+                                        color: Color(0xFF8E95A5),
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 6,
+                                  children: teamSuggestions.map((tName) {
+                                    final isChosen = _teamController.text
+                                            .trim()
+                                            .toLowerCase() ==
+                                        tName.toLowerCase();
+                                    return InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          _teamController.text = tName;
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isChosen
+                                              ? const Color(0xFFFA6144)
+                                              : const Color(0xFF323846),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: isChosen
+                                                ? const Color(0xFFFA6144)
+                                                : const Color(0xFF3B4150),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.group_rounded,
+                                              color: isChosen
+                                                  ? Colors.white
+                                                  : const Color(0xFF8E95A5),
+                                              size: 13,
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              tName,
+                                              style: TextStyle(
+                                                color: isChosen
+                                                    ? Colors.white
+                                                    : const Color(0xFFE5E7EB),
+                                                fontSize: 12,
+                                                fontWeight: isChosen
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ],
                     const SizedBox(height: 16),
 
-                    // 3. Room / Location
+                    // 4. Room / Location
                     const Text(
                       'Location / Room',
                       style: TextStyle(
@@ -356,7 +625,9 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                       controller: _locationController,
                       hint: isLecture
                           ? 'e.g. KTT B-106 • SSIF-04-REG-GAB02'
-                          : 'Location',
+                          : (isMeeting
+                              ? 'e.g. Ruang Rapat / Google Meet / Zoom'
+                              : 'Location'),
                       prefixIcon: Icons.location_on_rounded,
                     ),
                     const SizedBox(height: 16),
@@ -549,7 +820,9 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                         ),
                         onPressed: _submitForm,
                         child: Text(
-                          isEdit ? 'Save Changes' : 'Create Schedule',
+                          isEdit
+                              ? 'Save Changes'
+                              : (isMeeting ? 'Create Meeting' : 'Create Schedule'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -583,6 +856,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFFA6144) : const Color(0xFF323846),
           borderRadius: BorderRadius.circular(12),
@@ -596,15 +870,18 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
             Icon(
               icon,
               color: isSelected ? Colors.white : const Color(0xFF8E95A5),
-              size: 18,
+              size: 16,
             ),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: TextStyle(
-                color: isSelected ? Colors.white : const Color(0xFF8E95A5),
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                title,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFF8E95A5),
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -618,11 +895,13 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
     required String hint,
     IconData? prefixIcon,
     int maxLines = 1,
+    ValueChanged<String>? onChanged,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      onChanged: onChanged,
       validator: validator,
       style: const TextStyle(color: Colors.white, fontSize: 14),
       decoration: InputDecoration(

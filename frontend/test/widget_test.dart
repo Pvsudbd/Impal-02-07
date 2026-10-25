@@ -164,7 +164,7 @@ void main() {
     expect(find.text("Team's Schedule"), findsOneWidget);
     expect(find.text('MEETING IMPAL'), findsOneWidget);
     expect(find.text('Discord - Group IMPAL'), findsOneWidget);
-    expect(find.text('Tomorrow 19:00 WIB'), findsOneWidget);
+    expect(find.text('Tomorrow • 19:00 - 20:30 WIB'), findsOneWidget);
     expect(find.text('Team'), findsOneWidget);
     expect(find.text('Join Team'), findsOneWidget);
     expect(find.text('+ Create Team'), findsOneWidget);
@@ -1009,7 +1009,7 @@ void main() {
     expect(find.text("Team's Schedule"), findsOneWidget);
     expect(find.text('SPRINT RETROSPECTIVE IMPAL'), findsOneWidget);
     expect(find.text('Ruang Lab 2 TULT'), findsOneWidget);
-    expect(find.text('Today 14:00 WIB'), findsOneWidget);
+    expect(find.text('Today • 14:00 - 16:00 WIB'), findsOneWidget);
     expect(find.byIcon(Icons.edit_outlined), findsWidgets);
 
     // Update repository reactively with another title
@@ -1029,7 +1029,7 @@ void main() {
     // Verify UI immediately updated with new title and location
     expect(find.text('SCRUM DAILY KELOMPOK 7'), findsOneWidget);
     expect(find.text('Google Meet'), findsOneWidget);
-    expect(find.text('Tomorrow 20:00 WIB'), findsOneWidget);
+    expect(find.text('Tomorrow • 20:00 - 21:00 WIB'), findsOneWidget);
 
     // Tap schedule card to open PopUpCreateMeeting in edit mode
     await tester.tap(find.text('SCRUM DAILY KELOMPOK 7'));
@@ -1932,6 +1932,79 @@ void main() {
     expect(yLocation, lessThan(yDate));
     expect(yDate, lessThan(yTime));
     expect(yTime, lessThan(yRepeat));
+  });
+
+  testWidgets('ScheduleFormPage supports Meeting schedule type, Team Meeting checkbox, and joined team suggestions', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: ScheduleFormPage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify 3 schedule type buttons exist
+    expect(find.text('Lecture'), findsOneWidget);
+    expect(find.text('Meeting'), findsOneWidget);
+    expect(find.text('External'), findsOneWidget);
+
+    // Tap Meeting type
+    await tester.tap(find.text('Meeting'));
+    await tester.pumpAndSettle();
+
+    // Verify Title field changes label to 'Meeting Title'
+    expect(find.text('Meeting Title'), findsOneWidget);
+    expect(find.text('Team Meeting'), findsOneWidget);
+
+    // Tap 'Team Meeting' checkbox
+    await tester.tap(find.text('Team Meeting'));
+    await tester.pumpAndSettle();
+
+    // Verify Team Name field & suggestions appear
+    expect(find.text('Team Name'), findsOneWidget);
+    expect(find.text('Joined Teams (Tap to select):'), findsOneWidget);
+    expect(find.text('Kelompok - IMPAL'), findsOneWidget);
+    expect(find.text('Kelompok - IUM'), findsOneWidget);
+
+    // Tap a suggested team to auto-fill
+    await tester.tap(find.text('Kelompok - IMPAL'));
+    await tester.pumpAndSettle();
+
+    // Or freely type a non-joined custom team name
+    await tester.enterText(find.widgetWithText(TextFormField, 'Kelompok - IMPAL'), 'Kelompok Capstone Baru');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kelompok Capstone Baru'), findsOneWidget);
+  });
+
+  testWidgets('DashboardTeamPage meeting cards display date and start-end time', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
+
+    final now = DateTime.now();
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 'team_meeting_date_test',
+        title: 'STANDUP KELOMPOK IMPAL',
+        type: 'Meeting',
+        location: 'Discord - Group IMPAL',
+        date: now,
+        timeStart: '09:30',
+        timeEnd: '11:30',
+      ),
+    ];
+
+    await tester.pumpWidget(const MaterialApp(
+      home: DashboardTeamPage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify date is present on the card along with start and end time
+    expect(find.text('STANDUP KELOMPOK IMPAL'), findsOneWidget);
+    expect(find.text('Today • 09:30 - 11:30 WIB'), findsOneWidget);
   });
 }
 

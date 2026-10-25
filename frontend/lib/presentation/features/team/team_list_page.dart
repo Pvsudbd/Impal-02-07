@@ -11,6 +11,11 @@ import 'pop_up_create_meeting.dart';
 import 'pop_up_create_team.dart';
 import 'pop_up_join_team.dart';
 
+import 'models/team_model.dart';
+import 'models/team_repository.dart';
+export 'models/team_model.dart';
+export 'models/team_repository.dart';
+
 /// Aliases for backwards compatibility with Figma export & routes
 typedef ListKelompok = TeamListPage;
 typedef TeamPage = TeamListPage;
@@ -159,20 +164,6 @@ class _TeamListPageState extends State<TeamListPage> {
   }
 }
 
-/// Team Item Model
-class TeamModel {
-  final String id;
-  final String name;
-  final String membersLabel;
-  final List<Color> memberColors;
-
-  const TeamModel({
-    required this.id,
-    required this.name,
-    this.membersLabel = 'Team members',
-    required this.memberColors,
-  });
-}
 
 /// Reusable scrollable Team list content view
 class TeamListContentView extends StatefulWidget {
@@ -278,51 +269,13 @@ class _TeamListContentViewState extends State<TeamListContentView> {
       dayPrefix = '${schedule.date.day} ${months[schedule.date.month - 1]}';
     }
 
-    return '$dayPrefix ${schedule.timeStart} ${schedule.timeZone}';
+    final timeStr = schedule.timeEnd.isNotEmpty
+        ? '${schedule.timeStart} - ${schedule.timeEnd} ${schedule.timeZone}'
+        : '${schedule.timeStart} ${schedule.timeZone}';
+    return '$dayPrefix • $timeStr';
   }
 
-  final List<TeamModel> _teams = [
-    const TeamModel(
-      id: '1',
-      name: 'Kelompok - IMPAL',
-      memberColors: [
-        Color(0xFFF3A683),
-        Color(0xFF786FA6),
-        Color(0xFF63CDDA),
-        Color(0xFFE77F67),
-        Color(0xFF778BEB),
-      ],
-    ),
-    const TeamModel(
-      id: '2',
-      name: 'Kelompok - IUM',
-      memberColors: [
-        Color(0xFFF3A683),
-        Color(0xFF786FA6),
-        Color(0xFF63CDDA),
-      ],
-    ),
-    const TeamModel(
-      id: '3',
-      name: 'Kelompok - Projek TIK',
-      memberColors: [
-        Color(0xFFF3A683),
-        Color(0xFF786FA6),
-        Color(0xFF63CDDA),
-        Color(0xFFE77F67),
-      ],
-    ),
-    const TeamModel(
-      id: '4',
-      name: 'Kelompok - KA',
-      memberColors: [
-        Color(0xFFF3A683),
-        Color(0xFF786FA6),
-        Color(0xFF63CDDA),
-        Color(0xFF778BEB),
-      ],
-    ),
-  ];
+  List<TeamModel> get _teams => TeamRepository().teams;
 
   String _getUserInitials(String name) {
     if (name.trim().isEmpty) return 'JS';
@@ -342,20 +295,17 @@ class _TeamListContentViewState extends State<TeamListContentView> {
   void _showCreateTeamDialog() async {
     final result = await PopUpCreateTeam.show(context);
     if (!mounted || result == null || result.name.trim().isEmpty) return;
-    setState(() {
-      _teams.insert(
-        0,
-        TeamModel(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: result.name,
-          memberColors: const [
-            Color(0xFFF3A683),
-            Color(0xFF786FA6),
-            Color(0xFF63CDDA),
-          ],
-        ),
-      );
-    });
+    final newTeam = TeamModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: result.name,
+      memberColors: const [
+        Color(0xFFF3A683),
+        Color(0xFF786FA6),
+        Color(0xFF63CDDA),
+      ],
+    );
+    TeamRepository().addTeam(newTeam);
+    setState(() {});
     PopUpPemberitahuan.teamCreated(
       context,
       teamName: result.name,

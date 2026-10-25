@@ -666,6 +666,35 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     );
   }
 
+  String _formatScheduleTime(ScheduleModel schedule) {
+    final now = DateTime.now();
+    final scheduleDate =
+        DateTime(schedule.date.year, schedule.date.month, schedule.date.day);
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    String dayPrefix;
+    if (scheduleDate == today) {
+      dayPrefix = 'Today';
+    } else if (scheduleDate == tomorrow) {
+      dayPrefix = 'Tomorrow';
+    } else if (scheduleDate == yesterday) {
+      dayPrefix = 'Yesterday';
+    } else {
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      dayPrefix = '${schedule.date.day} ${months[schedule.date.month - 1]}';
+    }
+
+    final timeStr = schedule.timeEnd.isNotEmpty
+        ? '${schedule.timeStart} - ${schedule.timeEnd} ${schedule.timeZone}'
+        : '${schedule.timeStart} ${schedule.timeZone}';
+    return '$dayPrefix • $timeStr';
+  }
+
   Widget _buildTeamScheduleSection() {
     return ValueListenableBuilder<List<ScheduleModel>>(
       valueListenable: ScheduleRepository().schedulesNotifier,
@@ -716,6 +745,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
             schedule: ScheduleRepository.defaultTeamSchedule,
             isHorizontal: false,
             isLast: true,
+            customTimeText: _formatScheduleTime(ScheduleRepository.defaultTeamSchedule),
             onEdit: () => _openEditSchedule(ScheduleRepository.defaultTeamSchedule),
             onDelete: () => _deleteSchedule(ScheduleRepository.defaultTeamSchedule),
           );
@@ -724,6 +754,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
             schedule: teamSchedules.first,
             isHorizontal: false,
             isLast: true,
+            customTimeText: _formatScheduleTime(teamSchedules.first),
             onEdit: () => _openEditSchedule(teamSchedules.first),
             onDelete: () => _deleteSchedule(teamSchedules.first),
           );
@@ -731,6 +762,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           scheduleContent = ImpalHorizontalScheduleList(
             scrollKey: const ValueKey('team_dashboard_schedules_horizontal_scroll'),
             schedules: teamSchedules,
+            customTimeFormatter: _formatScheduleTime,
             onEdit: _openEditSchedule,
             onDelete: _deleteSchedule,
           );
