@@ -4,6 +4,7 @@ import 'models/schedule_repository.dart';
 import 'pop_up_make_schedule.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../common_widgets/impal_time_picker_dialog.dart';
+import '../../common_widgets/impal_date_picker_dialog.dart';
 
 /// Aliases for backwards compatibility
 typedef AddNewScheduleVar1 = AddNewSchedule;
@@ -68,25 +69,12 @@ class _AddNewScheduleState extends State<AddNewSchedule> {
   }
 
   Future<void> _selectDate() async {
-    final picked = await showDatePicker(
+    final picked = await showImpalDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFFFA6144),
-              onPrimary: Colors.white,
-              surface: Color(0xFF282D37),
-              onSurface: Colors.white,
-            ),
-            dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF282D37)),
-          ),
-          child: child!,
-        );
-      },
+      title: 'Select Date',
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);

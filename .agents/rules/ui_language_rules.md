@@ -44,3 +44,23 @@ Whenever creating or modifying UI elements, widgets, dialogs, or text copy in th
 - **Action Buttons**:
   - Dismiss: `'Cancel'` with `Color(0xFF8E95A5)` text and soft slate background `Color(0xFF282D37)` with border `Color(0xFF3B4150)`.
   - Confirm: `'Done'` with white text and coral button `Color(0xFFFA6144)`.
+
+---
+
+## 3. Bespoke Date Picker (`ImpalDatePickerDialog`) Rules
+- **No Day-Month-Date Banner**:
+  - The bulky top header displaying the day of week, month, and date (e.g. `"SELECT DATE \n Fri, Oct 25"`) is completely eliminated.
+  - The dialog opens directly with a clean, concise title (e.g. `'Select Date'`) and quick `'Today'` shortcut.
+- **Seamless Connected Month & Year (No Boxed Containers)**:
+  - The month and year are displayed seamlessly side-by-side as natural continuous typography (e.g. `"October 2026"`), rather than separated inside isolated box containers.
+  - **Tapping the Month Word** (e.g. `'October'`): Switches directly to a 12-month selector grid (`Jan`..`Dec`) so the user can change the month immediately with one tap.
+  - **Tapping the Year Word** (e.g. `'2026'`): Switches directly to a scrollable year selector grid so the user can change the year immediately with one tap.
+  - When active, the selected word is highlighted in Coral `Color(0xFFFA6144)` with an underline indicator.
+  - Previous (`<`) and Next (`>`) arrows on the right allow sequential navigation between adjacent months/years.
+- **Harmonized Soft Grey Surfaces**:
+  - Container background: `Color(0xFF282D37)` with border `Color(0xFF3B4150)`.
+  - Selected day highlight: Circle in Coral `Color(0xFFFA6144)` with bold white text.
+  - Current day (*Today*): Indicated with a subtle Coral border outline when unselected.
+- **Action Buttons**:
+  - Dismiss: `'Cancel'` with `Color(0xFF8E95A5)` text, background `Color(0xFF282D37)`, border `Color(0xFF3B4150)`.
+  - Confirm: `'Done'` with white text and coral button `Color(0xFFFA6144)`.

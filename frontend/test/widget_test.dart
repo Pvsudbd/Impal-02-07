@@ -9,6 +9,7 @@ import 'package:impal_smart_todolist/presentation/features/team/team_list_page.d
 import 'package:impal_smart_todolist/presentation/features/jadwal/add_new_schedule.dart';
 import 'package:impal_smart_todolist/presentation/features/jadwal/edit_schedule.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_time_picker_dialog.dart';
+import 'package:impal_smart_todolist/presentation/common_widgets/impal_date_picker_dialog.dart';
 
 void main() {
   testWidgets('Login page renders properly', (WidgetTester tester) async {
@@ -358,6 +359,87 @@ void main() {
     expect(result, isNotNull);
     expect(result!.hour, 14);
     expect(result!.minute, 45);
+  });
+
+  testWidgets('ImpalDatePickerDialog eliminates day-month-date banner and supports month/year switching', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    DateTime? pickedDate;
+
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () async {
+                pickedDate = await showImpalDatePicker(
+                  context: context,
+                  initialDate: DateTime(2026, 10, 25),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2035),
+                  title: 'Select Date',
+                );
+              },
+              child: const Text('Open Date Picker'),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    // Open date picker
+    await tester.tap(find.text('Open Date Picker'));
+    await tester.pumpAndSettle();
+
+    // Verify title is clean and no day-month-date banner exists
+    expect(find.text('Select Date'), findsOneWidget);
+    expect(find.text('Friday, Oct 25'), findsNothing);
+    expect(find.text('Fri, Oct 25'), findsNothing);
+
+    // Initial state shows October 2026
+    expect(find.text('October'), findsOneWidget);
+    expect(find.text('2026'), findsOneWidget);
+
+    // Switch to month selector by tapping month button
+    await tester.tap(find.byKey(const ValueKey('month_selector_button')));
+    await tester.pumpAndSettle();
+
+    // Verify 12 months are displayed and select 'Jul'
+    expect(find.text('Jul'), findsOneWidget);
+    expect(find.text('Dec'), findsOneWidget);
+    await tester.tap(find.text('Jul'));
+    await tester.pumpAndSettle();
+
+    // Verify view date switched to July
+    expect(find.text('July'), findsOneWidget);
+
+    // Switch to year selector by tapping year button
+    await tester.tap(find.byKey(const ValueKey('year_selector_button')));
+    await tester.pumpAndSettle();
+
+    // Verify years are displayed and select '2028'
+    expect(find.text('2028'), findsOneWidget);
+    await tester.tap(find.text('2028'));
+    await tester.pumpAndSettle();
+
+    // Verify view date switched to 2028
+    expect(find.text('2028'), findsOneWidget);
+    expect(find.text('July'), findsOneWidget);
+
+    // Pick day 15
+    await tester.tap(find.text('15'));
+    await tester.pumpAndSettle();
+
+    // Confirm
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    expect(pickedDate, isNotNull);
+    expect(pickedDate!.year, 2028);
+    expect(pickedDate!.month, 7);
+    expect(pickedDate!.day, 15);
   });
 }
 
