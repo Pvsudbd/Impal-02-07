@@ -2,8 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
-import 'add_new_schedule.dart';
-import 'edit_schedule.dart';
+import 'schedule_form_page.dart';
 import 'pop_up_konfirmasi_delete.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 
@@ -311,13 +310,13 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
 
   void _openAddSchedule() {
     Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const AddNewSchedule()),
+      MaterialPageRoute(builder: (_) => const ScheduleFormPage()),
     );
   }
 
   void _openEditSchedule(ScheduleModel item) {
     Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => EditSchedule(schedule: item)),
+      MaterialPageRoute(builder: (_) => ScheduleFormPage(schedule: item)),
     );
   }
 

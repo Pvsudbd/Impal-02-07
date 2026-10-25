@@ -91,3 +91,43 @@ Whenever creating or modifying UI elements, widgets, dialogs, or text copy in th
   - The user can scroll to the left to view past `Completed` schedules.
   - The user can scroll to the right to view future `Upcoming` schedules.
   - If there is no `Ongoing` schedule currently active, it focuses on the first `Upcoming` schedule (or index 0).
+
+---
+
+## 6. Schedule Form Architecture & Layout Rules (`ScheduleFormPage`, `AddNewSchedule`, & `EditSchedule`)
+- **Unified Single Form Component (`ScheduleFormPage`)**:
+  - `AddNewSchedule` and `EditSchedule` delegate directly to a single, unified `ScheduleFormPage` component with dual-mode support (`schedule == null` for Add, `schedule != null` for Edit).
+- **Unified Course / Title Field (Single Controller for DB Simplicity)**:
+  - Course (for Lecture) and Schedule Title (for External) share the **exact same text controller** (`_titleController`), adapting dynamically:
+    - **When Lecture**: Label displays as **"Course"**, Hint is `'e.g. SSIF-04-REG • Software Testing & Implementation'`, Icon is `Icons.school_outlined`.
+    - **When External**: Label displays as **"Schedule Title"**, Hint is `'e.g. Meet Impal Kelompok 7'`, Icon is `Icons.menu_book_rounded`.
+    - **Database Mapping**: The value is saved directly to `title`, and duplicated to `course` when type is `Lecture`, keeping database structures clean and seamless without dual controllers.
+- **Conditional Date Picker on Repeat Weekly**:
+  - When **Repeat Weekly** is enabled (`true`), the **"Date"** picker section is **completely hidden** (no date selection required).
+  - When Repeat Weekly is disabled (`false`), the **"Date"** picker appears seamlessly in the form.
+- **Strict Form Sequence**:
+  1. Schedule Type (`Lecture` / `External`)
+  2. Course (if Lecture) OR Schedule Title (if External)
+  3. Location / Room
+  4. Repeat Weekly Switch
+  5. Date Picker (only if Repeat Weekly is OFF)
+  6. Time Duration (Start Time - End Time)
+  7. Notes (Optional)
+  8. Submit / Save Changes Button
+  *(Note: The manual/chip status selector is completely eliminated from EditSchedule because schedule status is fully automated by ScheduleModel based on real-time clock and schedule dates).*
+- **Unified Control Sizing & Spacing**:
+  - **Single-row Controls Height**: All single-row containers and controls MUST have a unified height of **48px**:
+    - Type selection buttons: `height: 48`.
+    - Single-line TextFields: `isDense: true` with `contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14)`.
+    - Date picker container: `height: 48` with `padding: EdgeInsets.symmetric(horizontal: 14)`.
+    - Time duration containers: `height: 48` with `padding: EdgeInsets.symmetric(horizontal: 14)`.
+    - Repeat Weekly container: `height: 48` with `padding: EdgeInsets.symmetric(horizontal: 14)`.
+    - Action buttons: `height: 48`.
+  - **Repeat Weekly Switch**: To prevent the switch container from bulging larger than other fields, use:
+    - `Transform.scale(scale: 0.82)`
+    - `materialTapTargetSize: MaterialTapTargetSize.shrinkWrap`
+  - **Standard Spacing**:
+    - Gap between label and input control: `height: 8`.
+    - Gap between form sections: `height: 16`.
+    - Gap before submit button: `height: 24`.
+

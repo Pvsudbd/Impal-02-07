@@ -6,8 +6,7 @@ import 'package:impal_smart_todolist/presentation/features/jadwal/models/schedul
 import 'package:impal_smart_todolist/presentation/features/jadwal/models/schedule_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
 import 'package:impal_smart_todolist/presentation/features/team/team_list_page.dart';
-import 'package:impal_smart_todolist/presentation/features/jadwal/add_new_schedule.dart';
-import 'package:impal_smart_todolist/presentation/features/jadwal/edit_schedule.dart';
+import 'package:impal_smart_todolist/presentation/features/jadwal/schedule_form_page.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_time_picker_dialog.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_date_picker_dialog.dart';
 
@@ -212,13 +211,13 @@ void main() {
     expect(teamBackTapped, isTrue);
   });
 
-  testWidgets('AddNewSchedule opens time picker in 24-hour mode without AM/PM', (WidgetTester tester) async {
+  testWidgets('ScheduleFormPage (Add mode) opens time picker in 24-hour mode without AM/PM', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 1920);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(const MaterialApp(
-      home: AddNewSchedule(),
+      home: ScheduleFormPage(),
     ));
     await tester.pumpAndSettle();
 
@@ -247,7 +246,7 @@ void main() {
     expect(find.text('Select Start Time'), findsNothing);
   });
 
-  testWidgets('EditSchedule opens time picker in 24-hour mode without AM/PM', (WidgetTester tester) async {
+  testWidgets('ScheduleFormPage (Edit mode) opens time picker in 24-hour mode without AM/PM', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 1920);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -265,7 +264,7 @@ void main() {
     );
 
     await tester.pumpWidget(MaterialApp(
-      home: EditSchedule(schedule: item),
+      home: ScheduleFormPage(schedule: item),
     ));
     await tester.pumpAndSettle();
 
@@ -642,6 +641,91 @@ void main() {
     await tester.drag(scrollFinder, const Offset(-600, 0));
     await tester.pumpAndSettle();
     expect(scrollView.controller!.offset, greaterThan(200.0));
+  });
+
+  testWidgets('ScheduleFormPage (Add mode) form adapts fields based on Lecture vs External and Repeat Weekly toggle', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: ScheduleFormPage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // 1. By default, type is Lecture:
+    // Course field is shown, Schedule Title is NOT shown
+    expect(find.text('Course'), findsOneWidget);
+    expect(find.text('Schedule Title'), findsNothing);
+
+    // 2. By default, Repeat Weekly is ON:
+    // Date field is NOT shown
+    expect(find.text('Repeat Weekly'), findsOneWidget);
+    expect(find.text('Date'), findsNothing);
+
+    // 3. Toggle Repeat Weekly OFF:
+    // Date field now appears
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(find.text('Date'), findsOneWidget);
+
+    // 4. Toggle Repeat Weekly back ON:
+    // Date field disappears
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(find.text('Date'), findsNothing);
+
+    // 5. Select 'External' type:
+    // Schedule Title appears, Course disappears
+    await tester.tap(find.text('External'));
+    await tester.pumpAndSettle();
+    expect(find.text('Schedule Title'), findsOneWidget);
+    expect(find.text('Course'), findsNothing);
+
+    // 6. Switch back to 'Lecture':
+    // Course appears, Schedule Title disappears
+    await tester.tap(find.text('Lecture'));
+    await tester.pumpAndSettle();
+    expect(find.text('Course'), findsOneWidget);
+    expect(find.text('Schedule Title'), findsNothing);
+  });
+
+  testWidgets('ScheduleFormPage (Edit mode) form adapts fields based on Lecture vs External and Repeat Weekly toggle', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final lectureSchedule = ScheduleModel(
+      id: 'edit_test_1',
+      title: 'Operating Systems',
+      course: 'CS201 - OS',
+      type: 'Lecture',
+      date: DateTime.now(),
+      timeStart: '08:00',
+      timeEnd: '10:00',
+      repeat: true,
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: ScheduleFormPage(schedule: lectureSchedule),
+    ));
+    await tester.pumpAndSettle();
+
+    // Lecture with repeat = true: Course shown, Schedule Title hidden, Date hidden
+    expect(find.text('Course'), findsOneWidget);
+    expect(find.text('Schedule Title'), findsNothing);
+    expect(find.text('Date'), findsNothing);
+
+    // Toggle repeat weekly to false: Date should appear
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(find.text('Date'), findsOneWidget);
+
+    // Switch to External: Schedule Title shown, Course hidden
+    await tester.tap(find.text('External'));
+    await tester.pumpAndSettle();
+    expect(find.text('Schedule Title'), findsOneWidget);
+    expect(find.text('Course'), findsNothing);
   });
 }
 

@@ -1,79 +1,64 @@
 import 'package:flutter/material.dart';
 import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
+import 'pop_up_make_schedule.dart';
 import 'pop_up_konfirmasi_edit.dart';
 import 'pop_up_konfirmasi_delete.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../common_widgets/impal_time_picker_dialog.dart';
 import '../../common_widgets/impal_date_picker_dialog.dart';
 
-/// Aliases for backwards compatibility
-typedef EditScheduleVar1 = EditSchedule;
-typedef EditScheduleVar2 = EditSchedule;
-typedef EditTask = EditSchedule;
-typedef EditTaskVar1 = EditSchedule;
-typedef EditTaskVar2 = EditSchedule;
-typedef Edittask = EditSchedule;
-typedef EdittaskVar2 = EditSchedule;
+/// Unified screen for adding or editing a schedule.
+/// When [schedule] is provided, this page operates in Edit mode.
+/// When [schedule] is null, it operates in Create / Add mode.
+class ScheduleFormPage extends StatefulWidget {
+  final ScheduleModel? schedule;
+  final DateTime? initialDate;
 
-/// Unified screen for editing an existing schedule (combining Variation 1 & 2)
-class EditSchedule extends StatefulWidget {
-  final ScheduleModel schedule;
-
-  const EditSchedule({
+  const ScheduleFormPage({
     super.key,
-    required this.schedule,
+    this.schedule,
+    this.initialDate,
   });
 
+  bool get isEdit => schedule != null;
+
   @override
-  State<EditSchedule> createState() => _EditScheduleState();
+  State<ScheduleFormPage> createState() => _ScheduleFormPageState();
 }
 
-class _EditScheduleState extends State<EditSchedule> {
+class _ScheduleFormPageState extends State<ScheduleFormPage> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _titleController;
-  late TextEditingController _courseController;
-  late TextEditingController _locationController;
-  late TextEditingController _notesController;
+  final _titleController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _notesController = TextEditingController();
 
-  late String _selectedType;
-  late String _selectedStatus;
+  String _selectedType = 'Lecture';
   late DateTime _selectedDate;
-  late TimeOfDay _startTime;
-  late TimeOfDay _endTime;
-  late bool _repeatWeekly;
+  TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 30);
+  TimeOfDay _endTime = const TimeOfDay(hour: 11, minute: 30);
+  bool _repeatWeekly = true;
 
   @override
   void initState() {
     super.initState();
-    final s = widget.schedule;
-    _titleController = TextEditingController(text: s.title);
-    _courseController = TextEditingController(text: s.course ?? s.title);
-    _locationController = TextEditingController(text: s.location ?? '');
-    _notesController = TextEditingController(text: s.notes ?? '');
-
-    _selectedType = s.type;
-    _selectedStatus = s.status;
-    _selectedDate = s.date;
-    _repeatWeekly = s.repeat;
-
-    _startTime = _parseTime(s.timeStart, const TimeOfDay(hour: 9, minute: 30));
-    _endTime = _parseTime(s.timeEnd, const TimeOfDay(hour: 11, minute: 30));
-    _selectedStatus = ScheduleModel.calculateStatus(
-      date: _selectedDate,
-      timeStart: _formatTime(_startTime),
-      timeEnd: _formatTime(_endTime),
-    );
-  }
-
-  void _syncAutoStatus() {
-    setState(() {
-      _selectedStatus = ScheduleModel.calculateStatus(
-        date: _selectedDate,
-        timeStart: _formatTime(_startTime),
-        timeEnd: _formatTime(_endTime),
-      );
-    });
+    if (widget.schedule != null) {
+      final s = widget.schedule!;
+      _selectedType = s.type;
+      _titleController.text = (s.type == 'Lecture' ? (s.course ?? s.title) : s.title);
+      _locationController.text = s.location ?? '';
+      _notesController.text = s.notes ?? '';
+      _selectedDate = s.date;
+      _repeatWeekly = s.repeat;
+      _startTime = _parseTime(s.timeStart, const TimeOfDay(hour: 9, minute: 30));
+      _endTime = _parseTime(s.timeEnd, const TimeOfDay(hour: 11, minute: 30));
+    } else {
+      _selectedType = 'Lecture';
+      _selectedDate = widget.initialDate ?? DateTime.now();
+      _repeatWeekly = true;
+      _startTime = const TimeOfDay(hour: 9, minute: 30);
+      _endTime = const TimeOfDay(hour: 11, minute: 30);
+    }
   }
 
   TimeOfDay _parseTime(String str, TimeOfDay fallback) {
@@ -93,7 +78,6 @@ class _EditScheduleState extends State<EditSchedule> {
   @override
   void dispose() {
     _titleController.dispose();
-    _courseController.dispose();
     _locationController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -123,7 +107,6 @@ class _EditScheduleState extends State<EditSchedule> {
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
-      _syncAutoStatus();
     }
   }
 
@@ -135,7 +118,6 @@ class _EditScheduleState extends State<EditSchedule> {
     );
     if (picked != null) {
       setState(() => _startTime = picked);
-      _syncAutoStatus();
     }
   }
 
@@ -147,56 +129,15 @@ class _EditScheduleState extends State<EditSchedule> {
     );
     if (picked != null) {
       setState(() => _endTime = picked);
-      _syncAutoStatus();
-    }
-  }
-
-  Future<void> _saveChanges() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final confirmed = await PopUpKonfirmasiEdit.show(context);
-    if (confirmed != true) return;
-
-    final autoStatus = ScheduleModel.calculateStatus(
-      date: _selectedDate,
-      timeStart: _formatTime(_startTime),
-      timeEnd: _formatTime(_endTime),
-    );
-
-    final updated = widget.schedule.copyWith(
-      title: _titleController.text.trim(),
-      type: _selectedType,
-      status: autoStatus,
-      course: _selectedType == 'Lecture' && _courseController.text.trim().isNotEmpty
-          ? _courseController.text.trim()
-          : (_courseController.text.trim().isNotEmpty
-              ? _courseController.text.trim()
-              : _titleController.text.trim()),
-      location: _locationController.text.trim().isNotEmpty
-          ? _locationController.text.trim()
-          : 'Classroom',
-      date: _selectedDate,
-      timeStart: _formatTime(_startTime),
-      timeEnd: _formatTime(_endTime),
-      notes: _notesController.text.trim().isNotEmpty
-          ? _notesController.text.trim()
-          : null,
-      repeat: _repeatWeekly,
-    );
-
-    await ScheduleRepository().updateSchedule(updated);
-
-    if (mounted) {
-      PopUpPemberitahuan.scheduleUpdated(context);
-      Navigator.of(context).pop(true);
     }
   }
 
   Future<void> _deleteSchedule() async {
+    if (widget.schedule == null) return;
     final confirmed = await PopUpKonfirmasiDelete.show(context);
     if (confirmed != true) return;
 
-    await ScheduleRepository().deleteSchedule(widget.schedule.id);
+    await ScheduleRepository().deleteSchedule(widget.schedule!.id);
 
     if (mounted) {
       PopUpPemberitahuan.scheduleDeleted(context);
@@ -204,8 +145,88 @@ class _EditScheduleState extends State<EditSchedule> {
     }
   }
 
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final isEdit = widget.isEdit;
+    final enteredText = _titleController.text.trim();
+
+    if (isEdit) {
+      final confirmed = await PopUpKonfirmasiEdit.show(context);
+      if (confirmed != true) return;
+
+      final scheduleDate = _repeatWeekly ? widget.schedule!.date : _selectedDate;
+      final autoStatus = ScheduleModel.calculateStatus(
+        date: scheduleDate,
+        timeStart: _formatTime(_startTime),
+        timeEnd: _formatTime(_endTime),
+      );
+
+      final updated = widget.schedule!.copyWith(
+        title: enteredText,
+        type: _selectedType,
+        status: autoStatus,
+        course: _selectedType == 'Lecture' ? enteredText : null,
+        location: _locationController.text.trim().isNotEmpty
+            ? _locationController.text.trim()
+            : (_selectedType == 'Lecture' ? 'Classroom' : 'Online / Meeting'),
+        date: scheduleDate,
+        timeStart: _formatTime(_startTime),
+        timeEnd: _formatTime(_endTime),
+        notes: _notesController.text.trim().isNotEmpty
+            ? _notesController.text.trim()
+            : null,
+        repeat: _repeatWeekly,
+      );
+
+      await ScheduleRepository().updateSchedule(updated);
+
+      if (mounted) {
+        PopUpPemberitahuan.scheduleUpdated(context);
+        Navigator.of(context).pop(true);
+      }
+    } else {
+      final confirmed = await PopUpMakeSchedule.show(context);
+      if (confirmed != true) return;
+
+      final scheduleDate = _repeatWeekly ? DateTime.now() : _selectedDate;
+
+      final newSchedule = ScheduleModel(
+        id: 'sch_${DateTime.now().millisecondsSinceEpoch}',
+        title: enteredText,
+        type: _selectedType,
+        course: _selectedType == 'Lecture' ? enteredText : null,
+        location: _locationController.text.trim().isNotEmpty
+            ? _locationController.text.trim()
+            : (_selectedType == 'Lecture' ? 'Classroom' : 'Online / Meeting'),
+        status: ScheduleModel.calculateStatus(
+          date: scheduleDate,
+          timeStart: _formatTime(_startTime),
+          timeEnd: _formatTime(_endTime),
+        ),
+        date: scheduleDate,
+        timeStart: _formatTime(_startTime),
+        timeEnd: _formatTime(_endTime),
+        notes: _notesController.text.trim().isNotEmpty
+            ? _notesController.text.trim()
+            : null,
+        repeat: _repeatWeekly,
+      );
+
+      await ScheduleRepository().addSchedule(newSchedule);
+
+      if (mounted) {
+        PopUpPemberitahuan.scheduleCreated(context);
+        Navigator.of(context).pop(true);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isEdit = widget.isEdit;
+    final isLecture = _selectedType == 'Lecture';
+
     return Scaffold(
       backgroundColor: const Color(0xFF282D37),
       appBar: AppBar(
@@ -215,9 +236,9 @@ class _EditScheduleState extends State<EditSchedule> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        title: const Text(
-          'Edit Schedule',
-          style: TextStyle(
+        title: Text(
+          isEdit ? 'Edit Schedule' : 'Add Schedule',
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 18,
             fontFamily: 'Inter',
@@ -226,12 +247,14 @@ class _EditScheduleState extends State<EditSchedule> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFA6144)),
-            tooltip: 'Delete Schedule',
-            onPressed: _deleteSchedule,
-          ),
-          const SizedBox(width: 8),
+          if (isEdit) ...[
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFA6144)),
+              tooltip: 'Delete Schedule',
+              onPressed: _deleteSchedule,
+            ),
+            const SizedBox(width: 8),
+          ],
         ],
       ),
       body: SafeArea(
@@ -246,48 +269,7 @@ class _EditScheduleState extends State<EditSchedule> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Status selector
-                    Row(
-                      children: [
-                        const Text(
-                          'Status',
-                          style: TextStyle(
-                            color: Color(0xFF8E95A5),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF3B4150),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text(
-                            'Auto-determined',
-                            style: TextStyle(
-                              color: Color(0xFF8E95A5),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _buildStatusChip('Ongoing', const Color(0xFFFF826E)),
-                        const SizedBox(width: 10),
-                        _buildStatusChip('Upcoming', const Color(0xFF8E95A5)),
-                        const SizedBox(width: 10),
-                        _buildStatusChip('Completed', const Color(0xFF10B981)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Type
+                    // Schedule Type selector
                     const Text(
                       'Schedule Type',
                       style: TextStyle(
@@ -303,7 +285,7 @@ class _EditScheduleState extends State<EditSchedule> {
                           child: _buildTypeButton(
                             title: 'Lecture',
                             icon: Icons.school_rounded,
-                            isSelected: _selectedType == 'Lecture',
+                            isSelected: isLecture,
                             onTap: () => setState(() => _selectedType = 'Lecture'),
                           ),
                         ),
@@ -312,7 +294,7 @@ class _EditScheduleState extends State<EditSchedule> {
                           child: _buildTypeButton(
                             title: 'External',
                             icon: Icons.event_rounded,
-                            isSelected: _selectedType == 'External',
+                            isSelected: !isLecture,
                             onTap: () => setState(() => _selectedType = 'External'),
                           ),
                         ),
@@ -320,10 +302,10 @@ class _EditScheduleState extends State<EditSchedule> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Title
-                    const Text(
-                      'Schedule Title',
-                      style: TextStyle(
+                    // Unified Course (Lecture) / Schedule Title (External) field
+                    Text(
+                      isLecture ? 'Course' : 'Schedule Title',
+                      style: const TextStyle(
                         color: Color(0xFF8E95A5),
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -332,34 +314,17 @@ class _EditScheduleState extends State<EditSchedule> {
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _titleController,
-                      hint: 'Title',
-                      prefixIcon: Icons.menu_book_rounded,
+                      hint: isLecture
+                          ? 'e.g. SSIF-04-REG • Software Testing & Implementation'
+                          : 'e.g. Meet Impal Kelompok 7',
+                      prefixIcon: isLecture ? Icons.school_outlined : Icons.menu_book_rounded,
                       validator: (val) => val == null || val.trim().isEmpty
-                          ? 'Please enter title'
+                          ? (isLecture ? 'Please enter course name' : 'Please enter schedule title')
                           : null,
                     ),
                     const SizedBox(height: 16),
 
-                    // Course field (combining Variation 2 dynamically)
-                    if (_selectedType == 'Lecture') ...[
-                      const Text(
-                        'Course',
-                        style: TextStyle(
-                          color: Color(0xFF8E95A5),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildTextField(
-                        controller: _courseController,
-                        hint: 'e.g. SSIF-04-REG • Software Testing & Implementation',
-                        prefixIcon: Icons.school_outlined,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Location
+                    // Room / Location
                     const Text(
                       'Location / Room',
                       style: TextStyle(
@@ -371,54 +336,100 @@ class _EditScheduleState extends State<EditSchedule> {
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _locationController,
-                      hint: 'Location',
+                      hint: isLecture
+                          ? 'e.g. KTT B-106 • SSIF-04-REG-GAB02'
+                          : 'Location',
                       prefixIcon: Icons.location_on_rounded,
                     ),
                     const SizedBox(height: 16),
 
-                    // Date
-                    const Text(
-                      'Date',
-                      style: TextStyle(
-                        color: Color(0xFF8E95A5),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                    // Repeat Weekly Switch
+                    Container(
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF323846),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF3B4150)),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: _selectDate,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF323846),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF3B4150)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.calendar_today_rounded, color: Color(0xFF8E95A5), size: 18),
-                                const SizedBox(width: 12),
-                                Text(
-                                  _formatDate(_selectedDate),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.repeat_rounded, color: Color(0xFF8E95A5), size: 18),
+                              SizedBox(width: 10),
+                              Text(
+                                'Repeat Weekly',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
                                 ),
-                              ],
+                              ),
+                            ],
+                          ),
+                          Transform.scale(
+                            scale: 0.82,
+                            child: Switch(
+                              value: _repeatWeekly,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              activeThumbColor: const Color(0xFFFA6144),
+                              activeTrackColor: const Color(0xFFFA6144).withValues(alpha: 0.5),
+                              onChanged: (val) => setState(() => _repeatWeekly = val),
                             ),
-                            const Icon(Icons.edit_calendar_rounded, color: Color(0xFFFA6144), size: 18),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Date Picker (Only shown when Repeat Weekly is OFF)
+                    if (!_repeatWeekly) ...[
+                      const Text(
+                        'Date',
+                        style: TextStyle(
+                          color: Color(0xFF8E95A5),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: _selectDate,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF323846),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF3B4150)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.calendar_today_rounded, color: Color(0xFF8E95A5), size: 18),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    _formatDate(_selectedDate),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Icon(Icons.edit_calendar_rounded, color: Color(0xFFFA6144), size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Time Duration
                     const Text(
@@ -437,7 +448,8 @@ class _EditScheduleState extends State<EditSchedule> {
                             onTap: _selectStartTime,
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                              height: 48,
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF323846),
                                 borderRadius: BorderRadius.circular(12),
@@ -465,7 +477,8 @@ class _EditScheduleState extends State<EditSchedule> {
                             onTap: _selectEndTime,
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                              height: 48,
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF323846),
                                 borderRadius: BorderRadius.circular(12),
@@ -488,45 +501,9 @@ class _EditScheduleState extends State<EditSchedule> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Repeat weekly
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF323846),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF3B4150)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.repeat_rounded, color: Color(0xFF8E95A5), size: 20),
-                              SizedBox(width: 12),
-                              Text(
-                                'Repeat Weekly',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Switch(
-                            value: _repeatWeekly,
-                            activeThumbColor: const Color(0xFFFA6144),
-                            activeTrackColor: const Color(0xFFFA6144).withValues(alpha: 0.5),
-                            onChanged: (val) => setState(() => _repeatWeekly = val),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
                     // Notes
                     const Text(
-                      'Notes',
+                      'Notes (Optional)',
                       style: TextStyle(
                         color: Color(0xFF8E95A5),
                         fontSize: 13,
@@ -536,12 +513,12 @@ class _EditScheduleState extends State<EditSchedule> {
                     const SizedBox(height: 8),
                     _buildTextField(
                       controller: _notesController,
-                      hint: 'Add reminders, notes, or details...',
+                      hint: 'Add reminders, assignment info, or topics...',
                       maxLines: 3,
                     ),
                     const SizedBox(height: 24),
 
-                    // Save Button
+                    // Submit Button
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -554,10 +531,10 @@ class _EditScheduleState extends State<EditSchedule> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: _saveChanges,
-                        child: const Text(
-                          'Save Changes',
-                          style: TextStyle(
+                        onPressed: _submitForm,
+                        child: Text(
+                          isEdit ? 'Save Changes' : 'Create Schedule',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
                             fontFamily: 'Inter',
@@ -578,34 +555,6 @@ class _EditScheduleState extends State<EditSchedule> {
     );
   }
 
-  Widget _buildStatusChip(String label, Color color) {
-    final isSelected = _selectedStatus.toLowerCase() == label.toLowerCase();
-    return GestureDetector(
-      onTap: () => setState(() => _selectedStatus = label),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.2) : const Color(0xFF323846),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: isSelected ? color : const Color(0xFF3B4150),
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? color : const Color(0xFF8E95A5),
-            fontSize: 12,
-            fontFamily: 'Inter',
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildTypeButton({
     required String title,
     required IconData icon,
@@ -617,7 +566,7 @@ class _EditScheduleState extends State<EditSchedule> {
       borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        height: 48,
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFFA6144) : const Color(0xFF323846),
           borderRadius: BorderRadius.circular(12),
@@ -661,6 +610,7 @@ class _EditScheduleState extends State<EditSchedule> {
       validator: validator,
       style: const TextStyle(color: Colors.white, fontSize: 14),
       decoration: InputDecoration(
+        isDense: true,
         hintText: hint,
         hintStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
         filled: true,
@@ -668,7 +618,11 @@ class _EditScheduleState extends State<EditSchedule> {
         prefixIcon: prefixIcon != null
             ? Icon(prefixIcon, color: const Color(0xFF8E95A5), size: 18)
             : null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 48),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: maxLines > 1 ? 12 : 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFF3B4150)),
@@ -680,6 +634,14 @@ class _EditScheduleState extends State<EditSchedule> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFFA6144), width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
         ),
       ),
     );
