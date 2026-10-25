@@ -1,8 +1,8 @@
 import 'package:dotenv/dotenv.dart';
-import 'package:mysql1/mysql1.dart';
+import 'package:mysql_client/mysql_client.dart';
 
 class Database {
-  static MySqlConnection? _connection;
+  static MySQLConnection? _connection;
   static late final DotEnv _env;
   static bool _initialized = false;
 
@@ -15,33 +15,25 @@ class Database {
 
   static String get envPort => _env['PORT'] ?? '3000';
   static String get jwtSecret => _env['JWT_SECRET'] ?? 'impal07_secret_key_ganti_ini_di_production';
+  static String get dbName => _env['DB_NAME'] ?? 'db_manajemen_tugas';
 
-  static ConnectionSettings get settings {
+  static Future<MySQLConnection> getConnection() async {
     init();
-    return ConnectionSettings(
-      host: _env['DB_HOST'] ?? 'localhost',
-      port: int.tryParse(_env['DB_PORT'] ?? '3306') ?? 3306,
-      user: _env['DB_USER'] ?? 'admin',
-      password: _env['DB_PASSWORD'] ?? 'password123',
-      db: _env['DB_NAME'] ?? 'db_manajemen_tugas',
-    );
-  }
-
-  static Future<MySqlConnection> getConnection() async {
-    try {
-      if (_connection == null) {
-        _connection = await MySqlConnection.connect(settings);
-      }
-      return _connection!;
-    } catch (e) {
-      // Reconnect if connection was closed
-      _connection = await MySqlConnection.connect(settings);
-      return _connection!;
+    if (_connection == null || !_connection!.connected) {
+      _connection = await MySQLConnection.createConnection(
+        host: _env['DB_HOST'] ?? 'localhost',
+        port: int.tryParse(_env['DB_PORT'] ?? '3306') ?? 3306,
+        userName: _env['DB_USER'] ?? 'admin',
+        password: _env['DB_PASSWORD'] ?? 'password123',
+        databaseName: dbName,
+      );
+      await _connection!.connect();
     }
+    return _connection!;
   }
 
-  static Future<Results> query(String sql, [List<Object?>? values]) async {
+  static Future<IResultSet> query(String sql, [Map<String, dynamic>? params]) async {
     final conn = await getConnection();
-    return await conn.query(sql, values);
+    return await conn.execute(sql, params ?? {});
   }
 }

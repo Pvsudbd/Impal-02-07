@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
-import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
 import '../lib/config/db.dart';
 import '../lib/routes/auth/auth_routes.dart';
@@ -23,13 +22,13 @@ void main(List<String> args) async {
   // Test DB connection
   app.get('/test-db', (Request request) async {
     try {
-      final results = await Database.query('SELECT COUNT(*) FROM student');
-      final total = results.isNotEmpty ? results.first[0] : 0;
+      final results = await Database.query('SELECT COUNT(*) AS total FROM student');
+      final total = results.rows.isNotEmpty ? results.rows.first.colAt(0) : 0;
       return Response.ok(
         jsonEncode({
           'status': 'success',
           'message': 'Koneksi ke database berhasil!',
-          'database': Database.settings.db,
+          'database': Database.dbName,
           'totalStudents': total,
         }),
         headers: {'Content-Type': 'application/json'},
@@ -50,11 +49,11 @@ void main(List<String> args) async {
   app.get('/tables', (Request request) async {
     try {
       final results = await Database.query('SHOW TABLES');
-      final tables = results.map((r) => r.values?.first?.toString() ?? '').toList();
+      final tables = results.rows.map((r) => r.colAt(0)?.toString() ?? '').toList();
       return Response.ok(
         jsonEncode({
           'status': 'success',
-          'database': Database.settings.db,
+          'database': Database.dbName,
           'tables': tables,
         }),
         headers: {'Content-Type': 'application/json'},
@@ -71,10 +70,31 @@ void main(List<String> args) async {
   });
 
   // Mount Auth routes under /api/auth
-  app.mount('/api/auth/', AuthRoutes().router);
+  app.mount('/api/auth', AuthRoutes().router);
+
+  // Robust CORS Middleware for Chrome / Flutter Web
+  Handler corsMiddleware(Handler innerHandler) {
+    return (Request request) async {
+      final corsHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Origin, Content-Type, Authorization, Accept',
+      };
+
+      if (request.method == 'OPTIONS') {
+        return Response.ok('', headers: corsHeaders);
+      }
+
+      final response = await innerHandler(request);
+      return response.change(headers: corsHeaders);
+    };
+  }
 
   // Global Pipeline with CORS & Logger
-  final handler = const Pipeline().addMiddleware(corsHeaders()).addMiddleware(logRequests()).addHandler(app);
+  final handler = const Pipeline()
+      .addMiddleware(corsMiddleware)
+      .addMiddleware(logRequests())
+      .addHandler(app);
 
   final port = int.tryParse(Database.envPort) ?? 3000;
   final server = await io.serve(handler, InternetAddress.anyIPv4, port);
