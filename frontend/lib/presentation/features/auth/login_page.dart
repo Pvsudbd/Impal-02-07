@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import '../../../data/datasources/auth_remote_datasource.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
 import 'forgot_password_page.dart';
 import 'regist_page.dart';
@@ -87,10 +88,9 @@ class _LoginState extends State<Login> {
 
       if (!mounted) return;
 
-      showTopToast(
+      PopUpPemberitahuan.loginSuccess(
         context,
-        'Selamat datang, $userName!',
-        type: ToastType.success,
+        username: userName,
       );
 
       Navigator.pushReplacement(
@@ -100,7 +100,11 @@ class _LoginState extends State<Login> {
     } on Exception catch (e) {
       if (!mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');
-      showTopToast(context, msg, type: ToastType.error);
+      PopUpPemberitahuan.error(
+        context,
+        title: 'Login Gagal',
+        message: msg,
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -305,7 +309,7 @@ class _LoginState extends State<Login> {
                               ],
                             ),
                           ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 16),
 
                         // Password Field
                         const Text(
@@ -409,7 +413,7 @@ class _LoginState extends State<Login> {
                               ],
                             ),
                           ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 16),
 
                         // Checkbox & Forgot Password Row
                         Row(
@@ -507,7 +511,7 @@ class _LoginState extends State<Login> {
                             onTap: _isLoading ? null : _handleSignIn,
                             child: Ink(
                               width: double.infinity,
-                              height: 50,
+                              height: 48,
                               decoration: ShapeDecoration(
                                 color: _isLoading
                                     ? const Color(0x99FA6144)
@@ -539,29 +543,32 @@ class _LoginState extends State<Login> {
                                         children: [
                                           Text(
                                             'Sign In to Dashboard',
+                                            textAlign: TextAlign.center,
                                             style: TextStyle(
                                               color: Colors.white,
-                                              fontSize: 15,
+                                              fontSize: 14,
                                               fontFamily: 'Inter',
-                                              fontWeight: FontWeight.w700,
+                                              fontWeight: FontWeight.w600,
+                                              letterSpacing: 0.15,
                                             ),
                                           ),
                                           SizedBox(width: 8),
                                           Text(
                                             '➔',
+                                            textAlign: TextAlign.center,
                                             style: TextStyle(
                                               color: Colors.white,
-                                              fontSize: 15,
+                                              fontSize: 14,
                                               fontFamily: 'Inter',
-                                              fontWeight: FontWeight.w700,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ],
                                       ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
                         const SizedBox(height: 20),
 
                         // Register Link
@@ -629,14 +636,14 @@ class _LoginState extends State<Login> {
           ),
         ),
       ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
+    ],
+  ),
+),
+),
+);
+},
+),
+),
+);
+}
 }

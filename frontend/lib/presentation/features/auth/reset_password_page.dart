@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
-import 'pop_up_password_updated.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -123,10 +123,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
     setState(() => _isLoading = false);
 
-    await PasswordUpdatedDialog.show(
-      context,
-      autoCloseSeconds: 2,
-    );
+    PopUpPemberitahuan.passwordUpdated(context);
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (!mounted) return;
 
@@ -312,7 +310,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         onTap: _isLoading ? null : _handleSavePassword,
                         child: Ink(
                           width: double.infinity,
-                          height: 50,
+                          height: 48,
                           decoration: BoxDecoration(
                             color: const Color(0xFFFA6144),
                             borderRadius: BorderRadius.circular(12),
@@ -338,9 +336,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                                     'Save Password & Sign In',
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 15,
+                                      fontSize: 14,
                                       fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.15,
                                     ),
                                   ),
                           ),
@@ -348,7 +347,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 20),
 
                     // Remember your previous password? Back to Sign In
                     Center(

@@ -5,7 +5,7 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
 import 'reset_password_page.dart';
-import 'pop_up_recovery_code.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 class VerificationCodePage extends StatefulWidget {
   final String destination;
@@ -85,10 +85,9 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
       _otpError = null;
     });
     _startCountdownTimer();
-    RecoveryCodeSentDialog.show(
+    PopUpPemberitahuan.recoveryCodeSent(
       context,
       destination: widget.destination,
-      autoCloseSeconds: 2,
     );
   }
 
@@ -126,11 +125,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
 
     setState(() => _isLoading = false);
 
-    showTopToast(
-      context,
-      'Code verified successfully!',
-      type: ToastType.success,
-    );
+    PopUpPemberitahuan.codeVerified(context);
 
     Navigator.push(
       context,
@@ -194,7 +189,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
       children: [
         if (!isMobile) ...[
           topNavBar,
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
         ],
 
                     // Hero Section: Icon, Title, Subtitle
@@ -270,7 +265,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
                       ),
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
 
                     // OTP Section Label
                     const Center(
@@ -363,7 +358,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
                       ],
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
 
                     // Verify Code & Continue Button
                     Material(
@@ -373,7 +368,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
                         onTap: _isLoading ? null : _handleVerifyCode,
                         child: Ink(
                           width: double.infinity,
-                          height: 50,
+                          height: 48,
                           decoration: BoxDecoration(
                             color: const Color(0xFFFA6144),
                             borderRadius: BorderRadius.circular(12),
@@ -402,9 +397,10 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
                                         'Verify Code',
                                         style: TextStyle(
                                           color: Colors.white,
-                                          fontSize: 15,
+                                          fontSize: 14,
                                           fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w700,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.15,
                                         ),
                                       ),
                                       SizedBox(width: 8),

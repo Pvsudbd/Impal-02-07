@@ -183,8 +183,8 @@ class _TopToastWidgetState extends State<_TopToastWidget>
     final topPadding = MediaQuery.of(context).padding.top;
 
     final (Color defaultBg, IconData defaultIcon) = switch (widget.type) {
-      ToastType.error => (const Color(0xFFEF4444), Icons.error_outline_rounded),
-      ToastType.warning => (const Color(0xFFF59E0B), Icons.warning_amber_rounded),
+      ToastType.error => (const Color(0xFFFA6144), Icons.error_outline_rounded),
+      ToastType.warning => (const Color(0xFFFA6144), Icons.warning_amber_rounded),
       ToastType.success => (const Color(0xFF10B981), Icons.check_circle_outline_rounded),
       ToastType.info => (const Color(0xFFFA6144), Icons.info_outline_rounded),
     };

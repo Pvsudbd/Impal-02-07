@@ -4,7 +4,7 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
 import 'verification_code_page.dart';
-import 'pop_up_recovery_code.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 enum RecoveryMethod { email, sms }
 
@@ -122,10 +122,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
     setState(() => _isLoading = false);
 
-    await RecoveryCodeSentDialog.show(
+    PopUpPemberitahuan.recoveryCodeSent(
       context,
       destination: destination,
-      autoCloseSeconds: 2,
     );
 
     if (!mounted) return;
@@ -274,7 +273,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       ),
                     ),
 
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 24),
 
                     // SECTION 1: Recovery Method Selection (placed ON TOP)
                     const Text(
@@ -295,7 +294,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       subtitle: 'Receive reset instructions via your registered email',
                       icon: Icons.mail_outline_rounded,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
 
                     // Option 2: Send via SMS Card
                     _buildMethodCard(
@@ -305,7 +304,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       icon: Icons.chat_bubble_outline_rounded,
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 16),
 
                     // SECTION 2: Form Input (Adapts dynamically to the chosen method)
                     AnimatedSwitcher(
@@ -324,7 +323,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                     // SECTION 3: Dynamic Important Notice Card
                     _buildImportantNotice(),
 
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 24),
 
                     // Submit Button
                     Material(
@@ -334,7 +333,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                         onTap: _isLoading ? null : _handleSendRecovery,
                         child: Ink(
                           width: double.infinity,
-                          height: 50,
+                          height: 48,
                           decoration: BoxDecoration(
                             color: const Color(0xFFFA6144),
                             borderRadius: BorderRadius.circular(12),
@@ -352,7 +351,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                                     width: 22,
                                     height: 22,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
+                                       strokeWidth: 2.5,
                                       valueColor: AlwaysStoppedAnimation(Colors.white),
                                     ),
                                   )
@@ -365,9 +364,10 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                                             : 'Send 6-Digit Code',
                                         style: const TextStyle(
                                           color: Colors.white,
-                                          fontSize: 15,
+                                          fontSize: 14,
                                           fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w700,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.15,
                                         ),
                                       ),
                                     ],
@@ -377,7 +377,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       ),
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 20),
 
                     // Remembered your password? Sign In
                     Center(

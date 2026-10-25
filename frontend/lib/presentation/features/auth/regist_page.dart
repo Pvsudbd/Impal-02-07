@@ -4,7 +4,7 @@ import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
 import 'login_page.dart';
 import 'terms_privacy_page.dart';
-import 'pop_up_account_created.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -138,7 +138,7 @@ class _RegisterState extends State<Register> {
     }
 
     if (!_agreeTerms) {
-      _showToast('Please read and agree to the Terms of Service & Privacy Policy first!', isError: true);
+      PopUpPemberitahuan.termsWarning(context);
       _openTermsPrivacy();
       return;
     }
@@ -148,24 +148,12 @@ class _RegisterState extends State<Register> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      await AccountCreatedDialog.show(
-        context,
-        name: name,
-        email: email,
-        autoCloseSeconds: 2,
-      );
+      PopUpPemberitahuan.accountCreated(context, name: name);
+      await Future.delayed(const Duration(milliseconds: 500));
 
       if (!mounted) return;
       Navigator.pushReplacement(context, AuthFadeRoute(page: const Login()));
     });
-  }
-
-  void _showToast(String msg, {bool isError = false}) {
-    showTopToast(
-      context,
-      msg,
-      type: isError ? ToastType.error : ToastType.success,
-    );
   }
 
   void _navigateBack() {
@@ -220,18 +208,18 @@ class _RegisterState extends State<Register> {
       children: [
         if (!isMobile) ...[
           topNavBar,
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
         ],
 
                     // Title & Description
                     const Text('Create Account', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800, fontFamily: 'Inter', letterSpacing: -0.5)),
                     const SizedBox(height: 6),
                     const Text('Register your student identity for smart academic prioritization.', style: TextStyle(color: Color(0xFF8E95A5), fontSize: 13, fontFamily: 'Inter', height: 1.45)),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 24),
 
                     // Inputs
                     _label('Full Name'),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     _input(
                       ctrl: _nameCtrl,
                       hint: 'Enter your full name',
@@ -241,7 +229,7 @@ class _RegisterState extends State<Register> {
                     const SizedBox(height: 16),
 
                     _label('Email'),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     _input(
                       ctrl: _emailCtrl,
                       hint: 'Enter your email address',
@@ -252,7 +240,7 @@ class _RegisterState extends State<Register> {
                     const SizedBox(height: 16),
 
                     _label('Password'),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     _input(
                       ctrl: _pwdCtrl,
                       hint: 'Enter new password',
@@ -265,7 +253,7 @@ class _RegisterState extends State<Register> {
                         onPressed: () => setState(() => _obscurePwd = !_obscurePwd),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
 
                     // Password Strength Card
                     _strengthCard(),
@@ -295,7 +283,7 @@ class _RegisterState extends State<Register> {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     _input(
                       ctrl: _confirmCtrl,
                       hint: 'Confirm your password',
@@ -309,7 +297,7 @@ class _RegisterState extends State<Register> {
                         onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
 
                     // Terms Checkbox (Requires reading Terms & Privacy first)
                     InkWell(
@@ -367,7 +355,7 @@ class _RegisterState extends State<Register> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 24),
 
                     // Submit Button
                     Material(
@@ -377,7 +365,7 @@ class _RegisterState extends State<Register> {
                         onTap: _isLoading ? null : _handleRegister,
                         child: Ink(
                           width: double.infinity,
-                          height: 50,
+                          height: 48,
                           decoration: BoxDecoration(
                             color: const Color(0xFFFA6144),
                             borderRadius: BorderRadius.circular(12),
@@ -391,16 +379,16 @@ class _RegisterState extends State<Register> {
                                 : const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text('Create Student Account', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700, fontFamily: 'Inter')),
+                                      Text('Create Student Account', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.15, fontFamily: 'Inter')),
                                       SizedBox(width: 8),
-                                      Text('➔', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+                                      Text('➔', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
                                     ],
                                   ),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 20),
 
                     // Already have an account? Sign In Link
                     Center(
