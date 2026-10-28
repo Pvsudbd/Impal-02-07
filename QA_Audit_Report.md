@@ -27,6 +27,9 @@ Sesuai permintaan pengguna (*"setiap page nya kodingannya tidak sampai sebanyak 
 
 | Halaman (*Page*) | Baris Sebelum | Baris Sesudah | Penurunan | Komponen Modular yang Diciptakan |
 | :--- | :---: | :---: | :---: | :--- |
+| **`task_page.dart`** | 1,976 baris | **238 baris** | **-88%** | `task_item_model.dart`, `task_repository.dart`, `task_header.dart`, `task_timeline_summary.dart`, `task_filter_bar.dart`, `task_expandable_card.dart` |
+| **`create_task.dart`** | 925 baris | **398 baris** | **-57%** | **Formulir Terpadu Dual-Mode (Add & Edit Task)**, `CourseGradeWeightChips`, integrasi `SubmissionDeadlinePicker`, `PopUpPemberitahuan.taskCreated/taskUpdated` |
+| **`detail_card_task.dart`** | 650 baris | **28 baris** | **-96%** | **Kartu Detail Expandable ("card nya memanjang")** re-export `TaskExpandableCard`, backward compatibility alias `CardTaskDashboard` |
 | **`create_task_team.dart`** | 1,076 baris | **365 baris** | **-66%** | **Formulir Terpadu Dual-Mode (Create & Edit Task)**, Multi-Assignee, Pop-Up Pemberitahuan template resmi, `submission_deadline_picker.dart`, `assignee_dropdown.dart` |
 | **`home_page.dart`** | 1,288 baris | **337 baris** | **-74%** | `dashboard_models.dart`, `home_header.dart`, `home_categories_section.dart`, `home_task_card.dart`, `home_schedule_section.dart` |
 | **`dashboard_team_page.dart`** | 1,029 baris | **297 baris** | **-71%** | `team_task_model.dart`, `team_dashboard_header.dart`, `team_task_card.dart`, `create_task_dialog.dart`, `team_schedule_section.dart` |

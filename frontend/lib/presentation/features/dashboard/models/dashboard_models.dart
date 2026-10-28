@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../jadwal/models/schedule_model.dart';
+import '../../schedule/models/schedule_model.dart';
 
 /// Schedule preview item for the dashboard
 class ScheduleItem {

@@ -7,6 +7,7 @@ import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
 import 'pop_up_konfirmasi_delete.dart';
 import 'schedule_form_page.dart';
+import '../task/task_page.dart';
 import 'widgets/schedule_empty_state.dart';
 import 'widgets/schedule_filter_bar.dart';
 import 'widgets/schedule_header.dart';
@@ -126,8 +127,10 @@ class _SchedulePageState extends State<SchedulePage> {
         Navigator.of(context).pop();
       }
     } else if (index == 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tasks section'), duration: Duration(seconds: 1)),
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => TaskPage(userName: widget.userName),
+        ),
       );
     } else if (index == 2) {
       ScaffoldMessenger.of(context).showSnackBar(

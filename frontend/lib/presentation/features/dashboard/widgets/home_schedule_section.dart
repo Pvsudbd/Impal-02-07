@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../../common_widgets/impal_schedule_card.dart';
-import '../../jadwal/models/schedule_model.dart';
-import '../../jadwal/models/schedule_repository.dart';
+import '../../schedule/models/schedule_model.dart';
+import '../../schedule/models/schedule_repository.dart';
 import '../models/dashboard_models.dart';
 
 /// Today's schedule section on the dashboard with horizontal scroll support.

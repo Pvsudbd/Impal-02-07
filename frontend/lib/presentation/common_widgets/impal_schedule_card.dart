@@ -1,6 +1,6 @@
 import 'dart:ui' show PointerDeviceKind, FontFeature;
 import 'package:flutter/material.dart';
-import '../features/jadwal/models/schedule_model.dart';
+import '../features/schedule/models/schedule_model.dart';
 
 /// Reusable Schedule Card matching the sleek IMPAL Design System.
 /// Supports both vertical list layouts and horizontal carousels.

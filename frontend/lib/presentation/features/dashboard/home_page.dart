@@ -3,11 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/top_toast.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
-import '../jadwal/models/schedule_model.dart';
-import '../jadwal/models/schedule_repository.dart';
-import '../jadwal/pop_up_konfirmasi_delete.dart';
-import '../jadwal/schedule_form_page.dart';
-import '../jadwal/schedule_page.dart';
+import '../schedule/models/schedule_model.dart';
+import '../schedule/models/schedule_repository.dart';
+import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../schedule/schedule_form_page.dart';
+import '../schedule/schedule_page.dart';
+import '../task/task_page.dart';
 import '../team/dashboard_team_page.dart';
 import '../team/pop_up_create_meeting.dart';
 import '../team/team_list_page.dart';
@@ -141,7 +142,11 @@ class _HomePageState extends State<HomePage> {
       _currentTab = index;
     });
     if (index == 1) {
-      showTopToast(context, 'Tasks section');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => TaskPage(userName: widget.userName),
+        ),
+      );
     }
   }
 

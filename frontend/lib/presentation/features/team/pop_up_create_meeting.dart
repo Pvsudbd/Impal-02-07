@@ -3,10 +3,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../common_widgets/impal_date_picker_dialog.dart';
 import '../../common_widgets/impal_time_picker_dialog.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
-import '../jadwal/models/schedule_model.dart';
-import '../jadwal/models/schedule_repository.dart';
-import '../jadwal/pop_up_konfirmasi_delete.dart';
-import '../jadwal/widgets/team_meeting_autocomplete.dart';
+import '../schedule/models/schedule_model.dart';
+import '../schedule/models/schedule_repository.dart';
+import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../schedule/widgets/team_meeting_autocomplete.dart';
 
 /// Aliases for backwards compatibility with routes & components
 typedef FormCreateMeeting = PopUpCreateMeeting;

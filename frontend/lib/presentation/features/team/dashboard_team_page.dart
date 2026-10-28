@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
-import '../jadwal/models/schedule_model.dart';
-import '../jadwal/models/schedule_repository.dart';
-import '../jadwal/pop_up_konfirmasi_delete.dart';
-import '../jadwal/schedule_page.dart';
+import '../schedule/models/schedule_model.dart';
+import '../schedule/models/schedule_repository.dart';
+import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../schedule/schedule_page.dart';
+import '../task/task_page.dart';
 import 'create_task_team.dart';
 import 'pop_up_create_meeting.dart';
 import 'widgets/team_dashboard_header.dart';
@@ -326,6 +327,12 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomePage()),
         (route) => false,
+      );
+    } else if (index == 1) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => TaskPage(userName: widget.userName),
+        ),
       );
     } else if (index == 2) {
       if (Navigator.of(context).canPop()) {

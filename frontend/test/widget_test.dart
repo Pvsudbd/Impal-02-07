@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:impal_smart_todolist/presentation/features/auth/login_page.dart';
-import 'package:impal_smart_todolist/presentation/features/jadwal/schedule_page.dart';
-import 'package:impal_smart_todolist/presentation/features/jadwal/models/schedule_model.dart';
-import 'package:impal_smart_todolist/presentation/features/jadwal/models/schedule_repository.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/schedule_page.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/models/schedule_model.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/models/schedule_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
 import 'package:impal_smart_todolist/presentation/features/team/team_list_page.dart';
-import 'package:impal_smart_todolist/presentation/features/jadwal/schedule_form_page.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/schedule_form_page.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_time_picker_dialog.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_date_picker_dialog.dart';
 import 'package:impal_smart_todolist/presentation/features/team/pop_up_create_team.dart';
@@ -16,7 +16,7 @@ import 'package:impal_smart_todolist/presentation/features/team/dashboard_team_p
 import 'package:impal_smart_todolist/presentation/features/team/pop_up_create_meeting.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_schedule_card.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/pop_up_pemberitahuan.dart';
-import 'package:impal_smart_todolist/presentation/features/jadwal/pop_up_konfirmasi_delete.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/pop_up_konfirmasi_delete.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

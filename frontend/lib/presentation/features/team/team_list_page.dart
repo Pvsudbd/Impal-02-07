@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
-import '../jadwal/models/schedule_model.dart';
-import '../jadwal/models/schedule_repository.dart';
-import '../jadwal/pop_up_konfirmasi_delete.dart';
-import '../jadwal/schedule_page.dart';
+import '../schedule/models/schedule_model.dart';
+import '../schedule/models/schedule_repository.dart';
+import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../schedule/schedule_page.dart';
 import 'dashboard_team_page.dart';
 import 'models/team_model.dart';
 import 'models/team_repository.dart';
