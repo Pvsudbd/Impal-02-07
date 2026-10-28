@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/unfocus_on_tap.dart';
+import '../../common_widgets/impal_date_picker_dialog.dart';
+import '../../common_widgets/impal_time_picker_dialog.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
-import '../team/models/team_repository.dart';
-import 'pop_up_make_schedule.dart';
-import 'pop_up_konfirmasi_edit.dart';
 import 'pop_up_konfirmasi_delete.dart';
-import '../../common_widgets/pop_up_pemberitahuan.dart';
-import '../../common_widgets/impal_time_picker_dialog.dart';
-import '../../common_widgets/impal_date_picker_dialog.dart';
+import 'pop_up_konfirmasi_edit.dart';
+import 'pop_up_make_schedule.dart';
+import 'widgets/schedule_date_time_section.dart';
+import 'widgets/schedule_type_selector.dart';
+import 'widgets/team_meeting_autocomplete.dart';
 
 /// Aliases for backwards compatibility
 typedef AddNewSchedule = ScheduleFormPage;
@@ -55,6 +59,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
 
   String _selectedType = 'Lecture';
   bool _isTeamMeeting = false;
+  bool _isSubmitting = false;
   late DateTime _selectedDate;
   TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 30);
   TimeOfDay _endTime = const TimeOfDay(hour: 11, minute: 30);
@@ -130,14 +135,6 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
     return '$h:$m';
   }
 
-  String _formatDate(DateTime d) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return '${d.day} ${months[d.month - 1]} ${d.year}';
-  }
-
   Future<void> _selectDate() async {
     final picked = await showImpalDatePicker(
       context: context,
@@ -198,7 +195,9 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
   }
 
   Future<void> _submitForm() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
+    setState(() => _isSubmitting = true);
 
     final isEdit = widget.isEdit;
     final isMeeting = _selectedType == 'Meeting';
@@ -224,7 +223,10 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
 
     if (isEdit) {
       final confirmed = await PopUpKonfirmasiEdit.show(context);
-      if (confirmed != true) return;
+      if (confirmed != true) {
+        setState(() => _isSubmitting = false);
+        return;
+      }
 
       final scheduleDate = _selectedDate;
       final autoStatus = ScheduleModel.calculateStatus(
@@ -261,7 +263,10 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       }
     } else {
       final confirmed = await PopUpMakeSchedule.show(context);
-      if (confirmed != true) return;
+      if (confirmed != true) {
+        setState(() => _isSubmitting = false);
+        return;
+      }
 
       final scheduleDate = _selectedDate;
 
@@ -305,17 +310,10 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
     final isLecture = _selectedType == 'Lecture';
     final isMeeting = _selectedType == 'Meeting';
 
-    final joinedTeams = TeamRepository().joinedTeamNames;
-    final currentQuery = _teamController.text.trim().toLowerCase();
-    final teamSuggestions = joinedTeams.where((t) {
-      if (currentQuery.isEmpty) return true;
-      return t.toLowerCase().contains(currentQuery);
-    }).toList();
-
     return Scaffold(
-      backgroundColor: const Color(0xFF282D37),
+      backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF282D37),
+        backgroundColor: AppColors.bgPrimary,
         elevation: 0,
         leading: IconButton(
           key: const ValueKey('close_create_meeting_button'),
@@ -338,7 +336,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
           if (isEdit) ...[
             IconButton(
               key: const ValueKey('delete_meeting_button'),
-              icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFA6144)),
+              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.primary),
               tooltip: _selectedType == 'Meeting' ? 'Delete Meeting' : 'Delete Schedule',
               onPressed: _deleteSchedule,
             ),
@@ -346,568 +344,190 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
           ],
         ],
       ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 500),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              physics: const BouncingScrollPhysics(),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 1. Schedule Type selector
-                    const Text(
-                      'Schedule Type',
-                      style: TextStyle(
-                        color: Color(0xFF8E95A5),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTypeButton(
-                            title: 'Lecture',
-                            icon: Icons.school_rounded,
-                            isSelected: isLecture,
-                            onTap: () => setState(() {
-                              _selectedType = 'Lecture';
-                              _repeatWeekly = true;
-                            }),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildTypeButton(
-                            title: 'Meeting',
-                            icon: Icons.groups_rounded,
-                            isSelected: isMeeting,
-                            onTap: () => setState(() {
-                              _selectedType = 'Meeting';
-                              _repeatWeekly = false;
-                            }),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildTypeButton(
-                            title: 'External',
-                            icon: Icons.event_rounded,
-                            isSelected: !isLecture && !isMeeting,
-                            onTap: () => setState(() {
-                              _selectedType = 'External';
-                              _repeatWeekly = false;
-                            }),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 2. Course / Meeting Title / Schedule Title field
-                    Text(
-                      isLecture
-                          ? 'Course'
-                          : (isMeeting ? 'Meeting Title' : 'Schedule Title'),
-                      style: const TextStyle(
-                        color: Color(0xFF8E95A5),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      key: isMeeting ? const ValueKey('create_meeting_name_input') : null,
-                      controller: _titleController,
-                      hint: isLecture
-                          ? 'e.g. SSIF-04-REG • Software Testing & Implementation'
-                          : (isMeeting
-                              ? 'e.g. Weekly Standup Kelompok IMPAL'
-                              : 'e.g. Meet Impal Kelompok 7'),
-                      prefixIcon: isLecture
-                          ? Icons.school_outlined
-                          : (isMeeting
-                              ? Icons.groups_outlined
-                              : Icons.event_note_rounded),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          if (isLecture) return 'Please enter course name';
-                          if (isMeeting) return 'Please enter meeting title';
-                          return 'Please enter schedule title';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    // 3. Team Meeting Checkbox & Autocomplete / free typing
-                    if (isMeeting) ...[
-                      const SizedBox(height: 12),
-                      InkWell(
-                        onTap: () {
+      body: UnfocusOnTap(
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                physics: const BouncingScrollPhysics(),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. Schedule Type selector
+                      ScheduleTypeSelector(
+                        selectedType: _selectedType,
+                        onTypeChanged: (type) {
                           setState(() {
-                            _isTeamMeeting = !_isTeamMeeting;
-                            if (!_isTeamMeeting) {
-                              _teamController.clear();
-                            }
+                            _selectedType = type;
+                            _repeatWeekly = type == 'Lecture';
                           });
                         },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 2. Course / Meeting Title field
+                      Text(
+                        isLecture
+                            ? 'Course'
+                            : (isMeeting ? 'Meeting Title' : 'Schedule Title'),
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildTextField(
+                        key: isMeeting ? const ValueKey('create_meeting_name_input') : null,
+                        controller: _titleController,
+                        hint: isLecture
+                            ? 'e.g. SSIF-04-REG • Software Testing & Implementation'
+                            : (isMeeting
+                                ? 'e.g. Weekly Standup Kelompok IMPAL'
+                                : 'e.g. Meet Impal Kelompok 7'),
+                        prefixIcon: isLecture
+                            ? Icons.school_outlined
+                            : (isMeeting
+                                ? Icons.groups_outlined
+                                : Icons.event_note_rounded),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            if (isLecture) return 'Please enter course name';
+                            if (isMeeting) return 'Please enter meeting title';
+                            return 'Please enter schedule title';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      // 3. Team Meeting Checkbox & Autocomplete
+                      if (isMeeting)
+                        TeamMeetingAutocomplete(
+                          isTeamMeeting: _isTeamMeeting,
+                          teamController: _teamController,
+                          onToggleTeamMeeting: (val) {
+                            setState(() {
+                              _isTeamMeeting = val;
+                              if (!_isTeamMeeting) {
+                                _teamController.clear();
+                              }
+                            });
+                          },
+                          onTeamChanged: () => setState(() {}),
+                        ),
+
+                      const SizedBox(height: 16),
+
+                      // 4. Room / Location
+                      const Text(
+                        'Location / Room',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildTextField(
+                        key: isMeeting ? const ValueKey('create_meeting_location_input') : null,
+                        controller: _locationController,
+                        hint: isLecture
+                            ? 'e.g. KTT B-106 • SSIF-04-REG-GAB02'
+                            : (isMeeting
+                                ? 'e.g. Ruang Rapat / Google Meet / Zoom'
+                                : 'Location'),
+                        prefixIcon: Icons.location_on_rounded,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 5. Date & Time Range & Repeat
+                      ScheduleDateTimeSection(
+                        selectedDate: _selectedDate,
+                        startTime: _startTime,
+                        endTime: _endTime,
+                        repeatWeekly: _repeatWeekly,
+                        isMeeting: isMeeting,
+                        onSelectDate: _selectDate,
+                        onSelectStartTime: _selectStartTime,
+                        onSelectEndTime: _selectEndTime,
+                        onToggleRepeat: (val) => setState(() => _repeatWeekly = val),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 6. Notes (Optional)
+                      const Text(
+                        'Notes (Optional)',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildTextField(
+                        key: isMeeting ? const ValueKey('create_meeting_desc_input') : null,
+                        controller: _notesController,
+                        hint: 'Add reminders, assignment info, or topics...',
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Submit Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          key: isMeeting ? const ValueKey('create_meeting_submit_button') : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: _isSubmitting ? null : _submitForm,
                           child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: Checkbox(
-                                  value: _isTeamMeeting,
-                                  activeColor: const Color(0xFFFA6144),
-                                  checkColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
+                              if (_isSubmitting) ...[
+                                const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
-                                  side: const BorderSide(
-                                    color: Color(0xFF8E95A5),
-                                    width: 1.5,
-                                  ),
-                                  onChanged: (val) {
-                                    setState(() {
-                                      _isTeamMeeting = val ?? false;
-                                      if (!_isTeamMeeting) {
-                                        _teamController.clear();
-                                      }
-                                    });
-                                  },
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Team Meeting',
-                                style: TextStyle(
+                                const SizedBox(width: 10),
+                              ],
+                              Text(
+                                isEdit
+                                    ? 'Save Changes'
+                                    : (isMeeting ? 'Create Meeting' : 'Create Schedule'),
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.15,
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                      if (_isTeamMeeting) ...[
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Team Name',
-                          style: TextStyle(
-                            color: Color(0xFF8E95A5),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _buildTextField(
-                          controller: _teamController,
-                          hint: 'Type team name (e.g. Kelompok - IMPAL)',
-                          prefixIcon: Icons.group_work_rounded,
-                          onChanged: (_) => setState(() {}),
-                          validator: (val) {
-                            if (_selectedType == 'Meeting' && _isTeamMeeting) {
-                              if (val == null || val.trim().isEmpty) {
-                                return 'Please enter or select a team name';
-                              }
-                            }
-                            return null;
-                          },
-                        ),
-                        if (teamSuggestions.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF232832),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: const Color(0xFF3B4150),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Row(
-                                  children: [
-                                    Icon(
-                                      Icons.touch_app_rounded,
-                                      color: Color(0xFFFA6144),
-                                      size: 14,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'Joined Teams (Tap to select):',
-                                      style: TextStyle(
-                                        color: Color(0xFF8E95A5),
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 6,
-                                  children: teamSuggestions.map((tName) {
-                                    final isChosen = _teamController.text
-                                            .trim()
-                                            .toLowerCase() ==
-                                        tName.toLowerCase();
-                                    return InkWell(
-                                      onTap: () {
-                                        setState(() {
-                                          _teamController.text = tName;
-                                        });
-                                      },
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: isChosen
-                                              ? const Color(0xFFFA6144)
-                                              : const Color(0xFF323846),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          border: Border.all(
-                                            color: isChosen
-                                                ? const Color(0xFFFA6144)
-                                                : const Color(0xFF3B4150),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.group_rounded,
-                                              color: isChosen
-                                                  ? Colors.white
-                                                  : const Color(0xFF8E95A5),
-                                              size: 13,
-                                            ),
-                                            const SizedBox(width: 5),
-                                            Text(
-                                              tName,
-                                              style: TextStyle(
-                                                color: isChosen
-                                                    ? Colors.white
-                                                    : const Color(0xFFE5E7EB),
-                                                fontSize: 12,
-                                                fontWeight: isChosen
-                                                    ? FontWeight.w700
-                                                    : FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
+                      const SizedBox(height: 24),
                     ],
-                    const SizedBox(height: 16),
-
-                    // 4. Room / Location
-                    const Text(
-                      'Location / Room',
-                      style: TextStyle(
-                        color: Color(0xFF8E95A5),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      key: isMeeting ? const ValueKey('create_meeting_location_input') : null,
-                      controller: _locationController,
-                      hint: isLecture
-                          ? 'e.g. KTT B-106 • SSIF-04-REG-GAB02'
-                          : (isMeeting
-                              ? 'e.g. Ruang Rapat / Google Meet / Zoom'
-                              : 'Location'),
-                      prefixIcon: Icons.location_on_rounded,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 4. Date Picker (Always visible)
-                    const Text(
-                      'Date',
-                      style: TextStyle(
-                        color: Color(0xFF8E95A5),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: _selectDate,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF323846),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF3B4150)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.calendar_today_rounded, color: Color(0xFF8E95A5), size: 18),
-                                const SizedBox(width: 10),
-                                Text(
-                                  _formatDate(_selectedDate),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Icon(Icons.edit_calendar_rounded, color: Color(0xFFFA6144), size: 18),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 5. Time Duration
-                    const Text(
-                      'Time Duration',
-                      style: TextStyle(
-                        color: Color(0xFF8E95A5),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: _selectStartTime,
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              height: 48,
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF323846),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFF3B4150)),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.access_time_rounded, color: Color(0xFF8E95A5), size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _formatTime(_startTime),
-                                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('-', style: TextStyle(color: Color(0xFF8E95A5), fontSize: 18)),
-                        ),
-                        Expanded(
-                          child: InkWell(
-                            onTap: _selectEndTime,
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              height: 48,
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF323846),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFF3B4150)),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.access_time_rounded, color: Color(0xFF8E95A5), size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _formatTime(_endTime),
-                                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 6. Repeat Weekly Switch
-                    Container(
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF323846),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF3B4150)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.repeat_rounded, color: Color(0xFF8E95A5), size: 18),
-                              SizedBox(width: 10),
-                              Text(
-                                'Repeat Weekly',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Transform.scale(
-                            scale: 0.82,
-                            child: Switch(
-                              key: isMeeting ? const ValueKey('create_meeting_repeat_weekly_switch') : null,
-                              value: _repeatWeekly,
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              activeThumbColor: const Color(0xFFFA6144),
-                              activeTrackColor: const Color(0xFFFA6144).withValues(alpha: 0.5),
-                              onChanged: (val) => setState(() => _repeatWeekly = val),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 7. Notes (Optional)
-                    const Text(
-                      'Notes (Optional)',
-                      style: TextStyle(
-                        color: Color(0xFF8E95A5),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      key: isMeeting ? const ValueKey('create_meeting_desc_input') : null,
-                      controller: _notesController,
-                      hint: 'Add reminders, assignment info, or topics...',
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Submit Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        key: isMeeting ? const ValueKey('create_meeting_submit_button') : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFA6144),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: _submitForm,
-                        child: Text(
-                          isEdit
-                              ? 'Save Changes'
-                              : (isMeeting ? 'Create Meeting' : 'Create Schedule'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.15,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeButton({
-    required String title,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFA6144) : const Color(0xFF323846),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? const Color(0xFFFA6144) : const Color(0xFF3B4150),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.white : const Color(0xFF8E95A5),
-              size: 16,
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                title,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFF8E95A5),
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -919,8 +539,8 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
     required String hint,
     IconData? prefixIcon,
     int maxLines = 1,
-    ValueChanged<String>? onChanged,
     String? Function(String?)? validator,
+    void Function(String)? onChanged,
   }) {
     return TextFormField(
       key: key,
@@ -930,42 +550,27 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       validator: validator,
       style: const TextStyle(color: Colors.white, fontSize: 14),
       decoration: InputDecoration(
-        isDense: true,
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
-        filled: true,
-        fillColor: const Color(0xFF323846),
+        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
         prefixIcon: prefixIcon != null
-            ? Icon(prefixIcon, color: const Color(0xFF8E95A5), size: 18)
+            ? Icon(prefixIcon, color: AppColors.textMuted, size: 20)
             : null,
-        prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 48),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: maxLines > 1 ? 12 : 14,
-        ),
+        filled: true,
+        fillColor: AppColors.bgCard,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF3B4150)),
+          borderSide: const BorderSide(color: AppColors.borderSubtle),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF3B4150)),
+          borderSide: const BorderSide(color: AppColors.borderSubtle),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFFA6144), width: 1.5),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.redAccent, width: 1),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
     );
   }
 }
-
-

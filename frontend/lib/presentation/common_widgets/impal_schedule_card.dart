@@ -1,4 +1,4 @@
-import 'package:flutter/gestures.dart';
+import 'dart:ui' show PointerDeviceKind, FontFeature;
 import 'package:flutter/material.dart';
 import '../features/jadwal/models/schedule_model.dart';
 
@@ -165,6 +165,7 @@ class ImpalScheduleCard extends StatelessWidget {
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w500,
                                         letterSpacing: 0.05,
+                                        fontFeatures: [FontFeature.tabularFigures()],
                                       ),
                                     ),
                                   ),
@@ -172,7 +173,7 @@ class ImpalScheduleCard extends StatelessWidget {
                               ),
                             ),
 
-                            // Quick Actions
+                            // Quick Actions with accessible touch targets (min 44-48 dp)
                             if (onEdit != null || onDelete != null)
                               Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -180,28 +181,30 @@ class ImpalScheduleCard extends StatelessWidget {
                                   if (onEdit != null)
                                     InkWell(
                                       onTap: onEdit,
-                                      borderRadius: BorderRadius.circular(6),
-                                      child: const Padding(
-                                        padding: EdgeInsets.all(3.5),
-                                        child: Icon(
-                                          Icons.edit_outlined,
-                                          color: Color(0xFF8E95A5),
-                                          size: 15,
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.edit_outlined,
+                                            color: Color(0xFF8E95A5),
+                                            size: 16,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  if (onEdit != null && onDelete != null)
-                                    const SizedBox(width: 4),
                                   if (onDelete != null)
                                     InkWell(
                                       onTap: onDelete,
-                                      borderRadius: BorderRadius.circular(6),
-                                      child: const Padding(
-                                        padding: EdgeInsets.all(3.5),
-                                        child: Icon(
-                                          Icons.delete_outline_rounded,
-                                          color: Color(0xFFFA6144),
-                                          size: 15,
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.delete_outline_rounded,
+                                            color: Color(0xFFFA6144),
+                                            size: 16,
+                                          ),
                                         ),
                                       ),
                                     ),

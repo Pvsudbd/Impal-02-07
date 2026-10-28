@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../common_widgets/impal_date_picker_dialog.dart';
 import '../../common_widgets/impal_time_picker_dialog.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
 import '../jadwal/pop_up_konfirmasi_delete.dart';
-import 'models/team_repository.dart';
+import '../jadwal/widgets/team_meeting_autocomplete.dart';
 
 /// Aliases for backwards compatibility with routes & components
 typedef FormCreateMeeting = PopUpCreateMeeting;
@@ -205,7 +206,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
-      title: isEdit ? 'Select Meeting Date' : 'Select Meeting Date',
+      title: 'Select Meeting Date',
     );
     if (picked != null && mounted) {
       setState(() => _selectedDate = picked);
@@ -249,182 +250,93 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
     if (name.isEmpty) {
       PopUpPemberitahuan.teamWarning(
         context,
-        title: 'Meeting Name Required',
-        message: 'Please enter meeting name.',
+        title: 'Incomplete Form',
+        message: 'Please enter a meeting name.',
       );
       return;
     }
 
-    try {
-      final startH = _startTime.hour.toString().padLeft(2, '0');
-      final startM = _startTime.minute.toString().padLeft(2, '0');
-      final endH = _endTime.hour.toString().padLeft(2, '0');
-      final endM = _endTime.minute.toString().padLeft(2, '0');
+    final location = _locationController.text.trim().isNotEmpty
+        ? _locationController.text.trim()
+        : 'Online / Google Meet';
 
-      final timeStartStr = '$startH:$startM';
-      final timeEndStr = '$endH:$endM';
+    final teamNameValue =
+        _isTeamMeeting && _teamController.text.trim().isNotEmpty
+            ? _teamController.text.trim()
+            : null;
 
-      final status = ScheduleModel.calculateStatus(
-        date: _selectedDate,
-        timeStart: timeStartStr,
-        timeEnd: timeEndStr,
+    final scheduleDate = _selectedDate;
+
+    if (isEdit) {
+      final updated = widget.existingSchedule!.copyWith(
+        title: name,
+        type: 'Meeting',
+        location: location,
+        notes: _descController.text.trim(),
+        date: scheduleDate,
+        timeStart: _formatTime(_startTime).replaceAll(' WIB', ''),
+        timeEnd: _formatTime(_endTime).replaceAll(' WIB', ''),
+        repeat: _repeatWeekly,
+        teamName: teamNameValue,
       );
 
-      final teamNameValue = (_isTeamMeeting && _teamController.text.trim().isNotEmpty)
-          ? _teamController.text.trim()
-          : null;
+      await ScheduleRepository().updateSchedule(updated);
 
-      final inputLoc = _locationController.text.trim();
-      final loc = inputLoc.isNotEmpty
-          ? inputLoc
-          : (teamNameValue != null
-              ? 'Team $teamNameValue / Online'
-              : (widget.teamName != null && widget.teamName!.isNotEmpty
-                  ? 'Team ${widget.teamName} / Online'
-                  : 'Online / Google Meet'));
+      if (!mounted) return;
+      widget.onUpdated?.call(updated);
+      Navigator.of(context).pop(updated);
+    } else {
+      final newSchedule = ScheduleModel(
+        id: 'meeting_${DateTime.now().millisecondsSinceEpoch}',
+        title: name,
+        type: 'Meeting',
+        status: ScheduleModel.calculateStatus(
+          date: scheduleDate,
+          timeStart: _formatTime(_startTime).replaceAll(' WIB', ''),
+          timeEnd: _formatTime(_endTime).replaceAll(' WIB', ''),
+        ),
+        location: location,
+        notes: _descController.text.trim(),
+        date: scheduleDate,
+        timeStart: _formatTime(_startTime).replaceAll(' WIB', ''),
+        timeEnd: _formatTime(_endTime).replaceAll(' WIB', ''),
+        repeat: _repeatWeekly,
+        teamName: teamNameValue,
+      );
 
-      if (isEdit && widget.existingSchedule != null) {
-        final updatedSchedule = widget.existingSchedule!.copyWith(
-          title: name,
-          type: 'Meeting',
-          timeStart: timeStartStr,
-          timeEnd: timeEndStr,
-          timeZone: 'WIB',
-          location: loc,
-          teamName: teamNameValue,
-          status: status,
-          notes: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-          date: _selectedDate,
-          repeat: _repeatWeekly,
-        );
+      await ScheduleRepository().addSchedule(newSchedule);
 
-        await ScheduleRepository().updateSchedule(updatedSchedule);
-
-        if (widget.onUpdated != null) {
-          widget.onUpdated!(updatedSchedule);
-        }
-        if (widget.onCreated != null) {
-          widget.onCreated!(updatedSchedule);
-        }
-
-        if (mounted) {
-          PopUpPemberitahuan.meetingUpdated(context);
-          Navigator.of(context).pop(updatedSchedule);
-        }
-      } else {
-        final newSchedule = ScheduleModel(
-          id: 'meeting_${DateTime.now().millisecondsSinceEpoch}',
-          title: name,
-          type: 'Meeting',
-          timeStart: timeStartStr,
-          timeEnd: timeEndStr,
-          timeZone: 'WIB',
-          location: loc,
-          teamName: teamNameValue,
-          status: status,
-          notes: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-          date: _selectedDate,
-          repeat: _repeatWeekly,
-        );
-
-        await ScheduleRepository().addSchedule(newSchedule);
-
-        if (widget.onCreated != null) {
-          widget.onCreated!(newSchedule);
-        }
-
-        if (mounted) {
-          PopUpPemberitahuan.meetingCreated(context);
-          Navigator.of(context).pop(newSchedule);
-        }
-      }
-    } catch (_) {
-      if (mounted) {
-        PopUpPemberitahuan.teamWarning(
-          context,
-          title: 'Error',
-          message: isEdit
-              ? 'Failed to update meeting. Please try again.'
-              : 'Failed to create meeting. Please try again.',
-        );
-      }
+      if (!mounted) return;
+      widget.onCreated?.call(newSchedule);
+      Navigator.of(context).pop(newSchedule);
     }
   }
 
-  Future<void> _handleDeleteMeeting() async {
-    if (widget.existingSchedule == null) return;
+  Future<void> _handleDelete() async {
+    final existing = widget.existingSchedule;
+    if (existing == null) return;
+
     final confirmed = await PopUpKonfirmasiDelete.show(
       context,
       title: 'Delete Meeting?',
-      message: 'Are you sure you want to delete this meeting? This action cannot be undone.',
+      message: 'Are you sure you want to delete "${existing.title}"?',
     );
-    if (confirmed != true) return;
 
-    await ScheduleRepository().deleteSchedule(widget.existingSchedule!.id);
-
-    if (mounted) {
-      PopUpPemberitahuan.meetingDeleted(context);
-      Navigator.of(context).pop(null);
+    if (confirmed == true && mounted) {
+      await ScheduleRepository().deleteSchedule(existing.id);
+      if (mounted) {
+        PopUpPemberitahuan.meetingDeleted(context);
+        Navigator.of(context).pop(existing);
+      }
     }
-  }
-
-  Widget _buildTextField({
-    Key? key,
-    required TextEditingController controller,
-    required String hint,
-    IconData? prefixIcon,
-    int maxLines = 1,
-    ValueChanged<String>? onChanged,
-  }) {
-    return TextFormField(
-      key: key,
-      controller: controller,
-      maxLines: maxLines,
-      onChanged: onChanged,
-      style: const TextStyle(color: Colors.white, fontSize: 14),
-      decoration: InputDecoration(
-        isDense: true,
-        hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
-        filled: true,
-        fillColor: const Color(0xFF323846),
-        prefixIcon: prefixIcon != null
-            ? Icon(prefixIcon, color: const Color(0xFF8E95A5), size: 18)
-            : null,
-        prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 48),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: maxLines > 1 ? 12 : 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF3B4150)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF3B4150)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFFA6144), width: 1.5),
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final joinedTeams = TeamRepository().joinedTeamNames;
-    final currentQuery = _teamController.text.trim().toLowerCase();
-    final teamSuggestions = joinedTeams.where((t) {
-      if (currentQuery.isEmpty) return true;
-      return t.toLowerCase().contains(currentQuery);
-    }).toList();
-
     return Scaffold(
-      backgroundColor: const Color(0xFF282D37),
+      backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF282D37),
+        backgroundColor: AppColors.bgPrimary,
         elevation: 0,
         leading: IconButton(
           key: const ValueKey('close_create_meeting_button'),
@@ -445,9 +357,8 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
           if (isEdit) ...[
             IconButton(
               key: const ValueKey('delete_meeting_button'),
-              icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFA6144)),
-              tooltip: 'Delete Meeting',
-              onPressed: _handleDeleteMeeting,
+              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.primary),
+              onPressed: _handleDelete,
             ),
             const SizedBox(width: 8),
           ],
@@ -463,11 +374,11 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. Meeting Name
+                  // 1. Meeting Title
                   const Text(
                     'Meeting Name',
                     style: TextStyle(
-                      color: Color(0xFF8E95A5),
+                      color: AppColors.textMuted,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -477,189 +388,31 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                     key: const ValueKey('create_meeting_name_input'),
                     controller: _nameController,
                     hint: 'e.g. Weekly Standup Kelompok IMPAL',
-                    prefixIcon: Icons.groups_outlined,
+                    prefixIcon: Icons.groups_rounded,
                   ),
-                  const SizedBox(height: 14),
 
                   // 2. Team Meeting Checkbox & Autocomplete
-                  InkWell(
-                    onTap: () {
+                  TeamMeetingAutocomplete(
+                    isTeamMeeting: _isTeamMeeting,
+                    teamController: _teamController,
+                    onToggleTeamMeeting: (val) {
                       setState(() {
-                        _isTeamMeeting = !_isTeamMeeting;
+                        _isTeamMeeting = val;
                         if (!_isTeamMeeting) {
                           _teamController.clear();
                         }
                       });
                     },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: Checkbox(
-                              value: _isTeamMeeting,
-                              activeColor: const Color(0xFFFA6144),
-                              checkColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              side: const BorderSide(
-                                color: Color(0xFF8E95A5),
-                                width: 1.5,
-                              ),
-                              onChanged: (val) {
-                                setState(() {
-                                  _isTeamMeeting = val ?? false;
-                                  if (!_isTeamMeeting) {
-                                    _teamController.clear();
-                                  }
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Team Meeting',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    onTeamChanged: () => setState(() {}),
                   ),
-                  if (_isTeamMeeting) ...[
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Team Name',
-                      style: TextStyle(
-                        color: Color(0xFF8E95A5),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildTextField(
-                      controller: _teamController,
-                      hint: 'Type team name (e.g. Kelompok - IMPAL)',
-                      prefixIcon: Icons.group_work_rounded,
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    if (teamSuggestions.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF232832),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: const Color(0xFF3B4150),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.touch_app_rounded,
-                                  color: Color(0xFFFA6144),
-                                  size: 14,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Joined Teams (Tap to select):',
-                                  style: TextStyle(
-                                    color: Color(0xFF8E95A5),
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 6,
-                              children: teamSuggestions.map((tName) {
-                                final isChosen = _teamController.text
-                                        .trim()
-                                        .toLowerCase() ==
-                                    tName.toLowerCase();
-                                return InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      _teamController.text = tName;
-                                    });
-                                  },
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isChosen
-                                          ? const Color(0xFFFA6144)
-                                          : const Color(0xFF323846),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: isChosen
-                                            ? const Color(0xFFFA6144)
-                                            : const Color(0xFF3B4150),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.group_rounded,
-                                          color: isChosen
-                                              ? Colors.white
-                                              : const Color(0xFF8E95A5),
-                                          size: 13,
-                                        ),
-                                        const SizedBox(width: 5),
-                                        Text(
-                                          tName,
-                                          style: TextStyle(
-                                            color: isChosen
-                                                ? Colors.white
-                                                : const Color(0xFFE5E7EB),
-                                            fontSize: 12,
-                                            fontWeight: isChosen
-                                                ? FontWeight.w700
-                                                : FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+
                   const SizedBox(height: 16),
 
                   // 3. Location
                   const Text(
                     'Location',
                     style: TextStyle(
-                      color: Color(0xFF8E95A5),
+                      color: AppColors.textMuted,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -677,7 +430,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                   const Text(
                     'Date & Time',
                     style: TextStyle(
-                      color: Color(0xFF8E95A5),
+                      color: AppColors.textMuted,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -691,16 +444,16 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                       height: 48,
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF323846),
+                        color: AppColors.bgCard,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF3B4150)),
+                        border: Border.all(color: AppColors.borderSubtle),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.calendar_today_rounded, color: Color(0xFF8E95A5), size: 18),
+                              const Icon(Icons.calendar_today_rounded, color: AppColors.textMuted, size: 18),
                               const SizedBox(width: 10),
                               Text(
                                 _formatDate(_selectedDate),
@@ -712,7 +465,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                               ),
                             ],
                           ),
-                          const Icon(Icons.edit_calendar_rounded, color: Color(0xFFFA6144), size: 18),
+                          const Icon(Icons.edit_calendar_rounded, color: AppColors.primary, size: 18),
                         ],
                       ),
                     ),
@@ -729,7 +482,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                             const Text(
                               'Start Time',
                               style: TextStyle(
-                                color: Color(0xFF8E95A5),
+                                color: AppColors.textMuted,
                                 fontSize: 12,
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w500,
@@ -744,13 +497,13 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                                 height: 48,
                                 padding: const EdgeInsets.symmetric(horizontal: 14),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF323846),
+                                  color: AppColors.bgCard,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFF3B4150)),
+                                  border: Border.all(color: AppColors.borderSubtle),
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.access_time_rounded, color: Color(0xFF8E95A5), size: 18),
+                                    const Icon(Icons.access_time_rounded, color: AppColors.textMuted, size: 18),
                                     const SizedBox(width: 8),
                                     Text(
                                       _formatTime(_startTime),
@@ -771,7 +524,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                             const Text(
                               'End Time (Estimated)',
                               style: TextStyle(
-                                color: Color(0xFF8E95A5),
+                                color: AppColors.textMuted,
                                 fontSize: 12,
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w500,
@@ -786,13 +539,13 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                                 height: 48,
                                 padding: const EdgeInsets.symmetric(horizontal: 14),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF323846),
+                                  color: AppColors.bgCard,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFF3B4150)),
+                                  border: Border.all(color: AppColors.borderSubtle),
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.timer_outlined, color: Color(0xFF8E95A5), size: 18),
+                                    const Icon(Icons.timer_outlined, color: AppColors.textMuted, size: 18),
                                     const SizedBox(width: 8),
                                     Text(
                                       _formatTime(_endTime),
@@ -814,16 +567,16 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                     height: 48,
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF323846),
+                      color: AppColors.bgCard,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF3B4150)),
+                      border: Border.all(color: AppColors.borderSubtle),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.repeat_rounded, color: Color(0xFF8E95A5), size: 18),
+                            Icon(Icons.repeat_rounded, color: AppColors.textMuted, size: 18),
                             SizedBox(width: 10),
                             Text(
                               'Repeat Weekly',
@@ -841,8 +594,8 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                             key: const ValueKey('create_meeting_repeat_weekly_switch'),
                             value: _repeatWeekly,
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            activeThumbColor: const Color(0xFFFA6144),
-                            activeTrackColor: const Color(0xFFFA6144).withValues(alpha: 0.5),
+                            activeThumbColor: AppColors.primary,
+                            activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
                             onChanged: (val) => setState(() => _repeatWeekly = val),
                           ),
                         ),
@@ -855,7 +608,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                   const Text(
                     'Description (Optional)',
                     style: TextStyle(
-                      color: Color(0xFF8E95A5),
+                      color: AppColors.textMuted,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -877,7 +630,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                     child: ElevatedButton(
                       key: const ValueKey('create_meeting_submit_button'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFA6144),
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -903,6 +656,43 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    Key? key,
+    required TextEditingController controller,
+    required String hint,
+    IconData? prefixIcon,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      key: key,
+      controller: controller,
+      maxLines: maxLines,
+      style: const TextStyle(color: Colors.white, fontSize: 14),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+        prefixIcon: prefixIcon != null
+            ? Icon(prefixIcon, color: AppColors.textMuted, size: 20)
+            : null,
+        filled: true,
+        fillColor: AppColors.bgCard,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.borderSubtle),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.borderSubtle),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
     );
   }

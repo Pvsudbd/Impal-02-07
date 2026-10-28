@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
-import '../../common_widgets/impal_schedule_card.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
-import '../jadwal/schedule_page.dart';
 import '../jadwal/pop_up_konfirmasi_delete.dart';
+import '../jadwal/schedule_page.dart';
 import 'dashboard_team_page.dart';
+import 'models/team_model.dart';
+import 'models/team_repository.dart';
 import 'pop_up_create_meeting.dart';
 import 'pop_up_create_team.dart';
 import 'pop_up_join_team.dart';
+import 'widgets/team_card.dart';
+import 'widgets/team_header.dart';
+import 'widgets/team_schedule_section.dart';
 
-import 'models/team_model.dart';
-import 'models/team_repository.dart';
 export 'models/team_model.dart';
 export 'models/team_repository.dart';
 
@@ -38,7 +40,7 @@ class TeamListPage extends StatefulWidget {
 }
 
 class _TeamListPageState extends State<TeamListPage> {
-  int _currentTab = 2; // Team / Kelompok tab index
+  int _currentTab = 2;
 
   @override
   void initState() {
@@ -65,10 +67,7 @@ class _TeamListPageState extends State<TeamListPage> {
           switchInCurve: Curves.easeInOut,
           switchOutCurve: Curves.easeInOut,
           transitionBuilder: (child, animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
+            return FadeTransition(opacity: animation, child: child);
           },
           child: _currentTab == 3
               ? ScheduleContentView(
@@ -96,7 +95,20 @@ class _TeamListPageState extends State<TeamListPage> {
           left: 0,
           right: 0,
           bottom: 0,
-          child: _buildBottomNavBar(),
+          child: ImpalBottomNavBar(
+            currentTab: _currentTab,
+            onTabSelected: (index) {
+              if (index == 0) {
+                if (widget.onBackToHome != null) {
+                  widget.onBackToHome!();
+                } else if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              } else {
+                setState(() => _currentTab = index);
+              }
+            },
+          ),
         ),
       ],
     );
@@ -104,11 +116,7 @@ class _TeamListPageState extends State<TeamListPage> {
     if (isMobile) {
       return Scaffold(
         backgroundColor: const Color(0xFF282D37),
-        body: SafeArea(
-          top: true,
-          bottom: false,
-          child: content,
-        ),
+        body: SafeArea(top: true, bottom: false, child: content),
       );
     }
 
@@ -119,10 +127,7 @@ class _TeamListPageState extends State<TeamListPage> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 410,
-                maxHeight: 844,
-              ),
+              constraints: const BoxConstraints(maxWidth: 410, maxHeight: 844),
               child: Container(
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
@@ -145,25 +150,7 @@ class _TeamListPageState extends State<TeamListPage> {
       ),
     );
   }
-
-  Widget _buildBottomNavBar() {
-    return ImpalBottomNavBar(
-      currentTab: _currentTab,
-      onTabSelected: (index) {
-        if (index == 0) {
-          if (widget.onBackToHome != null) {
-            widget.onBackToHome!();
-          } else if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          }
-        } else {
-          setState(() => _currentTab = index);
-        }
-      },
-    );
-  }
 }
-
 
 /// Reusable scrollable Team list content view
 class TeamListContentView extends StatefulWidget {
@@ -246,45 +233,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
     }
   }
 
-  String _formatScheduleTime(ScheduleModel schedule) {
-    final now = DateTime.now();
-    final scheduleDate =
-        DateTime(schedule.date.year, schedule.date.month, schedule.date.day);
-    final today = DateTime(now.year, now.month, now.day);
-    final tomorrow = today.add(const Duration(days: 1));
-    final yesterday = today.subtract(const Duration(days: 1));
-
-    String dayPrefix;
-    if (scheduleDate == today) {
-      dayPrefix = 'Today';
-    } else if (scheduleDate == tomorrow) {
-      dayPrefix = 'Tomorrow';
-    } else if (scheduleDate == yesterday) {
-      dayPrefix = 'Yesterday';
-    } else {
-      const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
-      dayPrefix = '${schedule.date.day} ${months[schedule.date.month - 1]}';
-    }
-
-    final timeStr = schedule.timeEnd.isNotEmpty
-        ? '${schedule.timeStart} - ${schedule.timeEnd} ${schedule.timeZone}'
-        : '${schedule.timeStart} ${schedule.timeZone}';
-    return '$dayPrefix • $timeStr';
-  }
-
   List<TeamModel> get _teams => TeamRepository().teams;
-
-  String _getUserInitials(String name) {
-    if (name.trim().isEmpty) return 'JS';
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
-  }
 
   void _showJoinTeamDialog() async {
     final code = await PopUpJoinTeam.show(context);
@@ -323,304 +272,25 @@ class _TeamListContentViewState extends State<TeamListContentView> {
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              // 1. Header (Greeting + Subtitle + User Profile Initials)
-              _buildHeader(),
+              TeamHeader(
+                userName: widget.userName,
+                showBackButton: widget.showBackButton,
+                onBack: widget.onBack,
+              ),
               const SizedBox(height: 16),
-
-              // 2. Team's Schedule Section
-              _buildTeamScheduleSection(),
+              TeamScheduleSection(
+                isDashboard: false,
+                onActionTap: _openSchedulePage,
+                onAddScheduleTap: _openAddTeamSchedule,
+                onEditSchedule: _openEditSchedule,
+                onDeleteSchedule: _deleteSchedule,
+              ),
               const SizedBox(height: 16),
-
-              // 3. Team List Section (with Join & Create actions)
               _buildTeamsSection(),
             ]),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildHeader() {
-    final initials = _getUserInitials(widget.userName);
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              if (widget.showBackButton) ...[
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap:
-                        widget.onBack ?? () => Navigator.of(context).maybePop(),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF323846),
-                        borderRadius: BorderRadius.circular(10),
-                        border:
-                            Border.all(color: const Color(0xFF3B4150), width: 1),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Hi ${widget.userName}',
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.3,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    const Text(
-                      'Team List',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Color(0xFFFF7D65),
-                        fontSize: 12.5,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: const Color(0xFF323846),
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFF3B4150), width: 1),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            initials,
-            style: const TextStyle(
-              color: Color(0xFF8E95A5),
-              fontSize: 13.5,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTeamScheduleSection() {
-    return ValueListenableBuilder<List<ScheduleModel>>(
-      valueListenable: ScheduleRepository().schedulesNotifier,
-      builder: (context, allSchedules, _) {
-        // Filter schedules that belong strictly to team meetings (NO lectures, NO exams)
-        final rawTeamSchedules = allSchedules.where((s) {
-          final type = s.type.trim().toLowerCase();
-
-          // Jadwal perkuliahan (Lecture) BUKAN meeting team
-          if (type == 'lecture') return false;
-
-          // Jika tipe eksplisit team atau meeting
-          if (type == 'team' ||
-              type == 'team meeting' ||
-              type == 'meeting' ||
-              type == 'rapat' ||
-              type == 'group') {
-            return true;
-          }
-
-          final t = s.title.toLowerCase();
-          final n = (s.notes ?? '').toLowerCase();
-          final loc = (s.location ?? '').toLowerCase();
-
-          // Exclude kata-kata ujian atau kuis
-          if (t.contains('ujian') ||
-              t.contains('uts') ||
-              t.contains('uas') ||
-              t.contains('kuis')) {
-            return false;
-          }
-
-          // Cek kata kunci meeting / rapat / diskusi / tim / mentoring
-          final hasMeetingKeyword = t.contains('meet') ||
-              t.contains('rapat') ||
-              t.contains('diskusi') ||
-              t.contains('team') ||
-              t.contains('tim') ||
-              t.contains('kelompok') ||
-              t.contains('mentoring') ||
-              t.contains('briefing') ||
-              t.contains('standup') ||
-              t.contains('sync') ||
-              t.contains('sprint') ||
-              t.contains('evaluasi') ||
-              t.contains('koordinasi') ||
-              n.contains('meet') ||
-              n.contains('rapat') ||
-              n.contains('diskusi') ||
-              n.contains('kelompok') ||
-              n.contains('mentoring') ||
-              n.contains('sprint') ||
-              loc.contains('group') ||
-              loc.contains('tim') ||
-              loc.contains('team') ||
-              loc.contains('discord') ||
-              loc.contains('meet') ||
-              loc.contains('zoom');
-
-          return hasMeetingKeyword;
-        }).toList();
-
-        final teamSchedules = rawTeamSchedules;
-
-        // Sort by status priority: Overdue (0) -> Ongoing (1) -> Upcoming (2)
-        // Or if Ongoing is absent: Overdue (0) -> Upcoming (2)
-        // Then by startDateTime chronologically
-        teamSchedules.sort((a, b) {
-          int statusWeight(String s) {
-            final st = s.toLowerCase();
-            if (st == 'overdue' || st == 'completed') return 0;
-            if (st == 'ongoing') return 1;
-            return 2;
-          }
-
-          final wA = statusWeight(a.status);
-          final wB = statusWeight(b.status);
-          if (wA != wB) return wA.compareTo(wB);
-
-          final dtA = a.startDateTime ?? DateTime(2000);
-          final dtB = b.startDateTime ?? DateTime(2000);
-          return dtA.compareTo(dtB);
-        });
-
-        Widget scheduleContent;
-        if (teamSchedules.isEmpty) {
-          scheduleContent = _buildEmptyTeamSchedule();
-        } else if (teamSchedules.length == 1) {
-          scheduleContent = ImpalScheduleCard(
-            schedule: teamSchedules.first,
-            isHorizontal: false,
-            isLast: true,
-            customTimeText: _formatScheduleTime(teamSchedules.first),
-            onEdit: () => _openEditSchedule(teamSchedules.first),
-            onDelete: () => _deleteSchedule(teamSchedules.first),
-          );
-        } else {
-          scheduleContent = ImpalHorizontalScheduleList(
-            scrollKey: const ValueKey('team_schedules_horizontal_scroll'),
-            schedules: teamSchedules,
-            customTimeFormatter: _formatScheduleTime,
-            onEdit: _openEditSchedule,
-            onDelete: _deleteSchedule,
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Text(
-                  "Team's Schedule",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                GestureDetector(
-                  key: const ValueKey('team_schedule_see_all'),
-                  onTap: _openSchedulePage,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                    child: Text(
-                      'See all',
-                      style: TextStyle(
-                        color: Color(0xFFFF826E),
-                        fontSize: 12,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            scheduleContent,
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildEmptyTeamSchedule() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'No team schedules yet',
-            style: TextStyle(
-              color: Color(0xFF8E95A5),
-              fontSize: 13,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: _openAddTeamSchedule,
-            child: const Text(
-              '+ Add Team Schedule',
-              style: TextStyle(
-                color: Color(0xFFFF826E),
-                fontSize: 12.5,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -708,138 +378,29 @@ class _TeamListContentViewState extends State<TeamListContentView> {
         ),
         const SizedBox(height: 10),
 
-        // Team Cards List
         for (int i = 0; i < _teams.length; i++) ...[
-          _buildTeamCard(_teams[i]),
+          TeamCard(
+            team: _teams[i],
+            onTap: () {
+              if (widget.onTeamSelected != null) {
+                widget.onTeamSelected!(_teams[i]);
+              } else {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => DashboardTeamPage(
+                      userName: widget.userName,
+                      teamName: _teams[i].name,
+                      teamCode: '7X29',
+                      memberColors: _teams[i].memberColors,
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
           if (i < _teams.length - 1) const SizedBox(height: 12),
         ],
       ],
-    );
-  }
-
-  Widget _buildTeamCard(TeamModel team) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          if (widget.onTeamSelected != null) {
-            widget.onTeamSelected!(team);
-          } else {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => DashboardTeamPage(
-                  userName: widget.userName,
-                  teamName: team.name,
-                  teamCode: '7X29',
-                  memberColors: team.memberColors,
-                ),
-              ),
-            );
-          }
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF323846),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 10,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              team.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              team.membersLabel,
-              style: const TextStyle(
-                color: Color(0xFF8E95A5),
-                fontSize: 11,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildAvatarStack(team.memberColors),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-  Widget _buildAvatarStack(List<Color> colors) {
-    const double size = 24.0;
-    const double overlap = 16.0;
-    final displayColors = colors.take(5).toList();
-    final extraCount = colors.length - displayColors.length;
-
-    return SizedBox(
-      height: size,
-      width: size +
-          (displayColors.length - 1 + (extraCount > 0 ? 1 : 0)) * overlap,
-      child: Stack(
-        children: [
-          for (int i = 0; i < displayColors.length; i++)
-            Positioned(
-              left: i * overlap,
-              child: Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  color: displayColors[i],
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF323846), width: 2),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.person_rounded,
-                  size: 13,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          if (extraCount > 0)
-            Positioned(
-              left: displayColors.length * overlap,
-              child: Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF434A59),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF323846), width: 2),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '+$extraCount',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9.5,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }

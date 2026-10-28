@@ -7,6 +7,9 @@ import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
 import 'forgot_password_page.dart';
 import 'regist_page.dart';
+import 'widgets/auth_brand_header.dart';
+import 'widgets/auth_card_wrapper.dart';
+import 'widgets/auth_text_field.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -19,7 +22,7 @@ class _LoginState extends State<Login> {
   late final TextEditingController _usernameController;
   late final TextEditingController _passwordController;
   bool _rememberMe = false;
-  bool _obscurePassword = true;
+  bool _isLoading = false;
 
   String? _usernameError;
   String? _passwordError;
@@ -45,6 +48,7 @@ class _LoginState extends State<Login> {
   }
 
   void _handleSignIn() {
+    if (_isLoading) return;
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
 
@@ -69,6 +73,7 @@ class _LoginState extends State<Login> {
       return;
     }
 
+    setState(() => _isLoading = true);
     PopUpPemberitahuan.loginSuccess(
       context,
       username: username,
@@ -92,524 +97,232 @@ class _LoginState extends State<Login> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 600;
+    return AuthCardWrapper(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // 1. Signature Brand Header
+          const AuthBrandHeader(),
 
-    return Scaffold(
-      backgroundColor: isMobile ? const Color(0xFF282D37) : const Color(0xFF1E222B),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
-                child: IntrinsicHeight(
-                  child: Column(
-                    children: [
-                      const Spacer(),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 20 : 16,
-                      vertical: isMobile ? 20 : 32,
-                    ),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: 440,
-                        ),
-                        child: RepaintBoundary(
-                          child: Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isMobile ? 0 : 28,
-                              vertical: isMobile ? 0 : 36,
-                            ),
-                            decoration: isMobile
-                                ? null
-                                : ShapeDecoration(
-                                    color: const Color(0xFF282D37),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(28),
-                                    ),
-                                    shadows: const [
-                                      BoxShadow(
-                                        color: Color(0x66000000),
-                                        blurRadius: 18,
-                                        offset: Offset(0, 10),
-                                        spreadRadius: -2,
-                                      )
-                                    ],
-                                  ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                // Header & Logo
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: ShapeDecoration(
-                        color: const Color(0xFFFA6144) /* Primary Accent */,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        shadows: const [
-                          BoxShadow(
-                            color: Color(0x59EF4444),
-                            blurRadius: 20,
-                            offset: Offset(0, 8),
-                            spreadRadius: 0,
-                          )
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        '⚡',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Smart Task Manager',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.50,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'AI-Driven Academic Task & Schedule\nPrioritization System',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF9CA3AF),
-                        fontSize: 13,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                        height: 1.45,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
+          // 2. Credentials Form
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AuthTextField(
+                label: 'Username or Email',
+                controller: _usernameController,
+                hintText: 'Enter your student ID or email',
+                prefixIcon: Icons.person_outline_rounded,
+                errorText: _usernameError,
+                onTap: TopToast.dismiss,
+              ),
+              const SizedBox(height: 16),
+              AuthTextField(
+                label: 'Password',
+                controller: _passwordController,
+                hintText: 'Enter your password',
+                prefixIcon: Icons.lock_outline_rounded,
+                isPassword: true,
+                errorText: _passwordError,
+                inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+                onTap: TopToast.dismiss,
+              ),
+              const SizedBox(height: 16),
 
-                    // Form Inputs
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Username Field
-                        const Text(
-                          'Username or Email',
-                          style: TextStyle(
-                            color: Color(0xFFD1D5DB),
-                            fontSize: 13,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 48,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: ShapeDecoration(
-                            color: const Color(0xFF323846),
-                            shape: RoundedRectangleBorder(
-                              side: BorderSide(
-                                width: _usernameError != null ? 1.4 : 1,
-                                color: _usernameError != null ? const Color(0xFFEF4444) : const Color(0xFF3B4150),
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.person_outline_rounded,
-                                color: _usernameError != null ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
-                                size: 20,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextField(
-                                  controller: _usernameController,
-                                  onTap: TopToast.dismiss,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                  cursorColor: const Color(0xFFFA6144),
-                                  decoration: const InputDecoration(
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                    border: InputBorder.none,
-                                    hintText: 'Enter username or email',
-                                    hintStyle: TextStyle(
-                                      color: Color(0xFF6B7280),
-                                      fontSize: 13.5,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_usernameError != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6, left: 4),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.error_outline_rounded, size: 13, color: Color(0xFFEF4444)),
-                                const SizedBox(width: 5),
-                                Expanded(
-                                  child: Text(
-                                    _usernameError!,
-                                    style: const TextStyle(
-                                      color: Color(0xFFEF4444),
-                                      fontSize: 12,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        const SizedBox(height: 16),
-
-                        // Password Field
-                        const Text(
-                          'Password',
-                          style: TextStyle(
-                            color: Color(0xFFD1D5DB),
-                            fontSize: 13,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 48,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: ShapeDecoration(
-                            color: const Color(0xFF323846),
-                            shape: RoundedRectangleBorder(
-                              side: BorderSide(
-                                width: _passwordError != null ? 1.4 : 1,
-                                color: _passwordError != null ? const Color(0xFFEF4444) : const Color(0xFF3B4150),
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.lock_outline_rounded,
-                                color: _passwordError != null ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
-                                size: 20,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextField(
-                                  controller: _passwordController,
-                                  obscureText: _obscurePassword,
-                                  enableInteractiveSelection: false,
-                                  contextMenuBuilder: (context, editableTextState) => const SizedBox.shrink(),
-                                  onTap: TopToast.dismiss,
-                                  inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                  cursorColor: const Color(0xFFFA6144),
-                                  decoration: const InputDecoration(
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                    border: InputBorder.none,
-                                    hintText: 'Enter your password',
-                                    hintStyle: TextStyle(
-                                      color: Color(0xFF6B7280),
-                                      fontSize: 13.5,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                splashRadius: 18,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: const Color(0xFF9CA3AF),
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_passwordError != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6, left: 4),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.error_outline_rounded, size: 13, color: Color(0xFFEF4444)),
-                                const SizedBox(width: 5),
-                                Expanded(
-                                  child: Text(
-                                    _passwordError!,
-                                    style: const TextStyle(
-                                      color: Color(0xFFEF4444),
-                                      fontSize: 12,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        const SizedBox(height: 16),
-
-                        // Checkbox & Forgot Password Row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
+              // 3. Remember Me & Forgot Password
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(6),
+                      onTap: () => setState(() => _rememberMe = !_rememberMe),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Clickable Remember Me Checkbox
-                            Flexible(
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(6),
-                                onTap: () {
-                                  setState(() {
-                                    _rememberMe = !_rememberMe;
-                                  });
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 4),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 18,
-                                        height: 18,
-                                        decoration: BoxDecoration(
-                                          color: _rememberMe
-                                              ? const Color(0xFFFA6144)
-                                              : const Color(0xFF323846),
-                                          borderRadius: BorderRadius.circular(5),
-                                          border: Border.all(
-                                            color: _rememberMe
-                                              ? const Color(0xFFFA6144)
-                                              : const Color(0xFF4B5563),
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: _rememberMe
-                                            ? const Icon(
-                                                Icons.check,
-                                                size: 13,
-                                                color: Colors.white,
-                                              )
-                                            : null,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      const Flexible(
-                                        child: Text(
-                                          'Remember me',
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: Color(0xFFD1D5DB),
-                                            fontSize: 12,
-                                            fontFamily: 'Inter',
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                            Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: _rememberMe
+                                    ? const Color(0xFFFA6144)
+                                    : const Color(0xFF323846),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(
+                                  color: _rememberMe
+                                      ? const Color(0xFFFA6144)
+                                      : const Color(0xFF4B5563),
+                                  width: 1.5,
                                 ),
                               ),
+                              child: _rememberMe
+                                  ? const Icon(Icons.check, size: 13, color: Colors.white)
+                                  : null,
                             ),
                             const SizedBox(width: 8),
-
-                            // Forgot Password Link
-                            InkWell(
-                              borderRadius: BorderRadius.circular(4),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  AuthFadeRoute(page: const ForgotPassword()),
-                                );
-                              },
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 4),
-                                child: Text(
-                                  'Forgot password?',
-                                  style: TextStyle(
-                                    color: Color(0xFFFF7D65),
-                                    fontSize: 12,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Interactive Sign In Button
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: _handleSignIn,
-                            child: Ink(
-                              width: double.infinity,
-                              height: 48,
-                              decoration: ShapeDecoration(
-                                color: const Color(0xFFFA6144) /* Primary */,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                shadows: const [
-                                  BoxShadow(
-                                    color: Color(0x59EF4444),
-                                    blurRadius: 18,
-                                    offset: Offset(0, 8),
-                                    spreadRadius: 0,
-                                  )
-                                ],
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'Sign In to Dashboard',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.15,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    '➔',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Register Link
-                        SizedBox(
-                          width: double.infinity,
-                          child: Wrap(
-                            alignment: WrapAlignment.center,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: 4,
-                            runSpacing: 4,
-                            children: [
-                              const Text(
-                                'Don’t have an account? ',
-                                textAlign: TextAlign.center,
+                            const Flexible(
+                              child: Text(
+                                'Remember me',
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: Color(0xFF8E95A5),
+                                  color: Color(0xFFD1D5DB),
                                   fontSize: 12,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
-                              InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    AuthFadeRoute(
-                                      page: const Register(),
-                                    ),
-                                  );
-                                },
-                                child: const Text(
-                                  'Register Now',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Color(0xFFFF7D65),
-                                    fontSize: 12,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        AuthFadeRoute(page: const ForgotPassword()),
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
+                        'Forgot password?',
+                        style: TextStyle(
+                          color: Color(0xFFFF7D65),
+                          fontSize: 12,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // 4. Interactive Sign In Button (anti-double submit & loading label retention)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: _isLoading ? null : _handleSignIn,
+                  child: Ink(
+                    width: double.infinity,
+                    height: 48,
+                    decoration: ShapeDecoration(
+                      color: _isLoading
+                          ? const Color(0xFFFA6144).withValues(alpha: 0.7)
+                          : const Color(0xFFFA6144),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      shadows: const [
+                        BoxShadow(
+                          color: Color(0x59EF4444),
+                          blurRadius: 18,
+                          offset: Offset(0, 8),
+                          spreadRadius: 0,
+                        )
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_isLoading) ...[
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+                        const Text(
+                          'Sign In to Dashboard',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.15,
                           ),
                         ),
+                        if (!_isLoading) ...[
+                          const SizedBox(width: 8),
+                          const Text(
+                            '➔',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // 5. Register Link
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: [
+                    const Text(
+                      'Don’t have an account? ',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF8E95A5),
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          AuthFadeRoute(
+                            page: const Register(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Register Now',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFFFF7D65),
+                          fontSize: 12,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-        ),
-      ),
-      const Spacer(),
-      const Padding(
-        padding: EdgeInsets.only(bottom: 24, top: 12),
-        child: Text(
-          'IMPAL Group 7 • Telkom University © 2026',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Color(0xFF6B7280),
-            fontSize: 11,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+        ],
       ),
     );
   }

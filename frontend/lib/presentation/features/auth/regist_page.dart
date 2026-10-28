@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 import 'login_page.dart';
 import 'terms_privacy_page.dart';
-import '../../common_widgets/pop_up_pemberitahuan.dart';
+import 'widgets/auth_card_wrapper.dart';
+import 'widgets/auth_text_field.dart';
+import 'widgets/password_strength_card.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -19,8 +22,6 @@ class _RegisterState extends State<Register> {
   final _pwdCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
 
-  bool _obscurePwd = true;
-  bool _obscureConfirm = true;
   bool _agreeTerms = false;
   bool _isLoading = false;
 
@@ -57,7 +58,6 @@ class _RegisterState extends State<Register> {
     super.dispose();
   }
 
-  // Password Validation Checkers
   bool get _hasNoSpace => !_pwdCtrl.text.contains(' ');
   bool get _hasMinLength => _pwdCtrl.text.length >= 8;
   bool get _hasUpperLower =>
@@ -65,28 +65,6 @@ class _RegisterState extends State<Register> {
   bool get _hasNumSymbol =>
       RegExp(r'[0-9]').hasMatch(_pwdCtrl.text) &&
       RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_pwdCtrl.text);
-
-  int get _pwdScore {
-    final p = _pwdCtrl.text;
-    if (p.isEmpty) return 0;
-    if (!_hasNoSpace) return 1;
-    int s = (_hasMinLength ? 1 : 0) + (_hasUpperLower ? 1 : 0) + (_hasNumSymbol ? 1 : 0);
-    return (p.length >= 12 && s == 3) ? 4 : s;
-  }
-
-  String get _pwdLabel => switch (_pwdScore) {
-        1 => 'Weak (33%)',
-        2 => 'Medium (66%)',
-        3 || 4 => 'Strong (92%)',
-        _ => 'Too Weak (0%)',
-      };
-
-  Color get _pwdColor => switch (_pwdScore) {
-        1 => const Color(0xFFEF4444),
-        2 => const Color(0xFFF59E0B),
-        3 || 4 => const Color(0xFF6EE7B7),
-        _ => const Color(0xFF6B7280),
-      };
 
   bool get _isMatch =>
       _confirmCtrl.text.isNotEmpty && _pwdCtrl.text == _confirmCtrl.text;
@@ -138,13 +116,16 @@ class _RegisterState extends State<Register> {
     }
 
     if (!_agreeTerms) {
-      PopUpPemberitahuan.termsWarning(context);
-      _openTermsPrivacy();
+      TopToast.show(
+        context,
+        type: ToastType.error,
+        message: 'Please review and accept our Terms of Service & Privacy Policy.',
+      );
       return;
     }
 
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 700), () async {
+    Future.delayed(const Duration(milliseconds: 600), () async {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
@@ -176,8 +157,6 @@ class _RegisterState extends State<Register> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 600;
-
     final topNavBar = Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -198,490 +177,319 @@ class _RegisterState extends State<Register> {
             ),
           ),
         ),
-        const Text('Step 1 of 1', style: TextStyle(color: Color(0xFF8E95A5), fontSize: 13, fontWeight: FontWeight.w700, fontFamily: 'Inter')),
+        const Text(
+          'Step 1 of 1',
+          style: TextStyle(
+            color: Color(0xFF8E95A5),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'Inter',
+          ),
+        ),
       ],
     );
 
-    final contentColumn = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!isMobile) ...[
-          topNavBar,
-          const SizedBox(height: 20),
-        ],
+    return AuthCardWrapper(
+      topNavBar: topNavBar,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Create Account',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              fontFamily: 'Inter',
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Register your student identity for smart academic prioritization.',
+            style: TextStyle(
+              color: Color(0xFF8E95A5),
+              fontSize: 13,
+              fontFamily: 'Inter',
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 24),
 
-                    // Title & Description
-                    const Text('Create Account', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800, fontFamily: 'Inter', letterSpacing: -0.5)),
-                    const SizedBox(height: 6),
-                    const Text('Register your student identity for smart academic prioritization.', style: TextStyle(color: Color(0xFF8E95A5), fontSize: 13, fontFamily: 'Inter', height: 1.45)),
-                    const SizedBox(height: 24),
+          // Inputs
+          AuthTextField(
+            label: 'Full Name',
+            controller: _nameCtrl,
+            hintText: 'Enter your full name',
+            prefixIcon: Icons.person_outline_rounded,
+            errorText: _nameError,
+            onTap: TopToast.dismiss,
+          ),
+          const SizedBox(height: 16),
 
-                    // Inputs
-                    _label('Full Name'),
-                    const SizedBox(height: 8),
-                    _input(
-                      ctrl: _nameCtrl,
-                      hint: 'Enter your full name',
-                      icon: Icons.person_outline_rounded,
-                      errorText: _nameError,
+          AuthTextField(
+            label: 'Email',
+            controller: _emailCtrl,
+            hintText: 'Enter your email address',
+            prefixIcon: Icons.mail_outline_rounded,
+            keyboardType: TextInputType.emailAddress,
+            errorText: _emailError,
+            onTap: TopToast.dismiss,
+          ),
+          const SizedBox(height: 16),
+
+          AuthTextField(
+            label: 'Password',
+            controller: _pwdCtrl,
+            hintText: 'Enter new password',
+            prefixIcon: Icons.lock_outline_rounded,
+            isPassword: true,
+            errorText: _pwdError,
+            inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+            onTap: TopToast.dismiss,
+          ),
+          const SizedBox(height: 8),
+
+          // Password Strength Card
+          PasswordStrengthCard(password: _pwdCtrl.text),
+          const SizedBox(height: 16),
+
+          // Confirm Password
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Confirm Password',
+                style: TextStyle(
+                  color: Color(0xFFD1D5DB),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                ),
+              ),
+              if (_confirmCtrl.text.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _isMatch ? const Color(0x2D10B981) : const Color(0x2DEF4444),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: _isMatch ? const Color(0x5910B981) : const Color(0x59EF4444),
                     ),
-                    const SizedBox(height: 16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _isMatch ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                        size: 11,
+                        color: _isMatch ? const Color(0xFF6EE7B7) : const Color(0xFFF87171),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _isMatch ? 'Match' : 'Mismatch',
+                        style: TextStyle(
+                          color: _isMatch ? const Color(0xFF6EE7B7) : const Color(0xFFF87171),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          AuthTextField(
+            controller: _confirmCtrl,
+            hintText: 'Confirm your password',
+            prefixIcon: Icons.lock_outline_rounded,
+            isPassword: true,
+            errorText: _confirmError,
+            inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+            onTap: TopToast.dismiss,
+          ),
+          const SizedBox(height: 16),
 
-                    _label('Email'),
-                    const SizedBox(height: 8),
-                    _input(
-                      ctrl: _emailCtrl,
-                      hint: 'Enter your email address',
-                      icon: Icons.mail_outline_rounded,
-                      type: TextInputType.emailAddress,
-                      errorText: _emailError,
-                    ),
-                    const SizedBox(height: 16),
-
-                    _label('Password'),
-                    const SizedBox(height: 8),
-                    _input(
-                      ctrl: _pwdCtrl,
-                      hint: 'Enter new password',
-                      icon: Icons.lock_outline_rounded,
-                      obscure: _obscurePwd,
-                      errorText: _pwdError,
-                      inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
-                      suffix: IconButton(
-                        icon: Icon(_obscurePwd ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF9CA3AF), size: 20),
-                        onPressed: () => setState(() => _obscurePwd = !_obscurePwd),
+          // Terms Checkbox
+          InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () {
+              if (!_agreeTerms) {
+                _openTermsPrivacy();
+              } else {
+                setState(() => _agreeTerms = false);
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: _agreeTerms ? const Color(0xFFFA6144) : const Color(0xFF323846),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: _agreeTerms ? const Color(0xFFFA6144) : const Color(0xFF4B5563),
+                        width: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 8),
-
-                    // Password Strength Card
-                    _strengthCard(),
-                    const SizedBox(height: 16),
-
-                    // Confirm Password
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _label('Confirm Password'),
-                        if (_confirmCtrl.text.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: _isMatch ? const Color(0x2D10B981) : const Color(0x2DEF4444),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: _isMatch ? const Color(0x5910B981) : const Color(0x59EF4444)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(_isMatch ? Icons.check_circle_rounded : Icons.cancel_rounded, size: 11, color: _isMatch ? const Color(0xFF6EE7B7) : const Color(0xFFF87171)),
-                                const SizedBox(width: 4),
-                                Text(_isMatch ? 'Match' : 'Mismatch', style: TextStyle(color: _isMatch ? const Color(0xFF6EE7B7) : const Color(0xFFF87171), fontSize: 10, fontWeight: FontWeight.w700, fontFamily: 'Inter')),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    _input(
-                      ctrl: _confirmCtrl,
-                      hint: 'Confirm your password',
-                      icon: Icons.lock_outline_rounded,
-                      obscure: _obscureConfirm,
-                      errorText: _confirmError,
-                      inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
-                      borderColor: _confirmCtrl.text.isNotEmpty ? (_isMatch ? const Color(0x6610B981) : const Color(0x66EF4444)) : null,
-                      suffix: IconButton(
-                        icon: Icon(_obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF9CA3AF), size: 20),
-                        onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Terms Checkbox (Requires reading Terms & Privacy first)
-                    InkWell(
-                      borderRadius: BorderRadius.circular(6),
-                      onTap: () {
-                        if (!_agreeTerms) {
-                          // Redirect user to Terms & Privacy page to read to the bottom!
-                          _openTermsPrivacy();
-                        } else {
-                          setState(() => _agreeTerms = false);
-                        }
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 18,
-                              height: 18,
-                              decoration: BoxDecoration(
-                                color: _agreeTerms ? const Color(0xFFFA6144) : const Color(0xFF323846),
-                                borderRadius: BorderRadius.circular(5),
-                                border: Border.all(color: _agreeTerms ? const Color(0xFFFA6144) : const Color(0xFF4B5563), width: 1.5),
-                              ),
-                              child: _agreeTerms ? const Icon(Icons.check, size: 13, color: Colors.white) : null,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text.rich(
-                                TextSpan(
-                                  style: const TextStyle(color: Color(0xFF8E95A5), fontSize: 12, fontFamily: 'Inter', height: 1.35),
-                                  children: [
-                                    const TextSpan(text: 'I agree to the '),
-                                    WidgetSpan(
-                                      alignment: PlaceholderAlignment.middle,
-                                      child: InkWell(
-                                        onTap: _openTermsPrivacy,
-                                        child: const Text('Terms of Service', style: TextStyle(color: Color(0xFFFF7D65), fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Inter')),
-                                      ),
-                                    ),
-                                    const TextSpan(text: ' and acknowledge the '),
-                                    WidgetSpan(
-                                      alignment: PlaceholderAlignment.middle,
-                                      child: InkWell(
-                                        onTap: _openTermsPrivacy,
-                                        child: const Text('Privacy Policy.', style: TextStyle(color: Color(0xFFFF7D65), fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'Inter')),
-                                      ),
-                                    ),
-                                  ],
+                    child: _agreeTerms
+                        ? const Icon(Icons.check, size: 13, color: Colors.white)
+                        : null,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        style: const TextStyle(
+                          color: Color(0xFF8E95A5),
+                          fontSize: 12,
+                          fontFamily: 'Inter',
+                          height: 1.35,
+                        ),
+                        children: [
+                          const TextSpan(text: 'I agree to the '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: InkWell(
+                              onTap: _openTermsPrivacy,
+                              child: const Text(
+                                'Terms of Service',
+                                style: TextStyle(
+                                  color: Color(0xFFFF7D65),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Inter',
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Submit Button
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: _isLoading ? null : _handleRegister,
-                        child: Ink(
-                          width: double.infinity,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFA6144),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x59EF4444), blurRadius: 18, offset: Offset(0, 8)),
-                            ],
                           ),
-                          child: Center(
-                            child: _isLoading
-                                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation(Colors.white)))
-                                : const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text('Create Student Account', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.15, fontFamily: 'Inter')),
-                                      SizedBox(width: 8),
-                                      Text('➔', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                                    ],
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Already have an account? Sign In Link
-                    Center(
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        children: [
-                          const Text('Already have an account? ', style: TextStyle(color: Color(0xFF8E95A5), fontSize: 12, fontFamily: 'Inter')),
-                          InkWell(
-                            onTap: _navigateBack,
-                            child: const Text('Sign In', style: TextStyle(color: Color(0xFFFF7D65), fontSize: 12, fontWeight: FontWeight.w700, fontFamily: 'Inter')),
+                          const TextSpan(text: ' and acknowledge the '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: InkWell(
+                              onTap: _openTermsPrivacy,
+                              child: const Text(
+                                'Privacy Policy.',
+                                style: TextStyle(
+                                  color: Color(0xFFFF7D65),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                );
-
-    return Scaffold(
-      backgroundColor: isMobile ? const Color(0xFF282D37) : const Color(0xFF1E222B),
-      body: SafeArea(
-        child: isMobile
-            ? Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                    child: topNavBar,
-                  ),
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minHeight: constraints.maxHeight,
-                              maxWidth: 440,
-                            ),
-                            child: IntrinsicHeight(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  contentColumn,
-                                  const Spacer(),
-                                  const Padding(
-                                    padding: EdgeInsets.only(bottom: 24, top: 16),
-                                    child: Center(
-                                      child: Text(
-                                        'IMPAL Group 7 • Telkom University © 2026',
-                                        style: TextStyle(
-                                          color: Color(0xFF6B7280),
-                                          fontSize: 11,
-                                          fontFamily: 'Inter',
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
                   ),
                 ],
-              )
-            : LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight,
-                      ),
-                      child: IntrinsicHeight(
-                        child: Column(
-                          children: [
-                            const Spacer(),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-                              child: Center(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(maxWidth: 440),
-                                  child: RepaintBoundary(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF282D37),
-                                        borderRadius: BorderRadius.circular(28),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            color: Color(0x66000000),
-                                            blurRadius: 18,
-                                            offset: Offset(0, 10),
-                                            spreadRadius: -2,
-                                          ),
-                                        ],
-                                      ),
-                                      child: contentColumn,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 24, top: 12),
-                              child: Center(
-                                child: Text(
-                                  'IMPAL Group 7 • Telkom University © 2026',
-                                  style: TextStyle(
-                                    color: Color(0xFF6B7280),
-                                    fontSize: 11,
-                                    fontFamily: 'Inter',
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
               ),
-      ),
-    );
-  }
-
-  Widget _label(String text) => Text(text, style: const TextStyle(color: Color(0xFFD1D5DB), fontSize: 12.5, fontWeight: FontWeight.w600, fontFamily: 'Inter'));
-
-  Widget _input({
-    required TextEditingController ctrl,
-    required String hint,
-    required IconData icon,
-    bool obscure = false,
-    Widget? suffix,
-    Color? borderColor,
-    TextInputType type = TextInputType.text,
-    String? errorText,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    final hasError = errorText != null && errorText.isNotEmpty;
-    final isPasswordField = obscure || ctrl == _pwdCtrl || ctrl == _confirmCtrl;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: const Color(0xFF323846),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: hasError
-                  ? const Color(0xFFEF4444)
-                  : (borderColor ?? const Color(0xFF3B4150)),
-              width: hasError ? 1.4 : 1.0,
             ),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: hasError ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: ctrl,
-                  obscureText: obscure,
-                  enableInteractiveSelection: !isPasswordField,
-                  contextMenuBuilder: isPasswordField
-                      ? (context, editableTextState) => const SizedBox.shrink()
-                      : null,
-                  onTap: TopToast.dismiss,
-                  keyboardType: type,
-                  inputFormatters: inputFormatters,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter'),
-                  cursorColor: const Color(0xFFFA6144),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                    border: InputBorder.none,
-                    hintText: hint,
-                    hintStyle: const TextStyle(color: Color(0xFF6B7280), fontSize: 13.5, fontFamily: 'Inter'),
+          const SizedBox(height: 24),
+
+          // Submit Button
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: _isLoading ? null : _handleRegister,
+              child: Ink(
+                width: double.infinity,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFA6144),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x59EF4444),
+                      blurRadius: 18,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (_isLoading) ...[
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      const Text(
+                        'Create Student Account',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.15,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                      if (!_isLoading) ...[
+                        const SizedBox(width: 8),
+                        const Text(
+                          '➔',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
-              if (suffix != null) suffix,
-            ],
+            ),
           ),
-        ),
-        if (hasError)
-          Padding(
-            padding: const EdgeInsets.only(top: 6, left: 4),
-            child: Row(
+          const SizedBox(height: 20),
+
+          // Already have an account? Sign In Link
+          Center(
+            child: Wrap(
+              alignment: WrapAlignment.center,
               children: [
-                const Icon(Icons.error_outline_rounded, size: 13, color: Color(0xFFEF4444)),
-                const SizedBox(width: 5),
-                Expanded(
-                  child: Text(
-                    errorText,
-                    style: const TextStyle(
-                      color: Color(0xFFEF4444),
+                const Text(
+                  'Already have an account? ',
+                  style: TextStyle(
+                    color: Color(0xFF8E95A5),
+                    fontSize: 12,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                InkWell(
+                  onTap: _navigateBack,
+                  child: const Text(
+                    'Sign In',
+                    style: TextStyle(
+                      color: Color(0xFFFF7D65),
                       fontSize: 12,
+                      fontWeight: FontWeight.w700,
                       fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-      ],
-    );
-  }
-
-  Widget _strengthCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2D333F),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF3B4150)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('PASSWORD STRENGTH', style: TextStyle(color: Color(0xFF8E95A5), fontSize: 11, fontWeight: FontWeight.w600, fontFamily: 'Inter', letterSpacing: 0.3)),
-              Text(_pwdLabel, style: TextStyle(color: _pwdColor, fontSize: 11, fontWeight: FontWeight.w700, fontFamily: 'Inter')),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: List.generate(4, (i) => Expanded(
-              child: Container(
-                height: 4.5,
-                margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
-                decoration: BoxDecoration(
-                  color: (i + 1) <= _pwdScore ? _pwdColor : const Color(0xFF3F4756),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-            )),
-          ),
-          const SizedBox(height: 10),
-          _reqItem(isMet: _hasMinLength, label: 'At least 8 characters long (recommended 12+)'),
-          const SizedBox(height: 5),
-          _reqItem(isMet: _hasUpperLower, label: 'Includes uppercase & lowercase letters'),
-          const SizedBox(height: 5),
-          _reqItem(isMet: _hasNumSymbol, label: 'Includes at least one number and special symbol (#, !, @)'),
-          const SizedBox(height: 5),
-          _reqItem(isMet: _hasNoSpace && _pwdCtrl.text.isNotEmpty, label: 'Cannot contain spaces'),
         ],
       ),
-    );
-  }
-
-  Widget _reqItem({required bool isMet, required String label}) {
-    return Row(
-      children: [
-        Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            color: isMet ? const Color(0x3310B981) : const Color(0xFF383F4D),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: isMet ? const Color(0x6610B981) : const Color(0xFF4B5563)),
-          ),
-          alignment: Alignment.center,
-          child: isMet
-              ? const Icon(Icons.check, size: 10, color: Color(0xFF10B981))
-              : Container(
-                  width: 4,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6B7280),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(child: Text(label, style: TextStyle(color: isMet ? const Color(0xFFD1D5DB) : const Color(0xFF6B7280), fontSize: 11, fontFamily: 'Inter'))),
-      ],
     );
   }
 }
