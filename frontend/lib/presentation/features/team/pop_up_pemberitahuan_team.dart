@@ -50,4 +50,28 @@ class PopUpPemberitahuanTeam {
       message: message,
     );
   }
+
+  /// Notifikasi ketika tugas kelompok berhasil dibuat
+  static void taskCreated(
+    BuildContext context, {
+    required String taskName,
+    String? assignees,
+  }) {
+    PopUpPemberitahuan.taskCreated(
+      context,
+      taskName: taskName,
+      assignees: assignees,
+    );
+  }
+
+  /// Notifikasi ketika tugas kelompok berhasil diperbarui
+  static void taskUpdated(
+    BuildContext context, {
+    required String taskName,
+  }) {
+    PopUpPemberitahuan.taskUpdated(
+      context,
+      taskName: taskName,
+    );
+  }
 }

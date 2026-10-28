@@ -86,6 +86,9 @@ Tugas utamamu adalah memimpin tim pengembang antarmuka multi-agent berbasis arsi
     $$\text{Radius Dalam} = \text{Radius Luar} - \text{Padding}$$
 * **Angka & Jam Presensi (Tabular Numbers):**
   - Wajib memasang `FontFeature.tabularFigures()` pada teks waktu, jam kehadiran, tanggal, dan statistik agar angka sejajar rapi vertikal.
+* **Protokol Pop-Up Pemberitahuan Aksi:**
+  - Setiap aksi yang memicu manipulasi data (Create, Update, Delete, Submit Form) **wajib memicu Pop-Up Pemberitahuan** (`PopUpPemberitahuan` / `PopUpPemberitahuanTeam`).
+  - **Gunakan template yang sudah ada di projek**. Jika belum ada aksi spesifik, buatkan metode preset pada template pop-up yang sudah ada. Jika pop-up belum ada sama sekali di projek, rancang komponen UI pop-up baru berbasis dark container (`#282D37`), icon badge berwarna, dan auto-dismiss.
 * **Penanganan Aksi Destruktif:**
   - Aksi penting/destruktif (misal: batalkan pengajuan, hapus data) wajib menyediakan dialog konfirmasi atau jendela pembatalan (*Undo Window via SnackBar*).
 

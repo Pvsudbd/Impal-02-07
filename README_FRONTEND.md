@@ -41,9 +41,11 @@ frontend/lib/
 │       ├── jadwal/                     # Schedule views, create & edit schedule form
 │       │   ├── models/                 # schedule_model.dart, schedule_repository.dart
 │       │   └── widgets/                # ScheduleTypeSelector, ScheduleDateTimeSection, TeamMeetingAutocomplete, dll.
-│       └── team/                       # Team collaboration & meeting management
-│           ├── models/                 # team_model.dart, team_repository.dart, team_task_model.dart
-│           └── widgets/                # TeamCard, TeamHeader, TeamDashboardHeader, TeamTaskCard, CreateTaskDialog, dll.
+│       └── team/                       # Team collaboration, tasks & meeting management
+│           ├── create_task_team.dart   # Layar Terpadu Dual-Mode: Create & Edit Task Team (Multi-Assignee)
+│           ├── pop_up_pemberitahuan_team.dart # Helper notifikasi pop-up team resmi IMPAL
+│           ├── models/                 # team_model.dart, team_repository.dart, team_task_model.dart, team_member_model.dart
+│           └── widgets/                # TeamCard, TeamHeader, TeamDashboardHeader, TeamTaskCard, SubmissionDeadlinePicker, AssigneeDropdown (Multi-Select), dll.
 ```
 
 ---

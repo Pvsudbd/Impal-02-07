@@ -6,9 +6,8 @@ import '../jadwal/models/schedule_model.dart';
 import '../jadwal/models/schedule_repository.dart';
 import '../jadwal/pop_up_konfirmasi_delete.dart';
 import '../jadwal/schedule_page.dart';
-import 'models/team_task_model.dart';
+import 'create_task_team.dart';
 import 'pop_up_create_meeting.dart';
-import 'widgets/create_task_dialog.dart';
 import 'widgets/team_dashboard_header.dart';
 import 'widgets/team_schedule_section.dart';
 import 'widgets/team_task_card.dart';
@@ -69,8 +68,9 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         id: 'task_2',
         title: 'Membuat ui page home',
         priority: TaskPriority.medium,
-        assignedTo: 'Yoga Perkasa Didik',
-        assigneeColor: Color(0xFFF3A683),
+        assignedTo: 'Ahmad Sahroni, Muhammad Kafi Rijal',
+        assigneeColor: Color(0xFF63CDDA),
+        assigneeColors: [Color(0xFF63CDDA), Color(0xFF786FA6)],
         timeRange: '09:30 - 11:30 WIB',
       ),
       const TeamTaskModel(
@@ -126,25 +126,51 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     }
   }
 
-  void _showCreateTaskDialog() {
-    CreateTaskDialog.show(
-      context,
-      onTaskCreated: (title, priority) {
-        setState(() {
-          _tasks.insert(
-            0,
-            TeamTaskModel(
-              id: 'task_${DateTime.now().millisecondsSinceEpoch}',
-              title: title,
-              priority: priority,
-              assignedTo: widget.userName,
-              assigneeColor: widget.memberColors.first,
-              timeRange: 'Today',
-            ),
-          );
-        });
-      },
+  Future<void> _openCreateTaskPage() async {
+    final result = await Navigator.of(context).push<TeamTaskModel>(
+      MaterialPageRoute(
+        builder: (_) => CreateTaskTeamPage(
+          onTaskCreated: (task) {
+            setState(() {
+              _tasks.insert(0, task);
+            });
+          },
+        ),
+      ),
     );
+    if (result != null && mounted) {
+      if (!_tasks.any((t) => t.id == result.id)) {
+        setState(() {
+          _tasks.insert(0, result);
+        });
+      }
+    }
+  }
+
+  Future<void> _openEditTaskPage(TeamTaskModel task) async {
+    final result = await Navigator.of(context).push<TeamTaskModel>(
+      MaterialPageRoute(
+        builder: (_) => CreateTaskTeamPage(
+          existingTask: task,
+          onTaskUpdated: (updatedTask) {
+            setState(() {
+              final index = _tasks.indexWhere((t) => t.id == updatedTask.id);
+              if (index != -1) {
+                _tasks[index] = updatedTask;
+              }
+            });
+          },
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        final index = _tasks.indexWhere((t) => t.id == result.id);
+        if (index != -1) {
+          _tasks[index] = result;
+        }
+      });
+    }
   }
 
   @override
@@ -260,7 +286,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
             const SizedBox(width: 8),
             GestureDetector(
               key: const ValueKey('dashboard_create_task_button'),
-              onTap: _showCreateTaskDialog,
+              onTap: _openCreateTaskPage,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
@@ -282,7 +308,10 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         ),
         const SizedBox(height: 10),
         for (int i = 0; i < _tasks.length; i++) ...[
-          TeamTaskCard(task: _tasks[i]),
+          TeamTaskCard(
+            task: _tasks[i],
+            onTap: () => _openEditTaskPage(_tasks[i]),
+          ),
           if (i < _tasks.length - 1) const SizedBox(height: 10),
         ],
       ],

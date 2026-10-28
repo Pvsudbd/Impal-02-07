@@ -323,6 +323,30 @@ class PopUpPemberitahuan extends StatefulWidget {
     );
   }
 
+  /// Preset notification when a team task is created (Positif -> Hijau).
+  static void taskCreated(BuildContext context, {required String taskName, String? assignees}) {
+    show(
+      context,
+      title: 'Task Created',
+      message: assignees != null && assignees.trim().isNotEmpty
+          ? 'Task "$taskName" assigned to $assignees.'
+          : 'Task "$taskName" has been successfully created.',
+      icon: Icons.checklist_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a team task is updated (Positif -> Hijau).
+  static void taskUpdated(BuildContext context, {required String taskName}) {
+    show(
+      context,
+      title: 'Task Updated',
+      message: 'Changes to "$taskName" have been saved successfully.',
+      icon: Icons.check_circle_outline_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
   static void _removeEntry() {
     if (_activeState != null && _activeState!.mounted) {
       _activeState!.dismiss();
