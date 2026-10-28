@@ -296,29 +296,30 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
 
                         const SizedBox(height: 12),
 
-                        // Section 2: Course
-                        Text(
-                          'Course',
-                          style: TextStyle(
-                            color: AppColors.textWhite,
-                            fontSize: context.rFont(12, min: 11, max: 14),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
+                        // Section 2: Course (Only visible for college tasks)
+                        if (task.isCollegeTask && task.course.trim().isNotEmpty) ...[
+                          Text(
+                            'Course',
+                            style: TextStyle(
+                              color: AppColors.textWhite,
+                              fontSize: context.rFont(12, min: 11, max: 14),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          task.course,
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: context.rFont(13, min: 11, max: 15),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
-                            height: 1.2,
+                          const SizedBox(height: 4),
+                          Text(
+                            task.course,
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: context.rFont(13, min: 11, max: 15),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w400,
+                              height: 1.2,
+                            ),
                           ),
-                        ),
-
-                        const SizedBox(height: 12),
+                          const SizedBox(height: 12),
+                        ],
 
                         // Section 3: Date Created
                         Text(

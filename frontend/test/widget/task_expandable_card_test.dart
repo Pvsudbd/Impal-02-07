@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:impal_smart_todolist/presentation/features/task/models/task_item_model.dart';
+import 'package:impal_smart_todolist/presentation/features/task/edit_task.dart';
+import 'package:impal_smart_todolist/presentation/features/task/widgets/course_grade_weight_chips.dart';
 import 'package:impal_smart_todolist/presentation/features/task/widgets/task_expandable_card.dart';
 
 void main() {
@@ -13,6 +14,7 @@ void main() {
     deadlineDate: DateTime(2026, 10, 11, 23, 59),
     formattedDeadline: 'Sat 11 Oct 2026, 23: 59 WIB',
     progressPercent: 98,
+    isCollegeTask: true,
     memberAvatars: const [
       Color(0xFFF3A683),
       Color(0xFF786FA6),
@@ -94,5 +96,74 @@ void main() {
     await tester.tap(find.text('Tugas Besar Kecerdasan AI'));
     await tester.pumpAndSettle();
   });
-}
 
+  testWidgets('CourseGradeWeightChips hides High/Medium/Low menu when Automatic is checked', (tester) async {
+    bool isAutomatic = false;
+    TaskPriorityLevel priority = TaskPriorityLevel.high;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              return CourseGradeWeightChips(
+                selectedPriority: priority,
+                isAutomatic: isAutomatic,
+                onPriorityChanged: (p) => setState(() => priority = p),
+                onAutomaticChanged: (a) => setState(() => isAutomatic = a),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    // When automatic is false: High, Medium, Low buttons are shown
+    expect(find.text('Task Grade Weight'), findsOneWidget);
+    expect(find.text('High'), findsOneWidget);
+    expect(find.text('Medium'), findsOneWidget);
+    expect(find.text('Low'), findsOneWidget);
+
+    // Tap Automatic toggle
+    await tester.tap(find.text('Automatic'));
+    await tester.pumpAndSettle();
+
+    // Now automatic is true: High, Medium, Low are hidden (collapsed)
+    expect(isAutomatic, isTrue);
+  });
+
+  testWidgets('EditTaskPage displays prefilled data and toggles Course field dynamically', (tester) async {
+    TaskItemModel? savedTask;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EditTaskPage(
+          task: sampleTask,
+          onTaskUpdated: (task) {
+            savedTask = task;
+          },
+        ),
+      ),
+    );
+
+    expect(find.text('Edit Task'), findsOneWidget);
+    expect(find.text('Tugas Besar Kecerdasan AI'), findsOneWidget);
+    expect(find.text('Tugas Kuliah'), findsOneWidget);
+    expect(find.text('Non-Kuliah'), findsOneWidget);
+
+    // Since sampleTask has isCollegeTask: true, Course is visible
+    expect(find.text('Course'), findsOneWidget);
+    expect(find.text('SSIF-04-REG • Software Testing & Implementation'), findsOneWidget);
+
+    // Tap "Non-Kuliah" category
+    await tester.tap(find.text('Non-Kuliah'));
+    await tester.pumpAndSettle();
+
+    // Tap "Save Changes"
+    await tester.tap(find.text('Save Changes'));
+    await tester.pumpAndSettle();
+
+    expect(savedTask, isNotNull);
+    expect(savedTask!.isCollegeTask, isFalse);
+  });
+}

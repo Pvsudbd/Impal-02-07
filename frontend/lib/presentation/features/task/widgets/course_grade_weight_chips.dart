@@ -3,11 +3,17 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../models/task_item_model.dart';
 
-/// Interactive selector for Course Grade Weight with an Automatic toggle.
+// Re-exports & Aliases for backward compatibility
+typedef TaskGradeWeightSelector = CourseGradeWeightChips;
+typedef TaskGradeWeightChips = CourseGradeWeightChips;
+
+/// Interactive selector for Task Grade Weight with an Automatic toggle.
 ///
 /// Features:
-/// - "Course Grade Weight" label with an "Automatic" checkbox aligned on top right
-/// - 3 side-by-side buttons: High, Medium, Low
+/// - Labelled "Task Grade Weight"
+/// - "Automatic" checkbox aligned on top right
+/// - Dynamic Menu: When "Automatic" is active, manual priority chips (High, Medium, Low)
+///   are completely hidden (menghilang). When "Automatic" is unchecked, the chips appear.
 /// - Complies with AGENTS.md ResponsiveContext and touch target standards.
 class CourseGradeWeightChips extends StatelessWidget {
   final TaskPriorityLevel selectedPriority;
@@ -25,6 +31,8 @@ class CourseGradeWeightChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final disableMotion = MediaQuery.disableAnimationsOf(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -34,7 +42,7 @@ class CourseGradeWeightChips extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              'Course Grade Weight',
+              'Task Grade Weight',
               style: TextStyle(
                 color: AppColors.textWhite,
                 fontSize: context.rFont(13, min: 11, max: 15),
@@ -82,33 +90,46 @@ class CourseGradeWeightChips extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: context.rSpacing(8)),
-        Row(
-          children: [
-            Expanded(
-              child: _buildPriorityButton(
-                context,
-                level: TaskPriorityLevel.high,
-                label: 'High',
-              ),
+
+        // Dynamic Menu: Hide High/Medium/Low when isAutomatic is true
+        AnimatedCrossFade(
+          duration: disableMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 220),
+          crossFadeState: isAutomatic
+              ? CrossFadeState.showFirst
+              : CrossFadeState.showSecond,
+          firstChild: const SizedBox(width: double.infinity, height: 0),
+          secondChild: Padding(
+            padding: EdgeInsets.only(top: context.rSpacing(8)),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildPriorityButton(
+                    context,
+                    level: TaskPriorityLevel.high,
+                    label: 'High',
+                  ),
+                ),
+                SizedBox(width: context.rSpacing(8)),
+                Expanded(
+                  child: _buildPriorityButton(
+                    context,
+                    level: TaskPriorityLevel.medium,
+                    label: 'Medium',
+                  ),
+                ),
+                SizedBox(width: context.rSpacing(8)),
+                Expanded(
+                  child: _buildPriorityButton(
+                    context,
+                    level: TaskPriorityLevel.low,
+                    label: 'Low',
+                  ),
+                ),
+              ],
             ),
-            SizedBox(width: context.rSpacing(8)),
-            Expanded(
-              child: _buildPriorityButton(
-                context,
-                level: TaskPriorityLevel.medium,
-                label: 'Medium',
-              ),
-            ),
-            SizedBox(width: context.rSpacing(8)),
-            Expanded(
-              child: _buildPriorityButton(
-                context,
-                level: TaskPriorityLevel.low,
-                label: 'Low',
-              ),
-            ),
-          ],
+          ),
         ),
       ],
     );
@@ -130,15 +151,11 @@ class CourseGradeWeightChips extends StatelessWidget {
         height: 42,
         decoration: BoxDecoration(
           color: isSelected
-              ? (isAutomatic
-                  ? const Color(0xFF384357)
-                  : AppColors.primary.withValues(alpha: 0.2))
+              ? AppColors.primary.withValues(alpha: 0.2)
               : const Color(0xFF1E232D),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected
-                ? (isAutomatic ? AppColors.primary : AppColors.primary)
-                : AppColors.borderSubtle,
+            color: isSelected ? AppColors.primary : AppColors.borderSubtle,
             width: isSelected ? 1.5 : 0.8,
           ),
         ),

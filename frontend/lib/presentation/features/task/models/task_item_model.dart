@@ -77,6 +77,7 @@ class TaskItemModel {
   final String notes;
   final bool isAutomaticWeight;
   final bool isAssignedToUser;
+  final bool isCollegeTask;
 
   const TaskItemModel({
     required this.id,
@@ -100,6 +101,7 @@ class TaskItemModel {
     this.notes = '',
     this.isAutomaticWeight = true,
     this.isAssignedToUser = true,
+    this.isCollegeTask = true,
   });
 
   TaskItemModel copyWith({
@@ -124,6 +126,7 @@ class TaskItemModel {
     String? notes,
     bool? isAutomaticWeight,
     bool? isAssignedToUser,
+    bool? isCollegeTask,
   }) {
     return TaskItemModel(
       id: id ?? this.id,
@@ -148,6 +151,7 @@ class TaskItemModel {
       notes: notes ?? this.notes,
       isAutomaticWeight: isAutomaticWeight ?? this.isAutomaticWeight,
       isAssignedToUser: isAssignedToUser ?? this.isAssignedToUser,
+      isCollegeTask: isCollegeTask ?? this.isCollegeTask,
     );
   }
 
@@ -228,6 +232,7 @@ class TaskItemModel {
           warningNotice: '*This task is asigned to you, and you can’t delete',
           notes: 'Rekaman video monolog bahasa Indonesia formal durasi 3-5 menit.',
           isAutomaticWeight: false,
+          isCollegeTask: false,
         ),
         TaskItemModel(
           id: 'task_3',

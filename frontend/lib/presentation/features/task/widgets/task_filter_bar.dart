@@ -35,18 +35,18 @@ class TaskFilterBar extends StatelessWidget {
             padding: EdgeInsets.only(right: context.rSpacing(8)),
             child: InkWell(
               onTap: () => onFilterSelected(filter),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeInOut,
-                constraints: const BoxConstraints(minHeight: 40),
+                constraints: const BoxConstraints(minHeight: 28),
                 padding: EdgeInsets.symmetric(
-                  horizontal: context.rSpacing(14),
-                  vertical: context.rSpacing(8),
+                  horizontal: context.rSpacing(12),
+                  vertical: context.rSpacing(4.5),
                 ),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.primary : AppColors.bgCard,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: isSelected ? AppColors.primary : AppColors.borderSubtle,
                     width: 0.5,
@@ -57,7 +57,7 @@ class TaskFilterBar extends StatelessWidget {
                   filter,
                   style: TextStyle(
                     color: isSelected ? Colors.white : AppColors.textMuted,
-                    fontSize: context.rFont(12, min: 11, max: 14),
+                    fontSize: context.rFont(11.5, min: 10, max: 13),
                     fontFamily: 'Inter',
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   ),

@@ -43,10 +43,11 @@ frontend/lib/
 │       │   └── widgets/                # ScheduleTypeSelector, ScheduleDateTimeSection, TeamMeetingAutocomplete, dll.
 │       ├── task/                       # Task management & personal/team assignments
 │       │   ├── task_page.dart          # Layar utama Task dengan filter, timeline counters, dan list expandable
-│       │   ├── create_task.dart        # Formulir Terpadu Dual-Mode: Add New Task & Edit Task
+│       │   ├── create_task.dart        # Formulir Add New Task (Dual-Mode compatible)
+│       │   ├── edit_task.dart          # Layar khusus Edit Task dengan pre-filled data
 │       │   ├── detail_card_task.dart   # Re-export kartu detail & preview
 │       │   ├── models/                 # task_item_model.dart, task_repository.dart
-│       │   └── widgets/                # TaskExpandableCard (Smooth Animated Expansion), TaskHeader, TaskTimelineSummary, TaskFilterBar, CourseGradeWeightChips
+│       │   └── widgets/                # TaskExpandableCard, TaskHeader, TaskTimelineSummary, TaskFilterBar, CourseGradeWeightChips (Task Grade Weight), TaskCategorySelector
 │       └── team/                       # Team collaboration, tasks & meeting management
 │           ├── create_task_team.dart   # Layar Terpadu Dual-Mode: Create & Edit Task Team (Multi-Assignee)
 │           ├── pop_up_pemberitahuan_team.dart # Helper notifikasi pop-up team resmi IMPAL

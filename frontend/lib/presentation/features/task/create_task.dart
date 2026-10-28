@@ -5,14 +5,16 @@ import '../../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../team/widgets/submission_deadline_picker.dart';
+import 'edit_task.dart';
 import 'models/task_item_model.dart';
 import 'widgets/course_grade_weight_chips.dart';
+import 'widgets/task_category_selector.dart';
 
 // Backward compatibility aliases matching Figma exports
+export 'edit_task.dart';
 export 'models/task_item_model.dart';
 
 typedef AddNewTask = CreateTaskPage;
-typedef EditTaskPage = CreateTaskPage;
 typedef TaskFormPage = CreateTaskPage;
 
 /// Unified dual-mode Form for Creating and Editing Tasks.
@@ -45,6 +47,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   late final TextEditingController _courseController;
   late final TextEditingController _notesController;
 
+  late bool _isCollegeTask;
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
   late TaskPriorityLevel _selectedPriority;
@@ -59,6 +62,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
     super.initState();
     final task = widget.existingTask;
     if (task != null) {
+      _isCollegeTask = task.isCollegeTask;
       _titleController = TextEditingController(text: task.title);
       _courseController = TextEditingController(text: task.course);
       _notesController = TextEditingController(text: task.notes);
@@ -67,6 +71,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       _selectedPriority = task.priority;
       _isAutomaticWeight = task.isAutomaticWeight;
     } else {
+      _isCollegeTask = true;
       _titleController = TextEditingController();
       _courseController = TextEditingController(
         text: 'SSIF-04-REG • Software Testing & Implementation',
@@ -123,19 +128,22 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
     await Future.delayed(const Duration(milliseconds: 350));
 
     final title = _titleController.text.trim();
-    final course = _courseController.text.trim();
+    final course = _isCollegeTask ? _courseController.text.trim() : '';
     final notes = _notesController.text.trim();
     final formattedDeadline = _formatDeadline(_selectedDate, _selectedTime);
 
     if (_isEditing) {
       final updated = widget.existingTask!.copyWith(
         title: title,
-        course: course.isNotEmpty ? course : widget.existingTask!.course,
+        course: course.isNotEmpty
+            ? course
+            : (_isCollegeTask ? widget.existingTask!.course : ''),
         notes: notes,
         deadlineDate: _selectedDate,
         formattedDeadline: formattedDeadline,
         priority: _selectedPriority,
         isAutomaticWeight: _isAutomaticWeight,
+        isCollegeTask: _isCollegeTask,
       );
 
       widget.onTaskUpdated?.call(updated);
@@ -147,13 +155,16 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       final newTask = TaskItemModel(
         id: 'task_${DateTime.now().millisecondsSinceEpoch}',
         title: title,
-        course: course.isNotEmpty ? course : 'General Course',
+        course: _isCollegeTask
+            ? (course.isNotEmpty ? course : 'General Course')
+            : '',
         notes: notes,
         deadlineDate: _selectedDate,
         formattedDeadline: formattedDeadline,
         priority: _selectedPriority,
         durationBadge: _selectedPriority == TaskPriorityLevel.high ? '12h' : '24h',
         isAutomaticWeight: _isAutomaticWeight,
+        isCollegeTask: _isCollegeTask,
         subtitle: 'Personal & Team task',
         tags: [
           TaskTagModel(
@@ -182,6 +193,8 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
 
   @override
   Widget build(BuildContext context) {
+    final disableMotion = MediaQuery.disableAnimationsOf(context);
+
     return UnfocusOnTap(
       child: Scaffold(
         backgroundColor: AppColors.bgPrimary,
@@ -233,6 +246,15 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                               ),
                               SizedBox(height: context.rSpacing(16)),
 
+                              // Field 0: Task Category Selector (Tugas Kuliah vs Non-Kuliah)
+                              TaskCategorySelector(
+                                isCollegeTask: _isCollegeTask,
+                                onCategoryChanged: (isCollege) {
+                                  setState(() => _isCollegeTask = isCollege);
+                                },
+                              ),
+                              SizedBox(height: context.rSpacing(14)),
+
                               // Field 1: Task Title
                               _buildFieldLabel(context, 'Task Title'),
                               const SizedBox(height: 6),
@@ -248,15 +270,33 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                               ),
                               SizedBox(height: context.rSpacing(14)),
 
-                              // Field 2: Course
-                              _buildFieldLabel(context, 'Course'),
-                              const SizedBox(height: 6),
-                              _buildTextField(
-                                controller: _courseController,
-                                hintText:
-                                    'SSIF-04-REG • Software Testing & Implementa...',
+                              // Field 2: Course (Only visible if Tugas Kuliah)
+                              AnimatedCrossFade(
+                                duration: disableMotion
+                                    ? Duration.zero
+                                    : const Duration(milliseconds: 220),
+                                crossFadeState: _isCollegeTask
+                                    ? CrossFadeState.showFirst
+                                    : CrossFadeState.showSecond,
+                                firstChild: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildFieldLabel(context, 'Course'),
+                                    const SizedBox(height: 6),
+                                    _buildTextField(
+                                      controller: _courseController,
+                                      hintText:
+                                          'SSIF-04-REG • Software Testing & Implementa...',
+                                    ),
+                                    SizedBox(height: context.rSpacing(14)),
+                                  ],
+                                ),
+                                secondChild: const SizedBox(
+                                  width: double.infinity,
+                                  height: 0,
+                                ),
                               ),
-                              SizedBox(height: context.rSpacing(14)),
 
                               // Field 3: Submission Deadline (Date & Time)
                               SubmissionDeadlinePicker(

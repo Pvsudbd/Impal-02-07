@@ -103,8 +103,8 @@ class _TaskPageState extends State<TaskPage> {
   Future<void> _openEditTask(TaskItemModel task) async {
     final updatedTask = await Navigator.of(context).push<TaskItemModel>(
       MaterialPageRoute(
-        builder: (_) => CreateTaskPage(
-          existingTask: task,
+        builder: (_) => EditTaskPage(
+          task: task,
           userInitials: widget.userInitials,
           onTaskUpdated: (updated) {
             _repository.updateTask(updated);
