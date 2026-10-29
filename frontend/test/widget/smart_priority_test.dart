@@ -52,6 +52,12 @@ void main() {
       expect(find.text('#3 LOW PRIORITY'), findsOneWidget);
       expect(find.text('IMPAL LMS Quiz Preparation'), findsOneWidget);
       expect(find.text('28.6'), findsOneWidget);
+
+      // Verify "Inspect XAI Reason" text is removed as requested
+      expect(find.text('Inspect XAI Reason'), findsNothing);
+
+      // Verify Notification Bell is present to the left of avatar
+      expect(find.byIcon(Icons.notifications_none_rounded), findsOneWidget);
     });
 
     testWidgets('Filter chip narrows down displayed tasks', (tester) async {

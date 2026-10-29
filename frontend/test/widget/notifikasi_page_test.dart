@@ -5,6 +5,7 @@ import 'package:impal_smart_todolist/presentation/features/notifikasi/models/not
 import 'package:impal_smart_todolist/presentation/features/notifikasi/models/notification_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/notifikasi/notifikasi_page.dart';
 import 'package:impal_smart_todolist/presentation/features/notifikasi/widgets/notification_card.dart';
+import 'package:impal_smart_todolist/presentation/features/team/widgets/team_dashboard_header.dart';
 
 void main() {
   setUp(() {
@@ -141,6 +142,27 @@ void main() {
       // Badge '3 New' disappears
       expect(find.text('3 New'), findsNothing);
       expect(NotificationRepository.instance.unreadCount, 0);
+    });
+
+    testWidgets('TeamDashboardHeader renders notification bell to the left of avatar',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+
+      await tester.pumpWidget(
+        createWidgetForTesting(
+          const TeamDashboardHeader(
+            userName: 'Yoga Perkasa',
+            teamName: 'Kelompok - IMPAL',
+            teamCode: '7X29',
+            memberColors: [Colors.blue],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.notifications_none_rounded), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('YP'), findsOneWidget);
     });
   });
 }

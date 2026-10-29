@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive_context.dart';
+import '../notifikasi/widgets/notification_bell_button.dart';
+import '../profile/profile_page.dart';
 import 'detail_card_smart_priority.dart';
 import 'models/smart_priority_model.dart';
 import 'models/smart_priority_repository.dart';
@@ -122,26 +124,43 @@ class _SmartPriorityPageState extends State<SmartPriorityPage> {
                   ),
                   SizedBox(width: context.rSpacing(8)),
 
-                  // User Avatar
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.bgCard,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.borderSubtle,
-                        width: 1,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 13,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
+                  // Notification Bell Button (placed to the left of profile avatar)
+                  const NotificationBellButton(size: 40, iconSize: 19),
+                  SizedBox(width: context.rSpacing(8)),
+
+                  // User Avatar (tapping opens ProfilePage)
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(999),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ProfilePage(userName: widget.userName),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.bgCard,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.borderSubtle,
+                            width: 1,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          initials,
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 13,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
                   ),

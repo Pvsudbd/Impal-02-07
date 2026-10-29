@@ -13,7 +13,6 @@ class SmartEngineStatusCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.bgCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderSubtle, width: 1),
         boxShadow: const [
           BoxShadow(
             color: Color(0x22000000),

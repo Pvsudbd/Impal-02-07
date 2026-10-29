@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../common_widgets/pop_up_pemberitahuan.dart';
+import '../../notifikasi/widgets/notification_bell_button.dart';
+import '../../profile/profile_page.dart';
 
 /// Top header and team info bar for the team dashboard screen.
 class TeamDashboardHeader extends StatelessWidget {
@@ -115,24 +117,40 @@ class TeamDashboardHeader extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: AppColors.bgCard,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.borderSubtle, width: 1),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 13.5,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
+            const SizedBox(width: 10),
+            // Notification Bell Button (placed to the left of the profile avatar)
+            const NotificationBellButton(),
+            const SizedBox(width: 10),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ProfilePage(userName: userName),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppColors.bgCard,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.borderSubtle, width: 1),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13.5,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
                 ),
               ),
             ),

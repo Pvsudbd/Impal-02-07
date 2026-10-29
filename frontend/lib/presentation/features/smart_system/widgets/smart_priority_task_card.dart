@@ -21,12 +21,6 @@ class SmartPriorityTaskCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.bgCard,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: item.level == SmartPriorityLevel.high
-              ? AppColors.primary.withValues(alpha: 0.35)
-              : AppColors.borderSubtle,
-          width: 1,
-        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x22000000),
@@ -132,10 +126,6 @@ class SmartPriorityTaskCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.bgPrimary,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: AppColors.borderSubtle,
-                      width: 0.8,
-                    ),
                   ),
                   child: Row(
                     children: [
@@ -205,30 +195,6 @@ class SmartPriorityTaskCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-
-                SizedBox(height: context.rSpacing(10)),
-
-                // Bottom Hint: Tap to inspect XAI calculation
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Inspect XAI Reason',
-                      style: TextStyle(
-                        color: AppColors.primaryAccent,
-                        fontSize: context.rFont(11.5, min: 10, max: 13),
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(width: context.rSpacing(4)),
-                    Icon(
-                      Icons.arrow_forward_rounded,
-                      size: context.rIcon(14),
-                      color: AppColors.primaryAccent,
-                    ),
-                  ],
                 ),
               ],
             ),

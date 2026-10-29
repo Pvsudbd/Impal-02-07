@@ -418,10 +418,6 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         color: const Color(0xFF323846),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: const Color(0xFFFA6144).withValues(alpha: 0.35),
-          width: 1,
-        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x22000000),
