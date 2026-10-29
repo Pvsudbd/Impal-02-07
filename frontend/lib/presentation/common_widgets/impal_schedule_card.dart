@@ -14,6 +14,7 @@ class ImpalScheduleCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onToggleAlert;
   final Key? targetKey;
   final String? customTimeText;
 
@@ -26,6 +27,7 @@ class ImpalScheduleCard extends StatelessWidget {
     this.onTap,
     this.onEdit,
     this.onDelete,
+    this.onToggleAlert,
     this.targetKey,
     this.customTimeText,
   });
@@ -99,6 +101,23 @@ class ImpalScheduleCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
+                            // Alert Bell Indicator & Toggle Button
+                            GestureDetector(
+                              onTap: onToggleAlert,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                child: Icon(
+                                  schedule.isAlertEnabled
+                                      ? Icons.notifications_active_rounded
+                                      : Icons.notifications_off_outlined,
+                                  size: 15,
+                                  color: schedule.isAlertEnabled
+                                      ? const Color(0xFFFF7D65)
+                                      : const Color(0xFF8E95A5),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
                             _buildStatusPill(isOngoing, isOverdue),
                           ],
                         ),

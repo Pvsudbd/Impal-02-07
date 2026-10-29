@@ -1,40 +1,66 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
-import '../../../common_widgets/impal_time_picker_dialog.dart';
 import '../models/user_profile_model.dart';
+import 'deadline_alert_settings_modal.dart';
 
-/// Grouped settings cards for Reminders & Schedule preferences.
+/// Grouped settings cards for Reminders & Alerts preferences.
+/// Supports granular, independent alert configuration for:
+/// 1. Task Deadlines (Personal assignments & submissions)
+/// 2. Class Schedule (Lectures & laboratory sessions)
+/// 3. Team Tasks & Meetings (Group work & sync discussions)
 class ProfileSettingsGroup extends StatelessWidget {
   final UserProfileModel profile;
   final ValueChanged<bool>? onToggleDeadlineAlerts;
-  final ValueChanged<bool>? onToggleSoundVibration;
-  final ValueChanged<String>? onBriefingTimeChanged;
+  final void Function({
+    required bool enabled,
+    required List<String> timings,
+    required AlertSoundVibrationMode mode,
+  })? onSaveAlertSettings;
+  final void Function({
+    required AlertCategoryType category,
+    required bool enabled,
+    required List<String> timings,
+    required AlertSoundVibrationMode mode,
+  })? onSaveCategoryAlertSettings;
 
   const ProfileSettingsGroup({
     super.key,
     required this.profile,
     this.onToggleDeadlineAlerts,
-    this.onToggleSoundVibration,
-    this.onBriefingTimeChanged,
+    this.onSaveAlertSettings,
+    this.onSaveCategoryAlertSettings,
   });
 
-  Future<void> _pickBriefingTime(BuildContext context) async {
-    // Parse current time string (e.g. '07:00 WIB')
-    final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(profile.dailyMorningBriefingTime);
-    final initialHour = match != null ? int.tryParse(match.group(1)!) ?? 7 : 7;
-    final initialMinute = match != null ? int.tryParse(match.group(2)!) ?? 0 : 0;
-
-    final picked = await showImpalTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: initialHour, minute: initialMinute),
+  void _openAlertSettingsModal(BuildContext context, AlertCategoryType category) {
+    DeadlineAlertSettingsModal.show(
+      context,
+      profile: profile,
+      category: category,
+      onSave: ({required enabled, required timings, required mode}) {
+        if (onSaveCategoryAlertSettings != null) {
+          onSaveCategoryAlertSettings!(
+            category: category,
+            enabled: enabled,
+            timings: timings,
+            mode: mode,
+          );
+        } else if (onSaveAlertSettings != null && category == AlertCategoryType.taskDeadline) {
+          onSaveAlertSettings!(
+            enabled: enabled,
+            timings: timings,
+            mode: mode,
+          );
+        } else {
+          UserProfileRepository().updateCategoryAlertSettings(
+            category: category,
+            enabled: enabled,
+            timings: timings,
+            mode: mode,
+          );
+        }
+      },
     );
-
-    if (picked != null && onBriefingTimeChanged != null) {
-      final h = picked.hour.toString().padLeft(2, '0');
-      final m = picked.minute.toString().padLeft(2, '0');
-      onBriefingTimeChanged!('$h:$m WIB');
-    }
   }
 
   @override
@@ -55,173 +81,152 @@ class ProfileSettingsGroup extends StatelessWidget {
         ),
         SizedBox(height: context.rSpacing(10)),
 
-        // Grouped Settings Container
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.bgCard,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: const Color(0xFF434A59).withValues(alpha: 0.5),
-              width: 1,
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x22000000),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // 1. Deadline Alerts
-              _buildSettingTile(
-                context,
-                icon: Icons.notifications_none_rounded,
-                iconBgColor: const Color(0xFFFF5E4D).withValues(alpha: 0.18),
-                iconColor: const Color(0xFFFF7D65),
-                title: 'Deadline Alerts',
-                subtitle: 'Automatic alarm at H-3, H-1 & Day H',
-                trailing: Transform.scale(
-                  scale: 0.85,
-                  child: Switch(
-                    value: profile.deadlineAlertsEnabled,
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: const Color(0xFF10B981),
-                    inactiveThumbColor: Colors.white70,
-                    inactiveTrackColor: const Color(0xFF434A59),
-                    onChanged: onToggleDeadlineAlerts,
-                  ),
-                ),
-              ),
+        // Category 1: Task Deadlines
+        _buildCategoryCard(
+          context,
+          category: AlertCategoryType.taskDeadline,
+          config: profile.taskDeadlineAlerts,
+        ),
+        SizedBox(height: context.rSpacing(10)),
 
-              const Divider(height: 1, color: Color(0xFF383F4D), indent: 16, endIndent: 16),
+        // Category 2: Class Schedule
+        _buildCategoryCard(
+          context,
+          category: AlertCategoryType.classSchedule,
+          config: profile.classScheduleAlerts,
+        ),
+        SizedBox(height: context.rSpacing(10)),
 
-              // 2. Daily Morning Briefing
-              _buildSettingTile(
-                context,
-                icon: Icons.access_time_rounded,
-                iconBgColor: const Color(0xFF5B93FF).withValues(alpha: 0.18),
-                iconColor: const Color(0xFF5B93FF),
-                title: 'Daily Morning Briefing',
-                subtitle: "Summary of today's classes & urgent tasks",
-                trailing: InkWell(
-                  onTap: () => _pickBriefingTime(context),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          profile.dailyMorningBriefingTime,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: context.rFont(12.5, min: 11, max: 14),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 16,
-                          color: AppColors.textMuted,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              const Divider(height: 1, color: Color(0xFF383F4D), indent: 16, endIndent: 16),
-
-              // 3. Sound & Vibration
-              _buildSettingTile(
-                context,
-                icon: Icons.volume_up_outlined,
-                iconBgColor: const Color(0xFFFBBF24).withValues(alpha: 0.18),
-                iconColor: const Color(0xFFFBBF24),
-                title: 'Sound & Vibration',
-                subtitle: 'Use system default notification ringtone',
-                trailing: Transform.scale(
-                  scale: 0.85,
-                  child: Switch(
-                    value: profile.soundVibrationEnabled,
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: const Color(0xFF10B981),
-                    inactiveThumbColor: Colors.white70,
-                    inactiveTrackColor: const Color(0xFF434A59),
-                    onChanged: onToggleSoundVibration,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        // Category 3: Team Tasks & Meetings
+        _buildCategoryCard(
+          context,
+          category: AlertCategoryType.teamMeeting,
+          config: profile.teamMeetingAlerts,
         ),
       ],
     );
   }
 
-  Widget _buildSettingTile(
+  Widget _buildCategoryCard(
     BuildContext context, {
-    required IconData icon,
-    required Color iconBgColor,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required Widget trailing,
+    required AlertCategoryType category,
+    required CategoryAlertConfig config,
   }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: context.rSpacing(14),
-        vertical: context.rSpacing(12),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: iconBgColor,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Icon(icon, size: 18, color: iconColor),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFF434A59).withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
-          SizedBox(width: context.rSpacing(12)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openAlertSettingsModal(context, category),
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: context.rSpacing(14),
+              vertical: context.rSpacing(13),
+            ),
+            child: Row(
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: context.rFont(13.5, min: 12, max: 15),
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
+                // Leading Icon
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: config.enabled
+                        ? category.accentColor.withValues(alpha: 0.18)
+                        : const Color(0xFF475569).withValues(alpha: 0.25),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    config.enabled
+                        ? category.icon
+                        : Icons.notifications_off_outlined,
+                    size: 20,
+                    color: config.enabled
+                        ? category.accentColor
+                        : const Color(0xFF94A3B8),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: context.rFont(11, min: 10, max: 12.5),
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
+                SizedBox(width: context.rSpacing(12)),
+
+                // Title & Dynamic Summary Subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        category.label,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: context.rFont(13.5, min: 12, max: 15),
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        config.summary,
+                        style: TextStyle(
+                          color: config.enabled
+                              ? AppColors.primaryAccent
+                              : AppColors.textMuted,
+                          fontSize: context.rFont(11, min: 10, max: 12.5),
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                const SizedBox(width: 8),
+
+                // Category Switch
+                Transform.scale(
+                  scale: 0.85,
+                  child: Switch(
+                    value: config.enabled,
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: const Color(0xFF10B981),
+                    inactiveThumbColor: Colors.white70,
+                    inactiveTrackColor: const Color(0xFF434A59),
+                    onChanged: (val) {
+                      UserProfileRepository().toggleCategoryAlert(category, val);
+                      if (category == AlertCategoryType.taskDeadline) {
+                        onToggleDeadlineAlerts?.call(val);
+                      }
+                    },
+                  ),
+                ),
+
+                const SizedBox(width: 2),
+
+                // Chevron indicating modal configurability
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textMuted,
+                  size: 22,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          trailing,
-        ],
+        ),
       ),
     );
   }

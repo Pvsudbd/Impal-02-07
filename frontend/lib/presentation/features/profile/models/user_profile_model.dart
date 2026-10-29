@@ -1,5 +1,154 @@
 import 'package:flutter/material.dart';
 
+/// Output mode for deadline alert notifications.
+enum AlertSoundVibrationMode {
+  soundAndVibrate,
+  soundOnly,
+  vibrationOnly,
+  silent,
+}
+
+extension AlertSoundVibrationModeX on AlertSoundVibrationMode {
+  String get label {
+    switch (this) {
+      case AlertSoundVibrationMode.soundAndVibrate:
+        return 'Sound & Vibration';
+      case AlertSoundVibrationMode.soundOnly:
+        return 'Sound Only';
+      case AlertSoundVibrationMode.vibrationOnly:
+        return 'Vibration Only';
+      case AlertSoundVibrationMode.silent:
+        return 'Silent Notification';
+    }
+  }
+
+  String get shortLabel {
+    switch (this) {
+      case AlertSoundVibrationMode.soundAndVibrate:
+        return 'Sound & Vibrate';
+      case AlertSoundVibrationMode.soundOnly:
+        return 'Sound Only';
+      case AlertSoundVibrationMode.vibrationOnly:
+        return 'Vibrate Only';
+      case AlertSoundVibrationMode.silent:
+        return 'Silent';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case AlertSoundVibrationMode.soundAndVibrate:
+        return 'Ringtone sound with device haptic vibration';
+      case AlertSoundVibrationMode.soundOnly:
+        return 'Audible alert ringtone without device vibration';
+      case AlertSoundVibrationMode.vibrationOnly:
+        return 'Vibration only without audible ringtone (ideal for classes)';
+      case AlertSoundVibrationMode.silent:
+        return 'Pop-up notification on screen without sound or vibration';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case AlertSoundVibrationMode.soundAndVibrate:
+        return Icons.volume_up_rounded;
+      case AlertSoundVibrationMode.soundOnly:
+        return Icons.volume_down_rounded;
+      case AlertSoundVibrationMode.vibrationOnly:
+        return Icons.vibration_rounded;
+      case AlertSoundVibrationMode.silent:
+        return Icons.notifications_off_outlined;
+    }
+  }
+}
+
+/// Distinct category of alerts configurable by the user.
+enum AlertCategoryType {
+  taskDeadline,
+  classSchedule,
+  teamMeeting;
+
+  String get label {
+    switch (this) {
+      case AlertCategoryType.taskDeadline:
+        return 'Task Deadlines';
+      case AlertCategoryType.classSchedule:
+        return 'Class Schedule';
+      case AlertCategoryType.teamMeeting:
+        return 'Team Tasks & Meetings';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case AlertCategoryType.taskDeadline:
+        return 'Personal assignment & project submissions';
+      case AlertCategoryType.classSchedule:
+        return 'Campus lectures & laboratory classes';
+      case AlertCategoryType.teamMeeting:
+        return 'Group discussions, voice calls & task syncs';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case AlertCategoryType.taskDeadline:
+        return Icons.assignment_late_outlined;
+      case AlertCategoryType.classSchedule:
+        return Icons.school_outlined;
+      case AlertCategoryType.teamMeeting:
+        return Icons.groups_outlined;
+    }
+  }
+
+  Color get accentColor {
+    switch (this) {
+      case AlertCategoryType.taskDeadline:
+        return const Color(0xFFFF7D65); // Coral
+      case AlertCategoryType.classSchedule:
+        return const Color(0xFF5B93FF); // Sky Blue
+      case AlertCategoryType.teamMeeting:
+        return const Color(0xFFFBBF24); // Warm Amber
+    }
+  }
+}
+
+/// Alert configuration for a specific activity category.
+class CategoryAlertConfig {
+  final bool enabled;
+  final List<String> timings;
+  final AlertSoundVibrationMode soundMode;
+
+  const CategoryAlertConfig({
+    this.enabled = true,
+    this.timings = const ['H-1 (24 Hours)', '1 Hour'],
+    this.soundMode = AlertSoundVibrationMode.soundAndVibrate,
+  });
+
+  CategoryAlertConfig copyWith({
+    bool? enabled,
+    List<String>? timings,
+    AlertSoundVibrationMode? soundMode,
+  }) {
+    return CategoryAlertConfig(
+      enabled: enabled ?? this.enabled,
+      timings: timings ?? this.timings,
+      soundMode: soundMode ?? this.soundMode,
+    );
+  }
+
+  String get summary {
+    if (!enabled) return 'Muted • Tap to configure';
+    final timingParts = timings.isNotEmpty
+        ? timings.map((t) {
+            final cleaned = t.replaceAll(RegExp(r'\(.*?\)'), '').trim();
+            return cleaned.isEmpty ? t : cleaned;
+          }).join(', ')
+        : 'Day H';
+    return '$timingParts • ${soundMode.shortLabel}';
+  }
+}
+
 /// Domain model representing the user's academic profile and app settings.
 class UserProfileModel {
   final String fullName;
@@ -20,8 +169,10 @@ class UserProfileModel {
   final int sksCount;
   final int onTimeRatePercent;
 
-  // Reminders & Schedule Settings
-  final bool deadlineAlertsEnabled;
+  // Reminders & Schedule Settings (Multi-Category Alert System)
+  final CategoryAlertConfig taskDeadlineAlerts;
+  final CategoryAlertConfig classScheduleAlerts;
+  final CategoryAlertConfig teamMeetingAlerts;
   final String dailyMorningBriefingTime;
   final bool soundVibrationEnabled;
 
@@ -45,12 +196,43 @@ class UserProfileModel {
     this.courseCount = 6,
     this.sksCount = 19,
     this.onTimeRatePercent = 94,
-    this.deadlineAlertsEnabled = true,
+    this.taskDeadlineAlerts = const CategoryAlertConfig(
+      enabled: true,
+      timings: ['H-1 (24 Hours)', '1 Hour'],
+      soundMode: AlertSoundVibrationMode.vibrationOnly,
+    ),
+    this.classScheduleAlerts = const CategoryAlertConfig(
+      enabled: true,
+      timings: ['30 Minutes', '15 Minutes'],
+      soundMode: AlertSoundVibrationMode.soundAndVibrate,
+    ),
+    this.teamMeetingAlerts = const CategoryAlertConfig(
+      enabled: true,
+      timings: ['1 Hour', '15 Minutes'],
+      soundMode: AlertSoundVibrationMode.soundOnly,
+    ),
     this.dailyMorningBriefingTime = '07:00 WIB',
     this.soundVibrationEnabled = true,
     this.isFuzzyModelActive = true,
     this.scoreExplainabilityEnabled = true,
   });
+
+  // Backward compatibility getters
+  bool get deadlineAlertsEnabled => taskDeadlineAlerts.enabled;
+  List<String> get deadlineAlertTimings => taskDeadlineAlerts.timings;
+  AlertSoundVibrationMode get alertSoundMode => taskDeadlineAlerts.soundMode;
+  String get deadlineAlertsSummary => taskDeadlineAlerts.summary;
+
+  CategoryAlertConfig configFor(AlertCategoryType category) {
+    switch (category) {
+      case AlertCategoryType.taskDeadline:
+        return taskDeadlineAlerts;
+      case AlertCategoryType.classSchedule:
+        return classScheduleAlerts;
+      case AlertCategoryType.teamMeeting:
+        return teamMeetingAlerts;
+    }
+  }
 
   /// Derives initials from the full name if not custom set.
   String get initials {
@@ -78,12 +260,26 @@ class UserProfileModel {
     int? courseCount,
     int? sksCount,
     int? onTimeRatePercent,
+    CategoryAlertConfig? taskDeadlineAlerts,
+    CategoryAlertConfig? classScheduleAlerts,
+    CategoryAlertConfig? teamMeetingAlerts,
     bool? deadlineAlertsEnabled,
+    List<String>? deadlineAlertTimings,
+    AlertSoundVibrationMode? alertSoundMode,
     String? dailyMorningBriefingTime,
     bool? soundVibrationEnabled,
     bool? isFuzzyModelActive,
     bool? scoreExplainabilityEnabled,
   }) {
+    CategoryAlertConfig resolvedTaskDeadline = taskDeadlineAlerts ?? this.taskDeadlineAlerts;
+    if (deadlineAlertsEnabled != null || deadlineAlertTimings != null || alertSoundMode != null) {
+      resolvedTaskDeadline = resolvedTaskDeadline.copyWith(
+        enabled: deadlineAlertsEnabled,
+        timings: deadlineAlertTimings,
+        soundMode: alertSoundMode,
+      );
+    }
+
     return UserProfileModel(
       fullName: fullName ?? this.fullName,
       studentId: studentId ?? this.studentId,
@@ -100,7 +296,9 @@ class UserProfileModel {
       courseCount: courseCount ?? this.courseCount,
       sksCount: sksCount ?? this.sksCount,
       onTimeRatePercent: onTimeRatePercent ?? this.onTimeRatePercent,
-      deadlineAlertsEnabled: deadlineAlertsEnabled ?? this.deadlineAlertsEnabled,
+      taskDeadlineAlerts: resolvedTaskDeadline,
+      classScheduleAlerts: classScheduleAlerts ?? this.classScheduleAlerts,
+      teamMeetingAlerts: teamMeetingAlerts ?? this.teamMeetingAlerts,
       dailyMorningBriefingTime:
           dailyMorningBriefingTime ?? this.dailyMorningBriefingTime,
       soundVibrationEnabled:
@@ -139,9 +337,67 @@ class UserProfileRepository with ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleDeadlineAlerts(bool value) {
-    _profile = _profile.copyWith(deadlineAlertsEnabled: value);
+  void updateCategoryAlertSettings({
+    required AlertCategoryType category,
+    required bool enabled,
+    required List<String> timings,
+    required AlertSoundVibrationMode mode,
+  }) {
+    final updatedConfig = CategoryAlertConfig(
+      enabled: enabled,
+      timings: timings,
+      soundMode: mode,
+    );
+    switch (category) {
+      case AlertCategoryType.taskDeadline:
+        _profile = _profile.copyWith(taskDeadlineAlerts: updatedConfig);
+        break;
+      case AlertCategoryType.classSchedule:
+        _profile = _profile.copyWith(classScheduleAlerts: updatedConfig);
+        break;
+      case AlertCategoryType.teamMeeting:
+        _profile = _profile.copyWith(teamMeetingAlerts: updatedConfig);
+        break;
+    }
     notifyListeners();
+  }
+
+  void toggleCategoryAlert(AlertCategoryType category, bool enabled) {
+    switch (category) {
+      case AlertCategoryType.taskDeadline:
+        _profile = _profile.copyWith(
+          taskDeadlineAlerts: _profile.taskDeadlineAlerts.copyWith(enabled: enabled),
+        );
+        break;
+      case AlertCategoryType.classSchedule:
+        _profile = _profile.copyWith(
+          classScheduleAlerts: _profile.classScheduleAlerts.copyWith(enabled: enabled),
+        );
+        break;
+      case AlertCategoryType.teamMeeting:
+        _profile = _profile.copyWith(
+          teamMeetingAlerts: _profile.teamMeetingAlerts.copyWith(enabled: enabled),
+        );
+        break;
+    }
+    notifyListeners();
+  }
+
+  void toggleDeadlineAlerts(bool value) {
+    toggleCategoryAlert(AlertCategoryType.taskDeadline, value);
+  }
+
+  void updateDeadlineAlertSettings({
+    required bool enabled,
+    required List<String> timings,
+    required AlertSoundVibrationMode mode,
+  }) {
+    updateCategoryAlertSettings(
+      category: AlertCategoryType.taskDeadline,
+      enabled: enabled,
+      timings: timings,
+      mode: mode,
+    );
   }
 
   void toggleSoundVibration(bool value) {

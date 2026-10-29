@@ -255,6 +255,14 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          if (!task.isAlertEnabled) ...[
+                            const Icon(
+                              Icons.notifications_off_outlined,
+                              size: 13,
+                              color: AppColors.textMuted,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
                           _buildPriorityBadge(task.priority),
                           const SizedBox(width: 4),
                           _buildDurationBadge(task),

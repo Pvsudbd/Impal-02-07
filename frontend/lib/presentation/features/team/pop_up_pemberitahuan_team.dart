@@ -7,6 +7,25 @@ export '../../common_widgets/pop_up_pemberitahuan.dart';
 /// Specialized PopUp Pemberitahuan helpers for Team operations
 /// follows the exact IMPAL notification template (Positive -> Green, Negative -> Orange)
 class PopUpPemberitahuanTeam {
+  /// General show delegate
+  static void show(
+    BuildContext context, {
+    required String title,
+    required String message,
+    IconData icon = Icons.check_circle_outline_rounded,
+    Color iconBgColor = PopUpPemberitahuan.positiveColor,
+    Duration duration = const Duration(milliseconds: 2800),
+  }) {
+    PopUpPemberitahuan.show(
+      context,
+      title: title,
+      message: message,
+      icon: icon,
+      iconBgColor: iconBgColor,
+      duration: duration,
+    );
+  }
+
   /// Notifikasi ketika invite code berhasil disalin ke clipboard
   static void codeCopied(BuildContext context, {String? code}) {
     PopUpPemberitahuan.codeCopied(context, code: code);

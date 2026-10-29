@@ -347,15 +347,19 @@ class _ProfilePageState extends State<ProfilePage> {
               ProfileStatsRow(profile: profile),
               SizedBox(height: context.rSpacing(20)),
 
-              // 4. Reminders & Schedule Group
+              // 4. Reminders & Alerts Group (Unified Master Alert Setting)
               ProfileSettingsGroup(
                 profile: profile,
                 onToggleDeadlineAlerts: (val) =>
                     _repo.toggleDeadlineAlerts(val),
-                onToggleSoundVibration: (val) =>
-                    _repo.toggleSoundVibration(val),
-                onBriefingTimeChanged: (val) =>
-                    _repo.updateBriefingTime(val),
+                onSaveAlertSettings: (
+                    {required enabled, required timings, required mode}) {
+                  _repo.updateDeadlineAlertSettings(
+                    enabled: enabled,
+                    timings: timings,
+                    mode: mode,
+                  );
+                },
               ),
               SizedBox(height: context.rSpacing(18)),
 

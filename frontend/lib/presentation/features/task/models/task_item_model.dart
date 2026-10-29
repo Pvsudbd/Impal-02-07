@@ -78,6 +78,7 @@ class TaskItemModel {
   final bool isAutomaticWeight;
   final bool isAssignedToUser;
   final bool isCollegeTask;
+  final bool isAlertEnabled;
 
   const TaskItemModel({
     required this.id,
@@ -102,6 +103,7 @@ class TaskItemModel {
     this.isAutomaticWeight = true,
     this.isAssignedToUser = true,
     this.isCollegeTask = true,
+    this.isAlertEnabled = true,
   });
 
   String get priorityLabel {
@@ -165,6 +167,7 @@ class TaskItemModel {
     bool? isAutomaticWeight,
     bool? isAssignedToUser,
     bool? isCollegeTask,
+    bool? isAlertEnabled,
   }) {
     return TaskItemModel(
       id: id ?? this.id,
@@ -190,6 +193,7 @@ class TaskItemModel {
       isAutomaticWeight: isAutomaticWeight ?? this.isAutomaticWeight,
       isAssignedToUser: isAssignedToUser ?? this.isAssignedToUser,
       isCollegeTask: isCollegeTask ?? this.isCollegeTask,
+      isAlertEnabled: isAlertEnabled ?? this.isAlertEnabled,
     );
   }
 

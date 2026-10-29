@@ -4,6 +4,7 @@ import '../../../../core/utils/responsive_context.dart';
 import '../../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
+import '../profile/models/user_profile_model.dart';
 import '../team/widgets/submission_deadline_picker.dart';
 import 'edit_task.dart';
 import 'models/task_item_model.dart';
@@ -52,6 +53,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   late TimeOfDay _selectedTime;
   late TaskPriorityLevel _selectedPriority;
   late bool _isAutomaticWeight;
+  late bool _isAlertEnabled;
   bool _isSubmitting = false;
   final int _currentTab = 1; // Task Tab
 
@@ -70,6 +72,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       _selectedTime = _parseTimeOfDay(task.formattedDeadline);
       _selectedPriority = task.priority;
       _isAutomaticWeight = task.isAutomaticWeight;
+      _isAlertEnabled = task.isAlertEnabled;
     } else {
       _isCollegeTask = true;
       _titleController = TextEditingController();
@@ -81,6 +84,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       _selectedTime = const TimeOfDay(hour: 23, minute: 59);
       _selectedPriority = TaskPriorityLevel.high;
       _isAutomaticWeight = true;
+      _isAlertEnabled = true;
     }
   }
 
@@ -144,6 +148,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
         priority: _selectedPriority,
         isAutomaticWeight: _isAutomaticWeight,
         isCollegeTask: _isCollegeTask,
+        isAlertEnabled: _isAlertEnabled,
       );
 
       widget.onTaskUpdated?.call(updated);
@@ -165,6 +170,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
         durationBadge: _selectedPriority == TaskPriorityLevel.high ? '12h' : '24h',
         isAutomaticWeight: _isAutomaticWeight,
         isCollegeTask: _isCollegeTask,
+        isAlertEnabled: _isAlertEnabled,
         subtitle: 'Personal & Team task',
         tags: [
           TaskTagModel(
@@ -234,15 +240,105 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Card Title
-                              Text(
-                                _isEditing ? 'Edit Task' : 'Add New Task',
-                                style: TextStyle(
-                                  color: AppColors.textWhite,
-                                  fontSize: context.rFont(18, min: 16, max: 22),
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w700,
-                                ),
+                              // Card Title & Alert Bell Toggle Button
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _isEditing ? 'Edit Task' : 'Add New Task',
+                                    style: TextStyle(
+                                      color: AppColors.textWhite,
+                                      fontSize:
+                                          context.rFont(18, min: 16, max: 22),
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(() => _isAlertEnabled =
+                                            !_isAlertEnabled);
+                                        final categoryConfig =
+                                            UserProfileRepository()
+                                                .profile
+                                                .taskDeadlineAlerts;
+                                        PopUpPemberitahuan.show(
+                                          context,
+                                          title: _isAlertEnabled
+                                              ? 'Alert Active'
+                                              : 'Alert Muted',
+                                          message: _isAlertEnabled
+                                              ? 'Task deadline alerts enabled (Following Profile: ${categoryConfig.summary}).'
+                                              : 'Alerts muted for this task.',
+                                          icon: _isAlertEnabled
+                                              ? Icons.notifications_active_rounded
+                                              : Icons
+                                                  .notifications_off_outlined,
+                                          iconBgColor: _isAlertEnabled
+                                              ? PopUpPemberitahuan.positiveColor
+                                              : PopUpPemberitahuan
+                                                  .neutralColor,
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 5,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _isAlertEnabled
+                                              ? const Color(0xFFFF5E4D)
+                                                  .withValues(alpha: 0.18)
+                                              : const Color(0xFF334155)
+                                                  .withValues(alpha: 0.35),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                          border: Border.all(
+                                            color: _isAlertEnabled
+                                                ? const Color(0xFFFF7D65)
+                                                : const Color(0xFF475569),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              _isAlertEnabled
+                                                  ? Icons
+                                                      .notifications_active_rounded
+                                                  : Icons
+                                                      .notifications_off_outlined,
+                                              size: 15,
+                                              color: _isAlertEnabled
+                                                  ? const Color(0xFFFF7D65)
+                                                  : const Color(0xFF94A3B8),
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              _isAlertEnabled
+                                                  ? 'Alert On'
+                                                  : 'Alert Off',
+                                              style: TextStyle(
+                                                color: _isAlertEnabled
+                                                    ? const Color(0xFFFF7D65)
+                                                    : const Color(0xFF94A3B8),
+                                                fontSize: context.rFont(11.5,
+                                                    min: 10, max: 13),
+                                                fontFamily: 'Inter',
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               SizedBox(height: context.rSpacing(16)),
 

@@ -14,6 +14,7 @@ class ScheduleModel {
   final String timeZone; // 'WIB'
   final String? notes;
   final bool repeat;
+  final bool isAlertEnabled;
 
   const ScheduleModel({
     required this.id,
@@ -29,6 +30,7 @@ class ScheduleModel {
     this.timeZone = 'WIB',
     this.notes,
     this.repeat = false,
+    this.isAlertEnabled = true,
   });
 
   /// Automatically computes the schedule status ('Ongoing', 'Upcoming', 'Overdue')
@@ -152,6 +154,7 @@ class ScheduleModel {
     String? timeZone,
     String? notes,
     bool? repeat,
+    bool? isAlertEnabled,
   }) {
     return ScheduleModel(
       id: id ?? this.id,
@@ -167,6 +170,7 @@ class ScheduleModel {
       timeZone: timeZone ?? this.timeZone,
       notes: notes ?? this.notes,
       repeat: repeat ?? this.repeat,
+      isAlertEnabled: isAlertEnabled ?? this.isAlertEnabled,
     );
   }
 

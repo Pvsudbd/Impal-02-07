@@ -4,6 +4,7 @@ import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/impal_schedule_card.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
+import '../profile/models/user_profile_model.dart';
 import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
 import 'pop_up_konfirmasi_delete.dart';
@@ -475,6 +476,29 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
             targetKey: (group.items[i].id == todayOngoingId) ? _todayTargetKey : null,
             onEdit: () => _openEditSchedule(group.items[i]),
             onDelete: () => _deleteSchedule(group.items[i]),
+            onToggleAlert: () {
+              final item = group.items[i];
+              final updated = item.copyWith(isAlertEnabled: !item.isAlertEnabled);
+              ScheduleRepository().updateSchedule(updated);
+              final isClass = item.type.toLowerCase().contains('lecture') || item.type.toLowerCase().contains('class');
+              final categoryConfig = isClass
+                  ? UserProfileRepository().profile.classScheduleAlerts
+                  : UserProfileRepository().profile.teamMeetingAlerts;
+              final categoryName = isClass ? 'Class Schedule' : 'Team Meeting';
+              PopUpPemberitahuan.show(
+                context,
+                title: updated.isAlertEnabled ? '$categoryName Alert Active' : '$categoryName Alert Muted',
+                message: updated.isAlertEnabled
+                    ? 'Alerts active for this schedule (Following Profile: ${categoryConfig.summary}).'
+                    : 'Alerts muted for this schedule.',
+                icon: updated.isAlertEnabled
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_off_outlined,
+                iconBgColor: updated.isAlertEnabled
+                    ? PopUpPemberitahuan.positiveColor
+                    : PopUpPemberitahuan.neutralColor,
+              );
+            },
           ),
       ],
     );

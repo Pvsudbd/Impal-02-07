@@ -27,6 +27,7 @@ class PopUpPemberitahuan extends StatefulWidget {
   // Standard color constants based on user rules
   static const Color positiveColor = Color(0xFF10B981); // Hijau untuk hal positif
   static const Color negativeColor = Color(0xFFFA6144); // Orange untuk hal negatif/warning
+  static const Color neutralColor = Color(0xFF64748B); // Abu-abu netral untuk muted/info
 
   static OverlayEntry? _activeEntry;
   static _PopUpPemberitahuanWidgetState? _activeState;

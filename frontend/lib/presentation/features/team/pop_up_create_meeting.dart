@@ -5,6 +5,7 @@ import '../../common_widgets/impal_time_picker_dialog.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../schedule/models/schedule_model.dart';
 import '../schedule/models/schedule_repository.dart';
+import '../profile/models/user_profile_model.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
 import '../schedule/widgets/team_meeting_autocomplete.dart';
 
@@ -110,6 +111,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
   late bool _repeatWeekly;
+  late bool _isAlertEnabled;
 
   bool get isEdit => widget.existingSchedule != null;
 
@@ -117,6 +119,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
   void initState() {
     super.initState();
     final existing = widget.existingSchedule;
+    _isAlertEnabled = existing?.isAlertEnabled ?? true;
     if (existing != null) {
       _nameController = TextEditingController(text: existing.title);
       _locationController = TextEditingController(text: existing.location ?? '');
@@ -278,6 +281,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
         timeEnd: _formatTime(_endTime).replaceAll(' WIB', ''),
         repeat: _repeatWeekly,
         teamName: teamNameValue,
+        isAlertEnabled: _isAlertEnabled,
       );
 
       await ScheduleRepository().updateSchedule(updated);
@@ -302,6 +306,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
         timeEnd: _formatTime(_endTime).replaceAll(' WIB', ''),
         repeat: _repeatWeekly,
         teamName: teamNameValue,
+        isAlertEnabled: _isAlertEnabled,
       );
 
       await ScheduleRepository().addSchedule(newSchedule);
@@ -354,6 +359,35 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            tooltip: _isAlertEnabled ? 'Alert Active' : 'Alert Muted',
+            icon: Icon(
+              _isAlertEnabled
+                  ? Icons.notifications_active_rounded
+                  : Icons.notifications_off_outlined,
+              color: _isAlertEnabled
+                  ? const Color(0xFFFBBF24)
+                  : AppColors.textMuted,
+            ),
+            onPressed: () {
+              setState(() => _isAlertEnabled = !_isAlertEnabled);
+              final categoryConfig =
+                  UserProfileRepository().profile.teamMeetingAlerts;
+              PopUpPemberitahuan.show(
+                context,
+                title: _isAlertEnabled ? 'Meeting Alert Active' : 'Meeting Alert Muted',
+                message: _isAlertEnabled
+                    ? 'Meeting alerts enabled (Following Profile: ${categoryConfig.summary}).'
+                    : 'Alerts muted for this meeting.',
+                icon: _isAlertEnabled
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_off_outlined,
+                iconBgColor: _isAlertEnabled
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFF475569),
+              );
+            },
+          ),
           if (isEdit) ...[
             IconButton(
               key: const ValueKey('delete_meeting_button'),

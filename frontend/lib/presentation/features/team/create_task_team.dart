@@ -4,6 +4,7 @@ import '../../../../core/utils/responsive_context.dart';
 import '../../../../core/utils/top_toast.dart';
 import '../../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
+import '../profile/models/user_profile_model.dart';
 import 'models/team_member_model.dart';
 import 'models/team_task_model.dart';
 import 'pop_up_pemberitahuan_team.dart';
@@ -56,6 +57,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
   late List<TeamMemberModel> _selectedMembers;
+  late bool _isAlertEnabled;
   bool _isSubmitting = false;
   int _currentTab = 1; // Checklist / Task tab active matching design
 
@@ -65,6 +67,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
   void initState() {
     super.initState();
     final task = widget.existingTask;
+    _isAlertEnabled = task?.isAlertEnabled ?? true;
     if (task != null) {
       _taskNameController = TextEditingController(text: task.title);
       _descriptionController = TextEditingController(text: task.description ?? '');
@@ -158,6 +161,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         description: _descriptionController.text.trim(),
         deadline: _selectedDate,
         dueBadge: dueBadgeStr,
+        isAlertEnabled: _isAlertEnabled,
       );
 
       if (mounted) {
@@ -181,6 +185,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         description: _descriptionController.text.trim(),
         deadline: _selectedDate,
         dueBadge: dueBadgeStr,
+        isAlertEnabled: _isAlertEnabled,
       );
 
       if (mounted) {
@@ -249,16 +254,91 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Card Title (Dynamic: "Edit Task" or "Create Task")
-                        Text(
-                          _isEditing ? 'Edit Task' : 'Create Task',
-                          style: TextStyle(
-                            color: AppColors.textWhite,
-                            fontSize: context.rFont(22, min: 20, max: 26),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.1,
-                          ),
+                        // Card Title & Alert Bell Toggle Button
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _isEditing ? 'Edit Task' : 'Create Task',
+                              style: TextStyle(
+                                color: AppColors.textWhite,
+                                fontSize: context.rFont(22, min: 20, max: 26),
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.1,
+                              ),
+                            ),
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  setState(() => _isAlertEnabled = !_isAlertEnabled);
+                                  final categoryConfig =
+                                      UserProfileRepository().profile.teamMeetingAlerts;
+                                  PopUpPemberitahuanTeam.show(
+                                    context,
+                                    title: _isAlertEnabled
+                                        ? 'Team Alert Active'
+                                        : 'Team Alert Muted',
+                                    message: _isAlertEnabled
+                                        ? 'Team task alerts enabled (Following Profile: ${categoryConfig.summary}).'
+                                        : 'Alerts muted for this team task.',
+                                    icon: _isAlertEnabled
+                                        ? Icons.notifications_active_rounded
+                                        : Icons.notifications_off_outlined,
+                                    iconBgColor: _isAlertEnabled
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFF475569),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _isAlertEnabled
+                                        ? const Color(0xFFFBBF24).withValues(alpha: 0.18)
+                                        : const Color(0xFF334155).withValues(alpha: 0.35),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: _isAlertEnabled
+                                          ? const Color(0xFFFBBF24)
+                                          : const Color(0xFF475569),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _isAlertEnabled
+                                            ? Icons.notifications_active_rounded
+                                            : Icons.notifications_off_outlined,
+                                        size: 15,
+                                        color: _isAlertEnabled
+                                            ? const Color(0xFFFBBF24)
+                                            : const Color(0xFF94A3B8),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        _isAlertEnabled ? 'Alert On' : 'Alert Off',
+                                        style: TextStyle(
+                                          color: _isAlertEnabled
+                                              ? const Color(0xFFFBBF24)
+                                              : const Color(0xFF94A3B8),
+                                          fontSize: context.rFont(11.5, min: 10, max: 13),
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         SizedBox(height: context.rSpacing(16)),
 
