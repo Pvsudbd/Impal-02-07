@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/edit_profile_page.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/models/user_profile_model.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/profile_page.dart';
+import 'package:impal_smart_todolist/presentation/features/profile/widgets/daily_briefing_settings_modal.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/widgets/deadline_alert_settings_modal.dart';
 
 void main() {
@@ -50,13 +51,12 @@ void main() {
       expect(find.text('94%'), findsOneWidget);
       expect(find.text('ON-TIME'), findsOneWidget);
 
-      // Check Settings and AI Fuzzy (including XAI and 3 high-level alert categories)
+      // Check Settings and AI Fuzzy (including XAI and alert categories + Daily Morning Briefing)
       expect(find.text('REMINDERS & SCHEDULE'), findsOneWidget);
       expect(find.text('Task Deadlines'), findsOneWidget);
       expect(find.text('Schedule Alerts'), findsOneWidget);
       expect(find.text('Team Alerts'), findsOneWidget);
-      // Verify Daily Morning Briefing is removed as requested
-      expect(find.text('Daily Morning Briefing'), findsNothing);
+      expect(find.text('Daily Morning Briefing'), findsOneWidget);
       expect(find.text('INTELLIGENT SYSTEM (AI FUZZY)'), findsOneWidget);
       expect(find.text('Fuzzy Inference Model'), findsOneWidget);
       expect(find.text('Score Explainability (XAI)'), findsOneWidget);
@@ -272,6 +272,52 @@ void main() {
 
       // Verify team summary reflects new independent configs
       expect(find.textContaining('Tasks: H-1 (Silent) • Meetings: 1 Hour (Sound & Vibrate)'), findsOneWidget);
+    });
+
+    testWidgets(
+        'DailyBriefingSettingsModal opens, configures topics, and updates briefing settings',
+        (tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 1400 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ProfilePage(userName: 'Yoga Perkasa Didik'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open Daily Morning Briefing settings
+      await tester.tap(find.text('Daily Morning Briefing'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DailyBriefingSettingsModal), findsOneWidget);
+      expect(find.text('1. BRIEFING DELIVERY TIME'), findsOneWidget);
+      expect(find.text('2. INCLUDED BRIEFING TOPICS'), findsOneWidget);
+      expect(find.text('Change Time'), findsOneWidget);
+
+      // Verify all 5 topics are displayed
+      expect(find.text('Personal Tasks'), findsOneWidget);
+      expect(find.text('Lecture Schedule'), findsOneWidget);
+      expect(find.text('External Schedule'), findsOneWidget);
+      expect(find.text('Team Tasks'), findsOneWidget);
+      expect(find.text('Team Meetings'), findsOneWidget);
+
+      // Toggle off Team Meetings
+      await tester.tap(find.text('Team Meetings'));
+      await tester.pumpAndSettle();
+
+      // Save preferences
+      await tester.tap(find.text('Save Briefing Preferences'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DailyBriefingSettingsModal), findsNothing);
+      // Summary updates without Team Meetings
+      expect(find.textContaining('07:00 WIB'), findsOneWidget);
     });
 
     test('AlertSoundVibrationMode has verified intuitive icon mappings', () {

@@ -154,6 +154,91 @@ class CategoryAlertConfig {
   }
 }
 
+/// Available topics that can be included in the Daily Morning Briefing.
+abstract class DailyBriefingTopic {
+  static const String personalTasks = 'personal_tasks';
+  static const String lectureSchedule = 'lecture_schedule';
+  static const String externalSchedule = 'external_schedule';
+  static const String teamTasks = 'team_tasks';
+  static const String teamMeetings = 'team_meetings';
+
+  static const List<String> all = [
+    personalTasks,
+    lectureSchedule,
+    externalSchedule,
+    teamTasks,
+    teamMeetings,
+  ];
+
+  static String label(String topic) {
+    switch (topic) {
+      case personalTasks:
+        return 'Personal Tasks';
+      case lectureSchedule:
+        return 'Lecture Schedule';
+      case externalSchedule:
+        return 'External Schedule';
+      case teamTasks:
+        return 'Team Tasks';
+      case teamMeetings:
+        return 'Team Meetings';
+      default:
+        return topic;
+    }
+  }
+
+  static String description(String topic) {
+    switch (topic) {
+      case personalTasks:
+        return 'Individual assignments & deadlines due today';
+      case lectureSchedule:
+        return 'Campus classes, lectures & lab sessions for today';
+      case externalSchedule:
+        return 'Seminars, competitions & external agendas for today';
+      case teamTasks:
+        return 'Group deliverables & team task deadlines';
+      case teamMeetings:
+        return 'Group voice calls, syncs & discussions today';
+      default:
+        return '';
+    }
+  }
+
+  static IconData icon(String topic) {
+    switch (topic) {
+      case personalTasks:
+        return Icons.assignment_outlined;
+      case lectureSchedule:
+        return Icons.school_outlined;
+      case externalSchedule:
+        return Icons.event_note_outlined;
+      case teamTasks:
+        return Icons.assignment_turned_in_outlined;
+      case teamMeetings:
+        return Icons.groups_outlined;
+      default:
+        return Icons.check_circle_outline;
+    }
+  }
+
+  static Color color(String topic) {
+    switch (topic) {
+      case personalTasks:
+        return const Color(0xFFFF7D65); // Coral
+      case lectureSchedule:
+        return const Color(0xFF38BDF8); // Sky Blue
+      case externalSchedule:
+        return const Color(0xFF10B981); // Emerald Green
+      case teamTasks:
+        return const Color(0xFFFBBF24); // Warm Amber
+      case teamMeetings:
+        return const Color(0xFFA78BFA); // Purple
+      default:
+        return const Color(0xFF94A3B8);
+    }
+  }
+}
+
 /// Domain model representing the user's academic profile and app settings.
 class UserProfileModel {
   final String fullName;
@@ -181,7 +266,9 @@ class UserProfileModel {
   final CategoryAlertConfig teamTaskAlerts;
   final CategoryAlertConfig teamMeetingAlerts;
 
+  final bool isDailyBriefingEnabled;
   final String dailyMorningBriefingTime;
+  final List<String> dailyBriefingTopics;
   final bool soundVibrationEnabled;
 
   // Intelligent System AI Fuzzy
@@ -229,7 +316,15 @@ class UserProfileModel {
       timings: ['1 Hour', '15 Minutes'],
       soundMode: AlertSoundVibrationMode.soundOnly,
     ),
+    this.isDailyBriefingEnabled = true,
     this.dailyMorningBriefingTime = '07:00 WIB',
+    this.dailyBriefingTopics = const [
+      DailyBriefingTopic.personalTasks,
+      DailyBriefingTopic.lectureSchedule,
+      DailyBriefingTopic.externalSchedule,
+      DailyBriefingTopic.teamTasks,
+      DailyBriefingTopic.teamMeetings,
+    ],
     this.soundVibrationEnabled = true,
     this.isFuzzyModelActive = true,
     this.scoreExplainabilityEnabled = true,
@@ -260,6 +355,18 @@ class UserProfileModel {
         ? '${teamMeetingAlerts.cleanTimingsSummary} (${teamMeetingAlerts.soundMode.shortLabel})'
         : 'Muted';
     return 'Tasks: $tText • Meetings: $mText';
+  }
+
+  String get dailyBriefingSummary {
+    if (!isDailyBriefingEnabled) return 'Muted • Tap to configure';
+    final count = dailyBriefingTopics.length;
+    if (count == 0) return '$dailyMorningBriefingTime • No topics selected';
+    if (count == DailyBriefingTopic.all.length) {
+      return '$dailyMorningBriefingTime • All topics';
+    }
+    final topicNames =
+        dailyBriefingTopics.map(DailyBriefingTopic.label).join(', ');
+    return '$dailyMorningBriefingTime • $topicNames';
   }
 
   CategoryAlertConfig configFor(AlertCategoryType category) {
@@ -311,7 +418,9 @@ class UserProfileModel {
     bool? deadlineAlertsEnabled,
     List<String>? deadlineAlertTimings,
     AlertSoundVibrationMode? alertSoundMode,
+    bool? isDailyBriefingEnabled,
     String? dailyMorningBriefingTime,
+    List<String>? dailyBriefingTopics,
     bool? soundVibrationEnabled,
     bool? isFuzzyModelActive,
     bool? scoreExplainabilityEnabled,
@@ -352,8 +461,12 @@ class UserProfileModel {
           externalScheduleAlerts ?? this.externalScheduleAlerts,
       teamTaskAlerts: teamTaskAlerts ?? this.teamTaskAlerts,
       teamMeetingAlerts: teamMeetingAlerts ?? this.teamMeetingAlerts,
+      isDailyBriefingEnabled:
+          isDailyBriefingEnabled ?? this.isDailyBriefingEnabled,
       dailyMorningBriefingTime:
           dailyMorningBriefingTime ?? this.dailyMorningBriefingTime,
+      dailyBriefingTopics:
+          dailyBriefingTopics ?? this.dailyBriefingTopics,
       soundVibrationEnabled:
           soundVibrationEnabled ?? this.soundVibrationEnabled,
       isFuzzyModelActive: isFuzzyModelActive ?? this.isFuzzyModelActive,
@@ -489,6 +602,24 @@ class UserProfileRepository with ChangeNotifier {
 
   void updateBriefingTime(String newTime) {
     _profile = _profile.copyWith(dailyMorningBriefingTime: newTime);
+    notifyListeners();
+  }
+
+  void updateDailyBriefingSettings({
+    required bool enabled,
+    required String time,
+    required List<String> topics,
+  }) {
+    _profile = _profile.copyWith(
+      isDailyBriefingEnabled: enabled,
+      dailyMorningBriefingTime: time,
+      dailyBriefingTopics: topics,
+    );
+    notifyListeners();
+  }
+
+  void toggleDailyBriefing(bool value) {
+    _profile = _profile.copyWith(isDailyBriefingEnabled: value);
     notifyListeners();
   }
 

@@ -516,33 +516,44 @@ class _DeadlineAlertSettingsModalState
                           letterSpacing: 0.6,
                         ),
                       ),
-                      if (current.availablePresets.length <
-                          _currentDefaultPresets.length)
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              for (final p in _currentDefaultPresets) {
-                                if (!current.availablePresets.contains(p)) {
-                                  current.availablePresets.add(p);
+                      Builder(
+                        builder: (context) {
+                          final isModified = current.availablePresets.length !=
+                                  _currentDefaultPresets.length ||
+                              !current.availablePresets
+                                  .every(_currentDefaultPresets.contains);
+                          if (!isModified) return const SizedBox.shrink();
+
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                current.availablePresets
+                                  ..clear()
+                                  ..addAll(_currentDefaultPresets);
+                                if (current.selectedTimings.isEmpty &&
+                                    current.availablePresets.isNotEmpty) {
+                                  current.selectedTimings
+                                      .add(current.availablePresets.first);
                                 }
-                              }
-                            });
-                          },
-                          child: const Text(
-                            'Reset Defaults',
-                            style: TextStyle(
-                              color: Color(0xFF5B93FF),
-                              fontSize: 11.5,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
+                              });
+                            },
+                            child: const Text(
+                              'Reset Defaults',
+                              style: TextStyle(
+                                color: Color(0xFF5B93FF),
+                                fontSize: 11.5,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                   SizedBox(height: context.rSpacing(4)),
                   Text(
-                    'Tap chip to select/deselect • Tap ✕ to remove interval:',
+                    'Tap chip to toggle alert • Tap ✕ to delete interval:',
                     style: TextStyle(
                       color: const Color(0xFF94A3B8),
                       fontSize: context.rFont(11.5, min: 10, max: 13),
@@ -564,27 +575,29 @@ class _DeadlineAlertSettingsModalState
 
                   // Custom Timing Input Row (Matched to AppColors.bgCard)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.bgCard,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: const Color(0xFF434A59).withValues(alpha: 0.5),
                         width: 1,
                       ),
                     ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // 1. Number input (Indented container matching AppColors.bgPrimary)
+                        // 1. Number input (Indented container matching AppColors.bgPrimary, 44dp height)
                         Container(
-                          width: 56,
-                          height: 42,
+                          width: 58,
+                          height: 44,
                           decoration: BoxDecoration(
                             color: AppColors.bgPrimary,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: const Color(0xFF434A59).withValues(alpha: 0.6),
+                              width: 1,
+                            ),
                           ),
                           alignment: Alignment.center,
                           child: TextField(
@@ -597,6 +610,7 @@ class _DeadlineAlertSettingsModalState
                               fontSize: 14,
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.w700,
+                              fontFeatures: [FontFeature.tabularFigures()],
                             ),
                             decoration: const InputDecoration(
                               isDense: true,
@@ -606,14 +620,18 @@ class _DeadlineAlertSettingsModalState
                           ),
                         ),
                         SizedBox(width: context.rSpacing(8)),
-                        // 2. Unit dropdown (Indented container matching AppColors.bgPrimary)
+                        // 2. Unit dropdown (Indented container matching AppColors.bgPrimary, exact 44dp height)
                         Expanded(
                           child: Container(
-                            height: 42,
+                            height: 44,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
                               color: AppColors.bgPrimary,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFF434A59).withValues(alpha: 0.6),
+                                width: 1,
+                              ),
                             ),
                             alignment: Alignment.center,
                             child: DropdownButtonHideUnderline(
@@ -621,6 +639,7 @@ class _DeadlineAlertSettingsModalState
                                 value: _customUnit,
                                 dropdownColor: AppColors.bgCard,
                                 isExpanded: true,
+                                isDense: true,
                                 icon: const Icon(
                                   Icons.arrow_drop_down_rounded,
                                   color: AppColors.textMuted,
@@ -658,27 +677,30 @@ class _DeadlineAlertSettingsModalState
                           ),
                         ),
                         SizedBox(width: context.rSpacing(8)),
-                        // 3. Add button (42dp height)
+                        // 3. Add button (Exact same 44dp height and 10dp radius)
                         SizedBox(
-                          height: 42,
+                          height: 44,
                           child: ElevatedButton(
                             key: const ValueKey('add_custom_timing_button'),
                             onPressed:
                                 current.enabled ? _addCustomTiming : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF434A59),
+                              foregroundColor: Colors.white,
                               elevation: 0,
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 16),
+                              minimumSize: const Size(0, 44),
+                              maximumSize: const Size(double.infinity, 44),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                             ),
                             child: const Text(
                               '+ Add',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 12.5,
+                                fontSize: 13,
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w700,
                               ),
@@ -825,99 +847,125 @@ class _DeadlineAlertSettingsModalState
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: state.enabled
-            ? () {
-                setState(() {
-                  if (isSelected) {
-                    if (state.selectedTimings.length > 1) {
-                      state.selectedTimings.remove(timing);
-                    }
-                  } else {
-                    state.selectedTimings.add(timing);
-                  }
-                });
-              }
-            : null,
-        borderRadius: BorderRadius.circular(999),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.only(
-            left: 12,
-            right: 6,
-            top: 6,
-            bottom: 6,
-          ),
-          decoration: BoxDecoration(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFFFA6144).withValues(alpha: 0.22)
+              : AppColors.bgCard,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
             color: isSelected
-                ? const Color(0xFFFA6144).withValues(alpha: 0.22)
-                : AppColors.bgCard,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: isSelected
-                  ? const Color(0xFFFA6144)
-                  : const Color(0xFF434A59),
-              width: 1,
-            ),
+                ? const Color(0xFFFA6144)
+                : const Color(0xFF434A59),
+            width: 1,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isSelected) ...[
-                const Icon(
-                  Icons.check_rounded,
-                  size: 14,
-                  color: Color(0xFFFA6144),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Left selection tap area
+            InkWell(
+              onTap: state.enabled
+                  ? () {
+                      setState(() {
+                        if (isSelected) {
+                          if (state.selectedTimings.length > 1) {
+                            state.selectedTimings.remove(timing);
+                          }
+                        } else {
+                          state.selectedTimings.add(timing);
+                        }
+                      });
+                    }
+                  : null,
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(999),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: 12,
+                  right: 4,
+                  top: 7,
+                  bottom: 7,
                 ),
-                const SizedBox(width: 5),
-              ],
-              Text(
-                timing,
-                style: TextStyle(
-                  color: isSelected
-                      ? const Color(0xFFFF7D65)
-                      : (state.enabled ? Colors.white70 : const Color(0xFF64748B)),
-                  fontSize: context.rFont(12, min: 10.5, max: 13.5),
-                  fontFamily: 'Inter',
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isSelected) ...[
+                      const Icon(
+                        Icons.check_rounded,
+                        size: 14,
+                        color: Color(0xFFFA6144),
+                      ),
+                      const SizedBox(width: 5),
+                    ],
+                    Text(
+                      timing,
+                      style: TextStyle(
+                        color: isSelected
+                            ? const Color(0xFFFF7D65)
+                            : (state.enabled
+                                ? Colors.white70
+                                : const Color(0xFF64748B)),
+                        fontSize: context.rFont(12, min: 10.5, max: 13.5),
+                        fontFamily: 'Inter',
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 6),
-              // Dedicated remove icon on every chip
-              GestureDetector(
-                key: ValueKey('delete_timing_$timing'),
-                behavior: HitTestBehavior.opaque,
-                onTap: state.enabled
-                    ? () {
-                        setState(() {
-                          state.availablePresets.remove(timing);
-                          state.selectedTimings.remove(timing);
-                          if (state.selectedTimings.isEmpty &&
-                              state.availablePresets.isNotEmpty) {
-                            state.selectedTimings.add(state.availablePresets.first);
-                          }
-                        });
-                      }
-                    : null,
+            ),
+            // Right dedicated delete tap area with clear hit target
+            InkWell(
+              key: ValueKey('delete_timing_$timing'),
+              onTap: state.enabled
+                  ? () {
+                      setState(() {
+                        state.availablePresets.remove(timing);
+                        state.selectedTimings.remove(timing);
+                        if (state.selectedTimings.isEmpty &&
+                            state.availablePresets.isNotEmpty) {
+                          state.selectedTimings
+                              .add(state.availablePresets.first);
+                        }
+                      });
+                    }
+                  : null,
+              borderRadius: const BorderRadius.horizontal(
+                right: Radius.circular(999),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: 4,
+                  right: 8,
+                  top: 6,
+                  bottom: 6,
+                ),
                 child: Container(
-                  padding: const EdgeInsets.all(2.5),
+                  width: 20,
+                  height: 20,
                   decoration: BoxDecoration(
                     color: isSelected
                         ? const Color(0xFFFA6144).withValues(alpha: 0.35)
                         : const Color(0xFF64748B).withValues(alpha: 0.25),
                     shape: BoxShape.circle,
                   ),
+                  alignment: Alignment.center,
                   child: Icon(
                     Icons.close_rounded,
-                    size: 11,
+                    size: 12,
                     color: isSelected
                         ? const Color(0xFFFF7D65)
                         : const Color(0xFF94A3B8),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../models/user_profile_model.dart';
+import 'daily_briefing_settings_modal.dart';
 import 'deadline_alert_settings_modal.dart';
 
 /// Grouped settings cards for Reminders & Alerts preferences.
 /// Unified into a single card container with dividers, matching the
-/// visual structure of AI Fuzzy and Account & Integration sections.
+/// visual structure of AI Fuzzy and Account & Integration sections:
+/// 1. Task Deadlines
+/// 2. Schedule Alerts
+/// 3. Team Alerts
+/// 4. Daily Morning Briefing
 class ProfileSettingsGroup extends StatelessWidget {
   final UserProfileModel profile;
   final ValueChanged<bool>? onToggleDeadlineAlerts;
@@ -160,9 +165,7 @@ class ProfileSettingsGroup extends StatelessWidget {
                 summary: profile.teamAlertsSummary,
                 isEnabled: profile.teamTaskAlerts.enabled ||
                     profile.teamMeetingAlerts.enabled,
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(18),
-                ),
+                borderRadius: BorderRadius.zero,
                 onToggle: (val) {
                   final repo = UserProfileRepository();
                   repo.updateTeamAlertSettings(
@@ -171,6 +174,27 @@ class ProfileSettingsGroup extends StatelessWidget {
                     teamMeetingConfig:
                         profile.teamMeetingAlerts.copyWith(enabled: val),
                   );
+                },
+              ),
+
+              // Divider 3
+              Container(
+                width: double.infinity,
+                height: 1,
+                color: const Color(0xFF434A59).withValues(alpha: 0.35),
+              ),
+
+              // 4. Daily Morning Briefing Tile
+              _buildBriefingTile(
+                context,
+                title: 'Daily Morning Briefing',
+                summary: profile.dailyBriefingSummary,
+                isEnabled: profile.isDailyBriefingEnabled,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(18),
+                ),
+                onToggle: (val) {
+                  UserProfileRepository().toggleDailyBriefing(val);
                 },
               ),
             ],
@@ -246,6 +270,105 @@ class ProfileSettingsGroup extends StatelessWidget {
                       style: TextStyle(
                         color: isEnabled
                             ? const Color(0xFFFA6144)
+                            : AppColors.textMuted,
+                        fontSize: context.rFont(11.5, min: 10, max: 13),
+                        fontFamily: 'Inter',
+                        fontWeight:
+                            isEnabled ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Switch
+              Switch(
+                value: isEnabled,
+                activeThumbColor: Colors.white,
+                activeTrackColor: const Color(0xFF10B981),
+                inactiveThumbColor: Colors.white70,
+                inactiveTrackColor: const Color(0xFF434A59),
+                onChanged: onToggle,
+              ),
+              const SizedBox(width: 4),
+              // Chevron icon indicating tap-to-open modal
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textMuted,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBriefingTile(
+    BuildContext context, {
+    required String title,
+    required String summary,
+    required bool isEnabled,
+    required BorderRadius borderRadius,
+    required ValueChanged<bool> onToggle,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => DailyBriefingSettingsModal.show(context, profile: profile),
+        borderRadius: borderRadius,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: context.rSpacing(14),
+            vertical: context.rSpacing(13),
+          ),
+          child: Row(
+            children: [
+              // Squared container (kotak rounded 10dp) with warm amber accent
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isEnabled
+                      ? const Color(0xFFF59E0B).withValues(alpha: 0.18)
+                      : const Color(0xFF475569).withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  isEnabled
+                      ? Icons.wb_sunny_rounded
+                      : Icons.notifications_off_outlined,
+                  size: 20,
+                  color: isEnabled
+                      ? const Color(0xFFF59E0B)
+                      : const Color(0xFF94A3B8),
+                ),
+              ),
+              SizedBox(width: context.rSpacing(12)),
+              // Text Column
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: context.rFont(13.5, min: 12, max: 15),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      summary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isEnabled
+                            ? const Color(0xFFF59E0B)
                             : AppColors.textMuted,
                         fontSize: context.rFont(11.5, min: 10, max: 13),
                         fontFamily: 'Inter',
