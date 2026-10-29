@@ -37,11 +37,8 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   late final TextEditingController _fullNameController;
-  late final TextEditingController _studentIdController;
-  late final TextEditingController _majorCampusController;
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
-  late final TextEditingController _groupRoleController;
   late final TextEditingController _bioController;
 
   bool _isSubmitting = false;
@@ -51,22 +48,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.initState();
     final p = widget.currentProfile;
     _fullNameController = TextEditingController(text: p.fullName);
-    _studentIdController = TextEditingController(text: p.studentId);
-    _majorCampusController = TextEditingController(text: p.majorCampus);
     _emailController = TextEditingController(text: p.email);
     _phoneController = TextEditingController(text: p.phoneNumber);
-    _groupRoleController = TextEditingController(text: p.groupRole);
     _bioController = TextEditingController(text: p.bio);
   }
 
   @override
   void dispose() {
     _fullNameController.dispose();
-    _studentIdController.dispose();
-    _majorCampusController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _groupRoleController.dispose();
     _bioController.dispose();
     super.dispose();
   }
@@ -181,11 +172,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     final updated = widget.currentProfile.copyWith(
       fullName: fullName,
-      studentId: _studentIdController.text.trim(),
-      majorCampus: _majorCampusController.text.trim(),
       email: _emailController.text.trim(),
       phoneNumber: _phoneController.text.trim(),
-      groupRole: _groupRoleController.text.trim(),
       bio: _bioController.text.trim(),
     );
 
@@ -245,14 +233,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                     ),
                   ),
-                  Text(
-                    'Edit Profile',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: context.rFont(18, min: 16, max: 22),
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
+                  Expanded(
+                    child: Text(
+                      'Edit Profile',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: context.rFont(18, min: 16, max: 22),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
                     ),
                   ),
                   // Empty balanced placeholder
@@ -369,26 +360,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               SizedBox(height: context.rSpacing(14)),
 
-              // 4. Form Field 2: STUDENT ID (NIM)
+              // 4. Form Field 2: EMAIL with Verified pill
               ProfileTextField(
-                label: 'STUDENT ID (NIM)',
-                controller: _studentIdController,
-                leadingIcon: Icons.credit_card_rounded,
-                keyboardType: TextInputType.number,
-              ),
-              SizedBox(height: context.rSpacing(14)),
-
-              // 5. Form Field 3: MAJOR & CAMPUS
-              ProfileTextField(
-                label: 'MAJOR & CAMPUS',
-                controller: _majorCampusController,
-                leadingIcon: Icons.school_outlined,
-              ),
-              SizedBox(height: context.rSpacing(14)),
-
-              // 6. Form Field 4: OFFICIAL CAMPUS EMAIL with Verified pill
-              ProfileTextField(
-                label: 'OFFICIAL CAMPUS EMAIL',
+                label: 'EMAIL',
                 controller: _emailController,
                 leadingIcon: Icons.mail_outline_rounded,
                 keyboardType: TextInputType.emailAddress,
@@ -429,7 +403,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               SizedBox(height: context.rSpacing(14)),
 
-              // 7. Form Field 5: WHATSAPP / MOBILE NUMBER
+              // 5. Form Field 3: WHATSAPP / MOBILE NUMBER
               ProfileTextField(
                 label: 'WHATSAPP / MOBILE NUMBER',
                 controller: _phoneController,
@@ -438,15 +412,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               SizedBox(height: context.rSpacing(14)),
 
-              // 8. Form Field 6: GROUP ROLE (COURSE PROJECT)
-              ProfileTextField(
-                label: 'GROUP ROLE (COURSE PROJECT)',
-                controller: _groupRoleController,
-                leadingIcon: Icons.groups_outlined,
-              ),
-              SizedBox(height: context.rSpacing(14)),
-
-              // 9. Form Field 7: STATUS / BIO
+              // 6. Form Field 4: STATUS / BIO
               ProfileTextField(
                 label: 'STATUS / BIO',
                 controller: _bioController,
@@ -455,7 +421,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               SizedBox(height: context.rSpacing(16)),
 
-              // 10. Information Notice Banner
+              // 7. Information Notice Banner
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.symmetric(
@@ -481,7 +447,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'NIM and Tel-U SSO attributes are synchronized with academic directory.',
+                        'Profile information and credentials are encrypted and synchronized securely.',
                         style: TextStyle(
                           color: const Color(0xFF94A3B8),
                           fontSize: context.rFont(11.5, min: 10, max: 13),

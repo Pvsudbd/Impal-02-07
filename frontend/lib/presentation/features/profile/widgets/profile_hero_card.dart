@@ -145,92 +145,50 @@ class ProfileHeroCard extends StatelessWidget {
                     letterSpacing: -0.3,
                   ),
                 ),
-                SizedBox(height: context.rSpacing(6)),
-
-                // 3. NIM + ACTIVE STUDENT Pill
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    Text(
-                      'NIM: ${profile.studentId}',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: context.rFont(12.5, min: 11, max: 14),
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.2,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                    if (profile.isActiveStudent)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2.5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF064E3B).withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.6),
-                            width: 0.8,
-                          ),
-                        ),
-                        child: Text(
-                          'ACTIVE STUDENT',
-                          style: TextStyle(
-                            color: const Color(0xFF34D399),
-                            fontSize: context.rFont(9.5, min: 8.5, max: 11),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                SizedBox(height: context.rSpacing(14)),
-
-                // Horizontal separator
-                Container(
-                  width: double.infinity,
-                  height: 1,
-                  color: const Color(0xFF434A59).withValues(alpha: 0.4),
-                ),
-                SizedBox(height: context.rSpacing(12)),
-
-                // 4. Academic & Campus Info Row 1 (Major & Campus)
-                _buildInfoRow(
-                  context,
-                  icon: Icons.school_outlined,
-                  iconColor: const Color(0xFF8E95A5),
-                  text: profile.majorCampus,
-                  textColor: const Color(0xFFCBD5E1),
-                ),
                 SizedBox(height: context.rSpacing(8)),
 
-                // 5. Academic & Campus Info Row 2 (Email)
+                // 3. User Email
                 _buildInfoRow(
                   context,
                   icon: Icons.mail_outline_rounded,
-                  iconColor: const Color(0xFF8E95A5),
+                  iconColor: AppColors.primaryAccent,
                   text: profile.email,
-                  textColor: const Color(0xFFCBD5E1),
+                  textColor: const Color(0xFFE2E8F0),
                 ),
-                SizedBox(height: context.rSpacing(8)),
 
-                // 6. Group Role Row (Amber Highlight)
-                _buildInfoRow(
-                  context,
-                  icon: Icons.groups_outlined,
-                  iconColor: const Color(0xFFFBBF24),
-                  text: profile.groupRole,
-                  textColor: const Color(0xFFFBBF24),
-                  isBold: true,
-                ),
+                // 4. Status / Bio (if provided)
+                if (profile.bio.trim().isNotEmpty) ...[
+                  SizedBox(height: context.rSpacing(10)),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.rSpacing(12),
+                      vertical: context.rSpacing(8),
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E2430),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFF434A59).withValues(alpha: 0.35),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Text(
+                      profile.bio,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: context.rFont(11.5, min: 10.5, max: 13),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w400,
+                        fontStyle: FontStyle.italic,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -4,10 +4,13 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/page_transitions.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../auth/login_page.dart';
+import '../auth/terms_privacy_page.dart';
 import '../dashboard/home_page.dart';
 import 'edit_profile_page.dart';
 import 'models/user_profile_model.dart';
+import 'widgets/profile_account_integration_group.dart';
 import 'widgets/profile_fuzzy_card.dart';
 import 'widgets/profile_hero_card.dart';
 import 'widgets/profile_settings_group.dart';
@@ -74,6 +77,102 @@ class _ProfilePageState extends State<ProfilePage> {
     if (updated != null && mounted) {
       _repo.updateProfile(updated);
     }
+  }
+
+  void _showChangePasswordModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: context.rSpacing(20),
+            vertical: context.rSpacing(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF38BDF8).withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.lock_outline_rounded,
+                      color: Color(0xFF38BDF8),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Change Password',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: context.rFont(18, min: 16, max: 20),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Password updates require verification with your registered email (${_repo.profile.email}). A secure reset link will be sent to proceed.',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: context.rFont(13, min: 11.5, max: 14),
+                  fontFamily: 'Inter',
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    PopUpPemberitahuan.show(
+                      context,
+                      title: 'Reset Link Sent',
+                      message:
+                          'Check your inbox for password reset instructions.',
+                      icon: Icons.mark_email_read_rounded,
+                      iconBgColor: const Color(0xFF10B981),
+                    );
+                  },
+                  child: const Text(
+                    'Send Reset Link',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showLogoutDialog(BuildContext context) {
@@ -188,14 +287,17 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   ),
-                  Text(
-                    'Profile & Settings',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: context.rFont(18, min: 16, max: 22),
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
+                  Expanded(
+                    child: Text(
+                      'Profile & Settings',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: context.rFont(18, min: 16, max: 22),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
                     ),
                   ),
                   InkWell(
@@ -242,41 +344,82 @@ class _ProfilePageState extends State<ProfilePage> {
               SizedBox(height: context.rSpacing(18)),
 
               // 5. Intelligent System AI Fuzzy Card
-              ProfileFuzzyCard(isActive: profile.isFuzzyModelActive),
+              ProfileFuzzyCard(
+                isActive: profile.isFuzzyModelActive,
+                isScoreExplainabilityActive: profile.scoreExplainabilityEnabled,
+                onToggleScoreExplainability: (val) =>
+                    _repo.toggleScoreExplainability(val),
+              ),
+              SizedBox(height: context.rSpacing(18)),
+
+              // 6. Account & Integration Section
+              ProfileAccountIntegrationGroup(
+                email: profile.email,
+                onChangePassword: () => _showChangePasswordModal(context),
+                onTermsPrivacy: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const TermsPrivacyPage(),
+                    ),
+                  );
+                },
+              ),
               SizedBox(height: context.rSpacing(22)),
 
-              // 6. Sign Out Button
+              // 7. Log Out Account Button
               SizedBox(
                 width: double.infinity,
-                height: 46,
-                child: OutlinedButton.icon(
+                height: 48,
+                child: OutlinedButton(
                   onPressed: () => _showLogoutDialog(context),
-                  icon: const Icon(
-                    Icons.logout_rounded,
-                    size: 18,
-                    color: Color(0xFFEF4444),
-                  ),
-                  label: Text(
-                    'Sign Out Account',
-                    style: TextStyle(
-                      color: const Color(0xFFEF4444),
-                      fontSize: context.rFont(13.5, min: 12, max: 15),
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                      color: const Color(0xFFEF4444).withValues(alpha: 0.35),
-                      width: 1,
+                    side: const BorderSide(
+                      color: Color(0xFFFA6144),
+                      width: 1.2,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    backgroundColor: const Color(0xFFEF4444).withValues(alpha: 0.06),
+                    backgroundColor:
+                        const Color(0xFFFA6144).withValues(alpha: 0.08),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.logout_rounded,
+                        size: 19,
+                        color: Color(0xFFFA6144),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Log Out Account',
+                        style: TextStyle(
+                          color: const Color(0xFFFA6144),
+                          fontSize: context.rFont(14, min: 12.5, max: 15.5),
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
+              SizedBox(height: context.rSpacing(14)),
+
+              // 8. Footer Branding Text
+              Text(
+                'Todolist Sistem Cerdas v2.0 • Kelompok 7 IMPAL Telkom University',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: const Color(0xFF64748B),
+                  fontSize: context.rFont(10.5, min: 9.5, max: 12),
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              SizedBox(height: context.rSpacing(110)),
             ]),
           ),
         ),

@@ -27,6 +27,7 @@ class UserProfileModel {
 
   // Intelligent System AI Fuzzy
   final bool isFuzzyModelActive;
+  final bool scoreExplainabilityEnabled;
 
   const UserProfileModel({
     this.fullName = 'Yoga Perkasa Didik',
@@ -48,6 +49,7 @@ class UserProfileModel {
     this.dailyMorningBriefingTime = '07:00 WIB',
     this.soundVibrationEnabled = true,
     this.isFuzzyModelActive = true,
+    this.scoreExplainabilityEnabled = true,
   });
 
   /// Derives initials from the full name if not custom set.
@@ -80,6 +82,7 @@ class UserProfileModel {
     String? dailyMorningBriefingTime,
     bool? soundVibrationEnabled,
     bool? isFuzzyModelActive,
+    bool? scoreExplainabilityEnabled,
   }) {
     return UserProfileModel(
       fullName: fullName ?? this.fullName,
@@ -103,6 +106,8 @@ class UserProfileModel {
       soundVibrationEnabled:
           soundVibrationEnabled ?? this.soundVibrationEnabled,
       isFuzzyModelActive: isFuzzyModelActive ?? this.isFuzzyModelActive,
+      scoreExplainabilityEnabled:
+          scoreExplainabilityEnabled ?? this.scoreExplainabilityEnabled,
     );
   }
 
@@ -146,6 +151,11 @@ class UserProfileRepository with ChangeNotifier {
 
   void updateBriefingTime(String newTime) {
     _profile = _profile.copyWith(dailyMorningBriefingTime: newTime);
+    notifyListeners();
+  }
+
+  void toggleScoreExplainability(bool value) {
+    _profile = _profile.copyWith(scoreExplainabilityEnabled: value);
     notifyListeners();
   }
 }
