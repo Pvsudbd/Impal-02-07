@@ -38,9 +38,9 @@ extension AlertSoundVibrationModeX on AlertSoundVibrationMode {
   IconData get icon {
     switch (this) {
       case AlertSoundVibrationMode.soundAndVibrate:
-        return Icons.volume_up_rounded;
+        return Icons.notifications_active_rounded;
       case AlertSoundVibrationMode.soundOnly:
-        return Icons.volume_down_rounded;
+        return Icons.volume_up_rounded;
       case AlertSoundVibrationMode.vibrationOnly:
         return Icons.vibration_rounded;
       case AlertSoundVibrationMode.silent:

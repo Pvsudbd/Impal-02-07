@@ -273,5 +273,12 @@ void main() {
       // Verify team summary reflects new independent configs
       expect(find.textContaining('Tasks: H-1 (Silent) • Meetings: 1 Hour (Sound & Vibrate)'), findsOneWidget);
     });
+
+    test('AlertSoundVibrationMode has verified intuitive icon mappings', () {
+      expect(AlertSoundVibrationMode.soundAndVibrate.icon, Icons.notifications_active_rounded);
+      expect(AlertSoundVibrationMode.soundOnly.icon, Icons.volume_up_rounded);
+      expect(AlertSoundVibrationMode.vibrationOnly.icon, Icons.vibration_rounded);
+      expect(AlertSoundVibrationMode.silent.icon, Icons.notifications_off_outlined);
+    });
   });
 }

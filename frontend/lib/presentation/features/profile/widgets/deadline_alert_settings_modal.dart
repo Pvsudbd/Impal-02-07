@@ -7,7 +7,7 @@ import '../models/user_profile_model.dart';
 /// Interactive modal bottom sheet for customizing:
 /// 1. Category alert timings (Days, Hours, Minutes, or Custom)
 /// 2. Segmented sub-tabs for Schedule (Lecture vs External) & Team (Tasks vs Meetings)
-/// 3. Sound & Vibration modes with orange highlights and clean titles
+/// 3. Harmonized color palette matching ProfilePage background (#282D37) and cards (#323846)
 class DeadlineAlertSettingsModal extends StatefulWidget {
   final UserProfileModel profile;
   final AlertCategoryType category;
@@ -284,8 +284,9 @@ class _DeadlineAlertSettingsModalState
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.88,
       ),
+      // Background matched identically to ProfilePage background (#282D37)
       decoration: const BoxDecoration(
-        color: Color(0xFF1E232D),
+        color: AppColors.bgPrimary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -365,7 +366,7 @@ class _DeadlineAlertSettingsModalState
                   color: AppColors.bgCard,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: const Color(0xFF383F4D),
+                    color: const Color(0xFF434A59).withValues(alpha: 0.5),
                     width: 1,
                   ),
                 ),
@@ -396,7 +397,10 @@ class _DeadlineAlertSettingsModalState
             ),
           ],
 
-          const Divider(height: 1, color: Color(0xFF333A48)),
+          Divider(
+            height: 1,
+            color: const Color(0xFF434A59).withValues(alpha: 0.35),
+          ),
 
           // Scrollable Body
           Flexible(
@@ -409,7 +413,7 @@ class _DeadlineAlertSettingsModalState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Master Switch for Sub-Category
+                  // Master Switch Card (Color matched to ProfilePage AppColors.bgCard)
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: context.rSpacing(14),
@@ -418,10 +422,14 @@ class _DeadlineAlertSettingsModalState
                     decoration: BoxDecoration(
                       color: AppColors.bgCard,
                       borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: const Color(0xFF434A59).withValues(alpha: 0.5),
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       children: [
-                        // Squared container (kotak rounded)
+                        // Squared container (kotak rounded 10dp)
                         Container(
                           width: 38,
                           height: 38,
@@ -554,7 +562,7 @@ class _DeadlineAlertSettingsModalState
 
                   SizedBox(height: context.rSpacing(14)),
 
-                  // Custom Timing Input Row (100% Equalized sizing across all 3 controls: 42dp height)
+                  // Custom Timing Input Row (Matched to AppColors.bgCard)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -563,15 +571,19 @@ class _DeadlineAlertSettingsModalState
                     decoration: BoxDecoration(
                       color: AppColors.bgCard,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF434A59).withValues(alpha: 0.5),
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       children: [
-                        // 1. Number input (42dp container, squared with rounded corners)
+                        // 1. Number input (Indented container matching AppColors.bgPrimary)
                         Container(
                           width: 56,
                           height: 42,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E232D),
+                            color: AppColors.bgPrimary,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           alignment: Alignment.center,
@@ -594,20 +606,20 @@ class _DeadlineAlertSettingsModalState
                           ),
                         ),
                         SizedBox(width: context.rSpacing(8)),
-                        // 2. Unit dropdown (42dp container)
+                        // 2. Unit dropdown (Indented container matching AppColors.bgPrimary)
                         Expanded(
                           child: Container(
                             height: 42,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1E232D),
+                              color: AppColors.bgPrimary,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             alignment: Alignment.center,
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
                                 value: _customUnit,
-                                dropdownColor: const Color(0xFF1E232D),
+                                dropdownColor: AppColors.bgCard,
                                 isExpanded: true,
                                 icon: const Icon(
                                   Icons.arrow_drop_down_rounded,
@@ -646,7 +658,7 @@ class _DeadlineAlertSettingsModalState
                           ),
                         ),
                         SizedBox(width: context.rSpacing(8)),
-                        // 3. Add button (42dp container)
+                        // 3. Add button (42dp height)
                         SizedBox(
                           height: 42,
                           child: ElevatedButton(
@@ -654,7 +666,7 @@ class _DeadlineAlertSettingsModalState
                             onPressed:
                                 current.enabled ? _addCustomTiming : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF334155),
+                              backgroundColor: const Color(0xFF434A59),
                               elevation: 0,
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 16),
@@ -701,7 +713,7 @@ class _DeadlineAlertSettingsModalState
                   ),
                   SizedBox(height: context.rSpacing(10)),
 
-                  // 4 Mode Options (Clean cards without description sub-text, All logos orange when selected)
+                  // 4 Mode Options (Color matched to Profile cards, All logos orange when selected)
                   _buildModeCard(
                     mode: AlertSoundVibrationMode.soundAndVibrate,
                     state: current,
@@ -771,11 +783,11 @@ class _DeadlineAlertSettingsModalState
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF282D37) : Colors.transparent,
+            color: isSelected ? AppColors.bgPrimary : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
             border: isSelected
                 ? Border.all(
-                    color: const Color(0xFFFA6144).withValues(alpha: 0.6),
+                    color: const Color(0xFFFA6144).withValues(alpha: 0.7),
                     width: 1,
                   )
                 : null,
@@ -929,10 +941,12 @@ class _DeadlineAlertSettingsModalState
             vertical: context.rSpacing(12),
           ),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF282D37) : AppColors.bgCard,
+            color: isSelected ? const Color(0xFF3B4353) : AppColors.bgCard,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: const Color(0xFF383F4D),
+              color: isSelected
+                  ? const Color(0xFF525C70)
+                  : const Color(0xFF434A59).withValues(alpha: 0.5),
               width: 1,
             ),
           ),
