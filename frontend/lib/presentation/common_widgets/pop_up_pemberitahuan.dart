@@ -268,6 +268,28 @@ class PopUpPemberitahuan extends StatefulWidget {
     );
   }
 
+  /// Preset notification when user profile details have been saved (Positif -> Hijau).
+  static void profileUpdated(BuildContext context) {
+    show(
+      context,
+      title: 'Profile Updated',
+      message: 'Your profile changes have been saved successfully.',
+      icon: Icons.badge_outlined,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when user changes avatar picture (Positif -> Hijau).
+  static void profilePictureUpdated(BuildContext context) {
+    show(
+      context,
+      title: 'Photo Updated',
+      message: 'Profile picture has been updated successfully.',
+      icon: Icons.camera_alt_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
   // --- Team Preset Notifications ---
 
   /// Preset notification when a team invite code is copied to clipboard (Positif -> Hijau).

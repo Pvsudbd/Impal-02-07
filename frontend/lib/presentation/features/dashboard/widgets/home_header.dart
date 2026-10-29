@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/page_transitions.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../auth/login_page.dart';
+import '../../profile/profile_page.dart';
 
 /// Top header banner showing user greeting, pending task count, and avatar.
 /// Standardized across Home, Task, Team List, and Schedule pages.
@@ -160,7 +161,14 @@ class HomeHeader extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(999),
-            onTap: () => _showLogoutDialog(context),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ProfilePage(userName: userName),
+                ),
+              );
+            },
+            onLongPress: () => _showLogoutDialog(context),
             child: Container(
               width: 42,
               height: 42,

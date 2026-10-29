@@ -113,6 +113,12 @@ Tugas utamamu adalah memimpin tim pengembang antarmuka multi-agent berbasis arsi
 * **Standar Kartu Tugas Tim (`TeamTaskCard`):**
   - **Sisa Waktu Deadline (Due Badge):** Wajib ditampilkan di sudut kanan atas bersanding dengan badge prioritas dalam format kapsul pill tabular figures.
   - **Tombol Edit Ikon Pensil Abu-Abu:** Tombol edit pada kartu tugas tim wajib ditempatkan di sudut kanan bawah (sejajar dengan profil anggota) berupa **logo pensil abu-abu murni** (`Icons.edit_rounded`, warna `AppColors.textMuted`) tanpa teks.
+* **Standar Halaman Profil & Pengaturan (`ProfilePage` & `EditProfilePage`):**
+  - Terhubung langsung dari ketukan avatar profil inisial di `HomeHeader`.
+  - **Hero Card Profil:** Menampilkan avatar inisial dengan concentric coral ring (`#FA6144`), verified student green badge, nama mahasiswa, NIM dengan pill `ACTIVE STUDENT`, serta afiliasi jurusan dan peran kelompok.
+  - **Baris Statistik 4 Kolom:** Menampilkan kartu ringkasan `DONE` (hijau), `PENDING` (coral), `MK / SKS` (sky blue), dan `ON-TIME` (amber) dengan tabular numbers.
+  - **Pengaturan Pengingat & AI Fuzzy:** Pengaturan switch `Deadline Alerts`, `Sound & Vibration`, pemilih jam `Daily Morning Briefing` via `showImpalTimePicker`, serta status kartu `Fuzzy Inference Model`.
+  - **Formulir Edit Profil:** Form input terstandarisasi (`ProfileTextField`) dengan leading icon, pill verified pada email kampus, notice banner SSO, dan pop-up `PopUpPemberitahuan.profileUpdated`.
 * **Protokol Pop-Up Pemberitahuan Aksi:**
   - Setiap aksi yang memicu manipulasi data (Create, Update, Delete, Submit Form) **wajib memicu Pop-Up Pemberitahuan** (`PopUpPemberitahuan` / `PopUpPemberitahuanTeam`).
   - **Gunakan template yang sudah ada di projek**. Jika belum ada aksi spesifik, buatkan metode preset pada template pop-up yang sudah ada. Jika pop-up belum ada sama sekali di projek, rancang komponen UI pop-up baru berbasis dark container (`#282D37`), icon badge berwarna, dan auto-dismiss.
@@ -132,13 +138,16 @@ Tugas utamamu adalah memimpin tim pengembang antarmuka multi-agent berbasis arsi
 
 ---
 
-## 5. Siklus Koreksi Mandiri (Self-Healing Loop)
+## 5. Siklus Koreksi Mandiri & Pembaruan Roadmap Wajib (Mandatory Self-Healing & Roadmap Loop)
 
 Sebelum menyerahkan kode final kepada pengguna:
 1. Jalankan `dart analyze` via Flutter tools untuk memastikan **0 Error dan 0 Warning**.
 2. Jalankan **Taste & Anti-Slop Audit**: pastikan tidak ada gradien ungu-biru melayang, card berjejer 3 yang membosankan, atau teks klise bawaan AI.
 3. Jalankan **Multi-Screen Stress Test**: uji pada lebar sempit (320–360 dp), standar (390 dp), dan tablet (768 dp) untuk memastikan **Zero Overflow**.
-4. Rangkum seluruh petunjuk integrasi dan arsitektur ke dalam berkas resmi: **`README_FRONTEND.md`**.
+4. **Pembaruan Dokumen Roadmap Wajib (`ROADMAP_AUDIT_DAN_PENINGKATAN.md`):**
+   - **ATURAN MUTLAK:** Setiap kali selesai melakukan suatu pekerjaan, pembuatan kode baru, refactoring, atau perubahan fitur, agen **WAJIB selalu memperbarui berkas `ROADMAP_AUDIT_DAN_PENINGKATAN.md`** di root proyek.
+   - Perbarui status pengerjaan (tandai fitur yang telah selesai), catat log riwayat perubahan, dan perbarui matriks prioritas berikutnya agar progres terdokumentasi rapi.
+5. Rangkum seluruh petunjuk integrasi dan arsitektur ke dalam berkas resmi: **`README_FRONTEND.md`**.
 
 ---
 
