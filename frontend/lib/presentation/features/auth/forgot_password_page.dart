@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 import 'login_page.dart';
 import 'verification_code_page.dart';
 import 'widgets/auth_card_wrapper.dart';
@@ -12,8 +13,15 @@ import 'widgets/recovery_method_card.dart';
 
 enum RecoveryMethod { email, sms }
 
+typedef ForgotPasswordPage = ForgotPassword;
+
 class ForgotPassword extends StatefulWidget {
-  const ForgotPassword({super.key});
+  final String? initialEmail;
+
+  const ForgotPassword({
+    super.key,
+    this.initialEmail,
+  });
 
   @override
   State<ForgotPassword> createState() => _ForgotPasswordState();
@@ -33,6 +41,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialEmail != null && widget.initialEmail!.trim().isNotEmpty) {
+      _emailController.text = widget.initialEmail!.trim();
+    }
     _emailController.addListener(() {
       if (_emailError != null) setState(() => _emailError = null);
     });
@@ -136,6 +147,11 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     final targetDestination = _selectedMethod == RecoveryMethod.email
         ? _emailController.text.trim()
         : '$_countryCode ${_phoneController.text.trim()}';
+
+    PopUpPemberitahuan.recoveryCodeSent(
+      context,
+      destination: targetDestination,
+    );
 
     Navigator.push(
       context,

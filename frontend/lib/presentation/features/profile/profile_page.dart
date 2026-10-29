@@ -4,7 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/page_transitions.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
-import '../../common_widgets/pop_up_pemberitahuan.dart';
+import '../auth/forgot_password_page.dart';
 import '../auth/login_page.dart';
 import '../auth/terms_privacy_page.dart';
 import '../dashboard/home_page.dart';
@@ -128,7 +128,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Password updates require verification with your registered email (${_repo.profile.email}). A secure reset link will be sent to proceed.',
+                'To change your password, you will be redirected to the secure verification and password reset flow for your registered account (${_repo.profile.email}).',
                 style: TextStyle(
                   color: AppColors.textMuted,
                   fontSize: context.rFont(13, min: 11.5, max: 14),
@@ -149,22 +149,36 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   onPressed: () {
                     Navigator.pop(ctx);
-                    PopUpPemberitahuan.show(
-                      context,
-                      title: 'Reset Link Sent',
-                      message:
-                          'Check your inbox for password reset instructions.',
-                      icon: Icons.mark_email_read_rounded,
-                      iconBgColor: const Color(0xFF10B981),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ForgotPassword(
+                          initialEmail: _repo.profile.email,
+                        ),
+                      ),
                     );
                   },
-                  child: const Text(
-                    'Send Reset Link',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Continue to Reset Password',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ],
                   ),
                 ),
               ),

@@ -148,7 +148,7 @@ class _RegisterState extends State<Register> {
   Future<void> _openTermsPrivacy() async {
     final agreed = await Navigator.push<bool>(
       context,
-      AuthFadeRoute(page: const TermsPrivacyPage()),
+      AuthFadeRoute(page: const TermsPrivacyPage(isFromRegister: true)),
     );
     if (agreed == true && mounted) {
       setState(() => _agreeTerms = true);
