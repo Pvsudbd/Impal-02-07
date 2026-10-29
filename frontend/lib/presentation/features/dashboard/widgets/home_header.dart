@@ -4,6 +4,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/page_transitions.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../auth/login_page.dart';
+import '../../notifikasi/models/notification_repository.dart';
+import '../../notifikasi/notifikasi_page.dart';
 import '../../profile/profile_page.dart';
 
 /// Top header banner showing user greeting, pending task count, and avatar.
@@ -156,7 +158,86 @@ class HomeHeader extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
+        // Notification Bell Button (placed to the left of the profile avatar)
+        ListenableBuilder(
+          listenable: NotificationRepository.instance,
+          builder: (context, _) {
+            final unreadCount = NotificationRepository.instance.unreadCount;
+
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const NotifikasiPage(),
+                    ),
+                  );
+                },
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: AppColors.bgCard,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.borderSubtle,
+                          width: 1,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.notifications_none_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    if (unreadCount > 0)
+                      Positioned(
+                        top: -2,
+                        right: -2,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: AppColors.bgPrimary,
+                              width: 1.5,
+                            ),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 17,
+                            minHeight: 17,
+                          ),
+                          child: Text(
+                            '$unreadCount',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'Inter',
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(width: 10),
         Material(
           color: Colors.transparent,
           child: InkWell(
