@@ -502,12 +502,12 @@ class _DeadlineAlertSettingsModalState
 
                   SizedBox(height: context.rSpacing(20)),
 
-                  // Section 1: Remind Me Before (Timings)
+                  // Section: Remind Me Before (Timings)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '1. REMIND ME BEFORE',
+                        'REMIND ME BEFORE',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: context.rFont(11.5, min: 10, max: 13),
@@ -713,9 +713,9 @@ class _DeadlineAlertSettingsModalState
 
                   SizedBox(height: context.rSpacing(24)),
 
-                  // Section 2: Sound & Vibration Mode
+                  // Section: Sound & Vibration Mode
                   Text(
-                    '2. SOUND & VIBRATION MODE',
+                    'SOUND & VIBRATION MODE',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: context.rFont(11.5, min: 10, max: 13),

@@ -141,8 +141,8 @@ void main() {
       // Verify modal is open
       expect(find.byType(DeadlineAlertSettingsModal), findsOneWidget);
       expect(find.text('Task Deadlines Alert Settings'), findsOneWidget);
-      expect(find.text('1. REMIND ME BEFORE'), findsOneWidget);
-      expect(find.text('2. SOUND & VIBRATION MODE'), findsOneWidget);
+      expect(find.text('REMIND ME BEFORE'), findsOneWidget);
+      expect(find.text('SOUND & VIBRATION MODE'), findsOneWidget);
 
       // Select Vibration Only mode
       await tester.tap(find.text('Vibration Only'));
@@ -296,9 +296,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(DailyBriefingSettingsModal), findsOneWidget);
-      expect(find.text('1. BRIEFING DELIVERY TIME'), findsOneWidget);
-      expect(find.text('2. INCLUDED BRIEFING TOPICS'), findsOneWidget);
+      expect(find.text('BRIEFING DELIVERY TIME'), findsOneWidget);
+      expect(find.text('NOTIFICATION DISPLAY FORMAT'), findsOneWidget);
+      expect(find.text('INCLUDED BRIEFING TOPICS'), findsOneWidget);
       expect(find.text('Change Time'), findsOneWidget);
+      expect(find.text('Detailed Agenda (Recommended)'), findsOneWidget);
+      expect(find.text('Compact Summary'), findsOneWidget);
 
       // Verify all 5 topics are displayed
       expect(find.text('Personal Tasks'), findsOneWidget);
@@ -306,6 +309,10 @@ void main() {
       expect(find.text('External Schedule'), findsOneWidget);
       expect(find.text('Team Tasks'), findsOneWidget);
       expect(find.text('Team Meetings'), findsOneWidget);
+
+      // Tap Compact Summary format
+      await tester.tap(find.text('Compact Summary'));
+      await tester.pumpAndSettle();
 
       // Toggle off Team Meetings
       await tester.tap(find.text('Team Meetings'));
@@ -316,8 +323,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(DailyBriefingSettingsModal), findsNothing);
-      // Summary updates without Team Meetings
+      // Summary updates with Compact format reflected
       expect(find.textContaining('07:00 WIB'), findsOneWidget);
+      expect(find.textContaining('Compact'), findsOneWidget);
     });
 
     test('AlertSoundVibrationMode has verified intuitive icon mappings', () {

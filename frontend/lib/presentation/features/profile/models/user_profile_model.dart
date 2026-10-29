@@ -269,6 +269,7 @@ class UserProfileModel {
   final bool isDailyBriefingEnabled;
   final String dailyMorningBriefingTime;
   final List<String> dailyBriefingTopics;
+  final bool isDailyBriefingCompact;
   final bool soundVibrationEnabled;
 
   // Intelligent System AI Fuzzy
@@ -325,6 +326,7 @@ class UserProfileModel {
       DailyBriefingTopic.teamTasks,
       DailyBriefingTopic.teamMeetings,
     ],
+    this.isDailyBriefingCompact = false,
     this.soundVibrationEnabled = true,
     this.isFuzzyModelActive = true,
     this.scoreExplainabilityEnabled = true,
@@ -360,13 +362,14 @@ class UserProfileModel {
   String get dailyBriefingSummary {
     if (!isDailyBriefingEnabled) return 'Muted • Tap to configure';
     final count = dailyBriefingTopics.length;
-    if (count == 0) return '$dailyMorningBriefingTime • No topics selected';
+    final styleTag = isDailyBriefingCompact ? 'Compact' : 'Detailed';
+    if (count == 0) return '$dailyMorningBriefingTime • No topics ($styleTag)';
     if (count == DailyBriefingTopic.all.length) {
-      return '$dailyMorningBriefingTime • All topics';
+      return '$dailyMorningBriefingTime • All topics • $styleTag';
     }
     final topicNames =
         dailyBriefingTopics.map(DailyBriefingTopic.label).join(', ');
-    return '$dailyMorningBriefingTime • $topicNames';
+    return '$dailyMorningBriefingTime • $topicNames • $styleTag';
   }
 
   CategoryAlertConfig configFor(AlertCategoryType category) {
@@ -421,6 +424,7 @@ class UserProfileModel {
     bool? isDailyBriefingEnabled,
     String? dailyMorningBriefingTime,
     List<String>? dailyBriefingTopics,
+    bool? isDailyBriefingCompact,
     bool? soundVibrationEnabled,
     bool? isFuzzyModelActive,
     bool? scoreExplainabilityEnabled,
@@ -467,6 +471,8 @@ class UserProfileModel {
           dailyMorningBriefingTime ?? this.dailyMorningBriefingTime,
       dailyBriefingTopics:
           dailyBriefingTopics ?? this.dailyBriefingTopics,
+      isDailyBriefingCompact:
+          isDailyBriefingCompact ?? this.isDailyBriefingCompact,
       soundVibrationEnabled:
           soundVibrationEnabled ?? this.soundVibrationEnabled,
       isFuzzyModelActive: isFuzzyModelActive ?? this.isFuzzyModelActive,
@@ -609,11 +615,13 @@ class UserProfileRepository with ChangeNotifier {
     required bool enabled,
     required String time,
     required List<String> topics,
+    bool isCompact = false,
   }) {
     _profile = _profile.copyWith(
       isDailyBriefingEnabled: enabled,
       dailyMorningBriefingTime: time,
       dailyBriefingTopics: topics,
+      isDailyBriefingCompact: isCompact,
     );
     notifyListeners();
   }

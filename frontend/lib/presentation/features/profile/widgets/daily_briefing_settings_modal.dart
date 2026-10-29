@@ -45,6 +45,7 @@ class _DailyBriefingSettingsModalState
   late bool _enabled;
   late String _briefingTime;
   late Set<String> _selectedTopics;
+  late bool _isCompact;
 
   @override
   void initState() {
@@ -52,6 +53,7 @@ class _DailyBriefingSettingsModalState
     _enabled = widget.profile.isDailyBriefingEnabled;
     _briefingTime = widget.profile.dailyMorningBriefingTime;
     _selectedTopics = Set.from(widget.profile.dailyBriefingTopics);
+    _isCompact = widget.profile.isDailyBriefingCompact;
   }
 
   TimeOfDay _parseTime(String timeStr) {
@@ -110,6 +112,7 @@ class _DailyBriefingSettingsModalState
       enabled: _enabled,
       time: _briefingTime,
       topics: _selectedTopics.toList(),
+      isCompact: _isCompact,
     );
 
     if (widget.onSaved != null) {
@@ -118,11 +121,12 @@ class _DailyBriefingSettingsModalState
 
     Navigator.of(context).pop();
 
+    final formatLabel = _isCompact ? 'Compact' : 'Detailed';
     PopUpPemberitahuan.show(
       context,
       title: 'Briefing Settings Saved',
       message: _enabled
-          ? 'Daily morning briefing scheduled at $_briefingTime with ${_selectedTopics.length} topics included.'
+          ? 'Daily morning briefing scheduled at $_briefingTime ($formatLabel) with ${_selectedTopics.length} topics included.'
           : 'Daily morning briefing has been muted.',
       iconBgColor: const Color(0xFF10B981),
       icon: Icons.check_circle_outline_rounded,
@@ -304,9 +308,9 @@ class _DailyBriefingSettingsModalState
 
                   SizedBox(height: context.rSpacing(20)),
 
-                  // Section 1: Briefing Time
+                  // Section: Briefing Time
                   Text(
-                    '1. BRIEFING DELIVERY TIME',
+                    'BRIEFING DELIVERY TIME',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: context.rFont(11.5, min: 10, max: 13),
@@ -427,9 +431,51 @@ class _DailyBriefingSettingsModalState
 
                   SizedBox(height: context.rSpacing(24)),
 
-                  // Section 2: Included Briefing Topics
+                  // Section: Notification Display Format
                   Text(
-                    '2. INCLUDED BRIEFING TOPICS',
+                    'NOTIFICATION DISPLAY FORMAT',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: context.rFont(11.5, min: 10, max: 13),
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  SizedBox(height: context.rSpacing(6)),
+                  Text(
+                    'Choose how the briefing summary is formatted on your lock screen:',
+                    style: TextStyle(
+                      color: const Color(0xFF94A3B8),
+                      fontSize: context.rFont(12, min: 10.5, max: 13.5),
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  SizedBox(height: context.rSpacing(10)),
+
+                  // Detailed Option Card
+                  _buildFormatOption(
+                    isCompact: false,
+                    title: 'Detailed Agenda (Recommended)',
+                    subtitle:
+                        'Lists specific agenda titles, times & bullet points directly on lock screen',
+                    icon: Icons.format_list_bulleted_rounded,
+                  ),
+                  SizedBox(height: context.rSpacing(8)),
+                  // Compact Option Card
+                  _buildFormatOption(
+                    isCompact: true,
+                    title: 'Compact Summary',
+                    subtitle:
+                        'Minimal overview with total agenda count only (e.g. "3 agendas scheduled today")',
+                    icon: Icons.short_text_rounded,
+                  ),
+
+                  SizedBox(height: context.rSpacing(24)),
+
+                  // Section: Included Briefing Topics
+                  Text(
+                    'INCLUDED BRIEFING TOPICS',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: context.rFont(11.5, min: 10, max: 13),
@@ -515,6 +561,115 @@ class _DailyBriefingSettingsModalState
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFormatOption({
+    required bool isCompact,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
+    final isSelected = _isCompact == isCompact;
+    const orangeColor = Color(0xFFFF7D65);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _enabled ? () => setState(() => _isCompact = isCompact) : null,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: context.rSpacing(14),
+            vertical: context.rSpacing(12),
+          ),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF3B4353) : AppColors.bgCard,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFF525C70)
+                  : const Color(0xFF434A59).withValues(alpha: 0.5),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              // Squared container with rounded corners (10dp)
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? orangeColor.withValues(alpha: 0.2)
+                      : const Color(0xFF334155).withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: isSelected ? orangeColor : const Color(0xFF94A3B8),
+                ),
+              ),
+              SizedBox(width: context.rSpacing(12)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: context.rFont(13.5, min: 12, max: 15),
+                        fontFamily: 'Inter',
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: context.rFont(11.5, min: 10, max: 13),
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Concentric Radio Indicator
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected
+                        ? orangeColor
+                        : const Color(0xFF64748B),
+                    width: 2,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: isSelected
+                    ? Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: orangeColor,
+                        ),
+                      )
+                    : null,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
