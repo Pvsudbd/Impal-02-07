@@ -480,11 +480,17 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
               final item = group.items[i];
               final updated = item.copyWith(isAlertEnabled: !item.isAlertEnabled);
               ScheduleRepository().updateSchedule(updated);
-              final isClass = item.type.toLowerCase().contains('lecture') || item.type.toLowerCase().contains('class');
+              final typeStr = item.type.toLowerCase();
+              final isClass = typeStr.contains('lecture') || typeStr.contains('class');
+              final isExternal = typeStr.contains('external');
               final categoryConfig = isClass
-                  ? UserProfileRepository().profile.classScheduleAlerts
-                  : UserProfileRepository().profile.teamMeetingAlerts;
-              final categoryName = isClass ? 'Class Schedule' : 'Team Meeting';
+                  ? UserProfileRepository().profile.lectureScheduleAlerts
+                  : (isExternal
+                      ? UserProfileRepository().profile.externalScheduleAlerts
+                      : UserProfileRepository().profile.teamMeetingAlerts);
+              final categoryName = isClass
+                  ? 'Lecture Schedule'
+                  : (isExternal ? 'External Schedule' : 'Team Meeting');
               PopUpPemberitahuan.show(
                 context,
                 title: updated.isAlertEnabled ? '$categoryName Alert Active' : '$categoryName Alert Muted',

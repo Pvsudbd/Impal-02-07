@@ -75,7 +75,7 @@ class ProfileFuzzyCard extends StatelessWidget {
                           height: 38,
                           decoration: BoxDecoration(
                             color: const Color(0xFF8B5CF6).withValues(alpha: 0.18),
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           alignment: Alignment.center,
                           child: const Icon(
@@ -177,7 +177,7 @@ class ProfileFuzzyCard extends StatelessWidget {
                       height: 38,
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981).withValues(alpha: 0.18),
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       alignment: Alignment.center,
                       child: const Icon(

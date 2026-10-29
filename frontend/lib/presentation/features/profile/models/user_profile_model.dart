@@ -18,7 +18,7 @@ extension AlertSoundVibrationModeX on AlertSoundVibrationMode {
       case AlertSoundVibrationMode.vibrationOnly:
         return 'Vibration Only';
       case AlertSoundVibrationMode.silent:
-        return 'Silent Notification';
+        return 'Silent';
     }
   }
 
@@ -32,19 +32,6 @@ extension AlertSoundVibrationModeX on AlertSoundVibrationMode {
         return 'Vibrate Only';
       case AlertSoundVibrationMode.silent:
         return 'Silent';
-    }
-  }
-
-  String get description {
-    switch (this) {
-      case AlertSoundVibrationMode.soundAndVibrate:
-        return 'Ringtone sound with device haptic vibration';
-      case AlertSoundVibrationMode.soundOnly:
-        return 'Audible alert ringtone without device vibration';
-      case AlertSoundVibrationMode.vibrationOnly:
-        return 'Vibration only without audible ringtone (ideal for classes)';
-      case AlertSoundVibrationMode.silent:
-        return 'Pop-up notification on screen without sound or vibration';
     }
   }
 
@@ -62,9 +49,12 @@ extension AlertSoundVibrationModeX on AlertSoundVibrationMode {
   }
 }
 
-/// Distinct category of alerts configurable by the user.
+/// Main pillars of alert configuration in Profile.
 enum AlertCategoryType {
   taskDeadline,
+  schedule,
+  team,
+  // Backwards compatibility aliases
   classSchedule,
   teamMeeting;
 
@@ -72,21 +62,25 @@ enum AlertCategoryType {
     switch (this) {
       case AlertCategoryType.taskDeadline:
         return 'Task Deadlines';
+      case AlertCategoryType.schedule:
       case AlertCategoryType.classSchedule:
-        return 'Class Schedule';
+        return 'Schedule Alerts';
+      case AlertCategoryType.team:
       case AlertCategoryType.teamMeeting:
-        return 'Team Tasks & Meetings';
+        return 'Team Alerts';
     }
   }
 
   String get description {
     switch (this) {
       case AlertCategoryType.taskDeadline:
-        return 'Personal assignment & project submissions';
+        return 'Personal assignment & submission reminders';
+      case AlertCategoryType.schedule:
       case AlertCategoryType.classSchedule:
-        return 'Campus lectures & laboratory classes';
+        return 'Campus lectures & external schedule alerts';
+      case AlertCategoryType.team:
       case AlertCategoryType.teamMeeting:
-        return 'Group discussions, voice calls & task syncs';
+        return 'Group task deadlines & team meeting reminders';
     }
   }
 
@@ -94,8 +88,10 @@ enum AlertCategoryType {
     switch (this) {
       case AlertCategoryType.taskDeadline:
         return Icons.assignment_late_outlined;
+      case AlertCategoryType.schedule:
       case AlertCategoryType.classSchedule:
-        return Icons.school_outlined;
+        return Icons.calendar_month_outlined;
+      case AlertCategoryType.team:
       case AlertCategoryType.teamMeeting:
         return Icons.groups_outlined;
     }
@@ -105,8 +101,10 @@ enum AlertCategoryType {
     switch (this) {
       case AlertCategoryType.taskDeadline:
         return const Color(0xFFFF7D65); // Coral
+      case AlertCategoryType.schedule:
       case AlertCategoryType.classSchedule:
         return const Color(0xFF5B93FF); // Sky Blue
+      case AlertCategoryType.team:
       case AlertCategoryType.teamMeeting:
         return const Color(0xFFFBBF24); // Warm Amber
     }
@@ -135,6 +133,13 @@ class CategoryAlertConfig {
       timings: timings ?? this.timings,
       soundMode: soundMode ?? this.soundMode,
     );
+  }
+
+  String get cleanTimingsSummary {
+    if (!enabled) return 'Muted';
+    if (timings.isEmpty) return 'Day H';
+    final first = timings.first.replaceAll(RegExp(r'\(.*?\)'), '').trim();
+    return first.isEmpty ? timings.first : first;
   }
 
   String get summary {
@@ -169,10 +174,13 @@ class UserProfileModel {
   final int sksCount;
   final int onTimeRatePercent;
 
-  // Reminders & Schedule Settings (Multi-Category Alert System)
+  // Reminders & Schedule Settings (Granular Independent Sub-Categories)
   final CategoryAlertConfig taskDeadlineAlerts;
-  final CategoryAlertConfig classScheduleAlerts;
+  final CategoryAlertConfig lectureScheduleAlerts;
+  final CategoryAlertConfig externalScheduleAlerts;
+  final CategoryAlertConfig teamTaskAlerts;
   final CategoryAlertConfig teamMeetingAlerts;
+
   final String dailyMorningBriefingTime;
   final bool soundVibrationEnabled;
 
@@ -201,10 +209,20 @@ class UserProfileModel {
       timings: ['H-1 (24 Hours)', '1 Hour'],
       soundMode: AlertSoundVibrationMode.vibrationOnly,
     ),
-    this.classScheduleAlerts = const CategoryAlertConfig(
+    this.lectureScheduleAlerts = const CategoryAlertConfig(
       enabled: true,
       timings: ['30 Minutes', '15 Minutes'],
       soundMode: AlertSoundVibrationMode.soundAndVibrate,
+    ),
+    this.externalScheduleAlerts = const CategoryAlertConfig(
+      enabled: true,
+      timings: ['H-1 (24 Hours)', '1 Hour'],
+      soundMode: AlertSoundVibrationMode.vibrationOnly,
+    ),
+    this.teamTaskAlerts = const CategoryAlertConfig(
+      enabled: true,
+      timings: ['H-1 (24 Hours)', '3 Hours'],
+      soundMode: AlertSoundVibrationMode.vibrationOnly,
     ),
     this.teamMeetingAlerts = const CategoryAlertConfig(
       enabled: true,
@@ -218,17 +236,40 @@ class UserProfileModel {
   });
 
   // Backward compatibility getters
+  CategoryAlertConfig get classScheduleAlerts => lectureScheduleAlerts;
   bool get deadlineAlertsEnabled => taskDeadlineAlerts.enabled;
   List<String> get deadlineAlertTimings => taskDeadlineAlerts.timings;
   AlertSoundVibrationMode get alertSoundMode => taskDeadlineAlerts.soundMode;
   String get deadlineAlertsSummary => taskDeadlineAlerts.summary;
 
+  String get scheduleAlertsSummary {
+    final lText = lectureScheduleAlerts.enabled
+        ? '${lectureScheduleAlerts.cleanTimingsSummary} (${lectureScheduleAlerts.soundMode.shortLabel})'
+        : 'Muted';
+    final eText = externalScheduleAlerts.enabled
+        ? '${externalScheduleAlerts.cleanTimingsSummary} (${externalScheduleAlerts.soundMode.shortLabel})'
+        : 'Muted';
+    return 'Lecture: $lText • External: $eText';
+  }
+
+  String get teamAlertsSummary {
+    final tText = teamTaskAlerts.enabled
+        ? '${teamTaskAlerts.cleanTimingsSummary} (${teamTaskAlerts.soundMode.shortLabel})'
+        : 'Muted';
+    final mText = teamMeetingAlerts.enabled
+        ? '${teamMeetingAlerts.cleanTimingsSummary} (${teamMeetingAlerts.soundMode.shortLabel})'
+        : 'Muted';
+    return 'Tasks: $tText • Meetings: $mText';
+  }
+
   CategoryAlertConfig configFor(AlertCategoryType category) {
     switch (category) {
       case AlertCategoryType.taskDeadline:
         return taskDeadlineAlerts;
+      case AlertCategoryType.schedule:
       case AlertCategoryType.classSchedule:
-        return classScheduleAlerts;
+        return lectureScheduleAlerts;
+      case AlertCategoryType.team:
       case AlertCategoryType.teamMeeting:
         return teamMeetingAlerts;
     }
@@ -261,8 +302,12 @@ class UserProfileModel {
     int? sksCount,
     int? onTimeRatePercent,
     CategoryAlertConfig? taskDeadlineAlerts,
-    CategoryAlertConfig? classScheduleAlerts,
+    CategoryAlertConfig? lectureScheduleAlerts,
+    CategoryAlertConfig? externalScheduleAlerts,
+    CategoryAlertConfig? teamTaskAlerts,
     CategoryAlertConfig? teamMeetingAlerts,
+    // Backwards compatibility parameters
+    CategoryAlertConfig? classScheduleAlerts,
     bool? deadlineAlertsEnabled,
     List<String>? deadlineAlertTimings,
     AlertSoundVibrationMode? alertSoundMode,
@@ -271,8 +316,11 @@ class UserProfileModel {
     bool? isFuzzyModelActive,
     bool? scoreExplainabilityEnabled,
   }) {
-    CategoryAlertConfig resolvedTaskDeadline = taskDeadlineAlerts ?? this.taskDeadlineAlerts;
-    if (deadlineAlertsEnabled != null || deadlineAlertTimings != null || alertSoundMode != null) {
+    CategoryAlertConfig resolvedTaskDeadline =
+        taskDeadlineAlerts ?? this.taskDeadlineAlerts;
+    if (deadlineAlertsEnabled != null ||
+        deadlineAlertTimings != null ||
+        alertSoundMode != null) {
       resolvedTaskDeadline = resolvedTaskDeadline.copyWith(
         enabled: deadlineAlertsEnabled,
         timings: deadlineAlertTimings,
@@ -297,7 +345,12 @@ class UserProfileModel {
       sksCount: sksCount ?? this.sksCount,
       onTimeRatePercent: onTimeRatePercent ?? this.onTimeRatePercent,
       taskDeadlineAlerts: resolvedTaskDeadline,
-      classScheduleAlerts: classScheduleAlerts ?? this.classScheduleAlerts,
+      lectureScheduleAlerts: lectureScheduleAlerts ??
+          classScheduleAlerts ??
+          this.lectureScheduleAlerts,
+      externalScheduleAlerts:
+          externalScheduleAlerts ?? this.externalScheduleAlerts,
+      teamTaskAlerts: teamTaskAlerts ?? this.teamTaskAlerts,
       teamMeetingAlerts: teamMeetingAlerts ?? this.teamMeetingAlerts,
       dailyMorningBriefingTime:
           dailyMorningBriefingTime ?? this.dailyMorningBriefingTime,
@@ -337,6 +390,28 @@ class UserProfileRepository with ChangeNotifier {
     notifyListeners();
   }
 
+  void updateScheduleAlertSettings({
+    required CategoryAlertConfig lectureConfig,
+    required CategoryAlertConfig externalConfig,
+  }) {
+    _profile = _profile.copyWith(
+      lectureScheduleAlerts: lectureConfig,
+      externalScheduleAlerts: externalConfig,
+    );
+    notifyListeners();
+  }
+
+  void updateTeamAlertSettings({
+    required CategoryAlertConfig teamTaskConfig,
+    required CategoryAlertConfig teamMeetingConfig,
+  }) {
+    _profile = _profile.copyWith(
+      teamTaskAlerts: teamTaskConfig,
+      teamMeetingAlerts: teamMeetingConfig,
+    );
+    notifyListeners();
+  }
+
   void updateCategoryAlertSettings({
     required AlertCategoryType category,
     required bool enabled,
@@ -352,9 +427,11 @@ class UserProfileRepository with ChangeNotifier {
       case AlertCategoryType.taskDeadline:
         _profile = _profile.copyWith(taskDeadlineAlerts: updatedConfig);
         break;
+      case AlertCategoryType.schedule:
       case AlertCategoryType.classSchedule:
-        _profile = _profile.copyWith(classScheduleAlerts: updatedConfig);
+        _profile = _profile.copyWith(lectureScheduleAlerts: updatedConfig);
         break;
+      case AlertCategoryType.team:
       case AlertCategoryType.teamMeeting:
         _profile = _profile.copyWith(teamMeetingAlerts: updatedConfig);
         break;
@@ -366,17 +443,22 @@ class UserProfileRepository with ChangeNotifier {
     switch (category) {
       case AlertCategoryType.taskDeadline:
         _profile = _profile.copyWith(
-          taskDeadlineAlerts: _profile.taskDeadlineAlerts.copyWith(enabled: enabled),
+          taskDeadlineAlerts:
+              _profile.taskDeadlineAlerts.copyWith(enabled: enabled),
         );
         break;
+      case AlertCategoryType.schedule:
       case AlertCategoryType.classSchedule:
         _profile = _profile.copyWith(
-          classScheduleAlerts: _profile.classScheduleAlerts.copyWith(enabled: enabled),
+          lectureScheduleAlerts:
+              _profile.lectureScheduleAlerts.copyWith(enabled: enabled),
         );
         break;
+      case AlertCategoryType.team:
       case AlertCategoryType.teamMeeting:
         _profile = _profile.copyWith(
-          teamMeetingAlerts: _profile.teamMeetingAlerts.copyWith(enabled: enabled),
+          teamMeetingAlerts:
+              _profile.teamMeetingAlerts.copyWith(enabled: enabled),
         );
         break;
     }
@@ -420,4 +502,3 @@ class UserProfileRepository with ChangeNotifier {
     notifyListeners();
   }
 }
-

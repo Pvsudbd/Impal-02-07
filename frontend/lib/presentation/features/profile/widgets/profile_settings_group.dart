@@ -5,10 +5,10 @@ import '../models/user_profile_model.dart';
 import 'deadline_alert_settings_modal.dart';
 
 /// Grouped settings cards for Reminders & Alerts preferences.
-/// Supports granular, independent alert configuration for:
+/// Supports 3 high-level pillars with progressive sub-disclosure:
 /// 1. Task Deadlines (Personal assignments & submissions)
-/// 2. Class Schedule (Lectures & laboratory sessions)
-/// 3. Team Tasks & Meetings (Group work & sync discussions)
+/// 2. Schedule Alerts (Lecture schedule & external schedule)
+/// 3. Team Alerts (Team tasks & team meetings)
 class ProfileSettingsGroup extends StatelessWidget {
   final UserProfileModel profile;
   final ValueChanged<bool>? onToggleDeadlineAlerts;
@@ -45,7 +45,8 @@ class ProfileSettingsGroup extends StatelessWidget {
             timings: timings,
             mode: mode,
           );
-        } else if (onSaveAlertSettings != null && category == AlertCategoryType.taskDeadline) {
+        } else if (onSaveAlertSettings != null &&
+            category == AlertCategoryType.taskDeadline) {
           onSaveAlertSettings!(
             enabled: enabled,
             timings: timings,
@@ -85,23 +86,54 @@ class ProfileSettingsGroup extends StatelessWidget {
         _buildCategoryCard(
           context,
           category: AlertCategoryType.taskDeadline,
-          config: profile.taskDeadlineAlerts,
+          title: 'Task Deadlines',
+          summary: profile.taskDeadlineAlerts.summary,
+          isEnabled: profile.taskDeadlineAlerts.enabled,
+          onToggle: (val) {
+            UserProfileRepository().toggleCategoryAlert(
+              AlertCategoryType.taskDeadline,
+              val,
+            );
+          },
         ),
         SizedBox(height: context.rSpacing(10)),
 
-        // Category 2: Class Schedule
+        // Category 2: Schedule Alerts (Lecture & External)
         _buildCategoryCard(
           context,
-          category: AlertCategoryType.classSchedule,
-          config: profile.classScheduleAlerts,
+          category: AlertCategoryType.schedule,
+          title: 'Schedule Alerts',
+          summary: profile.scheduleAlertsSummary,
+          isEnabled: profile.lectureScheduleAlerts.enabled ||
+              profile.externalScheduleAlerts.enabled,
+          onToggle: (val) {
+            final repo = UserProfileRepository();
+            repo.updateScheduleAlertSettings(
+              lectureConfig:
+                  profile.lectureScheduleAlerts.copyWith(enabled: val),
+              externalConfig:
+                  profile.externalScheduleAlerts.copyWith(enabled: val),
+            );
+          },
         ),
         SizedBox(height: context.rSpacing(10)),
 
-        // Category 3: Team Tasks & Meetings
+        // Category 3: Team Alerts (Tasks & Meetings)
         _buildCategoryCard(
           context,
-          category: AlertCategoryType.teamMeeting,
-          config: profile.teamMeetingAlerts,
+          category: AlertCategoryType.team,
+          title: 'Team Alerts',
+          summary: profile.teamAlertsSummary,
+          isEnabled: profile.teamTaskAlerts.enabled ||
+              profile.teamMeetingAlerts.enabled,
+          onToggle: (val) {
+            final repo = UserProfileRepository();
+            repo.updateTeamAlertSettings(
+              teamTaskConfig: profile.teamTaskAlerts.copyWith(enabled: val),
+              teamMeetingConfig:
+                  profile.teamMeetingAlerts.copyWith(enabled: val),
+            );
+          },
         ),
       ],
     );
@@ -110,7 +142,10 @@ class ProfileSettingsGroup extends StatelessWidget {
   Widget _buildCategoryCard(
     BuildContext context, {
     required AlertCategoryType category,
-    required CategoryAlertConfig config,
+    required String title,
+    required String summary,
+    required bool isEnabled,
+    required ValueChanged<bool> onToggle,
   }) {
     return Container(
       width: double.infinity,
@@ -142,86 +177,77 @@ class ProfileSettingsGroup extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Leading Icon
+                // Squared container (kotak rounded 10dp) matching Account & Integration
                 Container(
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: config.enabled
+                    color: isEnabled
                         ? category.accentColor.withValues(alpha: 0.18)
                         : const Color(0xFF475569).withValues(alpha: 0.25),
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
                   child: Icon(
-                    config.enabled
+                    isEnabled
                         ? category.icon
                         : Icons.notifications_off_outlined,
                     size: 20,
-                    color: config.enabled
+                    color: isEnabled
                         ? category.accentColor
                         : const Color(0xFF94A3B8),
                   ),
                 ),
                 SizedBox(width: context.rSpacing(12)),
-
-                // Title & Dynamic Summary Subtitle
+                // Text Column
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        category.label,
+                        title,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: context.rFont(13.5, min: 12, max: 15),
+                          fontSize: context.rFont(14, min: 12.5, max: 16),
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        config.summary,
+                        summary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: config.enabled
-                              ? AppColors.primaryAccent
+                          color: isEnabled
+                              ? const Color(0xFFFA6144)
                               : AppColors.textMuted,
-                          fontSize: context.rFont(11, min: 10, max: 12.5),
+                          fontSize: context.rFont(11.5, min: 10, max: 13),
                           fontFamily: 'Inter',
-                          fontWeight: FontWeight.w500,
+                          fontWeight:
+                              isEnabled ? FontWeight.w600 : FontWeight.w400,
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
-
-                // Category Switch
-                Transform.scale(
-                  scale: 0.85,
-                  child: Switch(
-                    value: config.enabled,
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: const Color(0xFF10B981),
-                    inactiveThumbColor: Colors.white70,
-                    inactiveTrackColor: const Color(0xFF434A59),
-                    onChanged: (val) {
-                      UserProfileRepository().toggleCategoryAlert(category, val);
-                      if (category == AlertCategoryType.taskDeadline) {
-                        onToggleDeadlineAlerts?.call(val);
-                      }
-                    },
-                  ),
+                // Switch
+                Switch(
+                  value: isEnabled,
+                  activeThumbColor: Colors.white,
+                  activeTrackColor: const Color(0xFF10B981),
+                  inactiveThumbColor: Colors.white70,
+                  inactiveTrackColor: const Color(0xFF434A59),
+                  onChanged: onToggle,
                 ),
-
-                const SizedBox(width: 2),
-
-                // Chevron indicating modal configurability
+                const SizedBox(width: 4),
+                // Chevron icon indicating tap-to-open modal
                 const Icon(
                   Icons.chevron_right_rounded,
                   color: AppColors.textMuted,
-                  size: 22,
+                  size: 20,
                 ),
               ],
             ),

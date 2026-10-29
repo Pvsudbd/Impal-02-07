@@ -6,7 +6,8 @@ import '../models/user_profile_model.dart';
 
 /// Interactive modal bottom sheet for customizing:
 /// 1. Category alert timings (Days, Hours, Minutes, or Custom)
-/// 2. Sound & Vibration mode (Sound & Vibrate, Sound Only, Vibration Only, or Silent)
+/// 2. Segmented sub-tabs for Schedule (Lecture vs External) & Team (Tasks vs Meetings)
+/// 3. Sound & Vibration modes with orange highlights and clean titles
 class DeadlineAlertSettingsModal extends StatefulWidget {
   final UserProfileModel profile;
   final AlertCategoryType category;
@@ -14,24 +15,24 @@ class DeadlineAlertSettingsModal extends StatefulWidget {
     required bool enabled,
     required List<String> timings,
     required AlertSoundVibrationMode mode,
-  }) onSave;
+  })? onSave;
 
   const DeadlineAlertSettingsModal({
     super.key,
     required this.profile,
     this.category = AlertCategoryType.taskDeadline,
-    required this.onSave,
+    this.onSave,
   });
 
   static Future<void> show(
     BuildContext context, {
     required UserProfileModel profile,
     AlertCategoryType category = AlertCategoryType.taskDeadline,
-    required void Function({
+    void Function({
       required bool enabled,
       required List<String> timings,
       required AlertSoundVibrationMode mode,
-    }) onSave,
+    })? onSave,
   }) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -50,65 +51,128 @@ class DeadlineAlertSettingsModal extends StatefulWidget {
       _DeadlineAlertSettingsModalState();
 }
 
+class _SubAlertState {
+  bool enabled;
+  List<String> availablePresets;
+  Set<String> selectedTimings;
+  AlertSoundVibrationMode selectedMode;
+
+  _SubAlertState({
+    required this.enabled,
+    required List<String> presets,
+    required List<String> selected,
+    required this.selectedMode,
+  })  : availablePresets = List.from(presets),
+        selectedTimings = Set.from(selected);
+
+  CategoryAlertConfig toConfig() => CategoryAlertConfig(
+        enabled: enabled,
+        timings: selectedTimings.toList(),
+        soundMode: selectedMode,
+      );
+}
+
 class _DeadlineAlertSettingsModalState
     extends State<DeadlineAlertSettingsModal> {
-  late bool _enabled;
-  late Set<String> _selectedTimings;
-  late AlertSoundVibrationMode _selectedMode;
+  int _activeTabIndex = 0;
 
   final TextEditingController _customNumberController =
       TextEditingController(text: '2');
   String _customUnit = 'Hours';
 
-  List<String> get _defaultPresets {
-    switch (widget.category) {
-      case AlertCategoryType.classSchedule:
-        return const [
-          '1 Hour',
-          '45 Minutes',
-          '30 Minutes',
-          '15 Minutes',
-          '10 Minutes',
-          '5 Minutes',
-        ];
-      case AlertCategoryType.teamMeeting:
-        return const [
-          '1 Day',
-          '3 Hours',
-          '1 Hour',
-          '30 Minutes',
-          '15 Minutes',
-          '5 Minutes',
-        ];
-      case AlertCategoryType.taskDeadline:
-        return const [
-          'H-3 (3 Days)',
-          'H-1 (24 Hours)',
-          '6 Hours',
-          '3 Hours',
-          '1 Hour',
-          '30 Minutes',
-          '15 Minutes',
-        ];
-    }
-  }
+  // Sub-category states
+  late _SubAlertState _taskDeadlineState;
+  late _SubAlertState _lectureScheduleState;
+  late _SubAlertState _externalScheduleState;
+  late _SubAlertState _teamTaskState;
+  late _SubAlertState _teamMeetingState;
 
-  late List<String> _availablePresets;
+  static const List<String> _taskPresets = [
+    'H-3 (3 Days)',
+    'H-1 (24 Hours)',
+    '6 Hours',
+    '3 Hours',
+    '1 Hour',
+    '30 Minutes',
+    '15 Minutes',
+  ];
+
+  static const List<String> _lecturePresets = [
+    '1 Hour',
+    '45 Minutes',
+    '30 Minutes',
+    '15 Minutes',
+    '10 Minutes',
+    '5 Minutes',
+  ];
+
+  static const List<String> _externalPresets = [
+    'H-1 (24 Hours)',
+    '6 Hours',
+    '3 Hours',
+    '1 Hour',
+    '30 Minutes',
+    '15 Minutes',
+  ];
+
+  static const List<String> _teamTaskPresets = [
+    'H-3 (3 Days)',
+    'H-1 (24 Hours)',
+    '6 Hours',
+    '3 Hours',
+    '1 Hour',
+    '30 Minutes',
+  ];
+
+  static const List<String> _teamMeetingPresets = [
+    '1 Day',
+    '3 Hours',
+    '1 Hour',
+    '30 Minutes',
+    '15 Minutes',
+    '5 Minutes',
+  ];
 
   @override
   void initState() {
     super.initState();
-    final config = widget.profile.configFor(widget.category);
-    _enabled = config.enabled;
-    _selectedTimings = Set<String>.from(config.timings);
-    _selectedMode = config.soundMode;
 
-    _availablePresets = List<String>.from(_defaultPresets);
-    for (final t in _selectedTimings) {
-      if (!_availablePresets.contains(t)) {
-        _availablePresets.add(t);
-      }
-    }
+    final p = widget.profile;
+
+    _taskDeadlineState = _SubAlertState(
+      enabled: p.taskDeadlineAlerts.enabled,
+      presets: _taskPresets,
+      selected: p.taskDeadlineAlerts.timings,
+      selectedMode: p.taskDeadlineAlerts.soundMode,
+    );
+
+    _lectureScheduleState = _SubAlertState(
+      enabled: p.lectureScheduleAlerts.enabled,
+      presets: _lecturePresets,
+      selected: p.lectureScheduleAlerts.timings,
+      selectedMode: p.lectureScheduleAlerts.soundMode,
+    );
+
+    _externalScheduleState = _SubAlertState(
+      enabled: p.externalScheduleAlerts.enabled,
+      presets: _externalPresets,
+      selected: p.externalScheduleAlerts.timings,
+      selectedMode: p.externalScheduleAlerts.soundMode,
+    );
+
+    _teamTaskState = _SubAlertState(
+      enabled: p.teamTaskAlerts.enabled,
+      presets: _teamTaskPresets,
+      selected: p.teamTaskAlerts.timings,
+      selectedMode: p.teamTaskAlerts.soundMode,
+    );
+
+    _teamMeetingState = _SubAlertState(
+      enabled: p.teamMeetingAlerts.enabled,
+      presets: _teamMeetingPresets,
+      selected: p.teamMeetingAlerts.timings,
+      selectedMode: p.teamMeetingAlerts.soundMode,
+    );
   }
 
   @override
@@ -117,79 +181,126 @@ class _DeadlineAlertSettingsModalState
     super.dispose();
   }
 
-  void _addCustomTiming() {
-    final numText = _customNumberController.text.trim();
-    final numVal = int.tryParse(numText);
-    if (numVal == null || numVal <= 0) {
-      PopUpPemberitahuan.show(
-        context,
-        title: 'Invalid Number',
-        message: 'Please enter a valid number greater than 0.',
-        icon: Icons.error_outline_rounded,
-        iconBgColor: PopUpPemberitahuan.negativeColor,
-      );
-      return;
-    }
+  bool get _hasSubTabs =>
+      widget.category == AlertCategoryType.schedule ||
+      widget.category == AlertCategoryType.team;
 
-    final customLabel = '$numVal $_customUnit';
+  _SubAlertState get _currentState {
+    if (widget.category == AlertCategoryType.schedule) {
+      return _activeTabIndex == 0
+          ? _lectureScheduleState
+          : _externalScheduleState;
+    } else if (widget.category == AlertCategoryType.team) {
+      return _activeTabIndex == 0 ? _teamTaskState : _teamMeetingState;
+    }
+    return _taskDeadlineState;
+  }
+
+  List<String> get _currentDefaultPresets {
+    if (widget.category == AlertCategoryType.schedule) {
+      return _activeTabIndex == 0 ? _lecturePresets : _externalPresets;
+    } else if (widget.category == AlertCategoryType.team) {
+      return _activeTabIndex == 0 ? _teamTaskPresets : _teamMeetingPresets;
+    }
+    return _taskPresets;
+  }
+
+  String get _currentSubLabel {
+    if (widget.category == AlertCategoryType.schedule) {
+      return _activeTabIndex == 0 ? 'Lecture Schedule' : 'External Schedule';
+    } else if (widget.category == AlertCategoryType.team) {
+      return _activeTabIndex == 0 ? 'Team Tasks' : 'Team Meetings';
+    }
+    return 'Task Deadlines';
+  }
+
+  void _addCustomTiming() {
+    final rawNumber = _customNumberController.text.trim();
+    final number = int.tryParse(rawNumber);
+    if (number == null || number <= 0) return;
+
+    final unitLabel = _customUnit;
+    final timingString = number == 1
+        ? '1 ${unitLabel.substring(0, unitLabel.length - 1)}'
+        : '$number $unitLabel';
+
     setState(() {
-      if (!_availablePresets.contains(customLabel)) {
-        _availablePresets.add(customLabel);
+      final state = _currentState;
+      if (!state.availablePresets.contains(timingString)) {
+        state.availablePresets.add(timingString);
       }
-      _selectedTimings.add(customLabel);
+      state.selectedTimings.add(timingString);
     });
   }
 
   void _save() {
-    if (_selectedTimings.isEmpty && _enabled) {
-      _selectedTimings.add(
-        _defaultPresets.isNotEmpty ? _defaultPresets.first : 'H-1 (24 Hours)',
+    final repo = UserProfileRepository();
+
+    if (widget.category == AlertCategoryType.schedule) {
+      repo.updateScheduleAlertSettings(
+        lectureConfig: _lectureScheduleState.toConfig(),
+        externalConfig: _externalScheduleState.toConfig(),
+      );
+    } else if (widget.category == AlertCategoryType.team) {
+      repo.updateTeamAlertSettings(
+        teamTaskConfig: _teamTaskState.toConfig(),
+        teamMeetingConfig: _teamMeetingState.toConfig(),
+      );
+    } else {
+      repo.updateCategoryAlertSettings(
+        category: AlertCategoryType.taskDeadline,
+        enabled: _taskDeadlineState.enabled,
+        timings: _taskDeadlineState.selectedTimings.toList(),
+        mode: _taskDeadlineState.selectedMode,
       );
     }
 
-    widget.onSave(
-      enabled: _enabled,
-      timings: _selectedTimings.toList(),
-      mode: _selectedMode,
-    );
+    if (widget.onSave != null) {
+      final cur = _currentState;
+      widget.onSave!(
+        enabled: cur.enabled,
+        timings: cur.selectedTimings.toList(),
+        mode: cur.selectedMode,
+      );
+    }
 
     Navigator.of(context).pop();
 
     PopUpPemberitahuan.show(
       context,
       title: 'Alert Preferences Saved',
-      message: _enabled
-          ? '${widget.category.label} alerts updated to ${_selectedTimings.map((t) => t.split(' ')[0]).join(', ')} • ${_selectedMode.shortLabel}.'
-          : '${widget.category.label} alerts have been turned off.',
+      message:
+          'Notification settings for ${widget.category.label} have been updated successfully.',
+      iconBgColor: const Color(0xFF10B981),
       icon: Icons.check_circle_outline_rounded,
-      iconBgColor: PopUpPemberitahuan.positiveColor,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final current = _currentState;
 
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.88,
       ),
-      margin: EdgeInsets.only(bottom: bottomInset),
       decoration: const BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: Color(0xFF1E232D),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag Notch
-          Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 8),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0xFF64748B).withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(999),
+          // Drag Handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFF434A59),
+                borderRadius: BorderRadius.circular(999),
+              ),
             ),
           ),
 
@@ -207,7 +318,7 @@ class _DeadlineAlertSettingsModalState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${widget.category.label} Alert Settings',
+                        '${widget.category.label} Settings',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: context.rFont(18, min: 16, max: 22),
@@ -217,7 +328,7 @@ class _DeadlineAlertSettingsModalState
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Customize reminder lead times and delivery style for ${widget.category.label.toLowerCase()}',
+                        'Customize reminder lead times and delivery style',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: context.rFont(12, min: 10.5, max: 13.5),
@@ -240,6 +351,51 @@ class _DeadlineAlertSettingsModalState
             ),
           ),
 
+          // Segmented Pill Tab Switcher (For Schedule & Team)
+          if (_hasSubTabs) ...[
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: context.rSpacing(20),
+                vertical: context.rSpacing(6),
+              ),
+              child: Container(
+                height: 44,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.bgCard,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF383F4D),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    _buildSubTab(
+                      index: 0,
+                      title: widget.category == AlertCategoryType.schedule
+                          ? 'Lecture Schedule'
+                          : 'Team Tasks',
+                      icon: widget.category == AlertCategoryType.schedule
+                          ? Icons.school_outlined
+                          : Icons.assignment_turned_in_outlined,
+                    ),
+                    const SizedBox(width: 4),
+                    _buildSubTab(
+                      index: 1,
+                      title: widget.category == AlertCategoryType.schedule
+                          ? 'External Schedule'
+                          : 'Team Meetings',
+                      icon: widget.category == AlertCategoryType.schedule
+                          ? Icons.event_note_outlined
+                          : Icons.groups_outlined,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
           const Divider(height: 1, color: Color(0xFF333A48)),
 
           // Scrollable Body
@@ -253,7 +409,7 @@ class _DeadlineAlertSettingsModalState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Master Switch for Category
+                  // Master Switch for Sub-Category
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: context.rSpacing(14),
@@ -265,23 +421,25 @@ class _DeadlineAlertSettingsModalState
                     ),
                     child: Row(
                       children: [
+                        // Squared container (kotak rounded)
                         Container(
-                          width: 36,
-                          height: 36,
+                          width: 38,
+                          height: 38,
                           decoration: BoxDecoration(
-                            color: _enabled
+                            color: current.enabled
                                 ? widget.category.accentColor
                                     .withValues(alpha: 0.18)
                                 : const Color(0xFF475569)
                                     .withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.circular(10),
                           ),
+                          alignment: Alignment.center,
                           child: Icon(
-                            _enabled
+                            current.enabled
                                 ? widget.category.icon
                                 : Icons.notifications_off_outlined,
-                            size: 19,
-                            color: _enabled
+                            size: 20,
+                            color: current.enabled
                                 ? widget.category.accentColor
                                 : const Color(0xFF94A3B8),
                           ),
@@ -293,7 +451,7 @@ class _DeadlineAlertSettingsModalState
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Enable ${widget.category.label} Alerts',
+                                'Enable $_currentSubLabel Alerts',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -305,9 +463,9 @@ class _DeadlineAlertSettingsModalState
                                 ),
                               ),
                               Text(
-                                _enabled
+                                current.enabled
                                     ? 'System sends timely reminders'
-                                    : 'All alerts for this category are muted',
+                                    : 'Alerts for this activity are muted',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -322,12 +480,13 @@ class _DeadlineAlertSettingsModalState
                         ),
                         const SizedBox(width: 8),
                         Switch(
-                          value: _enabled,
+                          value: current.enabled,
                           activeThumbColor: Colors.white,
                           activeTrackColor: const Color(0xFF10B981),
                           inactiveThumbColor: Colors.white70,
                           inactiveTrackColor: const Color(0xFF434A59),
-                          onChanged: (val) => setState(() => _enabled = val),
+                          onChanged: (val) =>
+                              setState(() => current.enabled = val),
                         ),
                       ],
                     ),
@@ -349,13 +508,14 @@ class _DeadlineAlertSettingsModalState
                           letterSpacing: 0.6,
                         ),
                       ),
-                      if (_availablePresets.length < _defaultPresets.length)
+                      if (current.availablePresets.length <
+                          _currentDefaultPresets.length)
                         GestureDetector(
                           onTap: () {
                             setState(() {
-                              for (final p in _defaultPresets) {
-                                if (!_availablePresets.contains(p)) {
-                                  _availablePresets.add(p);
+                              for (final p in _currentDefaultPresets) {
+                                if (!current.availablePresets.contains(p)) {
+                                  current.availablePresets.add(p);
                                 }
                               }
                             });
@@ -387,8 +547,8 @@ class _DeadlineAlertSettingsModalState
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _availablePresets.map((timing) {
-                      return _buildTimingChip(timing);
+                    children: current.availablePresets.map((timing) {
+                      return _buildTimingChip(timing, current);
                     }).toList(),
                   ),
 
@@ -406,7 +566,7 @@ class _DeadlineAlertSettingsModalState
                     ),
                     child: Row(
                       children: [
-                        // 1. Number input (Matching 42dp Container with uniform background)
+                        // 1. Number input (42dp container, squared with rounded corners)
                         Container(
                           width: 56,
                           height: 42,
@@ -418,7 +578,7 @@ class _DeadlineAlertSettingsModalState
                           child: TextField(
                             controller: _customNumberController,
                             keyboardType: TextInputType.number,
-                            enabled: _enabled,
+                            enabled: current.enabled,
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Colors.white,
@@ -434,7 +594,7 @@ class _DeadlineAlertSettingsModalState
                           ),
                         ),
                         SizedBox(width: context.rSpacing(8)),
-                        // 2. Unit dropdown (42dp height Container)
+                        // 2. Unit dropdown (42dp container)
                         Expanded(
                           child: Container(
                             height: 42,
@@ -474,7 +634,7 @@ class _DeadlineAlertSettingsModalState
                                     child: Text('Days before'),
                                   ),
                                 ],
-                                onChanged: _enabled
+                                onChanged: current.enabled
                                     ? (val) {
                                         if (val != null) {
                                           setState(() => _customUnit = val);
@@ -486,12 +646,13 @@ class _DeadlineAlertSettingsModalState
                           ),
                         ),
                         SizedBox(width: context.rSpacing(8)),
-                        // 3. Add button (42dp height button)
+                        // 3. Add button (42dp container)
                         SizedBox(
                           height: 42,
                           child: ElevatedButton(
                             key: const ValueKey('add_custom_timing_button'),
-                            onPressed: _enabled ? _addCustomTiming : null,
+                            onPressed:
+                                current.enabled ? _addCustomTiming : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF334155),
                               elevation: 0,
@@ -540,25 +701,25 @@ class _DeadlineAlertSettingsModalState
                   ),
                   SizedBox(height: context.rSpacing(10)),
 
-                  // 4 Mode Options (Radio Cards with Orange Icon & without orange card border)
+                  // 4 Mode Options (Clean cards without description sub-text, All logos orange when selected)
                   _buildModeCard(
                     mode: AlertSoundVibrationMode.soundAndVibrate,
-                    accentColor: const Color(0xFFFF7D65),
+                    state: current,
                   ),
                   SizedBox(height: context.rSpacing(8)),
                   _buildModeCard(
                     mode: AlertSoundVibrationMode.soundOnly,
-                    accentColor: const Color(0xFFFF7D65),
+                    state: current,
                   ),
                   SizedBox(height: context.rSpacing(8)),
                   _buildModeCard(
                     mode: AlertSoundVibrationMode.vibrationOnly,
-                    accentColor: const Color(0xFF5B93FF),
+                    state: current,
                   ),
                   SizedBox(height: context.rSpacing(8)),
                   _buildModeCard(
                     mode: AlertSoundVibrationMode.silent,
-                    accentColor: const Color(0xFF94A3B8),
+                    state: current,
                   ),
 
                   SizedBox(height: context.rSpacing(26)),
@@ -596,21 +757,72 @@ class _DeadlineAlertSettingsModalState
     );
   }
 
-  Widget _buildTimingChip(String timing) {
-    final isSelected = _selectedTimings.contains(timing);
+  Widget _buildSubTab({
+    required int index,
+    required String title,
+    required IconData icon,
+  }) {
+    final isSelected = _activeTabIndex == index;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _activeTabIndex = index),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF282D37) : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            border: isSelected
+                ? Border.all(
+                    color: const Color(0xFFFA6144).withValues(alpha: 0.6),
+                    width: 1,
+                  )
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected
+                    ? const Color(0xFFFF7D65)
+                    : const Color(0xFF94A3B8),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+                  fontSize: 12,
+                  fontFamily: 'Inter',
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimingChip(String timing, _SubAlertState state) {
+    final isSelected = state.selectedTimings.contains(timing);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: _enabled
+        onTap: state.enabled
             ? () {
                 setState(() {
                   if (isSelected) {
-                    if (_selectedTimings.length > 1) {
-                      _selectedTimings.remove(timing);
+                    if (state.selectedTimings.length > 1) {
+                      state.selectedTimings.remove(timing);
                     }
                   } else {
-                    _selectedTimings.add(timing);
+                    state.selectedTimings.add(timing);
                   }
                 });
               }
@@ -652,25 +864,25 @@ class _DeadlineAlertSettingsModalState
                 style: TextStyle(
                   color: isSelected
                       ? const Color(0xFFFF7D65)
-                      : (_enabled ? Colors.white70 : const Color(0xFF64748B)),
+                      : (state.enabled ? Colors.white70 : const Color(0xFF64748B)),
                   fontSize: context.rFont(12, min: 10.5, max: 13.5),
                   fontFamily: 'Inter',
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
               const SizedBox(width: 6),
-              // Dedicated remove icon on every chip!
+              // Dedicated remove icon on every chip
               GestureDetector(
                 key: ValueKey('delete_timing_$timing'),
                 behavior: HitTestBehavior.opaque,
-                onTap: _enabled
+                onTap: state.enabled
                     ? () {
                         setState(() {
-                          _availablePresets.remove(timing);
-                          _selectedTimings.remove(timing);
-                          if (_selectedTimings.isEmpty &&
-                              _availablePresets.isNotEmpty) {
-                            _selectedTimings.add(_availablePresets.first);
+                          state.availablePresets.remove(timing);
+                          state.selectedTimings.remove(timing);
+                          if (state.selectedTimings.isEmpty &&
+                              state.availablePresets.isNotEmpty) {
+                            state.selectedTimings.add(state.availablePresets.first);
                           }
                         });
                       }
@@ -701,14 +913,15 @@ class _DeadlineAlertSettingsModalState
 
   Widget _buildModeCard({
     required AlertSoundVibrationMode mode,
-    required Color accentColor,
+    required _SubAlertState state,
   }) {
-    final isSelected = _selectedMode == mode;
+    final isSelected = state.selectedMode == mode;
+    const orangeColor = Color(0xFFFF7D65);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: _enabled ? () => setState(() => _selectedMode = mode) : null,
+        onTap: state.enabled ? () => setState(() => state.selectedMode = mode) : null,
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: EdgeInsets.symmetric(
@@ -725,59 +938,45 @@ class _DeadlineAlertSettingsModalState
           ),
           child: Row(
             children: [
+              // Squared container with rounded corners (10dp)
+              // ALL logos are orange (#FF7D65) when selected!
               Container(
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? accentColor.withValues(alpha: 0.2)
+                      ? orangeColor.withValues(alpha: 0.2)
                       : const Color(0xFF334155).withValues(alpha: 0.4),
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                alignment: Alignment.center,
                 child: Icon(
                   mode.icon,
                   size: 20,
-                  color: isSelected ? accentColor : const Color(0xFF94A3B8),
+                  color: isSelected ? orangeColor : const Color(0xFF94A3B8),
                 ),
               ),
               SizedBox(width: context.rSpacing(12)),
+              // Clean Title without explanatory sub-text
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      mode.label,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: context.rFont(13.5, min: 12, max: 15),
-                        fontFamily: 'Inter',
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      mode.description,
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: context.rFont(11, min: 9.5, max: 12.5),
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  mode.label,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: context.rFont(13.5, min: 12, max: 15),
+                    fontFamily: 'Inter',
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  ),
                 ),
               ),
-              SizedBox(width: context.rSpacing(8)),
-              // Radio Indicator
+              // Concentric Radio Indicator
               Container(
                 width: 20,
                 height: 20,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isSelected
-                        ? AppColors.primary
-                        : const Color(0xFF64748B),
+                    color: isSelected ? orangeColor : const Color(0xFF64748B),
                     width: 2,
                   ),
                 ),
@@ -787,8 +986,8 @@ class _DeadlineAlertSettingsModalState
                         width: 10,
                         height: 10,
                         decoration: const BoxDecoration(
+                          color: orangeColor,
                           shape: BoxShape.circle,
-                          color: AppColors.primary,
                         ),
                       )
                     : null,

@@ -50,11 +50,11 @@ void main() {
       expect(find.text('94%'), findsOneWidget);
       expect(find.text('ON-TIME'), findsOneWidget);
 
-      // Check Settings and AI Fuzzy (including XAI and 3 granular alert categories)
+      // Check Settings and AI Fuzzy (including XAI and 3 high-level alert categories)
       expect(find.text('REMINDERS & SCHEDULE'), findsOneWidget);
       expect(find.text('Task Deadlines'), findsOneWidget);
-      expect(find.text('Class Schedule'), findsOneWidget);
-      expect(find.text('Team Tasks & Meetings'), findsOneWidget);
+      expect(find.text('Schedule Alerts'), findsOneWidget);
+      expect(find.text('Team Alerts'), findsOneWidget);
       // Verify Daily Morning Briefing is removed as requested
       expect(find.text('Daily Morning Briefing'), findsNothing);
       expect(find.text('INTELLIGENT SYSTEM (AI FUZZY)'), findsOneWidget);
@@ -212,7 +212,7 @@ void main() {
     });
 
     testWidgets(
-        'Class Schedule and Team Tasks & Meetings have independent alert settings',
+        'Schedule Alerts and Team Alerts have segmented sub-tabs and independent configurations',
         (tester) async {
       tester.view.physicalSize = const Size(390 * 3, 1400 * 3);
       tester.view.devicePixelRatio = 3.0;
@@ -228,34 +228,50 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Open Class Schedule alert settings
-      await tester.tap(find.text('Class Schedule'));
+      // Open Schedule Alerts settings
+      await tester.tap(find.text('Schedule Alerts'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Class Schedule Alert Settings'), findsOneWidget);
+      expect(find.text('Schedule Alerts Settings'), findsOneWidget);
+      expect(find.text('Lecture Schedule'), findsWidgets);
+      expect(find.text('External Schedule'), findsOneWidget);
 
-      // Select Sound & Vibration for class
+      // Tap External Schedule tab
+      await tester.tap(find.text('External Schedule'));
+      await tester.pumpAndSettle();
+
+      // Select Sound Only for External Schedule
+      await tester.tap(find.text('Sound Only'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save Alert Preferences'));
+      await tester.pumpAndSettle();
+
+      // Open Team Alerts settings
+      await tester.tap(find.text('Team Alerts'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Team Alerts Settings'), findsOneWidget);
+      expect(find.text('Team Tasks'), findsWidgets);
+      expect(find.text('Team Meetings'), findsOneWidget);
+
+      // Select Silent for Team Tasks
+      await tester.tap(find.text('Silent'));
+      await tester.pumpAndSettle();
+
+      // Tap Team Meetings tab
+      await tester.tap(find.text('Team Meetings'));
+      await tester.pumpAndSettle();
+
+      // Select Sound & Vibration for Team Meetings
       await tester.tap(find.text('Sound & Vibration'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Save Alert Preferences'));
       await tester.pumpAndSettle();
 
-      // Open Team Tasks & Meetings alert settings
-      await tester.tap(find.text('Team Tasks & Meetings'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Team Tasks & Meetings Alert Settings'), findsOneWidget);
-
-      // Select Silent Notification for team meetings
-      await tester.tap(find.text('Silent Notification'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Save Alert Preferences'));
-      await tester.pumpAndSettle();
-
-      // Verify team meeting summary shows Silent
-      expect(find.text('1 Hour, 15 Minutes • Silent'), findsOneWidget);
+      // Verify team summary reflects new independent configs
+      expect(find.textContaining('Tasks: H-1 (Silent) • Meetings: 1 Hour (Sound & Vibrate)'), findsOneWidget);
     });
   });
 }

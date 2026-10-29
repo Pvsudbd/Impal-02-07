@@ -274,7 +274,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
                                 onTap: () {
                                   setState(() => _isAlertEnabled = !_isAlertEnabled);
                                   final categoryConfig =
-                                      UserProfileRepository().profile.teamMeetingAlerts;
+                                      UserProfileRepository().profile.teamTaskAlerts;
                                   PopUpPemberitahuanTeam.show(
                                     context,
                                     title: _isAlertEnabled
