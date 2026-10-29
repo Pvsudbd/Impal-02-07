@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/page_transitions.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../auth/forgot_password_page.dart';
 import '../auth/login_page.dart';
 import '../auth/terms_privacy_page.dart';
@@ -362,8 +363,28 @@ class _ProfilePageState extends State<ProfilePage> {
               ProfileFuzzyCard(
                 isActive: profile.isFuzzyModelActive,
                 isScoreExplainabilityActive: profile.scoreExplainabilityEnabled,
-                onToggleScoreExplainability: (val) =>
-                    _repo.toggleScoreExplainability(val),
+                onToggleScoreExplainability: (val) {
+                  _repo.toggleScoreExplainability(val);
+                  if (val) {
+                    PopUpPemberitahuan.show(
+                      context,
+                      title: 'XAI Enabled',
+                      message:
+                          'Score Explainability is active. You can now inspect mathematical calculations.',
+                      icon: Icons.lightbulb_rounded,
+                      iconBgColor: PopUpPemberitahuan.positiveColor,
+                    );
+                  } else {
+                    PopUpPemberitahuan.show(
+                      context,
+                      title: 'XAI Disabled',
+                      message:
+                          'Score Explainability is disabled. Mathematical calculations are now hidden.',
+                      icon: Icons.lightbulb_outline_rounded,
+                      iconBgColor: PopUpPemberitahuan.negativeColor,
+                    );
+                  }
+                },
                 onFuzzyModelTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(

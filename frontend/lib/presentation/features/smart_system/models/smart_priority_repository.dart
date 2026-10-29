@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../profile/models/user_profile_model.dart';
 import 'smart_priority_model.dart';
 
 class SmartPriorityRepository extends ChangeNotifier {
@@ -8,6 +9,7 @@ class SmartPriorityRepository extends ChangeNotifier {
 
   SmartPriorityRepository._internal() {
     _initDefaultData();
+    UserProfileRepository().addListener(notifyListeners);
   }
 
   late List<SmartPriorityModel> _items;
@@ -16,6 +18,22 @@ class SmartPriorityRepository extends ChangeNotifier {
 
   SmartPriorityModel? get topPriority =>
       _items.isNotEmpty ? _items.first : null;
+
+  bool get isEngineActive =>
+      UserProfileRepository().profile.isFuzzyModelActive;
+
+  bool get isScoreExplainabilityActive =>
+      UserProfileRepository().profile.scoreExplainabilityEnabled;
+
+  void toggleEngineActive([bool? value]) {
+    final next = value ?? !isEngineActive;
+    UserProfileRepository().toggleFuzzyModel(next);
+  }
+
+  void toggleScoreExplainability([bool? value]) {
+    final next = value ?? !isScoreExplainabilityActive;
+    UserProfileRepository().toggleScoreExplainability(next);
+  }
 
   void _initDefaultData() {
     _items = [

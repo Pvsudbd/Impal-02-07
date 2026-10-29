@@ -52,6 +52,17 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
   void _handleActionPressed(NotificationModel notif) {
     switch (notif.actionType) {
       case NotificationActionType.aiReason:
+        if (!SmartPriorityRepository.instance.isScoreExplainabilityActive) {
+          PopUpPemberitahuan.show(
+            context,
+            title: 'XAI Disabled',
+            message:
+                'Score Explainability (XAI) is disabled in Profile & Settings. Enable it to view mathematical calculations.',
+            icon: Icons.lightbulb_outline_rounded,
+            iconBgColor: PopUpPemberitahuan.negativeColor,
+          );
+          return;
+        }
         final topItem = SmartPriorityRepository.instance.topPriority;
         if (topItem != null) {
           DetailCardSmartPriority.show(context, item: topItem);

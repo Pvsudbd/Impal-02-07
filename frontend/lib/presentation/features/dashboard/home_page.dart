@@ -411,124 +411,147 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildAiSmartPriorityBanner() {
-    final topPriority = SmartPriorityRepository.instance.topPriority;
+    return ListenableBuilder(
+      listenable: SmartPriorityRepository.instance,
+      builder: (context, _) {
+        final repo = SmartPriorityRepository.instance;
+        final isEngineActive = repo.isEngineActive;
+        final topPriority = repo.topPriority;
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => SmartPriorityPage(userName: widget.userName),
+        return Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color(0xFF323846),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x22000000),
+                blurRadius: 8,
+                offset: Offset(0, 3),
               ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFA6144),
-                    borderRadius: BorderRadius.circular(10),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SmartPriorityPage(userName: widget.userName),
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.psychology_rounded,
-                      color: Colors.white,
-                      size: 22,
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: isEngineActive
+                            ? const Color(0xFFFA6144)
+                            : const Color(0xFF475569),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          isEngineActive
+                              ? Icons.psychology_rounded
+                              : Icons.psychology_outlined,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Flexible(
-                            child: Text(
-                              'AI Smart Priority',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 13.5,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
+                          Row(
+                            children: [
+                              const Flexible(
+                                child: Text(
+                                  'AI Smart Priority',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13.5,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 1.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isEngineActive
+                                      ? const Color(0xFF10B981)
+                                          .withValues(alpha: 0.15)
+                                      : const Color(0xFF334155),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: isEngineActive
+                                        ? const Color(0xFF10B981)
+                                            .withValues(alpha: 0.4)
+                                        : const Color(0xFF64748B),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  isEngineActive
+                                      ? 'Mamdani Active'
+                                      : 'Mamdani Inactive',
+                                  style: TextStyle(
+                                    color: isEngineActive
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFF94A3B8),
+                                    fontSize: 9.5,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1.5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.4),
-                                width: 0.8,
-                              ),
-                            ),
-                            child: const Text(
-                              'Mamdani Active',
-                              style: TextStyle(
-                                color: Color(0xFF10B981),
-                                fontSize: 9.5,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                              ),
+                          const SizedBox(height: 3),
+                          Text(
+                            !isEngineActive
+                                ? 'AI prioritization is currently paused'
+                                : (topPriority != null
+                                    ? '#1 ${topPriority.title} (${topPriority.score.toStringAsFixed(1)} High)'
+                                    : 'Mamdani Centroid Defuzzification Active'),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF8E95A5),
+                              fontSize: 11.5,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        topPriority != null
-                            ? '#1 ${topPriority.title} (${topPriority.score.toStringAsFixed(1)} High)'
-                            : 'Mamdani Centroid Defuzzification Active',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF8E95A5),
-                          fontSize: 11.5,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                      color: Color(0xFFFF7D65),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                  color: Color(0xFFFF7D65),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

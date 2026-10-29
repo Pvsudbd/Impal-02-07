@@ -119,17 +119,23 @@ class ProfileFuzzyCard extends StatelessWidget {
                             vertical: 3.5,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF064E3B).withValues(alpha: 0.6),
+                            color: isActive
+                                ? const Color(0xFF064E3B).withValues(alpha: 0.6)
+                                : const Color(0xFF334155).withValues(alpha: 0.6),
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.6),
+                              color: isActive
+                                  ? const Color(0xFF10B981).withValues(alpha: 0.6)
+                                  : const Color(0xFF64748B).withValues(alpha: 0.6),
                               width: 0.8,
                             ),
                           ),
                           child: Text(
                             isActive ? 'Active' : 'Inactive',
                             style: TextStyle(
-                              color: const Color(0xFF34D399),
+                              color: isActive
+                                  ? const Color(0xFF34D399)
+                                  : const Color(0xFF94A3B8),
                               fontSize: context.rFont(10, min: 9, max: 11.5),
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.w700,

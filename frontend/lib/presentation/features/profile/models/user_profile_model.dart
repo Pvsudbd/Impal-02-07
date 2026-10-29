@@ -158,5 +158,10 @@ class UserProfileRepository with ChangeNotifier {
     _profile = _profile.copyWith(scoreExplainabilityEnabled: value);
     notifyListeners();
   }
+
+  void toggleFuzzyModel(bool value) {
+    _profile = _profile.copyWith(isFuzzyModelActive: value);
+    notifyListeners();
+  }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive_context.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../notifikasi/widgets/notification_bell_button.dart';
 import '../profile/profile_page.dart';
 import 'detail_card_smart_priority.dart';
@@ -28,6 +29,58 @@ class SmartPriorityPage extends StatefulWidget {
 class _SmartPriorityPageState extends State<SmartPriorityPage> {
   final SmartPriorityRepository _repo = SmartPriorityRepository.instance;
   SmartPriorityLevel? _selectedFilter;
+
+  @override
+  void initState() {
+    super.initState();
+    _repo.addListener(_onRepoChanged);
+  }
+
+  @override
+  void dispose() {
+    _repo.removeListener(_onRepoChanged);
+    super.dispose();
+  }
+
+  void _onRepoChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _toggleEngine() {
+    _repo.toggleEngineActive();
+    if (_repo.isEngineActive) {
+      PopUpPemberitahuan.show(
+        context,
+        title: 'Mamdani Engine Active',
+        message: 'Mamdani Fuzzy Logic Inference is now active across all tasks.',
+        icon: Icons.psychology_rounded,
+        iconBgColor: PopUpPemberitahuan.positiveColor,
+      );
+    } else {
+      PopUpPemberitahuan.show(
+        context,
+        title: 'Mamdani Engine Inactive',
+        message: 'Mamdani Fuzzy Logic Inference has been paused.',
+        icon: Icons.pause_circle_outline_rounded,
+        iconBgColor: PopUpPemberitahuan.negativeColor,
+      );
+    }
+  }
+
+  void _onTaskCardTap(SmartPriorityModel item) {
+    if (!_repo.isScoreExplainabilityActive) {
+      PopUpPemberitahuan.show(
+        context,
+        title: 'XAI Disabled',
+        message:
+            'Score Explainability (XAI) is disabled in Profile & Settings. Enable it to view mathematical calculations.',
+        icon: Icons.lightbulb_outline_rounded,
+        iconBgColor: PopUpPemberitahuan.negativeColor,
+      );
+      return;
+    }
+    DetailCardSmartPriority.show(context, item: item);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -174,8 +227,11 @@ class _SmartPriorityPageState extends State<SmartPriorityPage> {
                 physics: const BouncingScrollPhysics(),
                 padding: EdgeInsets.symmetric(horizontal: context.rSpacing(16)),
                 children: [
-                  // Engine Status Card
-                  const SmartEngineStatusCard(),
+                  // Engine Status Card (Tap to toggle Active/Inactive)
+                  SmartEngineStatusCard(
+                    isActive: _repo.isEngineActive,
+                    onTap: _toggleEngine,
+                  ),
                   SizedBox(height: context.rSpacing(16)),
 
                   // Filter Chips Bar
@@ -261,9 +317,7 @@ class _SmartPriorityPageState extends State<SmartPriorityPage> {
                       (item) => SmartPriorityTaskCard(
                         key: ValueKey(item.id),
                         item: item,
-                        onTap: () {
-                          DetailCardSmartPriority.show(context, item: item);
-                        },
+                        onTap: () => _onTaskCardTap(item),
                       ),
                     ),
 

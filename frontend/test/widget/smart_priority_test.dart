@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
+import 'package:impal_smart_todolist/presentation/features/profile/models/user_profile_model.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/profile_page.dart';
 import 'package:impal_smart_todolist/presentation/features/smart_system/detail_card_smart_priority.dart';
+import 'package:impal_smart_todolist/presentation/features/smart_system/models/smart_priority_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/smart_system/smart_priority_page.dart';
 import 'package:impal_smart_todolist/presentation/features/task/task_page.dart';
 
 void main() {
+  setUp(() {
+    UserProfileRepository().toggleFuzzyModel(true);
+    UserProfileRepository().toggleScoreExplainability(true);
+  });
+
   Widget createWidgetForTesting(Widget child) {
     return MaterialApp(
       home: Scaffold(body: child),
@@ -178,6 +185,72 @@ void main() {
 
       expect(find.text('Fuzzy Inference Model'), findsOneWidget);
       expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
+    });
+
+    testWidgets(
+        'Tapping Mamdani Inference Engine toggles between ACTIVE and INACTIVE',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 1000));
+
+      await tester.pumpWidget(
+        createWidgetForTesting(const SmartPriorityPage()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('ACTIVE'), findsOneWidget);
+      expect(SmartPriorityRepository.instance.isEngineActive, isTrue);
+
+      // Tap engine status card to deactivate
+      await tester.tap(find.text('Mamdani Inference Engine'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('INACTIVE'), findsOneWidget);
+      expect(SmartPriorityRepository.instance.isEngineActive, isFalse);
+      expect(find.text('Mamdani Engine Inactive'), findsOneWidget);
+
+      // Tap again to reactivate
+      await tester.tap(find.text('Mamdani Inference Engine'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ACTIVE'), findsOneWidget);
+      expect(SmartPriorityRepository.instance.isEngineActive, isTrue);
+      expect(find.text('Mamdani Engine Active'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Disabling XAI in profile prevents viewing XAI modal in SmartPriorityPage and shows disabled notice',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 1000));
+
+      // Turn OFF XAI explainability
+      UserProfileRepository().toggleScoreExplainability(false);
+      expect(SmartPriorityRepository.instance.isScoreExplainabilityActive, isFalse);
+
+      await tester.pumpWidget(
+        createWidgetForTesting(const SmartPriorityPage()),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap first task card
+      await tester.tap(find.text('AI Major Project - Sprint 2'));
+      await tester.pumpAndSettle();
+
+      // Modal should NOT be opened
+      expect(find.byType(DetailCardSmartPriority), findsNothing);
+
+      // Warning popup should be displayed
+      expect(find.text('XAI Disabled'), findsOneWidget);
+
+      // Turn XAI back ON
+      UserProfileRepository().toggleScoreExplainability(true);
+      await tester.pumpAndSettle();
+
+      // Tap again
+      await tester.tap(find.text('AI Major Project - Sprint 2'));
+      await tester.pumpAndSettle();
+
+      // Modal is now displayed
+      expect(find.byType(DetailCardSmartPriority), findsOneWidget);
     });
   });
 }
