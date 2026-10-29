@@ -145,6 +145,9 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
     final primaryAvatarColor = _selectedMembers.first.avatarColor;
     final assignedColors = _selectedMembers.map((m) => m.avatarColor).toList();
 
+    final daysDiff = _selectedDate.difference(DateTime.now()).inDays;
+    final dueBadgeStr = daysDiff > 0 ? '${daysDiff}d' : '12h';
+
     if (_isEditing) {
       final updatedTask = widget.existingTask!.copyWith(
         title: taskName,
@@ -154,6 +157,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         timeRange: timeStr,
         description: _descriptionController.text.trim(),
         deadline: _selectedDate,
+        dueBadge: dueBadgeStr,
       );
 
       if (mounted) {
@@ -176,6 +180,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         timeRange: timeStr,
         description: _descriptionController.text.trim(),
         deadline: _selectedDate,
+        dueBadge: dueBadgeStr,
       );
 
       if (mounted) {

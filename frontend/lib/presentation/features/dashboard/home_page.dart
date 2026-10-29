@@ -26,10 +26,12 @@ typedef Home = HomePage;
 
 class HomePage extends StatefulWidget {
   final String userName;
+  final int initialTab;
 
   const HomePage({
     super.key,
     this.userName = 'Jarvis',
+    this.initialTab = 0,
   });
 
   @override
@@ -37,13 +39,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _currentTab = 0;
+  late int _currentTab;
   String _selectedCategory = 'All';
   TeamModel? _selectedTeam;
 
   @override
   void initState() {
     super.initState();
+    _currentTab = widget.initialTab;
     ScheduleRepository().init();
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('is_logged_in', true);
@@ -65,12 +68,13 @@ class _HomePageState extends State<HomePage> {
     CategoryItem(name: 'Personal', count: '05 Tasks', icon: Icons.person_rounded),
   ];
 
-  final List<TaskItem> _tasks = const [
-    TaskItem(
+  final List<TaskItem> _tasks = [
+    const TaskItem(
+      id: 'home_task_1',
       title: 'Wallet App Design',
       dueBadge: '6d',
-      dueColor: Color(0xFF8FC7FF),
-      dueTextColor: Color(0xFF1E3A8A),
+      dueColor: Color(0xFF5B93FF),
+      dueTextColor: Colors.white,
       isUrgent: false,
       members: [Color(0xFFF3A683), Color(0xFF786FA6), Color(0xFF63CDDA)],
       progress: 0.46,
@@ -79,24 +83,44 @@ class _HomePageState extends State<HomePage> {
         TaskTag(label: 'Kelompok', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
         TaskTag(label: 'Figma', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
       ],
+      groupMembers: [
+        'Andi sukamoto (Leader)',
+        'Rayya Gemintang Nusasntarra',
+        'Kafi Rijal Perkasa Situmorang',
+      ],
+      course: 'SSIF-04-REG • Software Testing & Implementation',
+      dateCreated: 'Monday, 30 Sep 2026',
+      centroidDefuzzification: 'z* = 28.6',
+      centroidScale: 'scale(0-100)',
+      warningNotice: '*This task is asigned to you, and you can’t delete',
     ),
-    TaskItem(
+    const TaskItem(
+      id: 'home_task_2',
       title: 'Tugas IMPAL Figma',
       subtitle: 'Membuat ui page kelompok',
       dueBadge: '6d',
-      dueColor: Color(0xFF8FC7FF),
-      dueTextColor: Color(0xFF1E3A8A),
+      dueColor: Color(0xFF5B93FF),
+      dueTextColor: Colors.white,
       isUrgent: false,
       deadline: 'Sat 11 Oct 2026, 23:59 WIB',
       tags: [
         TaskTag(label: 'Personal', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
         TaskTag(label: 'Figma', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
       ],
+      groupMembers: [
+        'Personal Task • Jarvis',
+      ],
+      course: 'SSIF-04-REG • Software Testing & Implementation',
+      dateCreated: 'Tuesday, 01 Oct 2026',
+      centroidDefuzzification: 'z* = 34.2',
+      centroidScale: 'scale(0-100)',
+      warningNotice: '*This task is asigned to you, and you can’t delete',
     ),
-    TaskItem(
+    const TaskItem(
+      id: 'home_task_3',
       title: 'Dashboard & Mobile App',
       dueBadge: '4d',
-      dueColor: Color(0xFFFF826E),
+      dueColor: Color(0xFFFF7D65),
       dueTextColor: Colors.white,
       isUrgent: true,
       members: [
@@ -112,19 +136,38 @@ class _HomePageState extends State<HomePage> {
         TaskTag(label: 'Kelompok', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
         TaskTag(label: 'Code', bg: Color(0xFF63CDDA), text: Color(0xFF1C636D)),
       ],
+      groupMembers: [
+        'Andi sukamoto (Leader)',
+        'Rayya Gemintang Nusasntarra',
+        'Kafi Rijal Perkasa Situmorang',
+      ],
+      course: 'SSIF-04-REG • Software Testing & Implementation',
+      dateCreated: 'Wednesday, 02 Oct 2026',
+      centroidDefuzzification: 'z* = 78.4',
+      centroidScale: 'scale(0-100)',
+      warningNotice: '*This task is asigned to you, and you can’t delete',
     ),
-    TaskItem(
+    const TaskItem(
+      id: 'home_task_4',
       title: 'Tugas IMPAL Frontend',
       subtitle: 'Membuat frontend page kelompok',
       dueBadge: '17d',
-      dueColor: Color(0xFF8FC7FF),
-      dueTextColor: Color(0xFF1E3A8A),
+      dueColor: Color(0xFF5B93FF),
+      dueTextColor: Colors.white,
       isUrgent: false,
       deadline: 'Sat 11 Oct 2026, 23:59 WIB',
       tags: [
         TaskTag(label: 'Personal', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
         TaskTag(label: 'Code', bg: Color(0xFF63CDDA), text: Color(0xFF1C636D)),
       ],
+      groupMembers: [
+        'Personal Task • Jarvis',
+      ],
+      course: 'SSIF-04-REG • Software Testing & Implementation',
+      dateCreated: 'Thursday, 03 Oct 2026',
+      centroidDefuzzification: 'z* = 19.8',
+      centroidScale: 'scale(0-100)',
+      warningNotice: '*This task is asigned to you, and you can’t delete',
     ),
   ];
 
@@ -135,19 +178,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onTabSelected(int index) {
+    if (index == _currentTab && _selectedTeam == null) return;
     setState(() {
-      if (index == 2 || _selectedTeam != null) {
+      if (index != 2 || _selectedTeam != null) {
         _selectedTeam = null;
       }
       _currentTab = index;
     });
-    if (index == 1) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => TaskPage(userName: widget.userName),
-        ),
-      );
-    }
   }
 
   void _openEditSchedule(ScheduleModel item) async {
@@ -178,6 +215,61 @@ class _HomePageState extends State<HomePage> {
           PopUpPemberitahuan.scheduleDeleted(context);
         }
       }
+    }
+  }
+
+  Future<void> _openEditTask(TaskItem item) async {
+    if (item.isTeamTask) {
+      final team = TeamRepository().teams.firstWhere(
+        (t) => item.title.toLowerCase().contains(t.name.toLowerCase().replaceAll('kelompok - ', '').trim()),
+        orElse: () => TeamRepository().teams.isNotEmpty
+            ? TeamRepository().teams.first
+            : const TeamModel(
+                id: '1',
+                name: 'Kelompok - IMPAL',
+                memberColors: [
+                  Color(0xFFF3A683),
+                  Color(0xFF786FA6),
+                  Color(0xFF63CDDA),
+                ],
+              ),
+      );
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => DashboardTeamPage(
+            userName: widget.userName,
+            teamName: team.name,
+            teamCode: '7X29',
+            memberColors: team.memberColors,
+            isStandalone: true,
+          ),
+        ),
+      );
+      return;
+    }
+
+    final updatedModel = await Navigator.of(context).push<TaskItemModel>(
+      MaterialPageRoute(
+        builder: (_) => EditTaskPage(
+          task: item.toTaskItemModel(),
+          userInitials: widget.userName.length >= 2
+              ? widget.userName.substring(0, 2).toUpperCase()
+              : 'JS',
+        ),
+      ),
+    );
+
+    if (updatedModel != null && mounted) {
+      setState(() {
+        final index = _tasks.indexWhere(
+          (t) => (t.id.isNotEmpty && t.id == updatedModel.id) || t.title == item.title,
+        );
+        if (index != -1) {
+          _tasks[index] = TaskItem.fromTaskItemModel(updatedModel);
+        }
+      });
+      PopUpPemberitahuan.taskUpdated(context, taskName: updatedModel.title);
     }
   }
 
@@ -229,8 +321,7 @@ class _HomePageState extends State<HomePage> {
               ? ScheduleContentView(
                   key: const ValueKey('schedule_tab_content'),
                   userName: widget.userName,
-                  showBackButton: true,
-                  onBack: () => setState(() => _currentTab = 0),
+                  showBackButton: false,
                 )
               : (_currentTab == 2
                   ? (_selectedTeam != null
@@ -246,12 +337,17 @@ class _HomePageState extends State<HomePage> {
                       : TeamListContentView(
                           key: const ValueKey('team_tab_content'),
                           userName: widget.userName,
-                          showBackButton: true,
-                          onBack: () => setState(() => _currentTab = 0),
+                          showBackButton: false,
                           onOpenSchedule: () => setState(() => _currentTab = 3),
                           onTeamSelected: (team) => setState(() => _selectedTeam = team),
                         ))
-                  : dashboardContent),
+                  : (_currentTab == 1
+                      ? TaskContentView(
+                          key: const ValueKey('task_tab_content'),
+                          userName: widget.userName,
+                          showBackButton: false,
+                        )
+                      : dashboardContent)),
         ),
         Positioned(
           left: 0,
@@ -354,6 +450,7 @@ class _HomePageState extends State<HomePage> {
             child: HomeTaskCard(
               task: _tasks[i],
               isLast: i == _tasks.length - 1,
+              onEdit: () => _openEditTask(_tasks[i]),
             ),
           ),
       ],

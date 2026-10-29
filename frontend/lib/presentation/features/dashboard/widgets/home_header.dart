@@ -6,14 +6,21 @@ import '../../../../core/utils/responsive_context.dart';
 import '../../auth/login_page.dart';
 
 /// Top header banner showing user greeting, pending task count, and avatar.
+/// Standardized across Home, Task, Team List, and Schedule pages.
 class HomeHeader extends StatelessWidget {
   final String userName;
   final int pendingTaskCount;
+  final String? subtitle;
+  final bool showBackButton;
+  final VoidCallback? onBack;
 
   const HomeHeader({
     super.key,
     required this.userName,
     this.pendingTaskCount = 10,
+    this.subtitle,
+    this.showBackButton = false,
+    this.onBack,
   });
 
   void _showLogoutDialog(BuildContext context) {
@@ -84,33 +91,71 @@ class HomeHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hi $userName',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: context.rFont(22, min: 18, max: 26),
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
+        Expanded(
+          child: Row(
+            children: [
+              if (showBackButton) ...[
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onBack ?? () => Navigator.of(context).maybePop(),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: AppColors.bgCard,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.borderSubtle, width: 1),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Hi $userName',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: context.rFont(22, min: 18, max: 26),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    SizedBox(height: context.rSpacing(3)),
+                    Text(
+                      subtitle ?? '$pendingTaskCount task pending',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.primaryAccent,
+                        fontSize: context.rFont(12.5, min: 11, max: 14),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.15,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            SizedBox(height: context.rSpacing(3)),
-            Text(
-              '$pendingTaskCount task pending',
-              style: TextStyle(
-                color: AppColors.primaryAccent,
-                fontSize: context.rFont(12.5, min: 11, max: 14),
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.15,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
+        const SizedBox(width: 12),
         Material(
           color: Colors.transparent,
           child: InkWell(

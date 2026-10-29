@@ -3,22 +3,27 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../models/task_item_model.dart';
 
-/// Interactive expandable Task Card that smoothly animates open/close ("memanjang").
+/// Expandable Task Card based directly on the signature HomeTaskCard design.
 ///
 /// Features:
-/// - Collapsed View: Header title, High/12h badges, team avatars, due date/time, progress ring, tags
-/// - Expanded View: Reveals Group Members, Course, Date Created, Centroid Defuzzification, Notice, and Edit Button
-/// - 60 FPS HP Kentang: Uses RepaintBoundary, implicit smooth animation, and tabular numbers
+/// - Exact visual styling of HomeTaskCard: 16dp radius, card shadow, Stack layout
+///   with top-right due badge, avatar stack, circular/linear progress, and soft tags.
+/// - Expandable Behavior ("card nya memanjang"): Tapping the card smoothly reveals
+///   the full task details (Group Members, Course, Date Created, Centroid Defuzzification,
+///   assignment notice, and Edit button).
+/// - 60 FPS HP Kentang: RepaintBoundary, implicit smooth animations, and tabular numbers.
 class TaskExpandableCard extends StatefulWidget {
   final TaskItemModel task;
   final VoidCallback? onEdit;
   final bool isInitiallyExpanded;
+  final bool isLast;
 
   const TaskExpandableCard({
     super.key,
     required this.task,
     this.onEdit,
     this.isInitiallyExpanded = false,
+    this.isLast = false,
   });
 
   @override
@@ -45,18 +50,34 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
     final task = widget.task;
     final disableMotion = MediaQuery.disableAnimationsOf(context);
 
+    final isGroup = task.memberAvatars.isNotEmpty ||
+        task.tags.any((t) => t.label.toLowerCase() == 'kelompok');
+    final double? effectiveProgress = task.progressPercent != null
+        ? (task.progressPercent! / 100.0)
+        : (isGroup ? 0.46 : null);
+
+    final isUrgent = task.priority == TaskPriorityLevel.high;
+
     return RepaintBoundary(
       child: AnimatedContainer(
+        width: double.infinity,
         duration: disableMotion ? Duration.zero : const Duration(milliseconds: 260),
         curve: Curves.easeInOutCubic,
+        margin: EdgeInsets.only(bottom: widget.isLast ? 0 : 10),
         decoration: BoxDecoration(
           color: AppColors.bgCard,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: _isExpanded ? AppColors.borderMedium : AppColors.borderSubtle,
             width: _isExpanded ? 1.0 : 0.6,
           ),
-          boxShadow: AppColors.cardShadow,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 10,
+              offset: Offset(0, 3),
+            ),
+          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -64,188 +85,193 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
           splashColor: Colors.transparent,
           highlightColor: Colors.white.withValues(alpha: 0.04),
           child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: context.rSpacing(18),
-              vertical: context.rSpacing(16),
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 1. TOP HEADER: Title & Badges
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                // 1. COLLAPSED VIEW (Exact HomeTaskCard Structure)
+                Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    Expanded(
-                      child: Text(
-                        task.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.textWhite,
-                          fontSize: context.rFont(14.5, min: 13, max: 17),
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.20,
-                        ),
+                    // Ensure the Stack spans the full width of the card container
+                    const SizedBox(width: double.infinity),
+
+                    // Left Column: Title, Subtitle, Team members, Deadline, Tags
+                    Padding(
+                      padding: EdgeInsets.only(
+                        right: (isGroup && effectiveProgress != null) ? 120 : 108,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Priority Badge (e.g. High)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: task.priority.badgeBg,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            task.priority.label,
-                            style: TextStyle(
-                              color: task.priority.badgeText,
-                              fontSize: context.rFont(9.5, min: 8.5, max: 11),
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        // Duration Badge (e.g. 12h)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: task.durationBadgeColor,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            task.durationBadge,
-                            style: TextStyle(
-                              color: task.durationTextColor,
-                              fontSize: context.rFont(9.5, min: 8.5, max: 11),
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 6),
-
-                // 2. SUBTITLE: Team members or notes
-                Text(
-                  task.subtitle ?? 'Team members',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: context.rFont(11, min: 10, max: 13),
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // 3. MIDDLE ROW: Avatars, Due Time, and Circular Progress
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Avatars (if present)
-                          if (task.memberAvatars.isNotEmpty) ...[
-                            _buildAvatarStack(task.memberAvatars),
-                            const SizedBox(height: 8),
+                          // Title
+                          Text(
+                            task.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+
+                          // Subtitle if available
+                          if (task.subtitle != null && task.subtitle!.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              task.subtitle!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11.5,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ],
 
-                          // Deadline with Clock Icon
+                          // Team members section (for group tasks)
+                          if (isGroup && task.memberAvatars.isNotEmpty) ...[
+                            const SizedBox(height: 5),
+                            const Text(
+                              'Team members',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            _buildAvatarStack(task.memberAvatars),
+                          ],
+
+                          // Linear progress bar for non-group tasks (if specified)
+                          if (!isGroup && effectiveProgress != null) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Progress',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Text(
+                                  '${(effectiveProgress * 100).toInt()}%',
+                                  style: TextStyle(
+                                    color: isUrgent
+                                        ? const Color(0xFFFF826E)
+                                        : const Color(0xFF55E6C1),
+                                    fontSize: 11,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                    fontFeatures: const [FontFeature.tabularFigures()],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: effectiveProgress,
+                                minHeight: 4,
+                                backgroundColor: const Color(0xFF232834),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  isUrgent
+                                      ? const Color(0xFFFF826E)
+                                      : const Color(0xFF55E6C1),
+                                ),
+                              ),
+                            ),
+                          ],
+
+                          const SizedBox(height: 6),
+
+                          // Deadline info with circular clock icon
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                width: 16,
-                                height: 16,
+                                width: 14,
+                                height: 14,
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFFFF7D65),
+                                  color: Color(0xFFFF826E),
                                   shape: BoxShape.circle,
                                 ),
                                 alignment: Alignment.center,
                                 child: const Icon(
                                   Icons.access_time_filled_rounded,
-                                  size: 11,
+                                  size: 9.5,
                                   color: Colors.white,
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  task.formattedDeadline,
-                                  style: TextStyle(
-                                    color: AppColors.textMuted,
-                                    fontSize: context.rFont(11, min: 10, max: 13),
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w500,
-                                    fontFeatures: const [FontFeature.tabularFigures()],
-                                  ),
+                              const SizedBox(width: 5),
+                              Text(
+                                task.formattedDeadline,
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w500,
+                                  fontFeatures: [FontFeature.tabularFigures()],
                                 ),
                               ),
                             ],
                           ),
+
+                          const SizedBox(height: 8),
+
+                          // Tags Row
+                          if (task.tags.isNotEmpty)
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: task.tags.map(_buildTag).toList(),
+                            ),
                         ],
                       ),
                     ),
 
-                    // Progress Ring
-                    if (task.progressPercent != null)
-                      _buildProgressRing(context, task.progressPercent!),
+                    // Top-right Badges (Priority pill + Duration pill)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildPriorityBadge(task.priority),
+                          const SizedBox(width: 4),
+                          _buildDurationBadge(task),
+                        ],
+                      ),
+                    ),
+
+                    // Center-right Circular Progress Indicator for group tasks
+                    if (isGroup && effectiveProgress != null)
+                      Positioned(
+                        right: 0,
+                        bottom: 8,
+                        child: _buildCircularProgress(
+                          effectiveProgress,
+                          isUrgent: isUrgent,
+                        ),
+                      ),
                   ],
                 ),
 
-                const SizedBox(height: 12),
-
-                // 4. BOTTOM TAGS (e.g. 'Kelompok', 'Code')
-                if (task.tags.isNotEmpty)
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: task.tags.map((tag) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 3.5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: tag.backgroundColor,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          tag.label,
-                          style: TextStyle(
-                            color: tag.textColor,
-                            fontSize: context.rFont(9.5, min: 8.5, max: 11),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                // 5. EXPANDED DETAIL SECTION ("card nya memanjang")
+                // 2. EXPANDED DETAIL SECTION ("card nya memanjang")
                 AnimatedCrossFade(
                   duration: disableMotion
                       ? Duration.zero
@@ -255,18 +281,11 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                       : CrossFadeState.showFirst,
                   firstChild: const SizedBox(width: double.infinity, height: 0),
                   secondChild: Padding(
-                    padding: const EdgeInsets.only(top: 14),
+                    padding: const EdgeInsets.only(top: 10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Divider(
-                          color: AppColors.borderSubtle,
-                          height: 1,
-                          thickness: 1,
-                        ),
-                        const SizedBox(height: 14),
-
                         // Section 1: Group Member
                         Text(
                           'Group Member',
@@ -440,30 +459,55 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
   }
 
   Widget _buildAvatarStack(List<Color> colors) {
+    const double size = 22.0;
+    const double overlap = 14.0;
+    final displayColors = colors.take(4).toList();
+    final extraCount = colors.length - displayColors.length;
+
     return SizedBox(
-      height: 25,
-      width: (25.0 + ((colors.length - 1) * 19.0)).clamp(25.0, 160.0),
+      height: size,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          for (int i = 0; i < colors.length; i++)
+          for (int i = 0; i < displayColors.length; i++)
             Positioned(
-              left: i * 19.0,
+              left: i * overlap,
               child: Container(
-                width: 25,
-                height: 25,
+                width: size,
+                height: size,
                 decoration: BoxDecoration(
-                  color: colors[i],
+                  color: displayColors[i],
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.bgCard,
-                    width: 2,
-                  ),
+                  border: Border.all(color: AppColors.bgCard, width: 1.5),
                 ),
                 alignment: Alignment.center,
-                child: const Icon(
+                child: Icon(
                   Icons.person_rounded,
-                  size: 13,
-                  color: Colors.white,
+                  size: 11.5,
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
+              ),
+            ),
+          if (extraCount > 0)
+            Positioned(
+              left: displayColors.length * overlap,
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF434A59),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.bgCard, width: 1.5),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '+$extraCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -472,25 +516,122 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
     );
   }
 
-  Widget _buildProgressRing(BuildContext context, int percentage) {
+  Widget _buildCircularProgress(double progress, {bool isUrgent = false}) {
+    final percent = (progress * 100).toInt();
+    final progressColor =
+        isUrgent ? const Color(0xFFFF826E) : const Color(0xFF55E6C1);
+
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: CircularProgressIndicator(
+              value: progress,
+              strokeWidth: 3.6,
+              strokeCap: StrokeCap.round,
+              backgroundColor: const Color(0xFF232834),
+              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+              semanticsLabel: 'Task progress: $percent%',
+            ),
+          ),
+          Text(
+            '$percent%',
+            style: TextStyle(
+              color: progressColor,
+              fontSize: 11.5,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTag(TaskTagModel tag) {
     return Container(
-      width: 48,
-      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0xFF61D2B4),
-          width: 3.5,
+        color: tag.backgroundColor.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        tag.label,
+        style: TextStyle(
+          color: tag.backgroundColor,
+          fontSize: 10.5,
+          fontFamily: 'Inter',
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
         ),
       ),
-      alignment: Alignment.center,
+    );
+  }
+
+  Widget _buildPriorityBadge(TaskPriorityLevel priority) {
+    Color bg;
+    Color textColor;
+    String label;
+
+    switch (priority) {
+      case TaskPriorityLevel.high:
+        bg = AppColors.primary;
+        textColor = Colors.white;
+        label = 'High';
+        break;
+      case TaskPriorityLevel.medium:
+        bg = const Color(0xFFFBBF24);
+        textColor = const Color(0xFF1F2937);
+        label = 'Medium';
+        break;
+      case TaskPriorityLevel.low:
+        bg = const Color(0xFF6EE7B7);
+        textColor = const Color(0xFF064E3B);
+        label = 'Low';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Text(
-        '$percentage%',
+        label,
         style: TextStyle(
-          color: const Color(0xFF61D2B4),
-          fontSize: context.rFont(10, min: 9, max: 12),
+          color: textColor,
+          fontSize: 10.5,
           fontFamily: 'Inter',
           fontWeight: FontWeight.w700,
+          letterSpacing: 0.1,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDurationBadge(TaskItemModel task) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: task.durationBadgeColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        task.durationBadge,
+        style: TextStyle(
+          color: task.durationTextColor,
+          fontSize: 10.5,
+          fontFamily: 'Inter',
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.1,
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),

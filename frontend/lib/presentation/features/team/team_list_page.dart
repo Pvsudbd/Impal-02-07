@@ -5,6 +5,8 @@ import '../schedule/models/schedule_model.dart';
 import '../schedule/models/schedule_repository.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
 import '../schedule/schedule_page.dart';
+import '../dashboard/home_page.dart';
+import '../task/task_page.dart';
 import 'dashboard_team_page.dart';
 import 'models/team_model.dart';
 import 'models/team_repository.dart';
@@ -73,23 +75,20 @@ class _TeamListPageState extends State<TeamListPage> {
               ? ScheduleContentView(
                   key: const ValueKey('team_page_schedule_tab_content'),
                   userName: widget.userName,
-                  showBackButton: true,
-                  onBack: () => setState(() => _currentTab = 2),
+                  showBackButton: false,
                 )
-              : TeamListContentView(
-                  key: const ValueKey('team_page_list_content'),
-                  userName: widget.userName,
-                  showBackButton:
-                      Navigator.of(context).canPop() || widget.onBackToHome != null,
-                  onBack: () {
-                    if (widget.onBackToHome != null) {
-                      widget.onBackToHome!();
-                    } else if (Navigator.of(context).canPop()) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  onOpenSchedule: () => setState(() => _currentTab = 3),
-                ),
+              : (_currentTab == 1
+                  ? TaskContentView(
+                      key: const ValueKey('team_page_task_tab_content'),
+                      userName: widget.userName,
+                      showBackButton: false,
+                    )
+                  : TeamListContentView(
+                      key: const ValueKey('team_page_list_content'),
+                      userName: widget.userName,
+                      showBackButton: false,
+                      onOpenSchedule: () => setState(() => _currentTab = 3),
+                    )),
         ),
         Positioned(
           left: 0,
@@ -99,11 +98,15 @@ class _TeamListPageState extends State<TeamListPage> {
             currentTab: _currentTab,
             onTabSelected: (index) {
               if (index == 0) {
-                if (widget.onBackToHome != null) {
-                  widget.onBackToHome!();
-                } else if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                }
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (_) => HomePage(
+                      userName: widget.userName,
+                      initialTab: 0,
+                    ),
+                  ),
+                  (route) => false,
+                );
               } else {
                 setState(() => _currentTab = index);
               }
@@ -274,6 +277,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
             delegate: SliverChildListDelegate([
               TeamHeader(
                 userName: widget.userName,
+                subtitle: 'Team List',
                 showBackButton: widget.showBackButton,
                 onBack: widget.onBack,
               ),

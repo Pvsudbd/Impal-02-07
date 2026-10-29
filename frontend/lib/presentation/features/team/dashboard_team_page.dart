@@ -5,8 +5,6 @@ import '../dashboard/home_page.dart';
 import '../schedule/models/schedule_model.dart';
 import '../schedule/models/schedule_repository.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
-import '../schedule/schedule_page.dart';
-import '../task/task_page.dart';
 import 'create_task_team.dart';
 import 'pop_up_create_meeting.dart';
 import 'widgets/team_dashboard_header.dart';
@@ -49,7 +47,7 @@ class DashboardTeamPage extends StatefulWidget {
 }
 
 class _DashboardTeamPageState extends State<DashboardTeamPage> {
-  int _currentTab = 2; // Team tab active by default
+  final int _currentTab = 2; // Team tab active by default
   late List<TeamTaskModel> _tasks;
 
   @override
@@ -64,6 +62,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         assignedTo: 'Yoga Perkasa Didik',
         assigneeColor: Color(0xFFF3A683),
         timeRange: '09:30 - 11:30 WIB',
+        dueBadge: '12h',
       ),
       const TeamTaskModel(
         id: 'task_2',
@@ -73,6 +72,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         assigneeColor: Color(0xFF63CDDA),
         assigneeColors: [Color(0xFF63CDDA), Color(0xFF786FA6)],
         timeRange: '09:30 - 11:30 WIB',
+        dueBadge: '18h',
       ),
       const TeamTaskModel(
         id: 'task_3',
@@ -81,6 +81,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         assignedTo: 'Yoga Perkasa Didik',
         assigneeColor: Color(0xFFF3A683),
         timeRange: '09:30 - 11:30 WIB',
+        dueBadge: '2d',
       ),
     ];
   }
@@ -312,6 +313,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           TeamTaskCard(
             task: _tasks[i],
             onTap: () => _openEditTaskPage(_tasks[i]),
+            onEdit: () => _openEditTaskPage(_tasks[i]),
           ),
           if (i < _tasks.length - 1) const SizedBox(height: 10),
         ],
@@ -320,33 +322,24 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   }
 
   void _onTabSelected(int index) {
-    if (index == _currentTab) return;
-    setState(() => _currentTab = index);
-
-    if (index == 0) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomePage()),
-        (route) => false,
-      );
-    } else if (index == 1) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => TaskPage(userName: widget.userName),
-        ),
-      );
-    } else if (index == 2) {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
+    if (index == _currentTab) {
+      if (index == 2 && widget.onBack != null) {
+        widget.onBack!();
       }
-    } else if (index == 3) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => SchedulePage(
-            userName: widget.userName,
-            isStandalone: true,
-          ),
-        ),
-      );
+      return;
     }
+    if (index == 2 && widget.onBack != null) {
+      widget.onBack!();
+      return;
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => HomePage(
+          userName: widget.userName,
+          initialTab: index,
+        ),
+      ),
+      (route) => false,
+    );
   }
 }

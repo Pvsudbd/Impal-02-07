@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/home_task_card.dart';
+import 'package:impal_smart_todolist/presentation/features/dashboard/models/dashboard_models.dart';
 import 'package:impal_smart_todolist/presentation/features/task/edit_task.dart';
 import 'package:impal_smart_todolist/presentation/features/task/widgets/course_grade_weight_chips.dart';
 import 'package:impal_smart_todolist/presentation/features/task/widgets/task_expandable_card.dart';
@@ -165,5 +167,48 @@ void main() {
 
     expect(savedTask, isNotNull);
     expect(savedTask!.isCollegeTask, isFalse);
+  });
+
+  testWidgets('HomeTaskCard expands on tap and triggers onEdit', (tester) async {
+    bool editTapped = false;
+    const homeTask = TaskItem(
+      title: 'Wallet App Design',
+      dueBadge: '6d',
+      dueColor: Color(0xFF5B93FF),
+      dueTextColor: Colors.white,
+      isUrgent: false,
+      deadline: 'Sat 11 Oct 2026, 23:59 WIB',
+      tags: [
+        TaskTag(label: 'Kelompok', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: HomeTaskCard(
+              task: homeTask,
+              onEdit: () => editTapped = true,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Wallet App Design'), findsOneWidget);
+
+    // Tap to expand
+    await tester.tap(find.text('Wallet App Design'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Group Member'), findsOneWidget);
+    expect(find.text('Edit'), findsOneWidget);
+
+    // Tap Edit button
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+
+    expect(editTapped, isTrue);
   });
 }

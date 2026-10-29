@@ -84,8 +84,8 @@ class TaskItemModel {
     required this.title,
     this.priority = TaskPriorityLevel.high,
     this.durationBadge = '12h',
-    this.durationBadgeColor = const Color(0xFF8FC7FF),
-    this.durationTextColor = const Color(0xFF1E3A8A),
+    this.durationBadgeColor = const Color(0xFF5B93FF),
+    this.durationTextColor = Colors.white,
     this.subtitle,
     required this.deadlineDate,
     required this.formattedDeadline,
@@ -103,6 +103,44 @@ class TaskItemModel {
     this.isAssignedToUser = true,
     this.isCollegeTask = true,
   });
+
+  String get priorityLabel {
+    switch (priority) {
+      case TaskPriorityLevel.high:
+        return 'High';
+      case TaskPriorityLevel.medium:
+        return 'Medium';
+      case TaskPriorityLevel.low:
+        return 'Low';
+    }
+  }
+
+  Color get priorityBadgeColor {
+    switch (priority) {
+      case TaskPriorityLevel.high:
+        return const Color(0xFFFF5E4D);
+      case TaskPriorityLevel.medium:
+        return const Color(0xFFFBBF24);
+      case TaskPriorityLevel.low:
+        return const Color(0xFF6EE7B7);
+    }
+  }
+
+  Color get priorityTextColor {
+    switch (priority) {
+      case TaskPriorityLevel.high:
+        return Colors.white;
+      case TaskPriorityLevel.medium:
+        return const Color(0xFF1F2937);
+      case TaskPriorityLevel.low:
+        return const Color(0xFF064E3B);
+    }
+  }
+
+  bool get isTeamTask =>
+      memberAvatars.isNotEmpty ||
+      tags.any((t) => t.label.trim().toLowerCase() == 'kelompok') ||
+      groupMembers.length > 1;
 
   TaskItemModel copyWith({
     String? id,
@@ -162,8 +200,8 @@ class TaskItemModel {
           title: 'Tugas Besar Kecerdasan AI',
           priority: TaskPriorityLevel.high,
           durationBadge: '12h',
-          durationBadgeColor: const Color(0xFF8FC7FF),
-          durationTextColor: const Color(0xFF1E3A8A),
+          durationBadgeColor: const Color(0xFF5B93FF),
+          durationTextColor: Colors.white,
           subtitle: 'Team members',
           deadlineDate: DateTime(2026, 10, 11, 23, 59),
           formattedDeadline: 'Sat 11 Oct 2026, 23: 59 WIB',
@@ -203,8 +241,8 @@ class TaskItemModel {
           title: 'Tugas Video BINDO',
           priority: TaskPriorityLevel.medium,
           durationBadge: '13h',
-          durationBadgeColor: const Color(0xFF8FC7FF),
-          durationTextColor: const Color(0xFF1E3A8A),
+          durationBadgeColor: const Color(0xFF5B93FF),
+          durationTextColor: Colors.white,
           subtitle: 'Membuat video perkenalan',
           deadlineDate: DateTime(2026, 10, 11, 23, 59),
           formattedDeadline: 'Sat 11 Oct 2026, 23: 59 WIB',

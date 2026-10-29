@@ -86,6 +86,33 @@ Tugas utamamu adalah memimpin tim pengembang antarmuka multi-agent berbasis arsi
     $$\text{Radius Dalam} = \text{Radius Luar} - \text{Padding}$$
 * **Angka & Jam Presensi (Tabular Numbers):**
   - Wajib memasang `FontFeature.tabularFigures()` pada teks waktu, jam kehadiran, tanggal, dan statistik agar angka sejajar rapi vertikal.
+* **Standar Header Terpadu Antar-Tab (Unified Home Header):**
+  - Seluruh halaman/tab utama pada bottom navigation (`HomePage`, `TaskPage`, `TeamListPage`, `SchedulePage`) **wajib menggunakan desain header yang seragam dengan `HomeHeader`**:
+    - Menampilkan ucapan `Hi $userName`, subtitle adaptif dengan warna `AppColors.primaryAccent` (`Home`: `$count task pending`, `Task`: `Task`, `Team List`: `Team List`, `Schedule`: `Schedule`) dan tabular numbers.
+    - Avatar profil inisial di sisi kanan atas dengan popup konfirmasi Sign Out saat diketuk.
+    - Dilarang menampilkan tombol panah kembali (*back button*) saat berada di dalam tab navigasi utama shell.
+* **Standar Alur Edit Kartu Tugas (Task Edit Routing):**
+  - Ketika tombol **Edit** pada kartu tugas ditekan (pada `HomeTaskCard`, `TaskExpandableCard`, dll.):
+    - Jika merupakan tugas tim/kelompok (`isTeamTask` bernilai true, memiliki avatar/anggota kelompok, atau tag `Kelompok`), wajib langsung diarahkan ke halaman **Dashboard Team** (`DashboardTeamPage`) dari kelompok tersebut.
+    - Jika merupakan tugas personal/pribadi, diarahkan ke halaman formulir edit tugas (`EditTaskPage`).
+* **Standar Penanda Deadline & Durasi (Due / Duration Badge):**
+  - Seluruh kartu tugas (`HomeTaskCard`, `TaskExpandableCard`, dll.) **wajib menggunakan format penanda sisa waktu Task Page**:
+    - Bentuk: Kapsul pill melingkar penuh (`BorderRadius.circular(999)`).
+    - Warna: Sky Blue `Color(0xFF5B93FF)` dengan teks putih `Colors.white` (normal/non-urgent) dan Coral `Color(0xFFFF7D65)` dengan teks putih `Colors.white` (urgent/overdue).
+    - Tipografi: Tabular figures (`FontFeature.tabularFigures()`), padding `EdgeInsets.symmetric(horizontal: 8, vertical: 2.5)`, ukuran font 10.5sp bold.
+    - Ikon batas waktu: Wajib menyertakan ikon jam bulat coral `(clock icon)` tepat sebelum teks deadline (`Sat 11 Oct 2026, 23: 59 WIB`).
+* **Standar Posisi Badge di Sudut Kanan Atas (Pinned Top-Right Anti-Clustering):**
+  - Badge prioritas dan sisa durasi pada kartu tugas **wajib selalu diposisikan di sudut kanan atas kartu (*pinned to top-right corner*)**:
+    - Kontainer induk `Stack` wajib mengisi lebar penuh (`width: double.infinity` / `SizedBox(width: double.infinity)`) agar `Positioned(top: 0, right: 0)` tidak menyusut (*shrink-wrap*) dan menempel pada judul tugas yang pendek.
+    - Kolom judul tugas wajib memiliki batas margin/padding kanan (minimal 104–120 dp) agar teks panjang terpotong rapi dengan elipsis tanpa menyentuh atau menumpuk di bawah badge.
+* **Standar Token Warna Prioritas Tugas (High, Medium, Low):**
+  - Penanda prioritas tugas pada seluruh kartu individual dan tim wajib disamakan dengan standar **Card Task Team**:
+    - **High**: Background `AppColors.primary` (`Color(0xFFFF5E4D)`), Teks `Colors.white`.
+    - **Medium**: Background `Color(0xFFFBBF24)` (Warm Amber), Teks `Color(0xFF1F2937)` (Dark Slate).
+    - **Low**: Background `Color(0xFF6EE7B7)` (Mint Green), Teks `Color(0xFF064E3B)` (Dark Green).
+* **Standar Kartu Tugas Tim (`TeamTaskCard`):**
+  - **Sisa Waktu Deadline (Due Badge):** Wajib ditampilkan di sudut kanan atas bersanding dengan badge prioritas dalam format kapsul pill tabular figures.
+  - **Tombol Edit Ikon Pensil Abu-Abu:** Tombol edit pada kartu tugas tim wajib ditempatkan di sudut kanan bawah (sejajar dengan profil anggota) berupa **logo pensil abu-abu murni** (`Icons.edit_rounded`, warna `AppColors.textMuted`) tanpa teks.
 * **Protokol Pop-Up Pemberitahuan Aksi:**
   - Setiap aksi yang memicu manipulasi data (Create, Update, Delete, Submit Form) **wajib memicu Pop-Up Pemberitahuan** (`PopUpPemberitahuan` / `PopUpPemberitahuanTeam`).
   - **Gunakan template yang sudah ada di projek**. Jika belum ada aksi spesifik, buatkan metode preset pada template pop-up yang sudah ada. Jika pop-up belum ada sama sekali di projek, rancang komponen UI pop-up baru berbasis dark container (`#282D37`), icon badge berwarna, dan auto-dismiss.

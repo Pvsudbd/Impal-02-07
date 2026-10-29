@@ -7,11 +7,13 @@ import '../models/team_task_model.dart';
 class TeamTaskCard extends StatelessWidget {
   final TeamTaskModel task;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
 
   const TeamTaskCard({
     super.key,
     required this.task,
     this.onTap,
+    this.onEdit,
   });
 
   List<TeamMemberModel> _resolveAssignedMembers() {
@@ -149,22 +151,47 @@ class TeamTaskCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                    decoration: BoxDecoration(
-                      color: priorityColor,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      priorityText,
-                      style: TextStyle(
-                        color: priorityTextColor,
-                        fontSize: 9.5,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.2,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: priorityColor,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          priorityText,
+                          style: TextStyle(
+                            color: priorityTextColor,
+                            fontSize: 9.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: task.isUrgent
+                              ? const Color(0xFFFF7D65)
+                              : const Color(0xFF5B93FF),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          task.effectiveDueBadge,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -252,6 +279,22 @@ class TeamTaskCard extends StatelessWidget {
                         fontSize: 12,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onEdit ?? onTap,
+                      borderRadius: BorderRadius.circular(8),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.edit_rounded,
+                          size: 16,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ),
                   ),
