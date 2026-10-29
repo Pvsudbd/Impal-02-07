@@ -4,6 +4,7 @@ import '../../../../core/utils/responsive_context.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../dashboard/home_page.dart';
 import '../dashboard/widgets/home_header.dart';
+import '../smart_system/smart_priority_page.dart';
 import '../team/dashboard_team_page.dart';
 import '../team/models/team_model.dart';
 import '../team/models/team_repository.dart';
@@ -236,7 +237,87 @@ class _TaskContentViewState extends State<TaskContentView> {
                 mediumCount: mediumCount,
                 lowCount: lowCount,
               ),
-              SizedBox(height: context.rSpacing(16)),
+              SizedBox(height: context.rSpacing(10)),
+
+              // AI Smart Priority Ranking Shortcut
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            SmartPriorityPage(userName: widget.userName),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.rSpacing(12),
+                      vertical: context.rSpacing(9),
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgCard,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.35),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.psychology_rounded,
+                          size: context.rIcon(18),
+                          color: AppColors.primary,
+                        ),
+                        SizedBox(width: context.rSpacing(8)),
+                        Expanded(
+                          child: Text(
+                            'AI Smart Priority Ranking',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: context.rFont(12, min: 10.5, max: 13.5),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFF10B981).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'Mamdani CoG',
+                            style: TextStyle(
+                              color: const Color(0xFF10B981),
+                              fontSize: context.rFont(10, min: 9, max: 11),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: context.rSpacing(6)),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: context.rIcon(12),
+                          color: AppColors.textMuted,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: context.rSpacing(14)),
 
               // 3. Compact Filter Bar (All, Today, Next 7 Days, Overdue)
               TaskFilterBar(

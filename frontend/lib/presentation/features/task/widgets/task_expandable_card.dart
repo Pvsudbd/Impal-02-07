@@ -218,14 +218,18 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                                 ),
                               ),
                               const SizedBox(width: 5),
-                              Text(
-                                task.formattedDeadline,
-                                style: const TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 11,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w500,
-                                  fontFeatures: [FontFeature.tabularFigures()],
+                              Flexible(
+                                child: Text(
+                                  task.formattedDeadline,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w500,
+                                    fontFeatures: [FontFeature.tabularFigures()],
+                                  ),
                                 ),
                               ),
                             ],

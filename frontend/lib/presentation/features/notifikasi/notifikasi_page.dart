@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive_context.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
+import '../smart_system/detail_card_smart_priority.dart';
+import '../smart_system/models/smart_priority_repository.dart';
 import 'models/notification_model.dart';
 import 'models/notification_repository.dart';
 import 'widgets/notification_banner.dart';
@@ -50,7 +52,12 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
   void _handleActionPressed(NotificationModel notif) {
     switch (notif.actionType) {
       case NotificationActionType.aiReason:
-        _showXaiExplanationModal(notif);
+        final topItem = SmartPriorityRepository.instance.topPriority;
+        if (topItem != null) {
+          DetailCardSmartPriority.show(context, item: topItem);
+        } else {
+          _showXaiExplanationModal(notif);
+        }
         break;
       case NotificationActionType.sessionDetails:
         _showSessionDetailsModal(notif);

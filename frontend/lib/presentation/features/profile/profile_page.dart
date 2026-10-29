@@ -8,6 +8,7 @@ import '../auth/forgot_password_page.dart';
 import '../auth/login_page.dart';
 import '../auth/terms_privacy_page.dart';
 import '../dashboard/home_page.dart';
+import '../smart_system/smart_priority_page.dart';
 import 'edit_profile_page.dart';
 import 'models/user_profile_model.dart';
 import 'widgets/profile_account_integration_group.dart';
@@ -363,6 +364,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 isScoreExplainabilityActive: profile.scoreExplainabilityEnabled,
                 onToggleScoreExplainability: (val) =>
                     _repo.toggleScoreExplainability(val),
+                onFuzzyModelTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SmartPriorityPage(userName: profile.fullName),
+                    ),
+                  );
+                },
               ),
               SizedBox(height: context.rSpacing(18)),
 

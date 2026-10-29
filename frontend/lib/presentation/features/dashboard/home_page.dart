@@ -8,6 +8,8 @@ import '../schedule/models/schedule_repository.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
 import '../schedule/schedule_form_page.dart';
 import '../schedule/schedule_page.dart';
+import '../smart_system/models/smart_priority_repository.dart';
+import '../smart_system/smart_priority_page.dart';
 import '../task/task_page.dart';
 import '../team/dashboard_team_page.dart';
 import '../team/pop_up_create_meeting.dart';
@@ -301,6 +303,8 @@ class _HomePageState extends State<HomePage> {
                 onCategorySelected: _onCategorySelected,
               ),
               const SizedBox(height: 16),
+              _buildAiSmartPriorityBanner(),
+              const SizedBox(height: 16),
               _buildOngoingTaskSection(),
             ]),
           ),
@@ -399,6 +403,132 @@ class _HomePageState extends State<HomePage> {
                 ),
                 child: homeContent,
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAiSmartPriorityBanner() {
+    final topPriority = SmartPriorityRepository.instance.topPriority;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF323846),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFFA6144).withValues(alpha: 0.35),
+          width: 1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => SmartPriorityPage(userName: widget.userName),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFA6144),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.psychology_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          const Flexible(
+                            child: Text(
+                              'AI Smart Priority',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13.5,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: const Text(
+                              'Mamdani Active',
+                              style: TextStyle(
+                                color: Color(0xFF10B981),
+                                fontSize: 9.5,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        topPriority != null
+                            ? '#1 ${topPriority.title} (${topPriority.score.toStringAsFixed(1)} High)'
+                            : 'Mamdani Centroid Defuzzification Active',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF8E95A5),
+                          fontSize: 11.5,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: Color(0xFFFF7D65),
+                ),
+              ],
             ),
           ),
         ),

@@ -206,14 +206,18 @@ class _HomeTaskCardState extends State<HomeTaskCard> {
                                 ),
                               ),
                               const SizedBox(width: 5),
-                              Text(
-                                task.deadline,
-                                style: const TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 11,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w500,
-                                  fontFeatures: [FontFeature.tabularFigures()],
+                              Flexible(
+                                child: Text(
+                                  task.deadline,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w500,
+                                    fontFeatures: [FontFeature.tabularFigures()],
+                                  ),
                                 ),
                               ),
                             ],
