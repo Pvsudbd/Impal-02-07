@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../../../core/widgets/unfocus_on_tap.dart';
-import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../team/widgets/submission_deadline_picker.dart';
 import 'models/task_item_model.dart';
@@ -59,7 +58,6 @@ class _EditTaskPageState extends State<EditTaskPage> {
   late TaskPriorityLevel _selectedPriority;
   late bool _isAutomaticWeight;
   bool _isSubmitting = false;
-  final int _currentTab = 1;
 
   @override
   void initState() {
@@ -153,22 +151,21 @@ class _EditTaskPageState extends State<EditTaskPage> {
       child: Scaffold(
         backgroundColor: AppColors.bgPrimary,
         body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.rSpacing(20),
-                    vertical: context.rSpacing(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top Bar: Back & User Initials Avatar
-                      _buildTopBar(context),
-                      SizedBox(height: context.rSpacing(18)),
+          bottom: true,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              context.rSpacing(20),
+              context.rSpacing(12),
+              context.rSpacing(20),
+              context.rSpacing(32),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Bar: Back & User Initials Avatar
+                _buildTopBar(context),
+                SizedBox(height: context.rSpacing(18)),
 
                       // Main Form Card Container
                       Container(
@@ -291,26 +288,12 @@ class _EditTaskPageState extends State<EditTaskPage> {
                           ),
                         ),
                       ),
-                      SizedBox(height: context.rSpacing(24)),
                     ],
                   ),
                 ),
               ),
-
-              // Bottom Navigation Bar
-              ImpalBottomNavBar(
-                currentTab: _currentTab,
-                onTabSelected: (index) {
-                  if (index != _currentTab) {
-                    Navigator.of(context).pop();
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+            ),
+          );
   }
 
   Widget _buildTopBar(BuildContext context) {

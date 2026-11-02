@@ -21,12 +21,14 @@ typedef JadwalPage = SchedulePage;
 class SchedulePage extends StatefulWidget {
   final String userName;
   final bool isStandalone;
+  final bool? showBackButton;
   final VoidCallback? onBackToHome;
 
   const SchedulePage({
     super.key,
     this.userName = 'Jarvis',
     this.isStandalone = true,
+    this.showBackButton,
     this.onBackToHome,
   });
 
@@ -46,6 +48,10 @@ class _SchedulePageState extends State<SchedulePage> {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
+    final effectiveShowBack =
+        widget.showBackButton ?? (widget.isStandalone && canPop);
+
     if (!widget.isStandalone) {
       return ScheduleContentView(
         userName: widget.userName,
@@ -60,7 +66,8 @@ class _SchedulePageState extends State<SchedulePage> {
       children: [
         ScheduleContentView(
           userName: widget.userName,
-          showBackButton: false,
+          showBackButton: effectiveShowBack,
+          onBack: effectiveShowBack ? () => Navigator.of(context).maybePop() : null,
         ),
         Positioned(
           left: 0,
@@ -74,10 +81,23 @@ class _SchedulePageState extends State<SchedulePage> {
       ],
     );
 
+    final wrappedContent = PopScope(
+      canPop: !canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (canPop) {
+          Navigator.of(context).maybePop();
+        } else if (_currentTab != 0) {
+          _onTabSelected(0);
+        }
+      },
+      child: content,
+    );
+
     if (isMobile) {
       return Scaffold(
         backgroundColor: AppColors.bgPrimary,
-        body: SafeArea(top: true, bottom: false, child: content),
+        body: SafeArea(top: true, bottom: false, child: wrappedContent),
       );
     }
 
@@ -103,7 +123,7 @@ class _SchedulePageState extends State<SchedulePage> {
                     ),
                   ],
                 ),
-                child: content,
+                child: wrappedContent,
               ),
             ),
           ),
@@ -224,6 +244,26 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
         } else {
           PopUpPemberitahuan.scheduleDeleted(context);
         }
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 4),
+            backgroundColor: const Color(0xFF323846),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            content: Text(
+              isMeeting ? 'Meeting deleted' : 'Schedule deleted',
+              style: const TextStyle(color: Colors.white, fontFamily: 'Inter'),
+            ),
+            action: SnackBarAction(
+              label: 'UNDO',
+              textColor: const Color(0xFFFF7D65),
+              onPressed: () {
+                _repo.addSchedule(item);
+              },
+            ),
+          ),
+        );
       }
     }
   }
@@ -347,12 +387,15 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
           });
         }
 
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: Column(
-                children: [
+        return CustomScrollView(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  // 1. Unified Schedule Header
                   ScheduleHeader(
                     userName: widget.userName,
                     subtitle: 'Schedule',
@@ -360,44 +403,37 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
                     onBack: widget.onBack,
                   ),
                   const SizedBox(height: 16),
+
+                  // 2. Segmented Filter Pill Bar (All, Today, Week, Month)
                   ScheduleFilterBar(
                     selectedFilter: _selectedFilter,
-                    onFilterChanged: (f) => setState(() => _selectedFilter = f),
+                    onFilterChanged: (f) {
+                      setState(() => _selectedFilter = f);
+                    },
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
+
+                  // 3. "Add Schedule" Action Button
                   _buildAddScheduleButton(),
-                  const SizedBox(height: 14),
-                ],
-              ),
-            ),
-            Expanded(
-              child: CustomScrollView(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        if (groups.isEmpty)
-                          const ScheduleEmptyState()
-                        else
-                          ...groups.asMap().entries.map((indexedEntry) {
-                            final index = indexedEntry.key;
-                            final group = indexedEntry.value;
-                            final shouldAttachHeaderKey =
-                                group.isToday && todayOngoingId == null && hasTodayGroup;
-                            return _buildScheduleGroup(
-                              group,
-                              isFirstGroup: index == 0,
-                              todayOngoingId: todayOngoingId,
-                              attachTodayHeaderKey: shouldAttachHeaderKey,
-                            );
-                          }),
-                      ]),
-                    ),
-                  ),
-                ],
+                  const SizedBox(height: 16),
+
+                  // 5. Schedule Items List / Empty State
+                  if (groups.isEmpty)
+                    const ScheduleEmptyState()
+                  else
+                    ...groups.asMap().entries.map((indexedEntry) {
+                      final index = indexedEntry.key;
+                      final group = indexedEntry.value;
+                      final shouldAttachHeaderKey =
+                          group.isToday && todayOngoingId == null && hasTodayGroup;
+                      return _buildScheduleGroup(
+                        group,
+                        isFirstGroup: index == 0,
+                        todayOngoingId: todayOngoingId,
+                        attachTodayHeaderKey: shouldAttachHeaderKey,
+                      );
+                    }),
+                ]),
               ),
             ),
           ],
@@ -407,40 +443,30 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
   }
 
   Widget _buildAddScheduleButton() {
-    return InkWell(
-      onTap: _openAddSchedule,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: double.infinity,
-        height: 48,
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.35),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
-            ),
-          ],
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton.icon(
+        key: const ValueKey('add_schedule_button'),
+        onPressed: _openAddSchedule,
+        icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+        label: const Text(
+          'Add Schedule',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14.5,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.15,
+          ),
         ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(Icons.add_rounded, color: Colors.white, size: 19),
-            SizedBox(width: 8),
-            Text(
-              'Add Schedule',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.15,
-              ),
-            ),
-          ],
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );
@@ -458,15 +484,31 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
       children: [
         Padding(
           padding: EdgeInsets.only(top: isFirstGroup ? 4 : 14, bottom: 8),
-          child: Text(
-            group.header,
-            style: const TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 13.5,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.2,
-            ),
+          child: Row(
+            children: [
+              if (group.isToday) ...[
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+              Text(
+                group.header,
+                style: TextStyle(
+                  color: group.isToday ? Colors.white : AppColors.textMuted,
+                  fontSize: 13.5,
+                  fontFamily: 'Inter',
+                  fontWeight: group.isToday ? FontWeight.w700 : FontWeight.w600,
+                  letterSpacing: 0.2,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
           ),
         ),
         for (int i = 0; i < group.items.length; i++)

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../../../core/widgets/unfocus_on_tap.dart';
-import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../profile/models/user_profile_model.dart';
+import '../schedule/pop_up_konfirmasi_delete.dart';
 import '../team/widgets/submission_deadline_picker.dart';
 import 'edit_task.dart';
 import 'models/task_item_model.dart';
+import 'models/task_repository.dart';
 import 'widgets/course_grade_weight_chips.dart';
 import 'widgets/task_category_selector.dart';
 
@@ -55,7 +56,6 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   late bool _isAutomaticWeight;
   late bool _isAlertEnabled;
   bool _isSubmitting = false;
-  final int _currentTab = 1; // Task Tab
 
   bool get _isEditing => widget.existingTask != null;
 
@@ -205,22 +205,21 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       child: Scaffold(
         backgroundColor: AppColors.bgPrimary,
         body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.rSpacing(20),
-                    vertical: context.rSpacing(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top Bar: Back & User Initials Avatar
-                      _buildTopBar(context),
-                      SizedBox(height: context.rSpacing(18)),
+          bottom: true,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              context.rSpacing(20),
+              context.rSpacing(12),
+              context.rSpacing(20),
+              context.rSpacing(32),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Bar: Back & User Initials Avatar
+                _buildTopBar(context),
+                SizedBox(height: context.rSpacing(18)),
 
                       // Main Form Card Container
                       Container(
@@ -357,6 +356,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                               _buildTextField(
                                 controller: _titleController,
                                 hintText: 'IMPAL Architecture Analysis',
+                                maxLength: 80,
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
                                     return 'Please enter task title';
@@ -384,6 +384,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                                       controller: _courseController,
                                       hintText:
                                           'SSIF-04-REG • Software Testing & Implementa...',
+                                      maxLength: 80,
                                     ),
                                     SizedBox(height: context.rSpacing(14)),
                                   ],
@@ -423,35 +424,28 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                                 controller: _notesController,
                                 hintText: 'Add assignment details or links here...',
                                 maxLines: 4,
+                                maxLength: 500,
                               ),
                               SizedBox(height: context.rSpacing(20)),
 
                               // Submit Button with Loading State
                               _buildSubmitButton(context),
+                              if (_isEditing &&
+                                  widget.existingTask != null &&
+                                  !widget.existingTask!.isTeamTask) ...[
+                                SizedBox(height: context.rSpacing(12)),
+                                _buildDeleteButton(context),
+                              ],
                             ],
                           ),
                         ),
                       ),
-                      SizedBox(height: context.rSpacing(24)),
                     ],
                   ),
                 ),
               ),
-
-              // Bottom Navigation Bar
-              ImpalBottomNavBar(
-                currentTab: _currentTab,
-                onTabSelected: (index) {
-                  if (index != _currentTab) {
-                    Navigator.of(context).pop();
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+            ),
+          );
   }
 
   Widget _buildTopBar(BuildContext context) {
@@ -459,32 +453,38 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        InkWell(
-          onTap: widget.onBack ?? () => Navigator.of(context).pop(),
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.arrow_back_rounded,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFF323846),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF3B4150), width: 1.0),
+              ),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
                   color: Colors.white,
-                  size: 24,
+                  size: 16,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  'Back',
-                  style: TextStyle(
-                    color: AppColors.textWhite,
-                    fontSize: context.rFont(20, min: 18, max: 24),
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+                onPressed: widget.onBack ?? () => Navigator.of(context).pop(),
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Text(
+              _isEditing ? 'Edit Task' : 'Create Task',
+              style: TextStyle(
+                color: AppColors.textWhite,
+                fontSize: context.rFont(20, min: 18, max: 24),
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
         Container(
           width: context.rIcon(42),
@@ -528,11 +528,16 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
     required TextEditingController controller,
     required String hintText,
     int maxLines = 1,
+    int? maxLength,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      maxLength: maxLength,
+      buildCounter: maxLength != null
+          ? (context, {required currentLength, required isFocused, required maxLength}) => null
+          : null,
       style: const TextStyle(
         color: Colors.white,
         fontSize: 13,
@@ -621,6 +626,51 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildDeleteButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          final confirmed = await PopUpKonfirmasiDelete.show(
+            context,
+            title: 'Delete Personal Task?',
+            message:
+                'Are you sure you want to delete this personal task? This action cannot be undone.',
+          );
+          if (confirmed == true && context.mounted) {
+            TaskRepository().deleteTask(widget.existingTask!.id);
+            PopUpPemberitahuan.taskDeleted(
+              context,
+              taskName: widget.existingTask!.title,
+            );
+            Navigator.of(context).pop();
+          }
+        },
+        icon: const Icon(
+          Icons.delete_outline_rounded,
+          color: Color(0xFFFF5E4D),
+          size: 18,
+        ),
+        label: const Text(
+          'Delete Task',
+          style: TextStyle(
+            color: Color(0xFFFF5E4D),
+            fontSize: 14,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFFFF5E4D), width: 1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
       ),
     );
   }

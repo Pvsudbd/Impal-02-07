@@ -456,7 +456,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
               // 8. Footer Branding Text
               Text(
-                'Todolist Sistem Cerdas v2.0 • Kelompok 7 IMPAL Telkom University',
+                'Smart Task Manager v2.0 • Team 7 IMPAL Telkom University',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: const Color(0xFF64748B),

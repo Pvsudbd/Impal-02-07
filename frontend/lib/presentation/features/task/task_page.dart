@@ -110,6 +110,7 @@ class TaskContentView extends StatefulWidget {
 class _TaskContentViewState extends State<TaskContentView> {
   final TaskRepository _repository = TaskRepository();
   String _selectedFilter = 'Today';
+  String? _selectedPriority;
 
   @override
   void initState() {
@@ -130,17 +131,21 @@ class _TaskContentViewState extends State<TaskContentView> {
 
   List<TaskItemModel> get _filteredTasks {
     final all = _repository.tasks;
-    if (_selectedFilter == 'All') return all;
-    if (_selectedFilter == 'Today') {
-      return all;
-    }
+    var list = all;
     if (_selectedFilter == 'Next 7 Days') {
-      return all.where((t) => t.priority != TaskPriorityLevel.low).toList();
+      list = list.where((t) => t.priority != TaskPriorityLevel.low).toList();
+    } else if (_selectedFilter == 'Overdue') {
+      list = list.where((t) => t.priority == TaskPriorityLevel.high).toList();
     }
-    if (_selectedFilter == 'Overdue') {
-      return all.where((t) => t.priority == TaskPriorityLevel.high).toList();
+
+    if (_selectedPriority != null) {
+      list = list
+          .where((t) =>
+              t.priorityLabel.toLowerCase() ==
+              _selectedPriority!.toLowerCase())
+          .toList();
     }
-    return all;
+    return list;
   }
 
   Future<void> _openCreateTask() async {
@@ -237,6 +242,8 @@ class _TaskContentViewState extends State<TaskContentView> {
                 highCount: highCount,
                 mediumCount: mediumCount,
                 lowCount: lowCount,
+                selectedPriority: _selectedPriority,
+                onPrioritySelected: (p) => setState(() => _selectedPriority = p),
               ),
               SizedBox(height: context.rSpacing(10)),
 
@@ -387,30 +394,112 @@ class _TaskContentViewState extends State<TaskContentView> {
         ),
 
         // 6. Virtualized Task Cards List with smooth expansion using HomeTaskCard layout
-        SliverPadding(
-          padding: EdgeInsets.symmetric(
-            horizontal: context.rSpacing(20),
-          ),
-          sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final task = tasks[index];
-                return Padding(
-                  padding: EdgeInsets.only(
-                    bottom: context.rSpacing(10),
-                  ),
-                  child: TaskExpandableCard(
-                    key: ValueKey('task_card_${task.id}'),
-                    task: task,
-                    isLast: index == tasks.length - 1,
-                    onEdit: () => _openEditTask(task),
-                  ),
-                );
-              },
-              childCount: tasks.length,
+        if (tasks.isEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: context.rSpacing(20),
+                vertical: context.rSpacing(20),
+              ),
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.rSpacing(20),
+                  vertical: context.rSpacing(28),
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.bgCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderSubtle, width: 0.5),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.check_circle_outline_rounded,
+                        color: AppColors.primary,
+                        size: 28,
+                      ),
+                    ),
+                    SizedBox(height: context.rSpacing(12)),
+                    Text(
+                      'No Tasks Found',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: context.rFont(16, min: 14, max: 18),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: context.rSpacing(6)),
+                    Text(
+                      'No tasks match the selected filter criteria.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: context.rFont(12, min: 11, max: 13),
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    SizedBox(height: context.rSpacing(14)),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _selectedFilter = 'All';
+                          _selectedPriority = null;
+                        });
+                      },
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
+                      label: const Text('Reset Filter'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primaryAccent,
+                        side: const BorderSide(
+                          color: AppColors.primaryAccent,
+                          width: 1,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: EdgeInsets.symmetric(
+              horizontal: context.rSpacing(20),
+            ),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final task = tasks[index];
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: context.rSpacing(10),
+                    ),
+                    child: TaskExpandableCard(
+                      key: ValueKey('task_card_${task.id}'),
+                      task: task,
+                      isLast: index == tasks.length - 1,
+                      onEdit: () => _openEditTask(task),
+                    ),
+                  );
+                },
+                childCount: tasks.length,
+              ),
             ),
           ),
-        ),
 
         // Bottom clearance for the scooped navigation bar
         SliverToBoxAdapter(

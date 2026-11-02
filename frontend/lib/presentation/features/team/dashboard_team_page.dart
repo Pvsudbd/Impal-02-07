@@ -49,6 +49,7 @@ class DashboardTeamPage extends StatefulWidget {
 class _DashboardTeamPageState extends State<DashboardTeamPage> {
   final int _currentTab = 2; // Team tab active by default
   late List<TeamTaskModel> _tasks;
+  bool _assignedToMeOnly = false;
 
   @override
   void initState() {
@@ -57,7 +58,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     _tasks = [
       const TeamTaskModel(
         id: 'task_1',
-        title: 'Membuat ui page kelompok',
+        title: 'Create team UI page',
         priority: TaskPriority.high,
         assignedTo: 'Yoga Perkasa Didik',
         assigneeColor: Color(0xFFF3A683),
@@ -66,7 +67,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       ),
       const TeamTaskModel(
         id: 'task_2',
-        title: 'Membuat ui page home',
+        title: 'Create home UI page',
         priority: TaskPriority.medium,
         assignedTo: 'Ahmad Sahroni, Muhammad Kafi Rijal',
         assigneeColor: Color(0xFF63CDDA),
@@ -76,7 +77,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       ),
       const TeamTaskModel(
         id: 'task_3',
-        title: 'Membuat ui form tugas',
+        title: 'Create task form UI',
         priority: TaskPriority.low,
         assignedTo: 'Yoga Perkasa Didik',
         assigneeColor: Color(0xFFF3A683),
@@ -195,6 +196,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                 memberColors: widget.memberColors,
                 showBackButton: Navigator.of(context).canPop() || widget.onBack != null,
                 onBack: widget.onBack,
+                onMembersTap: _showTeamMembersModal,
               ),
               const SizedBox(height: 16),
               TeamScheduleSection(
@@ -210,6 +212,12 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         ),
       ],
     );
+
+    // If embedded inside HomePage shell, return scroll content directly
+    // to prevent duplicate Scaffolds, SafeAreas, and BottomNavBars
+    if (!widget.isStandalone) {
+      return dashboardScrollContent;
+    }
 
     final scaffoldContent = Stack(
       children: [
@@ -264,7 +272,200 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     );
   }
 
+  void _showTeamMembersModal() {
+    final members = [
+      {
+        'name': 'Andi Sukamoto',
+        'role': 'Team Leader',
+        'color': const Color(0xFFF3A683),
+        'email': 'andi@student.telkomuniversity.ac.id',
+      },
+      {
+        'name': 'Rayya Gemintang',
+        'role': 'UI/UX Designer',
+        'color': const Color(0xFF786FA6),
+        'email': 'rayya@student.telkomuniversity.ac.id',
+      },
+      {
+        'name': 'Muhammad Kafi Rijal',
+        'role': 'Frontend Engineer',
+        'color': const Color(0xFF63CDDA),
+        'email': 'kafi@student.telkomuniversity.ac.id',
+      },
+      {
+        'name': 'Yoga Perkasa Didik',
+        'role': 'Backend Engineer',
+        'color': const Color(0xFFE77F67),
+        'email': 'yoga@student.telkomuniversity.ac.id',
+      },
+      {
+        'name': widget.userName,
+        'role': 'Quality Assurance',
+        'color': const Color(0xFF778BEB),
+        'email': 'jarvis@student.telkomuniversity.ac.id',
+      },
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        decoration: const BoxDecoration(
+          color: Color(0xFF282D37),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF434A59),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Team Members (${members.length})',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            for (final m in members) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF323846),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF3B4150), width: 0.5),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: m['color'] as Color,
+                      child: Text(
+                        (m['name'] as String).substring(0, 1).toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            m['name'] as String,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            m['email'] as String,
+                            style: const TextStyle(
+                              color: Color(0xFF8E95A5),
+                              fontSize: 11,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: (m['role'] as String).contains('Leader')
+                            ? const Color(0xFFFF7D65).withValues(alpha: 0.15)
+                            : const Color(0xFF5B93FF).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        m['role'] as String,
+                        style: TextStyle(
+                          color: (m['role'] as String).contains('Leader')
+                              ? const Color(0xFFFF7D65)
+                              : const Color(0xFF5B93FF),
+                          fontSize: 10,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssigneeFilterChip(String label, bool isSelected, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFF7D65) : const Color(0xFF323846),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFF7D65) : const Color(0xFF3B4150),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : const Color(0xFF8E95A5),
+            fontSize: 11,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTeamTaskSection() {
+    final displayedTasks = _assignedToMeOnly
+        ? _tasks
+            .where((t) =>
+                t.assignedTo.toLowerCase().contains(widget.userName.toLowerCase()) ||
+                t.assignedTo.toLowerCase().contains('yoga'))
+            .toList()
+        : _tasks;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -309,14 +510,50 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           ],
         ),
         const SizedBox(height: 10),
-        for (int i = 0; i < _tasks.length; i++) ...[
-          TeamTaskCard(
-            task: _tasks[i],
-            onTap: () => _openEditTaskPage(_tasks[i]),
-            onEdit: () => _openEditTaskPage(_tasks[i]),
-          ),
-          if (i < _tasks.length - 1) const SizedBox(height: 10),
-        ],
+        Row(
+          children: [
+            _buildAssigneeFilterChip(
+              'All Tasks',
+              !_assignedToMeOnly,
+              () => setState(() => _assignedToMeOnly = false),
+            ),
+            const SizedBox(width: 8),
+            _buildAssigneeFilterChip(
+              'Assigned to Me',
+              _assignedToMeOnly,
+              () => setState(() => _assignedToMeOnly = true),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (displayedTasks.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF323846),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Center(
+              child: Text(
+                'No tasks assigned to you in this team.',
+                style: TextStyle(
+                  color: Color(0xFF8E95A5),
+                  fontSize: 13,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ),
+          )
+        else
+          for (int i = 0; i < displayedTasks.length; i++) ...[
+            TeamTaskCard(
+              task: displayedTasks[i],
+              onTap: () => _openEditTaskPage(displayedTasks[i]),
+              onEdit: () => _openEditTaskPage(displayedTasks[i]),
+            ),
+            if (i < displayedTasks.length - 1) const SizedBox(height: 10),
+          ],
       ],
     );
   }

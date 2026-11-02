@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/utils/top_toast.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../schedule/models/schedule_model.dart';
@@ -82,7 +82,7 @@ class _HomePageState extends State<HomePage> {
       progress: 0.46,
       deadline: 'Sat 11 Oct 2026, 23:59 WIB',
       tags: [
-        TaskTag(label: 'Kelompok', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
+        TaskTag(label: 'Team', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
         TaskTag(label: 'Figma', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
       ],
       groupMembers: [
@@ -95,11 +95,12 @@ class _HomePageState extends State<HomePage> {
       centroidDefuzzification: 'z* = 28.6',
       centroidScale: 'scale(0-100)',
       warningNotice: '*This task is asigned to you, and you can’t delete',
+      isCollegeTask: true,
     ),
     const TaskItem(
       id: 'home_task_2',
-      title: 'Tugas IMPAL Figma',
-      subtitle: 'Membuat ui page kelompok',
+      title: 'IMPAL Figma Design',
+      subtitle: 'Create team UI page',
       dueBadge: '6d',
       dueColor: Color(0xFF5B93FF),
       dueTextColor: Colors.white,
@@ -117,6 +118,7 @@ class _HomePageState extends State<HomePage> {
       centroidDefuzzification: 'z* = 34.2',
       centroidScale: 'scale(0-100)',
       warningNotice: '*This task is asigned to you, and you can’t delete',
+      isCollegeTask: false,
     ),
     const TaskItem(
       id: 'home_task_3',
@@ -135,7 +137,7 @@ class _HomePageState extends State<HomePage> {
       progress: 0.76,
       deadline: 'Sat 11 Oct 2026, 23:59 WIB',
       tags: [
-        TaskTag(label: 'Kelompok', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
+        TaskTag(label: 'Team', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
         TaskTag(label: 'Code', bg: Color(0xFF63CDDA), text: Color(0xFF1C636D)),
       ],
       groupMembers: [
@@ -148,11 +150,12 @@ class _HomePageState extends State<HomePage> {
       centroidDefuzzification: 'z* = 78.4',
       centroidScale: 'scale(0-100)',
       warningNotice: '*This task is asigned to you, and you can’t delete',
+      isCollegeTask: true,
     ),
     const TaskItem(
       id: 'home_task_4',
-      title: 'Tugas IMPAL Frontend',
-      subtitle: 'Membuat frontend page kelompok',
+      title: 'IMPAL Frontend Slicing',
+      subtitle: 'Dashboard UI implementation',
       dueBadge: '17d',
       dueColor: Color(0xFF5B93FF),
       dueTextColor: Colors.white,
@@ -170,6 +173,7 @@ class _HomePageState extends State<HomePage> {
       centroidDefuzzification: 'z* = 19.8',
       centroidScale: 'scale(0-100)',
       warningNotice: '*This task is asigned to you, and you can’t delete',
+      isCollegeTask: false,
     ),
   ];
 
@@ -216,6 +220,26 @@ class _HomePageState extends State<HomePage> {
         } else {
           PopUpPemberitahuan.scheduleDeleted(context);
         }
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 4),
+            backgroundColor: const Color(0xFF323846),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            content: Text(
+              isMeeting ? 'Meeting deleted' : 'Schedule deleted',
+              style: const TextStyle(color: Colors.white, fontFamily: 'Inter'),
+            ),
+            action: SnackBarAction(
+              label: 'UNDO',
+              textColor: const Color(0xFFFF7D65),
+              onPressed: () {
+                ScheduleRepository().addSchedule(item);
+              },
+            ),
+          ),
+        );
       }
     }
   }
@@ -223,12 +247,14 @@ class _HomePageState extends State<HomePage> {
   Future<void> _openEditTask(TaskItem item) async {
     if (item.isTeamTask) {
       final team = TeamRepository().teams.firstWhere(
-        (t) => item.title.toLowerCase().contains(t.name.toLowerCase().replaceAll('kelompok - ', '').trim()),
+        (t) => item.title.toLowerCase().contains(
+              t.name.toLowerCase().replaceAll('kelompok - ', '').replaceAll(' team', '').trim(),
+            ),
         orElse: () => TeamRepository().teams.isNotEmpty
             ? TeamRepository().teams.first
             : const TeamModel(
                 id: '1',
-                name: 'Kelompok - IMPAL',
+                name: 'IMPAL Team',
                 memberColors: [
                   Color(0xFFF3A683),
                   Color(0xFF786FA6),
@@ -365,13 +391,27 @@ class _HomePageState extends State<HomePage> {
       ],
     );
 
+    final canPop = _currentTab == 0 && _selectedTeam == null;
+    final wrappedHomeContent = PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_selectedTeam != null) {
+          setState(() => _selectedTeam = null);
+        } else if (_currentTab != 0) {
+          _onTabSelected(0);
+        }
+      },
+      child: homeContent,
+    );
+
     if (isMobile) {
       return Scaffold(
         backgroundColor: const Color(0xFF282D37),
         body: SafeArea(
           top: true,
           bottom: false,
-          child: homeContent,
+          child: wrappedHomeContent,
         ),
       );
     }
@@ -401,7 +441,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-                child: homeContent,
+                child: wrappedHomeContent,
               ),
             ),
           ),
@@ -556,6 +596,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildOngoingTaskSection() {
+    final displayedTasks = _selectedCategory == 'All'
+        ? _tasks
+        : _selectedCategory.toLowerCase() == 'college'
+            ? _tasks.where((t) => t.isCollegeTask).toList()
+            : _tasks.where((t) => !t.isCollegeTask).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -576,7 +622,7 @@ class _HomePageState extends State<HomePage> {
             InkWell(
               borderRadius: BorderRadius.circular(6),
               onTap: () {
-                showTopToast(context, 'Showing all ongoing tasks');
+                _onTabSelected(1);
               },
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -594,14 +640,42 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         const SizedBox(height: 10),
-        for (int i = 0; i < _tasks.length; i++)
-          RepaintBoundary(
-            child: HomeTaskCard(
-              task: _tasks[i],
-              isLast: i == _tasks.length - 1,
-              onEdit: () => _openEditTask(_tasks[i]),
+        if (displayedTasks.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppColors.bgCard,
+              borderRadius: BorderRadius.circular(16),
             ),
-          ),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.assignment_turned_in_outlined,
+                  color: AppColors.textMuted,
+                  size: 32,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'No ongoing tasks in $_selectedCategory',
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          for (int i = 0; i < displayedTasks.length; i++)
+            RepaintBoundary(
+              child: HomeTaskCard(
+                task: displayedTasks[i],
+                isLast: i == displayedTasks.length - 1,
+                onEdit: () => _openEditTask(displayedTasks[i]),
+              ),
+            ),
       ],
     );
   }

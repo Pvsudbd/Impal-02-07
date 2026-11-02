@@ -370,6 +370,19 @@ class PopUpPemberitahuan extends StatefulWidget {
     );
   }
 
+  /// Preset notification when a task is deleted (Negatif -> Orange).
+  static void taskDeleted(BuildContext context, {String? taskName}) {
+    show(
+      context,
+      title: 'Task Deleted',
+      message: taskName != null && taskName.trim().isNotEmpty
+          ? 'Task "$taskName" has been successfully removed.'
+          : 'Your task has been successfully removed.',
+      icon: Icons.delete_outline_rounded,
+      iconBgColor: negativeColor,
+    );
+  }
+
   static void _removeEntry() {
     if (_activeState != null && _activeState!.mounted) {
       _activeState!.dismiss();

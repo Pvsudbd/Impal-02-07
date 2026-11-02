@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive_context.dart';
 import '../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../notifikasi/widgets/notification_bell_button.dart';
 import '../../profile/profile_page.dart';
@@ -13,6 +14,7 @@ class TeamDashboardHeader extends StatelessWidget {
   final List<Color> memberColors;
   final bool showBackButton;
   final VoidCallback? onBack;
+  final VoidCallback? onMembersTap;
 
   const TeamDashboardHeader({
     super.key,
@@ -22,6 +24,7 @@ class TeamDashboardHeader extends StatelessWidget {
     required this.memberColors,
     this.showBackButton = true,
     this.onBack,
+    this.onMembersTap,
   });
 
   String _getUserInitials(String name) {
@@ -90,9 +93,9 @@ class TeamDashboardHeader extends StatelessWidget {
                         Text(
                           'Hi $userName',
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 22,
+                            fontSize: context.rFont(22, min: 18, max: 24),
                             fontFamily: 'Inter',
                             fontWeight: FontWeight.w700,
                             letterSpacing: -0.3,
@@ -100,12 +103,12 @@ class TeamDashboardHeader extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 3),
-                        const Text(
+                        Text(
                           'Team Dashboard',
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: AppColors.primaryAccent,
-                            fontSize: 12.5,
+                            fontSize: context.rFont(12.5, min: 11, max: 14),
                             fontFamily: 'Inter',
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.15,
@@ -175,27 +178,31 @@ class TeamDashboardHeader extends StatelessWidget {
                       teamName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
+                        fontSize: context.rFont(20, min: 17, max: 22),
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.04,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // Overlapping avatar circles with person silhouettes
-                    SizedBox(
-                      height: 28,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          for (int i = 0; i < memberColors.length; i++)
-                            Positioned(
-                              left: i * 20.0,
-                              child: _buildAvatarCircle(memberColors[i], size: 28),
-                            ),
-                        ],
+                    // Overlapping avatar circles with person silhouettes (tap to open members modal)
+                    GestureDetector(
+                      onTap: onMembersTap,
+                      behavior: HitTestBehavior.opaque,
+                      child: SizedBox(
+                        height: 28,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            for (int i = 0; i < memberColors.length; i++)
+                              Positioned(
+                                left: i * 20.0,
+                                child: _buildAvatarCircle(memberColors[i], size: 28),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

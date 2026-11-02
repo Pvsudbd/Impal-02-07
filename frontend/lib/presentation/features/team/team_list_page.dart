@@ -192,6 +192,7 @@ class _TeamListContentViewState extends State<TeamListContentView> {
           builder: (_) => SchedulePage(
             userName: widget.userName,
             isStandalone: true,
+            showBackButton: true,
           ),
         ),
       );

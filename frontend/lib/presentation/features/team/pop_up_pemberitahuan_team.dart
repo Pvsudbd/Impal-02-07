@@ -93,4 +93,15 @@ class PopUpPemberitahuanTeam {
       taskName: taskName,
     );
   }
+
+  /// Notifikasi ketika tugas kelompok berhasil dihapus
+  static void taskDeleted(
+    BuildContext context, {
+    String? taskName,
+  }) {
+    PopUpPemberitahuan.taskDeleted(
+      context,
+      taskName: taskName,
+    );
+  }
 }

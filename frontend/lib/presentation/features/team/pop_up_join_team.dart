@@ -72,7 +72,7 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Container(
-        width: 352,
+        constraints: const BoxConstraints(maxWidth: 380),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         clipBehavior: Clip.antiAlias,
         decoration: ShapeDecoration(
@@ -115,20 +115,26 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
                   key: const ValueKey('close_join_team_button'),
                   onTap: () => Navigator.of(context).pop(),
                   borderRadius: BorderRadius.circular(999),
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: ShapeDecoration(
-                      color: const Color(0x33FA6144),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Center(
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: ShapeDecoration(
+                          color: const Color(0x33FA6144),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Color(0xFFFA6144),
+                          size: 18,
+                        ),
                       ),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.close_rounded,
-                      color: Color(0xFFFA6144),
-                      size: 18,
                     ),
                   ),
                 ),
@@ -148,6 +154,8 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
               ),
               child: TextField(
                 controller: _codeController,
+                maxLength: 20,
+                buildCounter: (context, {required currentLength, required isFocused, required maxLength}) => null,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 14,

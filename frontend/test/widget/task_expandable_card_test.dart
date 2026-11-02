@@ -150,15 +150,15 @@ void main() {
 
     expect(find.text('Edit Task'), findsOneWidget);
     expect(find.text('Tugas Besar Kecerdasan AI'), findsOneWidget);
-    expect(find.text('Tugas Kuliah'), findsOneWidget);
-    expect(find.text('Non-Kuliah'), findsOneWidget);
+    expect(find.text('College Task'), findsOneWidget);
+    expect(find.text('Personal'), findsOneWidget);
 
     // Since sampleTask has isCollegeTask: true, Course is visible
     expect(find.text('Course'), findsOneWidget);
     expect(find.text('SSIF-04-REG • Software Testing & Implementation'), findsOneWidget);
 
-    // Tap "Non-Kuliah" category
-    await tester.tap(find.text('Non-Kuliah'));
+    // Tap "Personal" category
+    await tester.tap(find.text('Personal'));
     await tester.pumpAndSettle();
 
     // Tap "Save Changes"

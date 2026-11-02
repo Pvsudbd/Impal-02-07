@@ -315,10 +315,22 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       appBar: AppBar(
         backgroundColor: AppColors.bgPrimary,
         elevation: 0,
-        leading: IconButton(
-          key: const ValueKey('close_create_meeting_button'),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-          onPressed: () => Navigator.of(context).maybePop(),
+        leading: Center(
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFF323846),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF3B4150), width: 1.0),
+            ),
+            child: IconButton(
+              key: const ValueKey('close_create_meeting_button'),
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ),
         ),
         title: Text(
           isEdit
@@ -384,11 +396,12 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                       _buildTextField(
                         key: isMeeting ? const ValueKey('create_meeting_name_input') : null,
                         controller: _titleController,
+                        maxLength: 80,
                         hint: isLecture
                             ? 'e.g. SSIF-04-REG • Software Testing & Implementation'
                             : (isMeeting
-                                ? 'e.g. Weekly Standup Kelompok IMPAL'
-                                : 'e.g. Meet Impal Kelompok 7'),
+                                ? 'e.g. Weekly Standup IMPAL Team'
+                                : 'e.g. IMPAL Team 7 Sync'),
                         prefixIcon: isLecture
                             ? Icons.school_outlined
                             : (isMeeting
@@ -435,6 +448,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                       _buildTextField(
                         key: isMeeting ? const ValueKey('create_meeting_location_input') : null,
                         controller: _locationController,
+                        maxLength: 80,
                         hint: isLecture
                             ? 'e.g. KTT B-106 • SSIF-04-REG-GAB02'
                             : (isMeeting
@@ -471,6 +485,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                       _buildTextField(
                         key: isMeeting ? const ValueKey('create_meeting_desc_input') : null,
                         controller: _notesController,
+                        maxLength: 500,
                         hint: 'Add reminders, assignment info, or topics...',
                         maxLines: 3,
                       ),
@@ -539,6 +554,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
     required String hint,
     IconData? prefixIcon,
     int maxLines = 1,
+    int? maxLength,
     String? Function(String?)? validator,
     void Function(String)? onChanged,
   }) {
@@ -546,6 +562,10 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       key: key,
       controller: controller,
       maxLines: maxLines,
+      maxLength: maxLength,
+      buildCounter: maxLength != null
+          ? (context, {required currentLength, required isFocused, required maxLength}) => null
+          : null,
       onChanged: onChanged,
       validator: validator,
       style: const TextStyle(color: Colors.white, fontSize: 14),

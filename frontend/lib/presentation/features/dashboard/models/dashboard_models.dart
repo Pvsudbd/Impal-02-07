@@ -89,7 +89,10 @@ class TaskItem {
 
   bool get isTeamTask =>
       (members != null && members!.isNotEmpty) ||
-      tags.any((t) => t.label.trim().toLowerCase() == 'kelompok') ||
+      tags.any((t) {
+        final l = t.label.trim().toLowerCase();
+        return l == 'kelompok' || l == 'team' || l == 'group';
+      }) ||
       groupMembers.length > 1;
 
   TaskItem copyWith({

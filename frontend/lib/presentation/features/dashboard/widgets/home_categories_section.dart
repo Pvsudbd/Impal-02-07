@@ -53,7 +53,7 @@ class HomeCategoriesSection extends StatelessWidget {
                   showTopToast(context, 'Add category coming soon!');
                 },
                 child: Container(
-                  width: 44,
+                  width: 48,
                   height: 58,
                   decoration: BoxDecoration(
                     color: AppColors.bgCard,

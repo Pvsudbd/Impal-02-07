@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
-import '../../../../core/utils/top_toast.dart';
 import '../../../../core/widgets/unfocus_on_tap.dart';
-import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../profile/models/user_profile_model.dart';
+import '../schedule/pop_up_konfirmasi_delete.dart';
 import 'models/team_member_model.dart';
 import 'models/team_task_model.dart';
 import 'pop_up_pemberitahuan_team.dart';
@@ -59,7 +58,6 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
   late List<TeamMemberModel> _selectedMembers;
   late bool _isAlertEnabled;
   bool _isSubmitting = false;
-  int _currentTab = 1; // Checklist / Task tab active matching design
 
   bool get _isEditing => widget.existingTask != null;
 
@@ -203,38 +201,23 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
     }
   }
 
-  void _onTabSelected(int index) {
-    if (index == _currentTab) return;
-    setState(() => _currentTab = index);
-    if (index == 0) {
-      Navigator.of(context).maybePop();
-    } else {
-      showTopToast(context, 'Tab switched');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isMobile = context.isMobile;
-    final bottomNavTotalHeight =
-        ImpalBottomNavBar.barTop + 68.0 + MediaQuery.paddingOf(context).bottom;
 
-    Widget pageBody = Stack(
-      children: [
-        // 1. Scrollable Form Body
-        Positioned.fill(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.only(
-              left: context.rSpacing(20),
-              right: context.rSpacing(20),
-              top: context.rSpacing(12),
-              bottom: bottomNavTotalHeight + context.rSpacing(24),
-            ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+    final Widget pageBody = SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        context.rSpacing(20),
+        context.rSpacing(12),
+        context.rSpacing(20),
+        context.rSpacing(32),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                   // Top Navigation Bar (Back Button + Avatar Initials)
                   _buildTopHeader(context),
                   SizedBox(height: context.rSpacing(18)),
@@ -386,34 +369,24 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
 
                         // Submit Button (Dynamic: "Save Changes" or "Create Task")
                         _buildSubmitButton(context),
+                        if (_isEditing) ...[
+                          SizedBox(height: context.rSpacing(12)),
+                          _buildDeleteButton(context),
+                        ],
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ),
-
-        // 2. Persistent Scooped Bottom Navigation Bar
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: ImpalBottomNavBar(
-            currentTab: _currentTab,
-            onTabSelected: _onTabSelected,
-          ),
-        ),
-      ],
-    );
+          );
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: UnfocusOnTap(
         child: SafeArea(
           top: true,
-          bottom: false,
+          bottom: true,
           child: isMobile
               ? pageBody
               : Center(
@@ -431,36 +404,39 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Back Button with text label
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onBack ?? () => Navigator.of(context).maybePop(),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: context.rIcon(24),
-                  ),
-                  SizedBox(width: context.rSpacing(8)),
-                  Text(
-                    'Back',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: context.rFont(22, min: 20, max: 24),
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+        // Back Button & Page Title
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFF323846),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF3B4150), width: 1.0),
+              ),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
+                onPressed: widget.onBack ?? () => Navigator.of(context).maybePop(),
               ),
             ),
-          ),
+            SizedBox(width: context.rSpacing(12)),
+            Text(
+              widget.existingTask != null ? 'Edit Team Task' : 'Create Team Task',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: context.rFont(20, min: 18, max: 24),
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
 
         // User Avatar Initials Badge
@@ -593,6 +569,50 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeleteButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          final confirmed = await PopUpKonfirmasiDelete.show(
+            context,
+            title: 'Delete Team Task?',
+            message:
+                'Are you sure you want to delete this team task? This action cannot be undone.',
+          );
+          if (confirmed == true && context.mounted) {
+            PopUpPemberitahuan.taskDeleted(
+              context,
+              taskName: widget.existingTask!.title,
+            );
+            Navigator.of(context).pop();
+          }
+        },
+        icon: const Icon(
+          Icons.delete_outline_rounded,
+          color: Color(0xFFFF5E4D),
+          size: 18,
+        ),
+        label: const Text(
+          'Delete Task',
+          style: TextStyle(
+            color: Color(0xFFFF5E4D),
+            fontSize: 14,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFFFF5E4D), width: 1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
       ),

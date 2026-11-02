@@ -141,7 +141,10 @@ class TaskItemModel {
 
   bool get isTeamTask =>
       memberAvatars.isNotEmpty ||
-      tags.any((t) => t.label.trim().toLowerCase() == 'kelompok') ||
+      tags.any((t) {
+        final l = t.label.trim().toLowerCase();
+        return l == 'kelompok' || l == 'team' || l == 'group';
+      }) ||
       groupMembers.length > 1;
 
   TaskItemModel copyWith({
@@ -201,12 +204,12 @@ class TaskItemModel {
   static List<TaskItemModel> get defaultTasks => [
         TaskItemModel(
           id: 'task_1',
-          title: 'Tugas Besar Kecerdasan AI',
+          title: 'AI System Final Project',
           priority: TaskPriorityLevel.high,
           durationBadge: '12h',
           durationBadgeColor: const Color(0xFF5B93FF),
           durationTextColor: Colors.white,
-          subtitle: 'Team members',
+          subtitle: 'SSIF-04-REG • Software Testing',
           deadlineDate: DateTime(2026, 10, 11, 23, 59),
           formattedDeadline: 'Sat 11 Oct 2026, 23: 59 WIB',
           memberAvatars: const [
@@ -217,7 +220,7 @@ class TaskItemModel {
           progressPercent: 98,
           tags: const [
             TaskTagModel(
-              label: 'Kelompok',
+              label: 'Team',
               backgroundColor: Color(0xFF786FA6),
               textColor: Color(0xFF4A3C8C),
             ),
@@ -237,24 +240,24 @@ class TaskItemModel {
           centroidDefuzzification: 'z* = 28.6',
           centroidScale: 'scale(0-100)',
           warningNotice: '*This task is asigned to you, and you can’t delete',
-          notes: 'Implementasi fuzzy inference system Mamdani pada model prediksi AI.',
+          notes: 'Implementation of Mamdani fuzzy inference system in AI prediction model.',
           isAutomaticWeight: true,
         ),
         TaskItemModel(
           id: 'task_2',
-          title: 'Tugas Video BINDO',
+          title: 'Linguistics Presentation Video',
           priority: TaskPriorityLevel.medium,
           durationBadge: '13h',
           durationBadgeColor: const Color(0xFF5B93FF),
           durationTextColor: Colors.white,
-          subtitle: 'Membuat video perkenalan',
+          subtitle: 'Introduction video presentation',
           deadlineDate: DateTime(2026, 10, 11, 23, 59),
           formattedDeadline: 'Sat 11 Oct 2026, 23: 59 WIB',
           memberAvatars: const [],
           progressPercent: null,
           tags: const [
             TaskTagModel(
-              label: 'personal',
+              label: 'Personal',
               backgroundColor: Color(0xFF786FA6),
               textColor: Color(0xFF4A3C8C),
             ),
@@ -267,23 +270,23 @@ class TaskItemModel {
           groupMembers: const [
             'Personal Task • Jarvis',
           ],
-          course: 'BINDO-02 • Bahasa Indonesia',
+          course: 'LING-02 • Linguistics & Communication',
           dateCreated: 'Tuesday, 01 Oct 2026',
           centroidDefuzzification: 'z* = 45.2',
           centroidScale: 'scale(0-100)',
           warningNotice: '*This task is asigned to you, and you can’t delete',
-          notes: 'Rekaman video monolog bahasa Indonesia formal durasi 3-5 menit.',
+          notes: 'Formal presentation recording (duration 3-5 minutes).',
           isAutomaticWeight: false,
           isCollegeTask: false,
         ),
         TaskItemModel(
           id: 'task_3',
-          title: 'Analisis Teks Paragraf BINDO',
+          title: 'Paragraph Text Analysis',
           priority: TaskPriorityLevel.medium,
           durationBadge: '20h',
           durationBadgeColor: const Color(0xFFFF7D65),
           durationTextColor: Colors.white,
-          subtitle: 'Team members',
+          subtitle: 'LING-02 • Linguistics & Communication',
           deadlineDate: DateTime(2026, 10, 15, 23, 59),
           formattedDeadline: 'Wed 15 Oct 2026, 23: 59 WIB',
           memberAvatars: const [
@@ -293,12 +296,12 @@ class TaskItemModel {
           progressPercent: null,
           tags: const [
             TaskTagModel(
-              label: 'Kelompok',
+              label: 'Team',
               backgroundColor: Color(0xFF786FA6),
               textColor: Color(0xFF4A3C8C),
             ),
             TaskTagModel(
-              label: 'Analisis',
+              label: 'Analysis',
               backgroundColor: Color(0xFF778BEB),
               textColor: Color(0xFF4056C0),
             ),
@@ -307,12 +310,12 @@ class TaskItemModel {
             'Andi sukamoto (Leader)',
             'Kafi Rijal Perkasa Situmorang',
           ],
-          course: 'BINDO-02 • Bahasa Indonesia',
+          course: 'LING-02 • Linguistics & Communication',
           dateCreated: 'Wednesday, 02 Oct 2026',
           centroidDefuzzification: 'z* = 18.4',
           centroidScale: 'scale(0-100)',
           warningNotice: '*This task is asigned to you, and you can’t delete',
-          notes: 'Bedah struktur paragraf deduktif dan induktif artikel opini.',
+          notes: 'Analysis of deductive and inductive paragraph structures in editorial articles.',
           isAutomaticWeight: true,
         ),
       ];

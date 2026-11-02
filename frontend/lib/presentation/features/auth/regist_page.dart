@@ -323,8 +323,8 @@ class _RegisterState extends State<Register> {
                 setState(() => _agreeTerms = false);
               }
             },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [

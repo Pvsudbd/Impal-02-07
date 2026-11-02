@@ -120,8 +120,10 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                             ),
                           ),
 
-                          // Subtitle if available
-                          if (task.subtitle != null && task.subtitle!.isNotEmpty) ...[
+                          // Subtitle if available (prevent duplicate if equal to 'Team members')
+                          if (task.subtitle != null &&
+                              task.subtitle!.isNotEmpty &&
+                              task.subtitle!.trim().toLowerCase() != 'team members') ...[
                             const SizedBox(height: 2),
                             Text(
                               task.subtitle!,

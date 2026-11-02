@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive_context.dart';
 import '../models/team_member_model.dart';
 import '../models/team_task_model.dart';
 
@@ -141,9 +142,9 @@ class TeamTaskCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       task.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 14.8,
+                        fontSize: context.rFont(14.5, min: 13, max: 16),
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.2,
@@ -172,7 +173,7 @@ class TeamTaskCard extends StatelessWidget {
                           priorityText,
                           style: TextStyle(
                             color: priorityTextColor,
-                            fontSize: 9.5,
+                            fontSize: context.rFont(9.5, min: 8.5, max: 11),
                             fontFamily: 'Inter',
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.2,
@@ -190,12 +191,12 @@ class TeamTaskCard extends StatelessWidget {
                         ),
                         child: Text(
                           task.effectiveDueBadge,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 9.5,
+                            fontSize: context.rFont(9.5, min: 8.5, max: 11),
                             fontFamily: 'Inter',
                             fontWeight: FontWeight.w700,
-                            fontFeatures: [FontFeature.tabularFigures()],
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
                       ),
@@ -209,11 +210,11 @@ class TeamTaskCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Assign to:',
                     style: TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 11,
+                      fontSize: context.rFont(11, min: 10, max: 12),
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w500,
                     ),
@@ -237,9 +238,9 @@ class TeamTaskCard extends StatelessWidget {
                       const SizedBox(width: 5),
                       Text(
                         task.timeRange,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textMuted,
-                          fontSize: 10.8,
+                          fontSize: context.rFont(10.5, min: 9.5, max: 12),
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w500,
                         ),
@@ -282,9 +283,9 @@ class TeamTaskCard extends StatelessWidget {
                       displayName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFFCBD5E1),
-                        fontSize: 12,
+                      style: TextStyle(
+                        color: const Color(0xFFCBD5E1),
+                        fontSize: context.rFont(12, min: 11, max: 13),
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w600,
                       ),
@@ -296,12 +297,15 @@ class TeamTaskCard extends StatelessWidget {
                     child: InkWell(
                       onTap: onEdit ?? onTap,
                       borderRadius: BorderRadius.circular(8),
-                      child: const Padding(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(
-                          Icons.edit_rounded,
-                          size: 16,
-                          color: AppColors.textMuted,
+                      child: const SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Center(
+                          child: Icon(
+                            Icons.edit_rounded,
+                            size: 16,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
                     ),

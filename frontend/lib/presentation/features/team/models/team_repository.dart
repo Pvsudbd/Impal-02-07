@@ -13,7 +13,7 @@ class TeamRepository {
   static const List<TeamModel> _defaultTeams = [
     TeamModel(
       id: '1',
-      name: 'Kelompok - IMPAL',
+      name: 'IMPAL Team',
       memberColors: [
         Color(0xFFF3A683),
         Color(0xFF786FA6),
@@ -24,7 +24,7 @@ class TeamRepository {
     ),
     TeamModel(
       id: '2',
-      name: 'Kelompok - IUM',
+      name: 'IUM Team',
       memberColors: [
         Color(0xFFF3A683),
         Color(0xFF786FA6),
@@ -33,7 +33,7 @@ class TeamRepository {
     ),
     TeamModel(
       id: '3',
-      name: 'Kelompok - Projek TIK',
+      name: 'ICT Project Team',
       memberColors: [
         Color(0xFFF3A683),
         Color(0xFF786FA6),
@@ -43,7 +43,7 @@ class TeamRepository {
     ),
     TeamModel(
       id: '4',
-      name: 'Kelompok - KA',
+      name: 'AI Project Team',
       memberColors: [
         Color(0xFFF3A683),
         Color(0xFF786FA6),

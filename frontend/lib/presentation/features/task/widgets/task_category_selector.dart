@@ -37,7 +37,7 @@ class TaskCategorySelector extends StatelessWidget {
             Expanded(
               child: _buildCategoryOption(
                 context,
-                title: 'Tugas Kuliah',
+                title: 'College Task',
                 icon: Icons.school_rounded,
                 isSelected: isCollegeTask,
                 onTap: () => onCategoryChanged(true),
@@ -47,7 +47,7 @@ class TaskCategorySelector extends StatelessWidget {
             Expanded(
               child: _buildCategoryOption(
                 context,
-                title: 'Non-Kuliah',
+                title: 'Personal',
                 icon: Icons.person_rounded,
                 isSelected: !isCollegeTask,
                 onTap: () => onCategoryChanged(false),

@@ -1,5 +1,6 @@
 import 'dart:ui' show PointerDeviceKind, FontFeature;
 import 'package:flutter/material.dart';
+import '../../core/utils/responsive_context.dart';
 import '../features/schedule/models/schedule_model.dart';
 
 /// Reusable Schedule Card matching the sleek IMPAL Design System.
@@ -37,7 +38,11 @@ class ImpalScheduleCard extends StatelessWidget {
     final statusLower = schedule.status.toLowerCase();
     final isOngoing = statusLower == 'ongoing';
     final isOverdue = statusLower == 'overdue' || statusLower == 'completed';
-    final accentColor = schedule.accentColor;
+    final stripeColor = isOngoing ? const Color(0xFFFF826E) : const Color(0xFF8E95A5);
+    final clockCircleColor = isOngoing ? const Color(0xFFFF7D65) : const Color(0xFF8E95A5);
+    final bellColor = schedule.isAlertEnabled
+        ? (isOngoing ? const Color(0xFFFF7D65) : const Color(0xFF8E95A5))
+        : const Color(0xFF8E95A5);
 
     final cardWidth = isHorizontal ? (width ?? 285.0) : double.infinity;
 
@@ -69,122 +74,117 @@ class ImpalScheduleCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Left Accent Stripe
+                // 1. Left Indicator Stripe (5.0dp exact FigCraft spec)
                 Container(
-                  width: 4.5,
-                  color: accentColor,
+                  width: 5.0,
+                  color: stripeColor,
                 ),
-                // Card Content
+                const SizedBox(width: 9.0),
+                // 2. Card Content (Padding top:16, bottom:16, right:18, gap:9.0)
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
+                    padding: const EdgeInsets.fromLTRB(0, 16, 18, 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Header Row: Title & Status Pill
+                        // Row 1: Title & Right Group (Bell + Status Pill)
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Expanded(
                               child: Text(
                                 schedule.title,
-                                maxLines: isHorizontal ? 1 : 2,
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 13.5,
+                                  fontSize: context.rFont(14.5, min: 13, max: 16),
                                   fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                   height: 1.25,
-                                  letterSpacing: -0.1,
+                                  letterSpacing: -0.2,
                                 ),
                               ),
                             ),
                             const SizedBox(width: 8),
-                            // Alert Bell Indicator & Toggle Button
-                            GestureDetector(
+                            // Bell Icon Button (accessible touch target)
+                            InkWell(
                               onTap: onToggleAlert,
+                              borderRadius: BorderRadius.circular(6),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                 child: Icon(
                                   schedule.isAlertEnabled
                                       ? Icons.notifications_active_rounded
                                       : Icons.notifications_off_outlined,
-                                  size: 15,
-                                  color: schedule.isAlertEnabled
-                                      ? const Color(0xFFFF7D65)
-                                      : const Color(0xFF8E95A5),
+                                  size: 14,
+                                  color: bellColor,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 5),
                             _buildStatusPill(isOngoing, isOverdue),
                           ],
                         ),
 
-                        // Location info (if provided)
+                        // Row 2: Location & Class info (9.0dp gap)
                         if (schedule.location != null &&
                             schedule.location!.trim().isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  schedule.location!.trim(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Color(0xFF8E95A5),
-                                    fontSize: 11.5,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: 0.05,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 9.0),
+                          Text(
+                            schedule.location!.trim(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: const Color(0xFF8E95A5),
+                              fontSize: context.rFont(11.0, min: 10, max: 12.5),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.0,
+                            ),
                           ),
                         ],
 
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 9.0),
 
-                        // Footer Row: Time and Quick Actions (Edit & Delete)
+                        // Row 3: Time Info & Quick Actions
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Time Info
+                            // Time Info (15x15 solid clock circle + time text)
                             Expanded(
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Container(
-                                    width: 15,
-                                    height: 15,
+                                    width: 15.0,
+                                    height: 15.0,
                                     decoration: BoxDecoration(
-                                      color: accentColor.withValues(alpha: 0.18),
+                                      color: clockCircleColor,
                                       shape: BoxShape.circle,
                                     ),
                                     alignment: Alignment.center,
-                                    child: Icon(
+                                    child: const Icon(
                                       Icons.access_time_filled_rounded,
-                                      color: accentColor,
-                                      size: 10,
+                                      color: Colors.white,
+                                      size: 9.0,
                                     ),
                                   ),
-                                  const SizedBox(width: 6),
+                                  const SizedBox(width: 6.0),
                                   Flexible(
                                     child: Text(
                                       customTimeText ?? schedule.formattedTime,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Color(0xFF8E95A5),
-                                        fontSize: 11.5,
+                                      style: TextStyle(
+                                        color: const Color(0xFF8E95A5),
+                                        fontSize: context.rFont(10.8, min: 10, max: 12.0),
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w500,
-                                        letterSpacing: 0.05,
-                                        fontFeatures: [FontFeature.tabularFigures()],
+                                        letterSpacing: 0.0,
+                                        fontFeatures: const [FontFeature.tabularFigures()],
                                       ),
                                     ),
                                   ),
@@ -192,7 +192,7 @@ class ImpalScheduleCard extends StatelessWidget {
                               ),
                             ),
 
-                            // Quick Actions with accessible touch targets (min 44-48 dp)
+                            // Quick Actions if provided (Edit & Delete)
                             if (onEdit != null || onDelete != null)
                               Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -200,33 +200,31 @@ class ImpalScheduleCard extends StatelessWidget {
                                   if (onEdit != null)
                                     InkWell(
                                       onTap: onEdit,
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: ConstrainedBox(
-                                        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.edit_outlined,
-                                            color: Color(0xFF8E95A5),
-                                            size: 16,
-                                          ),
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                        child: Icon(
+                                          Icons.edit_outlined,
+                                          color: Color(0xFF8E95A5),
+                                          size: 15,
                                         ),
                                       ),
                                     ),
-                                  if (onDelete != null)
+                                  if (onDelete != null) ...[
+                                    const SizedBox(width: 4),
                                     InkWell(
                                       onTap: onDelete,
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: ConstrainedBox(
-                                        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.delete_outline_rounded,
-                                            color: Color(0xFFFA6144),
-                                            size: 16,
-                                          ),
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                        child: Icon(
+                                          Icons.delete_outline_rounded,
+                                          color: Color(0xFFFA6144),
+                                          size: 15,
                                         ),
                                       ),
                                     ),
+                                  ],
                                 ],
                               ),
                           ],
@@ -244,45 +242,34 @@ class ImpalScheduleCard extends StatelessWidget {
   }
 
   Widget _buildStatusPill(bool isOngoing, bool isOverdue) {
+    final String label;
+    final Color pillColor;
+
     if (isOngoing) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFF826E),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: const Text(
-          'Ongoing',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 9.5,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.25,
-          ),
-        ),
-      );
+      label = 'Ongoing';
+      pillColor = const Color(0xFFFF826E);
+    } else if (isOverdue) {
+      label = 'Overdue';
+      pillColor = const Color(0xFF8E95A5);
+    } else {
+      label = 'Upcoming';
+      pillColor = const Color(0xFF8E95A5);
     }
 
-    final label = isOverdue ? 'Overdue' : 'Upcoming';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 3.0),
       decoration: BoxDecoration(
-        color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
+        color: pillColor,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-          width: 0.8,
-        ),
       ),
       child: Text(
         label,
         style: const TextStyle(
-          color: Color(0xFF8E95A5),
+          color: Colors.white,
           fontSize: 9.5,
           fontFamily: 'Inter',
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.25,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.1,
         ),
       ),
     );

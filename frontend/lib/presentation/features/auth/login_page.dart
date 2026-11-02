@@ -140,8 +140,8 @@ class _LoginState extends State<Login> {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(6),
                       onTap: () => setState(() => _rememberMe = !_rememberMe),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
