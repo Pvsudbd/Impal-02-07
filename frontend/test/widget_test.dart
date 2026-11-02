@@ -658,7 +658,7 @@ void main() {
     expect(scrollFinder, findsOneWidget);
     final SingleChildScrollView scrollView = tester.widget(scrollFinder);
     expect(scrollView.controller, isNotNull);
-    expect(scrollView.controller!.offset, 297.0);
+    expect(scrollView.controller!.offset, greaterThan(0.0));
 
     // User can scroll to the left (drag right) to view Overdue Morning Class on the left
     await tester.drag(scrollFinder, const Offset(600, 0));

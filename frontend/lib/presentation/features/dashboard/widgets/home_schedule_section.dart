@@ -63,118 +63,127 @@ class HomeScheduleSection extends StatelessWidget {
           return dtA.compareTo(dtB);
         });
 
-        Widget scheduleContent;
-        if (sortedItems.isEmpty && fallbackSchedules.isNotEmpty) {
-          final isHorizontal = fallbackSchedules.length > 1;
-          final cardWidgets = <Widget>[];
-          for (int i = 0; i < fallbackSchedules.length; i++) {
-            final isLast = i == fallbackSchedules.length - 1;
-            cardWidgets.add(_buildStaticScheduleCard(
-              context,
-              fallbackSchedules[i],
-              isHorizontal: isHorizontal,
-              isLast: isLast,
-            ));
-          }
-          scheduleContent = isHorizontal
-              ? ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(context).copyWith(
-                    dragDevices: {
-                      PointerDeviceKind.touch,
-                      PointerDeviceKind.mouse,
-                      PointerDeviceKind.trackpad,
-                    },
-                  ),
-                  child: SingleChildScrollView(
-                    key: const ValueKey('today_schedules_horizontal_scroll'),
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    clipBehavior: Clip.none,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: cardWidgets,
-                    ),
-                  ),
-                )
-              : cardWidgets.first;
-        } else if (sortedItems.isEmpty) {
-          scheduleContent = Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              color: AppColors.bgCard,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              'No schedules for today',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 13,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          );
-        } else if (sortedItems.length == 1) {
-          scheduleContent = ImpalScheduleCard(
-            schedule: sortedItems.first,
-            isHorizontal: false,
-            isLast: true,
-            onTap: onSeeAll,
-            onEdit: () => onEditSchedule(sortedItems.first),
-            onDelete: () => onDeleteSchedule(sortedItems.first),
-            onToggleAlert: onToggleAlert != null
-                ? () => onToggleAlert!(sortedItems.first)
-                : null,
-          );
-        } else {
-          scheduleContent = ImpalHorizontalScheduleList(
-            key: const ValueKey('home_today_schedule_list'),
-            scrollKey: const ValueKey('today_schedules_horizontal_scroll'),
-            schedules: sortedItems,
-            onCardTap: (s) => onSeeAll(),
-            onEdit: (s) => onEditSchedule(s),
-            onDelete: (s) => onDeleteSchedule(s),
-            onToggleAlert: onToggleAlert,
-          );
-        }
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final availableWidth = constraints.maxWidth;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Widget scheduleContent;
+            if (sortedItems.isEmpty && fallbackSchedules.isNotEmpty) {
+              final isHorizontal = fallbackSchedules.length > 1;
+              final cardWidgets = <Widget>[];
+              for (int i = 0; i < fallbackSchedules.length; i++) {
+                final isLast = i == fallbackSchedules.length - 1;
+                cardWidgets.add(_buildStaticScheduleCard(
+                  context,
+                  fallbackSchedules[i],
+                  cardWidth: availableWidth,
+                  isHorizontal: isHorizontal,
+                  isLast: isLast,
+                ));
+              }
+              scheduleContent = isHorizontal
+                  ? ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: SingleChildScrollView(
+                        key: const ValueKey('today_schedules_horizontal_scroll'),
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        clipBehavior: Clip.none,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: cardWidgets,
+                        ),
+                      ),
+                    )
+                  : cardWidgets.first;
+            } else if (sortedItems.isEmpty) {
+              scheduleContent = Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.bgCard,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                alignment: Alignment.center,
+                child: const Text(
+                  'No schedules for today',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              );
+            } else if (sortedItems.length == 1) {
+              scheduleContent = ImpalScheduleCard(
+                schedule: sortedItems.first,
+                isHorizontal: false,
+                isLast: true,
+                width: availableWidth,
+                onTap: onSeeAll,
+                onEdit: () => onEditSchedule(sortedItems.first),
+                onDelete: () => onDeleteSchedule(sortedItems.first),
+                onToggleAlert: onToggleAlert != null
+                    ? () => onToggleAlert!(sortedItems.first)
+                    : null,
+              );
+            } else {
+              scheduleContent = ImpalHorizontalScheduleList(
+                key: const ValueKey('home_today_schedule_list'),
+                scrollKey: const ValueKey('today_schedules_horizontal_scroll'),
+                schedules: sortedItems,
+                cardWidth: availableWidth,
+                onCardTap: (s) => onSeeAll(),
+                onEdit: (s) => onEditSchedule(s),
+                onDelete: (s) => onDeleteSchedule(s),
+                onToggleAlert: onToggleAlert,
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    "Today's schedule",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: context.rFont(18, min: 16, max: 20),
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.04,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "Today's schedule",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: context.rFont(18, min: 16, max: 20),
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.04,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: onSeeAll,
-                  child: const Text(
-                    'See all',
-                    style: TextStyle(
-                      color: AppColors.primaryLight,
-                      fontSize: 12,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
+                    GestureDetector(
+                      onTap: onSeeAll,
+                      child: const Text(
+                        'See all',
+                        style: TextStyle(
+                          color: AppColors.primaryLight,
+                          fontSize: 12,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
+                SizedBox(height: context.rSpacing(10)),
+                scheduleContent,
               ],
-            ),
-            SizedBox(height: context.rSpacing(10)),
-            scheduleContent,
-          ],
+            );
+          },
         );
       },
     );
@@ -183,6 +192,7 @@ class HomeScheduleSection extends StatelessWidget {
   Widget _buildStaticScheduleCard(
     BuildContext context,
     ScheduleItem schedule, {
+    double? cardWidth,
     bool isHorizontal = false,
     bool isLast = false,
   }) {
@@ -193,7 +203,7 @@ class HomeScheduleSection extends StatelessWidget {
           right: isHorizontal ? (isLast ? 0 : 12) : 0,
           bottom: !isHorizontal ? (isLast ? 0 : 10) : 0,
         ),
-        width: isHorizontal ? 285 : double.infinity,
+        width: isHorizontal ? (cardWidth ?? 285) : double.infinity,
         decoration: BoxDecoration(
           color: AppColors.bgCard,
           borderRadius: BorderRadius.circular(12),

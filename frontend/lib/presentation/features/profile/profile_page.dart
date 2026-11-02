@@ -3,12 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/page_transitions.dart';
 import '../../../../core/utils/responsive_context.dart';
-import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../auth/forgot_password_page.dart';
 import '../auth/login_page.dart';
 import '../auth/terms_privacy_page.dart';
-import '../dashboard/home_page.dart';
 import '../smart_system/smart_priority_page.dart';
 import 'edit_profile_page.dart';
 import 'models/user_profile_model.dart';
@@ -268,7 +266,7 @@ class _ProfilePageState extends State<ProfilePage> {
             context.rSpacing(20),
             context.rSpacing(14),
             context.rSpacing(20),
-            context.rSpacing(96),
+            context.rSpacing(24),
           ),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
@@ -466,43 +464,19 @@ class _ProfilePageState extends State<ProfilePage> {
                   letterSpacing: 0.2,
                 ),
               ),
-              SizedBox(height: context.rSpacing(110)),
+              SizedBox(height: context.rSpacing(24)),
             ]),
           ),
         ),
       ],
     );
 
-    final scaffoldContent = Stack(
-      children: [
-        scrollContent,
-        if (widget.isStandalone)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: ImpalBottomNavBar(
-              currentTab: 0,
-              onTabSelected: (index) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (_) => HomePage(
-                      userName: profile.fullName,
-                      initialTab: index,
-                    ),
-                  ),
-                  (route) => false,
-                );
-              },
-            ),
-          ),
-      ],
-    );
+    final scaffoldContent = scrollContent;
 
     if (isMobile) {
       return Scaffold(
         backgroundColor: AppColors.bgPrimary,
-        body: SafeArea(top: true, bottom: false, child: scaffoldContent),
+        body: SafeArea(top: true, bottom: true, child: scaffoldContent),
       );
     }
 

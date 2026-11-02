@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:impal_smart_todolist/presentation/common_widgets/impal_bottom_nav_bar.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/edit_profile_page.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/models/user_profile_model.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/profile_page.dart';
@@ -333,6 +334,23 @@ void main() {
       expect(AlertSoundVibrationMode.soundOnly.icon, Icons.volume_up_rounded);
       expect(AlertSoundVibrationMode.vibrationOnly.icon, Icons.vibration_rounded);
       expect(AlertSoundVibrationMode.silent.icon, Icons.notifications_off_outlined);
+    });
+
+    testWidgets(
+        'ProfilePage does not render ImpalBottomNavBar and relies purely on top back button',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ProfilePage(
+            userName: 'Yoga Perkasa Didik',
+            isStandalone: true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ImpalBottomNavBar), findsNothing);
+      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
     });
   });
 }
