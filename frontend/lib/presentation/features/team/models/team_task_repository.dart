@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../task/models/task_repository.dart';
+import 'team_milestone_model.dart';
 import 'team_task_model.dart';
 
-/// Centralized in-memory repository managing team tasks for team dashboards.
+export 'team_milestone_model.dart';
+
+/// Centralized in-memory repository managing team tasks and milestones for team dashboards.
 ///
 /// Follows singleton pattern with ChangeNotifier, automatically synchronizing
 /// team project progress and completion with [TaskRepository].
@@ -12,6 +15,7 @@ class TeamTaskRepository with ChangeNotifier {
   TeamTaskRepository._internal();
 
   final Map<String, List<TeamTaskModel>> _teamTasks = {};
+  final Map<String, List<TeamMilestoneModel>> _teamMilestones = {};
   bool _initialized = false;
 
   void init() {
@@ -51,14 +55,132 @@ class TeamTaskRepository with ChangeNotifier {
       ),
     ];
 
+    _teamMilestones['7X29'] = [
+      TeamMilestoneModel(
+        id: 'milestone_1',
+        teamCode: '7X29',
+        title: 'Responsi 1 - UI & Architecture',
+        description: 'Implementation of team dashboard layout and responsiveness.',
+        deadline: DateTime(2026, 10, 18, 23, 59),
+        formattedDeadline: 'Sat 18 Oct 2026, 23: 59 WIB',
+        dueBadge: '6d',
+        taskIds: const ['task_1', 'task_2'],
+        dateCreated: DateTime(2026, 10, 1),
+      ),
+    ];
+
     _initialized = true;
     _syncWithTaskRepository('7X29');
+  }
+
+  /// Resets repository to default mock fixtures (useful for unit tests).
+  void resetToDefaults() {
+    _initialized = false;
+    _teamTasks.clear();
+    _teamMilestones.clear();
+    init();
+    notifyListeners();
   }
 
   /// Returns unmodifiable list of tasks for given team code.
   List<TeamTaskModel> getTasks(String teamCode) {
     init();
     return List.unmodifiable(_teamTasks[teamCode] ?? []);
+  }
+
+  /// Returns unmodifiable list of milestones for given team code.
+  List<TeamMilestoneModel> getMilestones(String teamCode) {
+    init();
+    return List.unmodifiable(_teamMilestones[teamCode] ?? []);
+  }
+
+  /// Returns tasks belonging to a specific milestone.
+  List<TeamTaskModel> getTasksForMilestone(String teamCode, String milestoneId) {
+    init();
+    final milestones = _teamMilestones[teamCode] ?? [];
+    final milestone = milestones.where((m) => m.id == milestoneId).firstOrNull;
+    if (milestone == null) return [];
+    final allTasks = getTasks(teamCode);
+    return milestone.getMemberTasks(allTasks);
+  }
+
+  /// Returns tasks that are not assigned to any milestone in this team.
+  List<TeamTaskModel> getUncategorizedTasks(String teamCode) {
+    init();
+    final allTasks = getTasks(teamCode);
+    final milestones = _teamMilestones[teamCode] ?? [];
+    final assignedTaskIds = <String>{};
+    for (final m in milestones) {
+      assignedTaskIds.addAll(m.taskIds);
+    }
+    return allTasks.where((t) => !assignedTaskIds.contains(t.id)).toList();
+  }
+
+  /// Adds a new milestone.
+  void addMilestone(String teamCode, TeamMilestoneModel milestone) {
+    init();
+    final list = _teamMilestones.putIfAbsent(teamCode, () => []);
+    list.insert(0, milestone);
+    notifyListeners();
+  }
+
+  /// Updates an existing milestone.
+  void updateMilestone(String teamCode, TeamMilestoneModel updated) {
+    init();
+    final list = _teamMilestones[teamCode];
+    if (list != null) {
+      final index = list.indexWhere((m) => m.id == updated.id);
+      if (index != -1) {
+        list[index] = updated;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// Finds which milestone contains this task id, if any.
+  TeamMilestoneModel? getMilestoneForTask(String teamCode, String taskId) {
+    init();
+    final list = _teamMilestones[teamCode] ?? [];
+    return list.where((m) => m.taskIds.contains(taskId)).firstOrNull;
+  }
+
+  /// Sets or clears the milestone association for a task.
+  void setTaskMilestone({
+    required String teamCode,
+    required String taskId,
+    String? milestoneId,
+  }) {
+    init();
+    final list = _teamMilestones[teamCode];
+    if (list != null) {
+      bool changed = false;
+      for (int i = 0; i < list.length; i++) {
+        final m = list[i];
+        final contains = m.taskIds.contains(taskId);
+        if (m.id == milestoneId && !contains) {
+          final updatedIds = List<String>.from(m.taskIds)..add(taskId);
+          list[i] = m.copyWith(taskIds: updatedIds);
+          changed = true;
+        } else if (m.id != milestoneId && contains) {
+          final updatedIds = List<String>.from(m.taskIds)..remove(taskId);
+          list[i] = m.copyWith(taskIds: updatedIds);
+          changed = true;
+        }
+      }
+      if (changed) {
+        notifyListeners();
+      }
+    }
+  }
+
+  /// Deletes a milestone without deleting its member tasks.
+  void deleteMilestone(String teamCode, String milestoneId) {
+    init();
+    final list = _teamMilestones[teamCode];
+    if (list != null) {
+      list.removeWhere((m) => m.id == milestoneId);
+      notifyListeners();
+    }
   }
 
   /// Checks if all team tasks under given team code are finished.
@@ -93,6 +215,11 @@ class TeamTaskRepository with ChangeNotifier {
         notifyListeners();
       }
     }
+  }
+
+  /// Convenience alias for [toggleTaskCompletion].
+  void toggleTaskDone(String teamCode, String taskId) {
+    toggleTaskCompletion(teamCode: teamCode, taskId: taskId);
   }
 
   /// Adds a new team task.

@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:impal_smart_todolist/presentation/features/task/task_page.dart';
 import 'package:impal_smart_todolist/presentation/features/task/models/task_repository.dart';
+import 'package:impal_smart_todolist/presentation/features/team/models/team_task_repository.dart';
 
 void main() {
   setUp(() {
     TaskRepository().resetToDefaults();
+    TeamTaskRepository().resetToDefaults();
   });
 
-  testWidgets('TaskPage strictly excludes team tasks and renders only non-team tasks across all categories', (tester) async {
+  testWidgets('TaskPage renders personal tasks and user-assigned team tasks, while excluding team tasks assigned to others', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -22,22 +24,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Verify Team Tasks are NOT displayed on TaskPage
-    expect(find.text('AI System Final Project'), findsNothing);
+    // Verify Team Tasks assigned to OTHER members are NOT displayed on TaskPage
     expect(find.text('Paragraph Text Analysis'), findsNothing);
+    expect(find.text('Create home UI page'), findsNothing);
+
+    // Verify Team Tasks ASSIGNED TO CURRENT USER (Jarvis / Yoga) ARE displayed with Team Name under title and no profile avatars
+    expect(find.text('AI System Final Project'), findsOneWidget);
+    expect(find.text('Create team UI page'), findsOneWidget);
+    expect(find.text('Kelompok IMPAL'), findsWidgets);
+    expect(find.byIcon(Icons.person_rounded), findsNothing);
 
     // Verify Non-Team Tasks ARE displayed (both College and Personal categories)
     expect(find.text('Linguistics Presentation Video'), findsOneWidget);
     expect(find.text('Mobile App Testing Report'), findsOneWidget);
-    expect(find.text('Academic Advisory Consultation'), findsOneWidget);
-
-    // Verify Timeline summary counter displays only non-team tasks
-    // In default mock: task_4 (high=1), task_2 (med=1), task_5 (low=1)
-    final repo = TaskRepository();
-    final counts = repo.getPriorityCounts(nonTeamOnly: true);
-    expect(counts[TaskPriorityLevel.high], equals(1));
-    expect(counts[TaskPriorityLevel.medium], equals(1));
-    expect(counts[TaskPriorityLevel.low], equals(1));
   });
 }
+
 

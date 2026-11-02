@@ -104,4 +104,39 @@ class PopUpPemberitahuanTeam {
       taskName: taskName,
     );
   }
+
+  /// Notifikasi ketika milestone berhasil dibuat (Positif -> Hijau)
+  static void milestoneCreated(
+    BuildContext context, {
+    required String title,
+    int taskCount = 0,
+  }) {
+    PopUpPemberitahuan.milestoneCreated(
+      context,
+      title: title,
+      taskCount: taskCount,
+    );
+  }
+
+  /// Notifikasi ketika milestone berhasil diperbarui (Positif -> Hijau)
+  static void milestoneUpdated(
+    BuildContext context, {
+    required String title,
+  }) {
+    PopUpPemberitahuan.milestoneUpdated(
+      context,
+      title: title,
+    );
+  }
+
+  /// Notifikasi ketika milestone dihapus (Negatif/Hapus -> Orange)
+  static void milestoneDeleted(
+    BuildContext context, {
+    String? title,
+  }) {
+    PopUpPemberitahuan.milestoneDeleted(
+      context,
+      title: title,
+    );
+  }
 }

@@ -1,7 +1,21 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'presentation/features/auth/login_page.dart';
 import 'presentation/features/dashboard/home_page.dart';
+
+/// Custom ScrollBehavior enabling mouse drag, touch, and trackpad across all platforms.
+class ImpalScrollBehavior extends MaterialScrollBehavior {
+  const ImpalScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +42,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'IMPAL To-Do List',
+      scrollBehavior: const ImpalScrollBehavior(),
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF282D37),

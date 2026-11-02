@@ -48,7 +48,6 @@ class _HomeTaskCardState extends State<HomeTaskCard> {
 
     final isGroup = (task.members != null && task.members!.isNotEmpty) ||
         task.tags.any((t) => t.label.toLowerCase() == 'kelompok');
-    final effectiveProgress = task.progress ?? (isGroup ? 0.46 : null);
 
     final cardContent = RepaintBoundary(
       child: AnimatedContainer(
@@ -91,9 +90,7 @@ class _HomeTaskCardState extends State<HomeTaskCard> {
 
                     // Left Column: Title, Subtitle, Team members, Deadline, Tags
                     Padding(
-                      padding: EdgeInsets.only(
-                        right: (isGroup && effectiveProgress != null) ? 120 : 108,
-                      ),
+                      padding: const EdgeInsets.only(right: 104),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
@@ -245,17 +242,6 @@ class _HomeTaskCardState extends State<HomeTaskCard> {
                         ],
                       ),
                     ),
-
-                    // Center-right Circular Progress Indicator for group tasks
-                    if (isGroup && effectiveProgress != null)
-                      Positioned(
-                        right: 0,
-                        bottom: 8,
-                        child: _buildCircularProgress(
-                          effectiveProgress,
-                          isUrgent: task.isUrgent,
-                        ),
-                      ),
                   ],
                 ),
 
@@ -551,46 +537,6 @@ class _HomeTaskCardState extends State<HomeTaskCard> {
                 ),
               ),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCircularProgress(double progress, {bool isUrgent = false}) {
-    final percent = (progress * 100).toInt();
-    final progressColor = isUrgent
-        ? const Color(0xFFFF826E)
-        : const Color(0xFF55E6C1);
-
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: CircularProgressIndicator(
-              value: progress,
-              strokeWidth: 3.6,
-              strokeCap: StrokeCap.round,
-              backgroundColor: const Color(0xFF232834),
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-              semanticsLabel: 'Task progress: $percent%',
-            ),
-          ),
-          Text(
-            '$percent%',
-            style: TextStyle(
-              color: progressColor,
-              fontSize: 11.5,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.3,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
         ],
       ),
     );

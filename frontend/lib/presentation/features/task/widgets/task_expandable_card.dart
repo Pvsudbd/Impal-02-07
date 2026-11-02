@@ -54,12 +54,10 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
     final task = widget.task;
     final disableMotion = MediaQuery.disableAnimationsOf(context);
 
-    final isGroup = task.memberAvatars.isNotEmpty ||
-        task.tags.any((t) => t.label.toLowerCase() == 'kelompok');
-    final double? effectiveProgress = task.progressPercent != null
+    final isGroup = task.isTeamTask;
+    final double? effectiveProgress = !isGroup && task.progressPercent != null
         ? (task.progressPercent! / 100.0)
-        : (isGroup ? 0.46 : null);
-
+        : null;
     final isUrgent = task.priority == TaskPriorityLevel.high;
 
     final cardContent = RepaintBoundary(
@@ -105,9 +103,7 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
 
                     // Left Column: Title, Subtitle, Team members, Deadline, Tags
                     Padding(
-                      padding: EdgeInsets.only(
-                        right: (isGroup && effectiveProgress != null) ? 120 : 108,
-                      ),
+                      padding: const EdgeInsets.only(right: 104),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
@@ -132,9 +128,24 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                             ),
                           ),
 
-                          // Subtitle if available (only for non-group tasks; team cards remain clean like Home)
-                          if (!isGroup &&
-                              task.subtitle != null &&
+                          // Subtitle directly under title:
+                          // For team tasks on Task Page, show team name (without profile avatars); for personal tasks, show subtitle
+                          if (isGroup) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              task.effectiveTeamName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: task.isCompleted
+                                    ? const Color(0xFF7E8696)
+                                    : AppColors.textMuted,
+                                fontSize: 11.5,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ] else if (task.subtitle != null &&
                               task.subtitle!.isNotEmpty &&
                               task.subtitle!.trim().toLowerCase() != 'team members') ...[
                             const SizedBox(height: 2),
@@ -142,19 +153,15 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                               task.subtitle!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: AppColors.textMuted,
+                              style: TextStyle(
+                                color: task.isCompleted
+                                    ? const Color(0xFF7E8696)
+                                    : AppColors.textMuted,
                                 fontSize: 11.5,
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ],
-
-                          // Team members avatar stack (for group tasks)
-                          if (isGroup && task.memberAvatars.isNotEmpty) ...[
-                            const SizedBox(height: 5),
-                            _buildAvatarStack(task.memberAvatars),
                           ],
 
                           // Linear progress bar for non-group tasks (if specified)
@@ -282,17 +289,6 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                         ],
                       ),
                     ),
-
-                    // Center-right Circular Progress Indicator for group tasks
-                    if (isGroup && effectiveProgress != null)
-                      Positioned(
-                        right: 0,
-                        bottom: 8,
-                        child: _buildCircularProgress(
-                          effectiveProgress,
-                          isUrgent: isUrgent,
-                        ),
-                      ),
                   ],
                 ),
 
@@ -548,103 +544,6 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
         ),
       ),
       child: cardContent,
-    );
-  }
-
-  Widget _buildAvatarStack(List<Color> colors) {
-    const double size = 22.0;
-    const double overlap = 14.0;
-    final displayColors = colors.take(4).toList();
-    final extraCount = colors.length - displayColors.length;
-
-    return SizedBox(
-      height: size,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          for (int i = 0; i < displayColors.length; i++)
-            Positioned(
-              left: i * overlap,
-              child: Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  color: displayColors[i],
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.bgCard, width: 1.5),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.person_rounded,
-                  size: 11.5,
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-              ),
-            ),
-          if (extraCount > 0)
-            Positioned(
-              left: displayColors.length * overlap,
-              child: Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF434A59),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.bgCard, width: 1.5),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '+$extraCount',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCircularProgress(double progress, {bool isUrgent = false}) {
-    final percent = (progress * 100).toInt();
-    final progressColor =
-        isUrgent ? const Color(0xFFFF826E) : const Color(0xFF55E6C1);
-
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: CircularProgressIndicator(
-              value: progress,
-              strokeWidth: 3.6,
-              strokeCap: StrokeCap.round,
-              backgroundColor: const Color(0xFF232834),
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-              semanticsLabel: 'Task progress: $percent%',
-            ),
-          ),
-          Text(
-            '$percent%',
-            style: TextStyle(
-              color: progressColor,
-              fontSize: 11.5,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.3,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

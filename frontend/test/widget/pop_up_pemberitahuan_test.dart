@@ -360,5 +360,86 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('PopUpPemberitahuan.milestoneCreated displays Milestone Created notification with positive green color', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  PopUpPemberitahuan.milestoneCreated(
+                    context,
+                    title: 'Responsi 1 - UI & Architecture',
+                    taskCount: 3,
+                  );
+                },
+                child: const Text('Create Milestone'),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Create Milestone'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Milestone Created'), findsOneWidget);
+    expect(find.text('Milestone "Responsi 1 - UI & Architecture" with 3 tasks created.'), findsOneWidget);
+
+    // Verify it uses the positive green color badge
+    final containerFinder = find.byWidgetPredicate(
+      (w) => w is Container &&
+             w.decoration is BoxDecoration &&
+             (w.decoration as BoxDecoration).color == PopUpPemberitahuan.positiveColor,
+    );
+    expect(containerFinder, findsWidgets);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('PopUpPemberitahuan.milestoneDeleted displays Milestone Deleted notification with negative orange color', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  PopUpPemberitahuan.milestoneDeleted(
+                    context,
+                    title: 'Old Milestone',
+                  );
+                },
+                child: const Text('Delete Milestone'),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Delete Milestone'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Milestone Deleted'), findsOneWidget);
+    expect(find.text('Milestone "Old Milestone" has been removed.'), findsOneWidget);
+
+    // Verify it uses the negative orange color badge
+    final containerFinder = find.byWidgetPredicate(
+      (w) => w is Container &&
+             w.decoration is BoxDecoration &&
+             (w.decoration as BoxDecoration).color == PopUpPemberitahuan.negativeColor,
+    );
+    expect(containerFinder, findsWidgets);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
 }
 

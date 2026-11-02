@@ -63,6 +63,7 @@ class TaskItemModel {
   final Color durationBadgeColor;
   final Color durationTextColor;
   final String? subtitle; // e.g. 'Team members' or 'Membuat video perkenalan'
+  final String? teamName; // e.g. 'Kelompok IMPAL'
   final DateTime deadlineDate;
   final String formattedDeadline; // e.g. 'Sat 11 Oct 2026, 23: 59 WIB'
   final List<Color> memberAvatars;
@@ -89,6 +90,7 @@ class TaskItemModel {
     this.durationBadgeColor = const Color(0xFF5B93FF),
     this.durationTextColor = Colors.white,
     this.subtitle,
+    this.teamName,
     required this.deadlineDate,
     required this.formattedDeadline,
     this.memberAvatars = const [],
@@ -142,12 +144,24 @@ class TaskItemModel {
   }
 
   bool get isTeamTask =>
+      (teamName != null && teamName!.trim().isNotEmpty) ||
       memberAvatars.isNotEmpty ||
       tags.any((t) {
         final l = t.label.trim().toLowerCase();
         return l == 'kelompok' || l == 'team' || l == 'group';
       }) ||
       groupMembers.length > 1;
+
+  /// Effective team or group name displayed under the title on Task Page.
+  String get effectiveTeamName {
+    if (teamName != null && teamName!.trim().isNotEmpty) {
+      return teamName!.trim();
+    }
+    if (course.toLowerCase().contains('impal')) {
+      return 'Kelompok IMPAL';
+    }
+    return 'Kelompok IMPAL';
+  }
 
   TaskItemModel copyWith({
     String? id,
@@ -157,6 +171,7 @@ class TaskItemModel {
     Color? durationBadgeColor,
     Color? durationTextColor,
     String? subtitle,
+    String? teamName,
     DateTime? deadlineDate,
     String? formattedDeadline,
     List<Color>? memberAvatars,
@@ -183,6 +198,7 @@ class TaskItemModel {
       durationBadgeColor: durationBadgeColor ?? this.durationBadgeColor,
       durationTextColor: durationTextColor ?? this.durationTextColor,
       subtitle: subtitle ?? this.subtitle,
+      teamName: teamName ?? this.teamName,
       deadlineDate: deadlineDate ?? this.deadlineDate,
       formattedDeadline: formattedDeadline ?? this.formattedDeadline,
       memberAvatars: memberAvatars ?? this.memberAvatars,
@@ -243,6 +259,7 @@ class TaskItemModel {
         TaskItemModel(
           id: 'task_1',
           title: 'AI System Final Project',
+          teamName: 'Kelompok IMPAL',
           priority: TaskPriorityLevel.high,
           durationBadge: '12h',
           durationBadgeColor: const Color(0xFF5B93FF),
@@ -271,6 +288,7 @@ class TaskItemModel {
             'Andi sukamoto (Leader)',
             'Rayya Gemintang Nusasntarra',
             'Kafi Rijal Perkasa Situmorang',
+            'Jarvis (You)',
           ],
           course: 'SSIF-04-REG • Software Testing & Implementation',
           dateCreated: 'Monday, 30 Sep 2026',
@@ -279,6 +297,7 @@ class TaskItemModel {
           warningNotice: '*This task is asigned to you, and you can’t delete',
           notes: 'Implementation of Mamdani fuzzy inference system in AI prediction model.',
           isAutomaticWeight: true,
+          isAssignedToUser: true,
         ),
         TaskItemModel(
           id: 'task_2',
@@ -319,6 +338,7 @@ class TaskItemModel {
         TaskItemModel(
           id: 'task_3',
           title: 'Paragraph Text Analysis',
+          teamName: 'Kelompok IMPAL',
           priority: TaskPriorityLevel.medium,
           durationBadge: '20h',
           durationBadgeColor: const Color(0xFFFF7D65),
@@ -353,6 +373,7 @@ class TaskItemModel {
           warningNotice: '*This task is asigned to you, and you can’t delete',
           notes: 'Analysis of deductive and inductive paragraph structures in editorial articles.',
           isAutomaticWeight: true,
+          isAssignedToUser: false,
         ),
         TaskItemModel(
           id: 'task_4',

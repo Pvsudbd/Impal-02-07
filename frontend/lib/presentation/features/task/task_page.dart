@@ -11,6 +11,7 @@ import '../smart_system/smart_priority_page.dart';
 import '../team/dashboard_team_page.dart';
 import '../team/models/team_model.dart';
 import '../team/models/team_repository.dart';
+import '../team/models/team_task_repository.dart';
 import 'create_task.dart';
 import 'models/task_repository.dart';
 import 'widgets/task_expandable_card.dart';
@@ -111,6 +112,7 @@ class TaskContentView extends StatefulWidget {
 
 class _TaskContentViewState extends State<TaskContentView> {
   final TaskRepository _repository = TaskRepository();
+  final TeamTaskRepository _teamTaskRepository = TeamTaskRepository();
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _firstActiveTaskKey = GlobalKey();
   String _selectedFilter = 'Today';
@@ -122,6 +124,8 @@ class _TaskContentViewState extends State<TaskContentView> {
     super.initState();
     _repository.init();
     _repository.addListener(_onRepositoryChanged);
+    _teamTaskRepository.init();
+    _teamTaskRepository.addListener(_onRepositoryChanged);
     _triggerAutoScroll();
   }
 
@@ -144,6 +148,7 @@ class _TaskContentViewState extends State<TaskContentView> {
   @override
   void dispose() {
     _repository.removeListener(_onRepositoryChanged);
+    _teamTaskRepository.removeListener(_onRepositoryChanged);
     _scrollController.dispose();
     super.dispose();
   }
@@ -152,10 +157,76 @@ class _TaskContentViewState extends State<TaskContentView> {
     if (mounted) setState(() {});
   }
 
+  bool _isTeamTaskAssignedToCurrentUser(TeamTaskModel task) {
+    final userLower = widget.userName.toLowerCase();
+    final assignedLower = task.assignedTo.toLowerCase();
+    if (assignedLower.contains(userLower)) return true;
+    if (userLower == 'jarvis' &&
+        (assignedLower.contains('yoga') || assignedLower.contains('jarvis'))) {
+      return true;
+    }
+    final parts = userLower.split(' ').where((s) => s.length > 2);
+    for (final p in parts) {
+      if (assignedLower.contains(p)) return true;
+    }
+    return false;
+  }
+
+  TaskItemModel _convertTeamTaskToTaskItem(TeamTaskModel task) {
+    final priorityLevel = task.priority == TaskPriority.high
+        ? TaskPriorityLevel.high
+        : (task.priority == TaskPriority.medium
+            ? TaskPriorityLevel.medium
+            : TaskPriorityLevel.low);
+
+    return TaskItemModel(
+      id: 'team_task_${task.id}',
+      title: task.title,
+      teamName: 'Kelompok IMPAL',
+      priority: priorityLevel,
+      durationBadge: task.effectiveDueBadge,
+      durationBadgeColor: task.isUrgent
+          ? const Color(0xFFFF7D65)
+          : const Color(0xFF5B93FF),
+      durationTextColor: Colors.white,
+      subtitle: task.assignedTo,
+      deadlineDate: task.deadline ?? DateTime(2026, 10, 18, 23, 59),
+      formattedDeadline: 'Sun 18 Oct 2026, ${task.timeRange}',
+      memberAvatars: task.colors,
+      tags: const [
+        TaskTagModel(
+          label: 'Team',
+          backgroundColor: Color(0xFF786FA6),
+          textColor: Color(0xFF4A3C8C),
+        ),
+      ],
+      groupMembers: [task.assignedTo],
+      course: 'Kelompok IMPAL • 7X29',
+      notes: task.description ?? '',
+      isCompleted: task.isDone,
+      isAssignedToUser: true,
+      isCollegeTask: true,
+      isAlertEnabled: task.isAlertEnabled,
+    );
+  }
+
   List<TaskItemModel> get _filteredTasks {
-    // Only non-team tasks (displays all categories: College, Personal, etc. except team tasks)
-    final all = _repository.tasks.where((t) => !t.isTeamTask).toList();
-    var list = all;
+    // 1. Personal & College tasks, plus Team projects in TaskRepository assigned to user
+    final repoTasks = _repository.tasks.where((t) {
+      if (!t.isTeamTask) return true;
+      return t.isAssignedToUser;
+    }).toList();
+
+    // 2. Team tasks from TeamTaskRepository assigned to current user
+    final teamTasks = _teamTaskRepository
+        .getTasks('7X29')
+        .where(_isTeamTaskAssignedToCurrentUser)
+        .map(_convertTeamTaskToTaskItem)
+        .where((converted) => !repoTasks
+            .any((r) => r.title.toLowerCase() == converted.title.toLowerCase()))
+        .toList();
+
+    var list = [...repoTasks, ...teamTasks];
     if (_selectedFilter == 'Next 7 Days') {
       list = list.where((t) => t.priority != TaskPriorityLevel.low).toList();
     } else if (_selectedFilter == 'Overdue') {
@@ -250,10 +321,37 @@ class _TaskContentViewState extends State<TaskContentView> {
 
   @override
   Widget build(BuildContext context) {
-    final counts = _repository.getPriorityCounts(nonTeamOnly: true);
-    final highCount = counts[TaskPriorityLevel.high] ?? 0;
-    final mediumCount = counts[TaskPriorityLevel.medium] ?? 0;
-    final lowCount = counts[TaskPriorityLevel.low] ?? 0;
+    int highCount = 0;
+    int mediumCount = 0;
+    int lowCount = 0;
+
+    final allPersonalAndAssigned = _repository.tasks.where((t) {
+      if (!t.isTeamTask) return true;
+      return t.isAssignedToUser;
+    }).toList();
+
+    final teamTasks = _teamTaskRepository
+        .getTasks('7X29')
+        .where(_isTeamTaskAssignedToCurrentUser)
+        .map(_convertTeamTaskToTaskItem)
+        .where((converted) => !allPersonalAndAssigned
+            .any((r) => r.title.toLowerCase() == converted.title.toLowerCase()))
+        .toList();
+
+    for (final task in [...allPersonalAndAssigned, ...teamTasks]) {
+      switch (task.priority) {
+        case TaskPriorityLevel.high:
+          highCount++;
+          break;
+        case TaskPriorityLevel.medium:
+          mediumCount++;
+          break;
+        case TaskPriorityLevel.low:
+          lowCount++;
+          break;
+      }
+    }
+
     final tasks = _sortedTasks;
     final firstActiveId = tasks.where((t) => !t.isCompleted).map((t) => t.id).firstOrNull;
 
@@ -533,7 +631,12 @@ class _TaskContentViewState extends State<TaskContentView> {
                       onToggleCompletion: () {
                         HapticFeedback.lightImpact();
                         final willComplete = !task.isCompleted;
-                        _repository.toggleTaskCompletion(task.id);
+                        if (task.id.startsWith('team_task_')) {
+                          final realId = task.id.replaceFirst('team_task_', '');
+                          _teamTaskRepository.toggleTaskDone('7X29', realId);
+                        } else {
+                          _repository.toggleTaskCompletion(task.id);
+                        }
                         if (willComplete) {
                           PopUpPemberitahuan.taskCompleted(context, taskName: task.title);
                         } else {

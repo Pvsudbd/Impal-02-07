@@ -62,11 +62,13 @@ void main() {
       ),
     );
 
-    // Collapsed state: Title, badges, tags, and progress ring are visible
+    // Collapsed state: Title, team name under title, badges, and tags are visible (no profile avatars, progress ring exclusive to Milestones)
     expect(find.text('Tugas Besar Kecerdasan AI'), findsOneWidget);
+    expect(find.text('Kelompok IMPAL'), findsOneWidget);
+    expect(find.byIcon(Icons.person_rounded), findsNothing);
     expect(find.text('High'), findsOneWidget);
     expect(find.text('12h'), findsOneWidget);
-    expect(find.text('98%'), findsOneWidget);
+    expect(find.text('98%'), findsNothing);
     expect(find.text('Kelompok'), findsOneWidget);
     expect(find.text('Code'), findsOneWidget);
 

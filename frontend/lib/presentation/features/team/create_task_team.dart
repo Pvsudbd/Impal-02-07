@@ -6,6 +6,7 @@ import '../profile/models/user_profile_model.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
 import 'models/team_member_model.dart';
 import 'models/team_task_model.dart';
+import 'models/team_task_repository.dart';
 import 'pop_up_pemberitahuan_team.dart';
 import 'widgets/assignee_dropdown.dart';
 import 'widgets/submission_deadline_picker.dart';
@@ -34,6 +35,7 @@ class CreateTaskTeamPage extends StatefulWidget {
   final void Function(TeamTaskModel updatedTask)? onTaskUpdated;
   final VoidCallback? onBack;
   final String userInitials;
+  final String teamCode;
 
   const CreateTaskTeamPage({
     super.key,
@@ -42,6 +44,7 @@ class CreateTaskTeamPage extends StatefulWidget {
     this.onTaskUpdated,
     this.onBack,
     this.userInitials = 'JS',
+    this.teamCode = '7X29',
   });
 
   @override
@@ -57,6 +60,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
   late TimeOfDay _selectedTime;
   late List<TeamMemberModel> _selectedMembers;
   late bool _isAlertEnabled;
+  String? _selectedMilestoneId;
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.existingTask != null;
@@ -72,12 +76,16 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
       _selectedDate = task.deadline ?? DateTime(2026, 10, 18);
       _selectedTime = _parseTimeOfDay(task.timeRange);
       _selectedMembers = _matchMembers(task.assignedTo);
+      final existingMilestone =
+          TeamTaskRepository().getMilestoneForTask(widget.teamCode, task.id);
+      _selectedMilestoneId = existingMilestone?.id;
     } else {
       _taskNameController = TextEditingController();
       _descriptionController = TextEditingController();
       _selectedDate = DateTime(2026, 10, 18);
       _selectedTime = const TimeOfDay(hour: 23, minute: 59);
       _selectedMembers = [TeamMemberModel.defaultMembers.first];
+      _selectedMilestoneId = null;
     }
   }
 
@@ -162,6 +170,12 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         isAlertEnabled: _isAlertEnabled,
       );
 
+      TeamTaskRepository().setTaskMilestone(
+        teamCode: widget.teamCode,
+        taskId: updatedTask.id,
+        milestoneId: _selectedMilestoneId,
+      );
+
       if (mounted) {
         setState(() => _isSubmitting = false);
         PopUpPemberitahuanTeam.taskUpdated(context, taskName: taskName);
@@ -172,8 +186,9 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         }
       }
     } else {
+      final newTaskId = 'task_${DateTime.now().millisecondsSinceEpoch}';
       final newTask = TeamTaskModel(
-        id: 'task_${DateTime.now().millisecondsSinceEpoch}',
+        id: newTaskId,
         title: taskName,
         priority: TaskPriority.medium,
         assignedTo: assignedNames,
@@ -184,6 +199,12 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         deadline: _selectedDate,
         dueBadge: dueBadgeStr,
         isAlertEnabled: _isAlertEnabled,
+      );
+
+      TeamTaskRepository().setTaskMilestone(
+        teamCode: widget.teamCode,
+        taskId: newTaskId,
+        milestoneId: _selectedMilestoneId,
       );
 
       if (mounted) {
@@ -281,6 +302,12 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
                     onMembersChanged: (members) =>
                         setState(() => _selectedMembers = members),
                   ),
+                  SizedBox(height: context.rSpacing(16)),
+
+                  // Milestone Selector (Optional)
+                  _buildSectionLabel(context, 'Milestone (Optional)'),
+                  SizedBox(height: context.rSpacing(8)),
+                  _buildMilestoneSelector(context),
                   SizedBox(height: context.rSpacing(24)),
 
                   // Submit Button (Dynamic: "Save Changes" or "Create Task")
@@ -564,6 +591,75 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMilestoneSelector(BuildContext context) {
+    final milestones = TeamTaskRepository().getMilestones(widget.teamCode);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF434A59), width: 1),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: _selectedMilestoneId,
+          isExpanded: true,
+          dropdownColor: const Color(0xFF282D37),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text(
+                'None (No Milestone)',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 13.5,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ),
+            for (final m in milestones)
+              DropdownMenuItem<String?>(
+                value: m.id,
+                child: Row(
+                  children: [
+                    const Icon(Icons.flag_rounded, size: 14, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        m.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.5,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      m.effectiveDueBadge,
+                      style: const TextStyle(
+                        color: Color(0xFF8E95A5),
+                        fontSize: 11,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          onChanged: (val) {
+            setState(() => _selectedMilestoneId = val);
+          },
         ),
       ),
     );

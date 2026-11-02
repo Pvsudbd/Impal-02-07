@@ -246,10 +246,13 @@ Tugas utamamu adalah memimpin tim pengembang antarmuka multi-agent berbasis arsi
   - **Pengaturan Pengingat & AI Fuzzy:** Pengaturan switch `Deadline Alerts`, `Sound & Vibration`, pemilih jam `Daily Morning Briefing` via `showImpalTimePicker`, serta status kartu `Fuzzy Inference Model`.
   - **Formulir Edit Profil:** Form input terstandarisasi (`ProfileTextField`) dengan leading icon, pill verified pada email kampus, notice banner SSO, dan pop-up `PopUpPemberitahuan.profileUpdated`.
 
-* **Protokol Pop-Up Pemberitahuan Aksi (100% English UI Mandate):**
+* **Protokol Pop-Up Pemberitahuan Aksi (100% English UI Mandate & Strict Sentiment Color Law):**
   - **ATURAN MUTLAK BAHASA INGGRIS:** Seluruh teks notifikasi (`PopUpPemberitahuan`), judul, deskripsi pesan, toast feedback, validasi form, dialog konfirmasi (`PopUpKonfirmasiDelete`), dan alert sistem **WAJIB 100% MENGGUNAKAN BAHASA INGGRIS** tanpa kompromi. Dilarang keras menggunakan bahasa Indonesia pada string UI / pop-up.
+  - **HUKUM BAKU WARNA SENTIMEN NOTIFIKASI (STRICT COLOR SENTIMENT LAW):**
+    - **HAL POSITIF MUTLAK BERWARNA HIJAU (`#10B981` / `PopUpPemberitahuan.positiveColor`):** Segala peristiwa bernilai positif meliputi pembuatan data baru (*Create Milestone, Create Task, Create Schedule, Create Meeting, Create Team*), pembaruan data yang berhasil (*Update Milestone, Update Task, Update Schedule, Profile Updated, Password Updated*), penyelesaian tugas (*Task Completed, All Tasks Completed*), dan verifikasi berhasil (*Login Success, Team Joined, Code Copied, Code Verified*) **WAJIB 100% MENGGUNAKAN BADGE IKON HIJAU (`#10B981`)**. DILARANG KERAS menggunakan warna oranye/coral untuk hal yang positif.
+    - **HAL NEGATIF / KURANG POSITIF MUTLAK BERWARNA ORANYE (`#FA6144` / `PopUpPemberitahuan.negativeColor`):** Segala peristiwa bernilai destruktif atau peringatan seperti penghapusan data (*Delete Milestone, Delete Task, Delete Schedule, Delete Meeting*), peringatan validasi form (*Terms Warning, Form Warning*), dan penolakan akses (*Access Denied*) **WAJIB 100% MENGGUNAKAN BADGE IKON ORANYE (`#FA6144`)**.
   - Setiap aksi yang memicu manipulasi data (Create, Update, Delete, Submit Form) **wajib memicu Pop-Up Pemberitahuan** (`PopUpPemberitahuan` / `PopUpPemberitahuanTeam`).
-  - **Gunakan template yang sudah ada di projek**. Jika belum ada aksi spesifik, buatkan metode preset pada template pop-up yang sudah ada. Jika pop-up belum ada sama sekali di projek, rancang komponen UI pop-up baru berbasis dark container (`#282D37`), icon badge berwarna, dan auto-dismiss.
+  - **Gunakan template yang sudah ada di projek**. Jika belum ada aksi spesifik, buatkan metode preset pada template pop-up yang sudah ada (`PopUpPemberitahuan.milestoneCreated`, dll.). Jika pop-up belum ada sama sekali di projek, rancang komponen UI pop-up baru berbasis dark container (`#282D37`), icon badge berwarna, dan auto-dismiss.
 
 * **Penanganan Aksi Destruktif:**
   - Aksi penting/destruktif (misal: batalkan pengajuan, hapus data) wajib menyediakan dialog konfirmasi atau jendela pembatalan (*Undo Window via SnackBar*).

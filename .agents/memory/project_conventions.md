@@ -35,8 +35,11 @@
 - **Single Column List** $\to$ **Master-Detail Split View** (panel kiri 380 dp daftar tugas, panel kanan detail & editor).
 - **Modal Bottom Sheet** $\to$ **Centered Dialog Box**.
 
-### 7. Pop-Up Pemberitahuan, Dialog & Aksi (100% English UI Mandate)
+### 7. Pop-Up Pemberitahuan, Dialog & Aksi (100% English UI Mandate & Strict Sentiment Color Law)
 - **ATURAN MUTLAK BAHASA INGGRIS:** Seluruh teks notifikasi (`PopUpPemberitahuan`), judul, pesan, dialog konfirmasi (`PopUpKonfirmasiDelete`), toast SnackBar, validasi form, dan alert sistem **WAJIB 100% MENGGUNAKAN BAHASA INGGRIS** tanpa terkecuali. Dilarang keras menggunakan bahasa Indonesia pada string UI / pop-up.
+- **HUKUM BAKU WARNA SENTIMEN NOTIFIKASI:**
+  - **HAL POSITIF MUTLAK HIJAU (`#10B981` / `PopUpPemberitahuan.positiveColor`):** Semua peristiwa positif (pembuatan data: *Create Milestone, Create Task, Create Schedule, Create Meeting, Create Team*; pembaruan/simpan perubahan: *Update Milestone, Update Task, Update Schedule, Profile Updated, Password Updated*; penyelesaian tugas: *Task Completed, All Tasks Completed*; verifikasi berhasil: *Login Success, Team Joined, Code Copied, Code Verified*) **WAJIB 100% MENGGUNAKAN BADGE IKON HIJAU (`#10B981`)**. Dilarang keras menggunakan warna oranye/coral untuk hal yang positif.
+  - **HAL NEGATIF / KURANG POSITIF MUTLAK ORANYE (`#FA6144` / `PopUpPemberitahuan.negativeColor`):** Semua peristiwa yang bernilai destruktif atau peringatan (penghapusan data: *Delete Milestone, Delete Task, Delete Schedule, Delete Meeting*; peringatan validasi: *Terms Warning, Form Warning*; penolakan akses: *Access Denied*) **WAJIB 100% MENGGUNAKAN BADGE IKON ORANYE (`#FA6144`)**.
 - Setiap aksi mutasi data (Create, Update, Delete, Submit Form) wajib memicu `PopUpPemberitahuan` / `PopUpPemberitahuanTeam`.
 - Desain: Dark container (`#323846` / `#282D37`), icon badge berwarna (Hijau untuk positif, Orange/Coral untuk peringatan/negatif, Sky Blue untuk info/netral), auto-dismiss.
 

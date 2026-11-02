@@ -21,6 +21,14 @@ class TaskRepository with ChangeNotifier {
     _initialized = true;
   }
 
+  /// Resets tasks to default fixtures (useful for widget tests).
+  void resetToDefaults() {
+    _initialized = false;
+    _tasks.clear();
+    init();
+    notifyListeners();
+  }
+
   void addTask(TaskItemModel task) {
     _tasks.insert(0, task);
     notifyListeners();
@@ -81,13 +89,20 @@ class TaskRepository with ChangeNotifier {
   }
 
   /// Calculates counts by priority level for timeline counters.
-  Map<TaskPriorityLevel, int> getPriorityCounts({bool nonTeamOnly = false}) {
+  /// If [userAssignedOnly] is true, includes all non-team tasks and only team tasks assigned to user.
+  Map<TaskPriorityLevel, int> getPriorityCounts({
+    bool nonTeamOnly = false,
+    bool userAssignedOnly = true,
+  }) {
     int high = 0;
     int med = 0;
     int low = 0;
 
-    final targetList =
-        nonTeamOnly ? _tasks.where((t) => !t.isTeamTask) : _tasks;
+    final targetList = nonTeamOnly
+        ? _tasks.where((t) => !t.isTeamTask)
+        : (userAssignedOnly
+            ? _tasks.where((t) => !t.isTeamTask || t.isAssignedToUser)
+            : _tasks);
 
     for (final task in targetList) {
       switch (task.priority) {

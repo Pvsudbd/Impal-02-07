@@ -429,6 +429,46 @@ class PopUpPemberitahuan extends StatefulWidget {
     );
   }
 
+  // --- Milestone Preset Notifications ---
+
+  /// Preset notification when a milestone is created (Positif -> Hijau).
+  static void milestoneCreated(BuildContext context,
+      {required String title, int taskCount = 0}) {
+    show(
+      context,
+      title: 'Milestone Created',
+      message: taskCount > 0
+          ? 'Milestone "$title" with $taskCount tasks created.'
+          : 'Milestone "$title" has been successfully created.',
+      icon: Icons.flag_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a milestone is updated (Positif -> Hijau).
+  static void milestoneUpdated(BuildContext context, {required String title}) {
+    show(
+      context,
+      title: 'Milestone Updated',
+      message: 'Milestone "$title" has been updated successfully.',
+      icon: Icons.flag_circle_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a milestone is deleted (Negatif/Hapus -> Orange).
+  static void milestoneDeleted(BuildContext context, {String? title}) {
+    show(
+      context,
+      title: 'Milestone Deleted',
+      message: title != null && title.trim().isNotEmpty
+          ? 'Milestone "$title" has been removed.'
+          : 'Milestone has been removed. Member tasks remain in this team.',
+      icon: Icons.delete_outline_rounded,
+      iconBgColor: negativeColor,
+    );
+  }
+
   static void _removeEntry() {
     if (_activeState != null && _activeState!.mounted) {
       _activeState!.dismiss();

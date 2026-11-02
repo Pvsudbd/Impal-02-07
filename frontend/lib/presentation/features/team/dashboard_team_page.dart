@@ -8,7 +8,9 @@ import '../schedule/models/schedule_repository.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
 import 'create_task_team.dart';
 import 'pop_up_create_meeting.dart';
+import 'widgets/pop_up_create_milestone.dart';
 import 'widgets/team_dashboard_header.dart';
+import 'widgets/team_milestones_section.dart';
 import 'widgets/team_schedule_section.dart';
 import 'widgets/team_task_card.dart';
 import 'models/team_task_repository.dart';
@@ -52,9 +54,23 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   final int _currentTab = 2; // Team tab active by default
   final TeamTaskRepository _teamTaskRepository = TeamTaskRepository();
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _milestonesScrollController = ScrollController();
   bool _assignedToMeOnly = false;
+  String? _selectedMilestoneId;
   final GlobalKey _firstActiveTeamTaskKey = GlobalKey();
+  final GlobalKey _firstActiveMilestoneKey = GlobalKey();
   bool _hasAutoScrolled = false;
+
+  void _toggleMilestoneSelection(String milestoneId) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (_selectedMilestoneId == milestoneId) {
+        _selectedMilestoneId = null; // Toggle off: show all tasks!
+      } else {
+        _selectedMilestoneId = milestoneId; // Filter to this milestone!
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -73,6 +89,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   void dispose() {
     _teamTaskRepository.removeListener(_onRepositoryChanged);
     _scrollController.dispose();
+    _milestonesScrollController.dispose();
     super.dispose();
   }
 
@@ -88,6 +105,21 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           alignment: 0.22,
         );
         _hasAutoScrolled = true;
+      }
+      // Auto-scroll horizontal milestone bar to first active milestone
+      // so completed milestones remain to the left and user scrolls left to see them
+      if (_firstActiveMilestoneKey.currentContext != null) {
+        final milestones = _teamTaskRepository.getMilestones(widget.teamCode);
+        final allTasks = _teamTaskRepository.getTasks(widget.teamCode);
+        final hasCompleted = milestones.any((m) => m.isAllCompleted(allTasks));
+        if (hasCompleted) {
+          Scrollable.ensureVisible(
+            _firstActiveMilestoneKey.currentContext!,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            alignment: 0.0,
+          );
+        }
       }
     });
   }
@@ -184,6 +216,34 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     }
   }
 
+  Future<void> _openCreateMilestone() async {
+    await PopUpCreateMilestone.show(
+      context,
+      teamCode: widget.teamCode,
+    );
+  }
+
+  Future<void> _openEditMilestone(TeamMilestoneModel milestone) async {
+    await PopUpCreateMilestone.show(
+      context,
+      teamCode: widget.teamCode,
+      existingMilestone: milestone,
+    );
+  }
+
+  Future<void> _deleteMilestone(TeamMilestoneModel milestone) async {
+    final confirmed = await PopUpKonfirmasiDelete.show(
+      context,
+      title: 'Delete Milestone?',
+      message:
+          'Are you sure you want to delete "${milestone.title}"? Member tasks will remain in the dashboard.',
+    );
+    if (confirmed == true && mounted) {
+      _teamTaskRepository.deleteMilestone(widget.teamCode, milestone.id);
+      PopUpPemberitahuan.milestoneDeleted(context, title: milestone.title);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -213,6 +273,18 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                 onActionTap: _openCreateMeeting,
                 onEditSchedule: _openEditSchedule,
                 onDeleteSchedule: _deleteSchedule,
+              ),
+              const SizedBox(height: 16),
+              TeamMilestonesSection(
+                milestones: _teamTaskRepository.getMilestones(widget.teamCode),
+                allTasks: _teamTaskRepository.getTasks(widget.teamCode),
+                selectedMilestoneId: _selectedMilestoneId,
+                onMilestoneSelected: _toggleMilestoneSelection,
+                onAddMilestone: _openCreateMilestone,
+                onEditMilestone: _openEditMilestone,
+                onDeleteMilestone: _deleteMilestone,
+                scrollController: _milestonesScrollController,
+                firstActiveMilestoneKey: _firstActiveMilestoneKey,
               ),
               const SizedBox(height: 16),
               _buildTeamTaskSection(),
@@ -466,11 +538,48 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     );
   }
 
+  void _handleTaskToggleCompletion(TeamTaskModel task) {
+    HapticFeedback.lightImpact();
+    final willComplete = !task.isDone;
+    _teamTaskRepository.toggleTaskCompletion(
+      teamCode: widget.teamCode,
+      taskId: task.id,
+    );
+    if (willComplete) {
+      final allDone =
+          _teamTaskRepository.areAllTasksCompleted(widget.teamCode);
+      if (allDone) {
+        PopUpPemberitahuan.show(
+          context,
+          title: 'All Team Tasks Completed! 🎉',
+          message:
+              'All tasks in this dashboard are finished. Team Project is now marked completed!',
+          icon: Icons.celebration_rounded,
+          iconBgColor: const Color(0xFF10B981),
+        );
+      } else {
+        PopUpPemberitahuan.taskCompleted(context, taskName: task.title);
+      }
+    } else {
+      PopUpPemberitahuan.taskReopened(context, taskName: task.title);
+    }
+  }
+
   Widget _buildTeamTaskSection() {
     final allTasks = _teamTaskRepository.getTasks(widget.teamCode);
-    final filtered = _assignedToMeOnly
-        ? allTasks.where(_isAssignedToCurrentUser).toList()
+    final milestones = _teamTaskRepository.getMilestones(widget.teamCode);
+
+    final selectedMilestone = _selectedMilestoneId != null
+        ? milestones.where((m) => m.id == _selectedMilestoneId).firstOrNull
+        : null;
+
+    final targetTasks = selectedMilestone != null
+        ? selectedMilestone.getMemberTasks(allTasks)
         : allTasks;
+
+    final filtered = _assignedToMeOnly
+        ? targetTasks.where(_isAssignedToCurrentUser).toList()
+        : targetTasks;
 
     final completed = filtered.where((t) => t.isDone).toList();
     final active = filtered.where((t) => !t.isDone).toList();
@@ -503,7 +612,8 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
               key: const ValueKey('dashboard_create_task_button'),
               onTap: _openCreateTaskPage,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFA6144),
                   borderRadius: BorderRadius.circular(6),
@@ -537,7 +647,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         if (displayedTasks.isEmpty)
           Container(
             width: double.infinity,
@@ -546,10 +656,17 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
               color: const Color(0xFF323846),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'No tasks assigned to you in this team.',
-                style: TextStyle(
+                selectedMilestone != null
+                    ? (_assignedToMeOnly
+                        ? 'No tasks assigned to you in "${selectedMilestone.title}".'
+                        : 'No tasks added to "${selectedMilestone.title}" yet.')
+                    : (_assignedToMeOnly
+                        ? 'No tasks assigned to you in this team.'
+                        : 'No team tasks found in this dashboard.'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
                   color: Color(0xFF8E95A5),
                   fontSize: 13,
                   fontFamily: 'Inter',
@@ -568,34 +685,8 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                   _isAssignedToCurrentUser(displayedTasks[i]),
               onTap: () => _openEditTaskPage(displayedTasks[i]),
               onEdit: () => _openEditTaskPage(displayedTasks[i]),
-              onToggleCompletion: () {
-                HapticFeedback.lightImpact();
-                final willComplete = !displayedTasks[i].isDone;
-                _teamTaskRepository.toggleTaskCompletion(
-                  teamCode: widget.teamCode,
-                  taskId: displayedTasks[i].id,
-                );
-                if (willComplete) {
-                  final allDone =
-                      _teamTaskRepository.areAllTasksCompleted(widget.teamCode);
-                  if (allDone) {
-                    PopUpPemberitahuan.show(
-                      context,
-                      title: 'All Team Tasks Completed! 🎉',
-                      message:
-                          'All tasks in this dashboard are finished. Team Project is now marked completed!',
-                      icon: Icons.celebration_rounded,
-                      iconBgColor: const Color(0xFF10B981),
-                    );
-                  } else {
-                    PopUpPemberitahuan.taskCompleted(context,
-                        taskName: displayedTasks[i].title);
-                  }
-                } else {
-                  PopUpPemberitahuan.taskReopened(context,
-                      taskName: displayedTasks[i].title);
-                }
-              },
+              onToggleCompletion: () =>
+                  _handleTaskToggleCompletion(displayedTasks[i]),
             ),
             if (i < displayedTasks.length - 1) const SizedBox(height: 10),
           ],
