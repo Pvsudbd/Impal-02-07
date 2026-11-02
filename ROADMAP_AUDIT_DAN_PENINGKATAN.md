@@ -1,0 +1,298 @@
+# 📑 Dokumen Audit & Roadmap Peningkatan Aplikasi: IMPAL Smart Task Manager
+> **Status Dokumen:** Master Roadmap & Living Audit Document  
+> **Terakhir Diperbarui:** 02 November 2026 (Penegakan Mutlak 100% Bahasa Inggris pada Notifikasi, Pop-Up, Toast, Dialog, & Peringatan Sistem)  
+> **Arsitektur:** Flutter Feature-First, Single-Shell Navigation, ResponsiveContext, 60 FPS HP Kentang Compliance  
+> **Kepatuhan Mutu:** `dart analyze` — 0 Error, 0 Warning, 0 Deprecations  
+
+---
+
+## 🎯 1. Daftar Pekerjaan yang Perlu Dibuat (Backlog Matriks Prioritas Pengerjaan)
+
+Bagian ini ditempatkan di posisi teratas sebagai panduan kerja utama tim pengembang (*Actionable Backlog*). Seluruh item telah disaring dari hasil audit kode aktual:
+
+```text
+        Dampak UX Tinggi
+               ▲
+               │  [P1] Quick Complete Checkmark di Kartu Personal
+               │  [P1] Deteksi Bentrok Jadwal (Conflict Warning)
+               │  [P1] Kolom Pencarian Tugas & Jadwal (Search Bar)
+               │  [P1] Tautan Virtual Meeting (Zoom/GMeet/Discord) & "Join Call"
+               │
+               │  [P2] Menu Keluar Tim (Leave Team) / Hapus Tim
+               │  [P2] Checklist Subtask pada Tugas Tim (2/4 Done)
+               │  [P2] Kolom Pencarian Tim (Search Team)
+               │
+               │  [P3] Remember Me Persisten via Secure Storage
+               │  [P3] Upload Foto Profil Nyata dari Galeri (image_picker)
+               │  [P3] Penyimpanan Akun Baru (Register Persistence)
+               │  [P3] Invalidasi Sesi Lama saat Reset Password
+               │
+               │  [P4] Persistensi Database Lokal (Offline-First SQLite/Drift/Hive)
+               │  [P4] Background Push Notification Scheduler (Tiket REQ-004)
+               │  [P4] Integrasi SSO Kampus (Google / SSO Telkom University)
+               │  [P4] Autentikasi Biometrik (Fingerprint / Face ID)
+               │
+───────────────┼─────────────────────────────────────────────────────────────►
+               │                                            Tingkat Kompleksitas
+          Rendah                                           Tinggi
+```
+
+---
+
+### 🔴 Prioritas 1 — Kemenangan Cepat & Ergonomi Interaksi Pengguna (*Quick Wins & Core UX*)
+Fitur-fitur dengan dampak kenyamanan langsung pada interaksi harian mahasiswa:
+
+1. **[SELESAI — LOG-037] Swipe-to-Complete ke Kiri pada Kartu Personal & Tim:**
+   - ✅ **Telah Diimplementasikan:** Geser ke kiri untuk menandai tugas selesai (`isCompleted = true`), kartu bertransformasi menjadi abu-abu murni (*grayed-out* dengan coret judul tanpa badge completed), dismiss langsung di Home tersinkronisasi ke Task Page, serta pengurutan Completed di atas disusul deadline paling dekat dengan auto-scroll fokus langsung ke deadline terdekat saat halaman dibuka.
+
+2. **Deteksi Bentrok Jadwal (*Schedule Conflict Warning*):**
+   - **Masalah Saat Ini:** Mahasiswa bisa membuat jadwal kuliah atau rapat kelompok pada jam dan hari yang sama persis tanpa ada peringatan.
+   - **Solusi Implementasi:** Pasang validasi `ScheduleRepository.hasConflict(day, startTime, endTime)` di [`ScheduleFormPage`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/schedule/schedule_form_page.dart) dan [`pop_up_create_meeting.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/widgets/pop_up_create_meeting.dart). Tampilkan banner peringatan oranye *"Time conflict detected with [Nama Jadwal]"* dengan tombol konfirmasi tetap simpan / sesuaikan jam.
+
+3. **Kolom Pencarian Cepat (*Search Bar*) Tugas & Jadwal:**
+   - **Masalah Saat Ini:** Mahasiswa dengan banyak mata kuliah harus melakukan *scroll* panjang untuk mencari tugas atau jadwal spesifik.
+   - **Solusi Implementasi:** Tambahkan search bar lipat (*collapsible search bar*) berlatar `#323846` dengan border `#3B4150` dan debounce 300ms pada [`TaskPage`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/task/task_page.dart) dan [`SchedulePage`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/schedule/schedule_page.dart) untuk memfilter berdasarkan nama tugas, matkul, atau ruangan.
+
+4. **Tautan Meeting Daring (Zoom / Google Meet / Discord Link) & Tombol "Join Call":**
+   - **Masalah Saat Ini:** Jadwal rapat tim atau kelas daring tidak memiliki tautan langsung.
+   - **Solusi Implementasi:** Tambahkan field opsional `Meeting URL` pada formulir jadwal & meeting. Jika terisi, kartu jadwal [`ImpalScheduleCard`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/common_widgets/impal_schedule_card.dart) menampilkan tombol *"Join Call"* dengan ikon video yang membuka link langsung melalui `url_launcher`.
+
+---
+
+### 🟡 Prioritas 2 — Kolaborasi & Manajemen Tim (*Team Collaboration Polish*)
+Fitur-fitur untuk menyempurnakan kerja kelompok antar mahasiswa:
+
+1. **Aksi Keluar Tim (*Leave Team*) & Hapus Kelompok:**
+   - **Masalah Saat Ini:** Belum ada tombol aksi bagi anggota untuk keluar dari tim yang sudah selesai atau bagi ketua untuk membubarkan tim.
+   - **Solusi Implementasi:** Tambahkan tombol menu aksi (titik tiga `...`) di header [`DashboardTeamPage`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/dashboard_team_page.dart) atau kartu tim di [`TeamListPage`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/team_list_page.dart):
+     - Untuk Anggota: Menu *"Leave Team"* dengan dialog konfirmasi aman.
+     - Untuk Ketua (Leader): Menu *"Disband Team"* dengan proteksi password/konfirmasi 2-langkah.
+
+2. **Checklist Subtask pada Kartu Tugas Tim (`TeamTaskCard`):**
+   - **Masalah Saat Ini:** Tugas tim berukuran besar belum dapat dipecah menjadi sub-tahapan kecil yang terlihat progresnya.
+   - **Solusi Implementasi:** Tambahkan indikator progress bar mini dan checklist subtask (contoh: `2/4 subtasks done`) pada [`TeamTaskCard`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/widgets/team_task_card.dart) yang dapat dicentang oleh anggota yang di-assign.
+
+3. **Pencarian Tim (*Search Team*):**
+   - **Masalah Saat Ini:** Jika mahasiswa memiliki banyak kelompok praktikum, pencarian tim memakan waktu.
+   - **Solusi Implementasi:** Pasang kolom pencarian nama kelompok di bagian atas [`TeamListPage`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/team_list_page.dart).
+
+---
+
+### 🟠 Prioritas 3 — Keamanan, Akun & Media (*Auth, Storage & Media Polish*)
+Penyempurnaan layer identitas pengguna dan pengelolaan berkas:
+
+1. **Persistensi "Remember Me" via Secure Storage:**
+   - **Masalah Saat Ini:** Checkbox *"Remember me"* di [`login_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/auth/login_page.dart) hanya tersimpan dalam variabel state lokal di memori.
+   - **Solusi Implementasi:** Simpan status remember me dan token login secara aman ke `flutter_secure_storage` (Android Keystore / iOS Keychain) sehingga sesi pengguna tetap terjaga saat aplikasi ditutup dan dibuka kembali.
+
+2. **Upload Berkas Foto Profil Nyata (`image_picker`):**
+   - **Masalah Saat Ini:** Modal ubah foto di [`EditProfilePage`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/profile/edit_profile_page.dart) masih berupa simulasi kamera/galeri lokal dengan inisial avatar.
+   - **Solusi Implementasi:** Pasang package `image_picker` untuk memilih berkas foto nyata dari galeri atau kamera, simpan path lokal di cache aplikasi, dan tampilkan avatar foto riil.
+
+3. **Penyimpanan Akun Baru (Register Persistence):**
+   - **Masalah Saat Ini:** Akun baru yang didaftarkan di [`regist_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/auth/regist_page.dart) belum disimpan ke database lokal/backend, sehingga hilang setelah restart.
+   - **Solusi Implementasi:** Simpan data akun ke repositori persisten agar akun baru langsung dapat digunakan login ulang.
+
+4. **Invalidasi Sesi Lama saat Reset Password:**
+   - **Masalah Saat Ini:** Belum ada mekanisme untuk memutus token sesi lama saat pengguna berhasil mengubah password di [`ResetPasswordPage`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/auth/reset_password_page.dart).
+   - **Solusi Implementasi:** Reset auth token lokal dan paksa alur login ulang.
+
+---
+
+### 🔵 Prioritas 4 — Arsitektur Offline-First & Integrasi Backend Nyata (*Production Infrastructure*)
+Pondasi infrastruktur data jangka panjang:
+
+1. **Persistensi Database Lokal (Offline-First Engine via SQLite / Drift / Hive):**
+   - **Masalah Saat Ini:** Seluruh data tugas, tim, profil, dan jadwal saat ini disimpan di repositori in-memory singleton. Data kembali ke default setelah *hot restart* atau *app kill*.
+   - **Solusi Implementasi:** Bangun layer database lokal menggunakan `sqflite` atau `drift` dengan parameter binding aman (`?`) sesuai aturan OWASP `AGENTS.md`.
+
+2. **Background Push Notification Scheduler (Tiket `REQ-004`):**
+   - **Masalah Saat Ini:** Pengingat deadline H-3, H-1, dan 30 menit belum berjalan di background saat aplikasi ditutup.
+   - **Solusi Implementasi:** Integrasikan `flutter_local_notifications` atau background cron push notification worker dari backend Dart Frog sesuai spesifikasi tiket `.agents/tickets/pending/REQ-004-FE-DAILY-BRIEFING-NOTIFICATION-SCHEDULER.md`.
+
+3. **Integrasi Single Sign-On Kampus (Google / SSO Telkom University):**
+   - **Masalah Saat Ini:** Tombol SSO di Login masih berupa tombol visual tanpa alur OAuth/OpenID.
+   - **Solusi Implementasi:** Hubungkan tombol SSO dengan protokol autentikasi OAuth2 / OpenID Connect kampus Telkom University.
+
+4. **Autentikasi Biometrik:**
+   - **Masalah Saat Ini:** Belum mendukung pemindai sidik jari atau Face ID.
+   - **Solusi Implementasi:** Integrasikan package `local_auth` untuk autentikasi cepat saat login kembali.
+
+---
+
+## 📌 2. Ringkasan Eksekutif & Status Sistem Saat Ini
+
+Aplikasi **IMPAL Smart Task Manager** telah mencapai tingkat kematangan frontend produksi sebesar **~85%** dengan fondasi visual dan arsitektur yang sangat terstandarisasi:
+- **Estetika & Desain:** Dark palette terpadu (`#282D37`, `#323846`, `#3B4150`), aksen Orange Primary (`#FF5E4D`), dan font Inter tabular figures.
+- **Responsivitas Mutlak:** 100% menggunakan engine `ResponsiveContext` (bebas hardcoded pixel).
+- **Performa 60 FPS:** Telah menerapkan *flat form pages*, *single unified CustomScrollView*, *lazy list builders*, dan konstruktor `const` menyeluruh.
+- **Kepatuhan Mutu Kode:** Analisis statis Dart Analyzer mencatat **0 Error, 0 Warning, 0 Deprecations**.
+
+---
+
+## 📝 3. Log Eksekusi & Riwayat Perubahan Terkini (Execution & Changelog)
+
+| ID Log | Tanggal | Modul / Komponen | Ringkasan Pekerjaan & Implementasi | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **LOG-039** | 02 Nov 2026 | **100% English Language Mandate for Notifications & Pop-Ups** | • **Penegakan Mutlak Bahasa Inggris:** Mengonversi seluruh teks pop-up, notifikasi, toast, dan dialog menjadi 100% bahasa Inggris baku sesuai arahan pengguna.<br>• **Preset Baru PopUpPemberitahuan:** Menambahkan preset `PopUpPemberitahuan.teamProjectWarning` ("Team Project: Team projects cannot be completed manually...") dan `PopUpPemberitahuan.taskAccessDenied` ("Access Denied: You can only complete tasks assigned to you...").<br>• **Pembaruan Kartu:** Mengganti string peringatan swipe di `home_task_card.dart`, `task_expandable_card.dart`, dan `team_task_card.dart` menjadi bahasa Inggris.<br>• **Pembaruan Tata Kelola Aturan Proyek:** Mengunci aturan baku 100% English UI pada `.agents/memory/project_conventions.md` dan `AGENTS.md` agar seluruh fitur masa depan selalu menggunakan bahasa Inggris.<br>• Analisis statis: **0 Error, 0 Warning** (Unit test widget terverifikasi). | ✅ **SELESAI (100%)** |
+| **LOG-038** | 02 Nov 2026 | **Auto-Focus Scroll, Team Task Permission & Group Project Auto-Completion** | • **Auto-Focus Scroll (`ScrollController`):** Memasang jeda pasca-transisi 240ms dan `alignment: 0.22` sehingga layar otomatis terfokus ke tugas aktif dengan deadline terdekat. Kartu selesai (di posisi atas) tersembunyi di atas viewport dan baru terlihat saat pengguna men-scroll layar ke atas (*scroll ke atas*).<br>• **Proteksi Swipe Proyek Kelompok (`task_expandable_card.dart` & `home_task_card.dart`):** Kartu tugas kelompok (`isTeamTask` seperti "AI System Final Project") tidak dapat di-swipe completed secara manual. Jika di-swipe, sistem memunculkan pop-up pemberitahuan bahwa penyelesaian harus lewat Dashboard Tim.<br>• **Hak Akses Swipe Team Task (`team_task_card.dart` & `dashboard_team_page.dart`):** Gestur swipe completed pada sub-tugas tim dibatasi hanya untuk tugas yang di-assign ke pengguna aktif (`isAssignedToCurrentUser`). Jika di-swipe oleh non-assignee, swipe dibatalkan dengan getar haptic dan pop-up akses ditolak.<br>• **Repositori Terpusat & Sinkronisasi Otomatis (`TeamTaskRepository`):** Membangun singleton reaktif `TeamTaskRepository` yang mengontrol sub-tugas dashboard tim dan otomatis menyinkronkan status penyelesaian proyek kelompok di `TaskRepository` (proyek otomatis berstatus selesai dan 100% saat seluruh sub-tugas tim rampung).<br>• Analisis statis: **0 Error, 0 Warning**. | ✅ **SELESAI (100%)** |
+| **LOG-037** | 02 Nov 2026 | **Swipe-to-Complete Gestures, Pure Gray State, Sync & Proximity Sorting** | • **Gestur Swipe ke Kiri (`Dismissible`):** Mendukung swipe-to-complete pada `HomeTaskCard`, `TaskExpandableCard`, dan `TeamTaskCard` dengan haptic feedback dan background aksi geser.<br>• **Visual Abu-Abu Murni (Grayed-Out Completed State):** Seluruh kartu tugas selesai bertransformasi menjadi palet abu-abu murni tanpa badge completed tambahan (sesuai arahan pengguna): background gelap redup `#252932` ber-border `#383E4C`, judul dicoret (*strikethrough*) `#7E8696`, priority badge & duration pill desaturasi `#363C48` teks `#8E95A5`, ikon jam `#363C48`/`#8E95A5`.<br>• **Sinkronisasi Home Dismiss (`HomePage`):** Men-swipe kartu di Home langsung menghapusnya dari daftar `Ongoing Task` Home dan memicu pop-up `taskCompleted`, namun tugas tetap tersimpan di `TaskRepository` dan tetap muncul di `TaskPage`.<br>• **Urutan & Auto-Scroll di `TaskPage` & `DashboardTeamPage`:** Tugas selesai (abu-abu) ditempatkan di posisi paling atas; tugas aktif diurutkan berdasarkan deadline paling dekat di urutan pertama aktif disusul upcoming. Saat halaman dibuka, viewport otomatis bergulir (*auto-scroll* via `Scrollable.ensureVisible`) memfokuskan layar langsung ke tugas aktif dengan deadline terdekat.<br>• Analisis statis: **0 Error, 0 Warning**. | ✅ **SELESAI (100%)** |
+| **LOG-036** | 02 Nov 2026 | **Meeting Form Alignment, Compact Schedule Filter, Home Bell Toggle & Team Card Polish** | • **Form Meeting (`pop_up_create_meeting.dart`):** Standarisasi AppBar 38x38dp berbingkai `#3B4150`, pill `Alert On` kapsul melingkar (radius 999) solid Orange Primary (`#FF5E4D`), isian warna `#323846` border `#3B4150` radius 10dp, dan tombol delete untuk mode edit.<br>• **Filter Schedule (`schedule_filter_bar.dart`):** Filter All, Today, Week, Month dibuat lebih ramping & pendek (`minHeight: 28dp`, `borderRadius: 6dp`, padding 4.5dp, font 11sp).<br>• **Interaksi Lonceng Schedule di Homepage (`home_page.dart`):** Pengguna dapat langsung menekan lonceng kartu jadwal di Home untuk mengaktifkan/menonaktifkan alert secara realtime dengan toast feedback.<br>• **Perampingan Spacing `TeamTaskCard`:** Padding diubah menjadi `EdgeInsets.fromLTRB(16, 14, 16, 12)`, tombol edit pensil disesuaikan ke 28x28dp, menghasilkan jarak bawah simetris (~12dp).<br>• **Pembersihan Kartu:** Menghilangkan label `"Team members"` di atas avatar stack dan menghilangkan nama matkul pada kartu tim di mode collapsed Task Page.<br>• Analisis statis: **0 Error, 0 Warning**. | ✅ **SELESAI (100%)** |
+| **LOG-035** | 02 Nov 2026 | **Flat Form Architecture, Single Page Task Form & Filter Stretching** | • **Peregangan Filter Bar:** Filter bar Schedule dan Task diregangkan proporsional 100% lebar layar (`Row + Expanded`) dengan scale-down `FittedBox` responsif di 320dp-768dp.<br>• **Arsitektur Flat Form:** Menghilangkan inner enclosing card di `create_task.dart`, `create_task_team.dart`, dan `schedule_form_page.dart`, form diletakkan langsung di atas background halaman `#282D37`.<br>• **Penyatuan Form Task:** `create_task.dart` melayani create & edit dalam 1 halaman, `edit_task.dart` menjadi re-export bersih.<br>• **Harmonisasi Warna & Alert On:** Tombol toggle `Alert On` solid Orange Primary (`#FF5E4D`) kapsul radius 999 dengan ikon & teks putih cerah di seluruh formulir.<br>• Analisis statis: **0 Error, 0 Warning**. | ✅ **SELESAI (100%)** |
+| **LOG-034** | 02 Nov 2026 | **FigCraft Schedule Card & Top Strip Removal** | • **Penyelarasan Kartu Jadwal (`ImpalScheduleCard`):** Stripe status 5dp, padding 16/18dp, gap 9dp, tipografi 14.5sp bold, pill status solid penuh, lingkaran jam solid 15dp sesuai kanvas FigCraft.<br>• **Pembersihan Bagian Atas Schedule Page:** Menghapus komponen kalender mingguan Mon-Sun (`ScheduleWeeklyCalendarStrip`) sesuai arahan pengguna, mengembalikan alur bersih Header -> Filter -> Add Schedule -> List.<br>• Analisis statis: **0 Error, 0 Warning**. | ✅ **SELESAI (100%)** |
+| **LOG-033** | 02 Nov 2026 | **Paging, Navbar & Schedule Overhaul** | • Menghilangkan duplikasi subtitle `"Team members"` pada kartu tugas.<br>• Mengonversi Schedule Page menjadi single unified `CustomScrollView` dengan padding bawah 96dp.<br>• Mengeliminasi nested Scaffold dan duplicate navbar pada Tab 2 `DashboardTeamPage`.<br>• Menghapus fake bottom navbar pada modal form `create_task`, `edit_task`, dan `create_task_team`.<br>• Analisis statis: **0 Error, 0 Warning**. | ✅ **SELESAI (100%)** |
+| **LOG-032** | 02 Nov 2026 | **Dart Analyzer & Code Quality Fix** | • Pendaftaran root package eksklusif `frontend/` dan `backend/` ke Dart Analysis Engine.<br>• Perbaikan bedah import `AppColors` di Home, `_isEditing` di CreateTask, preset `taskDeleted` pada PopUpPemberitahuan, dan pembersihan unused import.<br>• Analisis statis lolos 100% (**0 Error, 0 Warning**). | ✅ **SELESAI (100%)** |
+| **LOG-031** | 02 Nov 2026 | **Frontend Remediation** | • Filter kategori Home aktif menyaring Ongoing Task.<br>• Tombol "See all" Ongoing Task navigasi ke Tab 1.<br>• Penanganan tombol fisik Android Back via `PopScope` kembali ke Tab 0.<br>• Touch target $\ge 48\times 48$ dp pada seluruh tombol aksi.<br>• Standarisasi tombol back ke kontainer 38x38dp `#323846` border `#3B4150`.<br>• Kartu `TaskTimelineSummary` aktif sebagai quick filter.<br>• Filter `[All Tasks]` / `[Assigned to Me]` dan modal `Team Members (5)` di Dashboard Tim.<br>• Tombol Delete Task dengan dialog konfirmasi pada tugas personal dan tim.<br>• SnackBar Undo Window 4-detik saat penghapusan jadwal.<br>• Countdown timer 60 detik pada halaman OTP.<br>• Analisis statis: **0 Error, 0 Warning**. | ✅ **SELESAI (100%)** |
+| **LOG-030** | 02 Nov 2026 | **Frontend Audit & Quality Assurance** | Audit kepatuhan komprehensif seluruh modul UI dan penyusunan rencana remediasi 4 batch. | ✅ **SELESAI (100%)** |
+| **LOG-029** | 31 Okt 2026 | **Design System & FigCraft** | Upgrade subagent `ui-art-director` dan penerbitan [.agents/rules/figcraft_canvas_rules.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/.agents/rules/figcraft_canvas_rules.md). | ✅ **SELESAI (100%)** |
+| **LOG-028** | 31 Okt 2026 | **Engineering Protocol** | Penerapan protokol debat adversarial dialektika Maker vs Checker (QA & AppSec). | ✅ **SELESAI (100%)** |
+| **LOG-027** | 31 Okt 2026 | **Cybersecurity & AppSec** | Integrasi subagent `flutter-appsec-auditor` dan aturan [.agents/rules/security_hardening_rules.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/.agents/rules/security_hardening_rules.md). | ✅ **SELESAI (100%)** |
+| **LOG-026** | 31 Okt 2026 | **Governance & Rules** | Restrukturisasi modular `.agents/rules/`, memori dinamis, dan pembersihan root folder. | ✅ **SELESAI (100%)** |
+| **LOG-025** | 29 Okt 2026 | **Modal Subheading Clean Up** | Pembersihan angka pada sub-judul seksi modal pengaturan (`REMIND ME BEFORE`, dll.). | ✅ **SELESAI (100%)** |
+| **LOG-024** | 29 Okt 2026 | **Briefing Notification Format & Ticket Creation** | Format notifikasi briefing (Detailed vs Compact) dan penerbitan tiket backend `REQ-004`. | ✅ **SELESAI (100%)** |
+| **LOG-023** | 29 Okt 2026 | **Alert Timing Row & Interval Deletion Polish** | Penyeragaman ukuran baris custom timing (44dp) dan tombol hapus chip interval `✕`. | ✅ **SELESAI (100%)** |
+| **LOG-022** | 29 Okt 2026 | **Daily Morning Briefing Customization** | Modal kustomisasi briefing: time picker `showImpalTimePicker` dan multi-topik agenda. | ✅ **SELESAI (100%)** |
+| **LOG-021** | 29 Okt 2026 | **Sound & Vibration Icon Alignment** | Penyelarasan ikon mode audio: active bell (Sound & Vibrate) dan speaker (Sound Only). | ✅ **SELESAI (100%)** |
+| **LOG-020** | 29 Okt 2026 | **Harmonized Card Unification** | Penyatuan 3 kartu reminders menjadi 1 kontainer master terpadu di Profile. | ✅ **SELESAI (100%)** |
+| **LOG-019** | 29 Okt 2026 | **Multi-Tier Sub-Category Alerts** | 3 pilar alert di Profile, sub-tab di modal, ikon mode oranye bersih, dan kontainer rounded 10dp. | ✅ **SELESAI (100%)** |
+| **LOG-018** | 29 Okt 2026 | **Multi-Category Alert & Inheritance** | Kustomisasi alert mandiri 3 kategori (Tugas, Kelas, Rapat Tim) dan aturan warisan item-level. | ✅ **SELESAI (100%)** |
+| **LOG-017** | 29 Okt 2026 | **Profile & Alert Customization** | Kontrol input custom 42dp, hapus timing `✕`, mode Sound Only, dan anti-orange border. | ✅ **SELESAI (100%)** |
+| **LOG-016** | 29 Okt 2026 | **Profile & Reminders UX** | Modal `DeadlineAlertSettingsModal` terpadu: chips interval, custom timing, dan mode audio. | ✅ **SELESAI (100%)** |
+| **LOG-015** | 29 Okt 2026 | **State Sync & XAI Control** | Sinkronisasi global mesin Mamdani di seluruh halaman dan switch XAI Explainability di Profile. | ✅ **SELESAI (100%)** |
+| **LOG-014** | 29 Okt 2026 | **Design System & Global Headers** | Pembersihan border kartu AI dan standarisasi tombol lonceng notifikasi di seluruh header. | ✅ **SELESAI (100%)** |
+| **LOG-013** | 29 Okt 2026 | **AI Smart Priority & XAI** | Implementasi penuh AI Smart Priority & modal XAI `DetailCardSmartPriority` via 4 Touchpoint. | ✅ **SELESAI (100%)** |
+| **LOG-012** | 29 Okt 2026 | **Notification & Navigation Header** | Halaman notifikasi 100% English UI, adaptive expand card, dan tombol lonceng unread counter. | ✅ **SELESAI (100%)** |
+| **LOG-011** | 29 Okt 2026 | **Auth & UX Notification** | Penempatan presisi pop-up notifikasi kode pemulihan hanya saat tombol kirim ditekan. | ✅ **SELESAI (100%)** |
+| **LOG-010** | 29 Okt 2026 | **Auth & Profile Terms** | Penyatuan komprehensif `TermsPrivacyPage` dengan dual-mode (Register vs Profile). | ✅ **SELESAI (100%)** |
+| **LOG-009** | 29 Okt 2026 | **Profile & Settings** | Penyempurnaan profil penuh sesuai tangkapan layar (tanpa NIM/Role, seksi Account & Integration). | ✅ **SELESAI (100%)** |
+| **LOG-008** | 29 Okt 2026 | **Governance / Rules** | Penguncian aturan wajib pembaruan roadmap secara berkelanjutan pada `AGENTS.md`. | ✅ **LOCKED** |
+| **LOG-007** | 29 Okt 2026 | **Profile & Settings** | Refactoring modul profil dari Figma export ke Pure UI Modular dengan domain model repository. | ✅ **SELESAI (100%)** |
+| **LOG-006** | 29 Okt 2026 | **Team Module** | Standarisasi `TeamTaskCard`: Due badge di kanan atas dan tombol edit pensil abu-abu. | ✅ **SELESAI (100%)** |
+| **LOG-005** | 29 Okt 2026 | **Task Routing** | Routing cerdas tombol edit: tugas personal ke edit form, tugas tim ke `DashboardTeamPage`. | ✅ **SELESAI (100%)** |
+| **LOG-004** | 29 Okt 2026 | **Design System** | Penyelarasan token warna prioritas: High (Coral), Medium (Warm Amber), Low (Mint Green). | ✅ **SELESAI (100%)** |
+| **LOG-003** | 29 Okt 2026 | **Task Cards** | Pinned top-right badge anti-clustering pada seluruh kartu tugas. | ✅ **SELESAI (100%)** |
+| **LOG-002** | 29 Okt 2026 | **Design System** | Standarisasi penanda sisa deadline (due badge) kapsul pill tabular figures dan jam coral. | ✅ **SELESAI (100%)** |
+| **LOG-001** | 29 Okt 2026 | **Navigation Shell** | Penyatuan header antar-tab (`HomeHeader`) dengan subtitle oranye dan penghapusan tombol back ganda. | ✅ **SELESAI (100%)** |
+
+---
+
+## 🔍 4. Audit Detail Halaman per Halaman (Page-by-Page Inspection — Terverifikasi)
+
+Bagian ini telah **disinkronkan 100% dengan kondisi kode aktual di repositori**, membedakan mana yang telah rampung dan mana yang masih menjadi backlog:
+
+### A. Modul Autentikasi (`lib/presentation/features/auth/`)
+Halaman: `Login`, `Register`, `ForgotPassword`, `VerificationCode`, `ResetPassword`, `TermsPrivacy`.
+
+| Halaman | Fitur yang Sudah Selesai & Terverifikasi (Done) | Apa yang Masih Belum Ada (Incomplete / Backlog) |
+| :--- | :--- | :--- |
+| **Login (`login_page.dart`)** | ✅ Validasi input, toggle visibilitas password, status loading dengan proteksi anti-double submit, popup notifikasi sukses, tata letak responsif. | 1. **Remember Me Tidak Persisten ke Hardware Storage**: Checkbox hanya tersimpan di memori lokal variabel, belum ke `flutter_secure_storage`.<br>2. **Integrasi SSO Kampus**: Tombol Google dan SSO Telkom University belum terhubung ke OAuth backend.<br>3. **Biometrik**: Belum mendukung Fingerprint/FaceID via `local_auth`. |
+| **Register (`regist_page.dart`)** | ✅ Indikator kekuatan password 4 kriteria interaktif, konfirmasi password realtime (*Match / Mismatch*), checkbox Terms & Privacy yang terhubung ke `TermsPrivacyPage(isFromRegister: true)`. | 1. **Penyimpanan Akun Baru**: Data register belum disimpan ke database lokal/backend sehingga akun baru belum bertahan saat aplikasi di-restart. |
+| **Forgot Password & OTP (`forgot_password_page.dart`, `verification_code_page.dart`)** | ✅ Pilihan pemulihan (Email vs SMS), kotak input OTP responsif dengan auto-focus, pop-up instruksi, **countdown timer 60 detik aktif (`Expires in 00:59`) dengan tabular figures** (`LOG-031`). | 1. **SMS Gateway / Email Delivery Nyata**: Masih menggunakan delay simulasi lokal. |
+| **Reset Password (`reset_password_page.dart`)** | ✅ Form password baru dengan checklist keamanan dan konfirmasi password. | 1. **Invalidasi Sesi Lama**: Belum ada mekanisme untuk logout dari perangkat lain setelah reset password berhasil. |
+| **Terms & Privacy (`terms_privacy_page.dart`)** | ✅ Single-source document dengan dual-mode adaptif (mode Register dengan checkbox & tombol accept, mode Profile murni baca) (`LOG-010`). | - |
+
+---
+
+### B. Halaman Dashboard / Home (`lib/presentation/features/dashboard/`) & Profil
+Halaman: `HomePage`, `HomeHeader`, `HomeCategoriesSection`, `HomeScheduleSection`, `HomeTaskCard`, `ProfilePage`, `EditProfilePage`.
+
+| Komponen | Fitur yang Sudah Selesai & Terverifikasi (Done) | Apa yang Masih Belum Ada (Incomplete / Backlog) |
+| :--- | :--- | :--- |
+| **Header (`HomeHeader`) & Profile (`ProfilePage`, `EditProfilePage`)** | ✅ **SELESAI 100% (FULL SPEC):** Salam dinamis `Hi $userName`, subtitle adaptif oranye, avatar inisial dengan concentric coral ring & green verified badge, navigasi ke `ProfilePage`. Hero card bersih, 4 stats row tabular numbers, toggle pengingat 3 pilar, Daily Morning Briefing, AI fuzzy card, seksi `ACCOUNT & INTEGRATION`, tombol `Log Out Account` coral pill, footer branding, form edit profil tersaring (`EditProfilePage`) dengan SSO banner dan modal upload foto simulasi. | 1. **Upload Berkas Foto Nyata**: Menggunakan modal kamera/galeri simulasi; belum terhubung ke file picker nyata (`image_picker`) atau multipart storage backend. |
+| **Kategori (`HomeCategoriesSection`)** | ✅ **SELESAI 100%:** Kartu kategori "College" & "Personal" dengan hitungan tugas, **aktif memfilter daftar `Ongoing Task` di bawahnya secara dinamis** (`LOG-031`). | 1. **Tombol Tambah Kategori (+)**: Hanya menampilkan toast, belum membuka modal pembuatan kategori kustom. |
+| **Jadwal Hari Ini (`HomeScheduleSection`)** | ✅ **SELESAI 100%:** Preview jadwal kuliah ongoing dengan status badge, jam tabular figures, lokasi, tombol "See all" ke Tab Schedule, serta **interaksi tap lonceng langsung untuk toggle alert dengan feedback pop-up** (`LOG-036`). | 1. **Transisi Status Otomatis**: Status 'Ongoing' masih dihitung statis, belum otomatis beralih menjadi 'Completed' secara dinamis saat jam kelas terlewati secara wall-clock time. |
+| **Ongoing Task (`HomeTaskCard`)** | ✅ **SELESAI 100%:** Expandable card on tap, dual badge pill ([High]/[Medium] + [6d]/[4d]), circular clock coral, tombol coral Edit dengan routing cerdas, **tombol "See all" mengarahkan langsung ke Tab Task (`_onTabSelected(1)`)**, label `"Team members"` di atas avatar telah dihilangkan (`LOG-031`, `LOG-036`), serta **gestur swipe ke kiri untuk menyelesaikan tugas langsung dari Home dengan pop-up pemberitahuan dan sinkronisasi ke Task Page** (`LOG-037`). | - |
+
+---
+
+### C. Halaman Task / Manajemen Tugas (`lib/presentation/features/task/`)
+Halaman: `TaskPage`, `TaskContentView`, `TaskExpandableCard`, `CreateTaskPage`, `EditTaskPage`.
+
+| Komponen | Fitur yang Sudah Selesai & Terverifikasi (Done) | Apa yang Masih Belum Ada (Incomplete / Backlog) |
+| :--- | :--- | :--- |
+| **Header & Timeline Summary (`TaskTimelineSummary`)** | ✅ **SELESAI 100%:** Header seragam tanpa back button dengan subtitle oranye `Task`. **Kartu ringkasan jumlah prioritas (High, Medium, Low) aktif sebagai quick filter dinamis dan secara presisi menghitung seluruh tugas non-kelompok (`nonTeamOnly: true`)** (`LOG-031`, `LOG-040`). | - |
+| **Filter Bar (`TaskFilterBar`)** | ✅ **SELESAI 100%:** Filter bar (All, Today, Next 7 Days, Overdue) **diregangkan proporsional 100% lebar layar** dengan `Row + Expanded` dan proteksi scale-down bebas overflow di 320dp-768dp (`LOG-035`). | 1. **Pencarian Kata Kunci**: Tidak ada search bar untuk mencari tugas berdasarkan nama atau mata kuliah.<br>2. **Sorting Dropdown**: Belum ada opsi sortir berdasarkan deadline terdekat vs prioritas tertinggi. |
+| **Daftar Tugas (`TaskPage` / `Today Task`)** | ✅ **SELESAI 100%:** **Penyaringan mutlak tugas non-kelompok (`!task.isTeamTask`)**. Menampilkan seluruh kategori tugas non-kelompok (baik College Task mandiri maupun Personal Task) secara utuh, dan **mengecualikan 100% seluruh tugas kelompok (Team Task)** agar dikelola eksklusif di Dashboard Tim (`LOG-040`). | - |
+| **Kartu Detail (`TaskExpandableCard`)** | ✅ **SELESAI 100%:** Pinned top-right badge anti-clustering, detail anggota tim, Centroid Defuzzification (`z* = 28.6`), tombol coral Edit dengan routing cerdas, label `"Team members"` dihilangkan, nama matkul kartu tim collapsed dihilangkan (`LOG-036`), serta **gestur swipe ke kiri untuk toggle selesai/buka kembali, transformasi abu-abu murni tanpa badge completed, penempatan completed di posisi teratas, dan auto-scroll ke deadline terdekat** (`LOG-037`). | 1. **Kalkulasi Fuzzy Realtime**: Nilai centroid masih berupa data model, belum dievaluasi oleh fungsi Mamdani dinamis saat deadline mendekat. |
+| **Form Tambah & Edit (`CreateTaskPage`, `edit_task.dart`)** | ✅ **SELESAI 100%:** **Penyatuan form Create & Edit menjadi 1 Single-Page Form** di `create_task.dart`, arsitektur flat page tanpa kartu pembungkus, tombol toggle `Alert On` solid Orange Primary (radius 999), selektor kategori dinamis, pemilih tanggal & waktu, tombol **"Delete Task" dengan konfirmasi dialog** (`LOG-031`, `LOG-032`, `LOG-035`). | 1. **Pilihan Mata Kuliah Dropdown**: Form isian `Course` masih berupa TextField bebas, belum berupa dropdown daftar mata kuliah terdaftar semester ini. |
+
+---
+
+### D. Halaman Jadwal Kuliah & Meeting (`lib/presentation/features/schedule/`)
+Halaman: `SchedulePage`, `ScheduleContentView`, `ScheduleFormPage`, `pop_up_create_meeting.dart`.
+
+| Komponen | Fitur yang Sudah Selesai & Terverifikasi (Done) | Apa yang Masih Belum Ada (Incomplete / Backlog) |
+| :--- | :--- | :--- |
+| **Daftar Jadwal (`SchedulePage`)** | ✅ **SELESAI 100%:** Single unified `CustomScrollView` (Header -> Filter Bar -> Add Schedule -> List), alur atas bersih tanpa kalender mingguan Mon-Sun (`LOG-034`), **filter bar All, Today, Week, Month dibuat lebih ramping & pendek (`minHeight: 28dp`)** membentang proporsional (`LOG-036`), kartu `ImpalScheduleCard` presisi FigCraft (`LOG-034`), serta **Undo Window SnackBar 4-detik saat jadwal dihapus** (`LOG-031`). | 1. **Tampilan Kalender Matriks Bulanan**: Belum ada tampilan kalender bulanan penuh.<br>2. **Deteksi Bentrok Jadwal (*Schedule Conflict*)**: Tidak ada peringatan bentrok waktu jika jam bertabrakan dengan jadwal lain. |
+| **Form Jadwal (`ScheduleFormPage`)** | ✅ **SELESAI 100%:** Arsitektur flat page tanpa kartu pembungkus, tombol toggle `Alert On` solid Orange Primary (radius 999), pemilih tipe jadwal, toggle meeting tim dengan autocomplete, pemilihan jam via dialog custom (`LOG-035`). | 1. **Lokasi Virtual (Link Zoom / GMeet / Discord)**: Belum ada input khusus untuk tautan meeting daring dan tombol aksi "Join Call". |
+| **Form Create & Edit Meeting (`pop_up_create_meeting.dart`)** | ✅ **SELESAI 100%:** Tampilan full page dengan AppBar berbingkai 38x38dp, tombol toggle `Alert On` oranye solid melingkar, input warna konsisten `#323846` border `#3B4150` radius 10dp, dan tombol delete saat mode edit (`LOG-036`). | - |
+
+---
+
+### E. Halaman Tim & Dashboard Kelompok (`lib/presentation/features/team/`)
+Halaman: `TeamListPage`, `DashboardTeamPage`, `CreateTaskTeamPage`, `TeamTaskCard`.
+
+| Komponen | Fitur yang Sudah Selesai & Terverifikasi (Done) | Apa yang Masih Belum Ada (Incomplete / Backlog) |
+| :--- | :--- | :--- |
+| **Daftar Tim (`TeamListPage`)** | ✅ **SELESAI 100%:** Header seragam `Team List`, kartu tim dengan nama kelompok, kluster avatar berwarna, jadwal meeting tim, dialog Gabung Tim (kode) dan Buat Tim baru (`LOG-001`, `LOG-031`). | 1. **Keluar Tim (*Leave Team*) / Hapus Tim**: Belum ada menu aksi (titik tiga) untuk keluar dari tim atau membubarkan kelompok.<br>2. **Pencarian Tim**: Belum ada filter pencarian nama tim. |
+| **Dashboard Kelompok (`DashboardTeamPage`)** | ✅ **SELESAI 100%:** Bebas dari double Scaffold / double navbar saat tersemat di Tab 2 (`LOG-033`), header tim dengan tombol back 38x38dp, pill kode tim dengan copy satu ketukan (`7X29`), **filter chips assignee `[All Tasks]` dan `[Assigned to Me]`**, serta **modal bottom sheet rincian anggota kelompok `Team Members (5)`** (`LOG-031`). | - |
+| **Kartu Tugas Tim (`TeamTaskCard`)** | ✅ **SELESAI 100%:** Due badge di kanan atas, badge prioritas standar tim, avatar bertumpuk, tombol edit pensil abu-abu 28dp di sudut kanan bawah, padding bawah dirampingkan simetris (~12dp) (`LOG-006`, `LOG-036`), serta **gestur swipe ke kiri untuk toggle selesai/buka kembali, transformasi abu-abu murni tanpa badge completed, penempatan completed di posisi teratas, dan auto-scroll ke deadline terdekat di Dashboard Tim** (`LOG-037`). | 1. **Subtask / Checklist**: Belum ada daftar checklist sub-pekerjaan interaktif (contoh: `2/4 subtasks done`). |
+| **Form Tugas Tim (`CreateTaskTeamPage`)** | ✅ **SELESAI 100%:** Arsitektur flat page tanpa inner card pembungkus, tombol toggle `Alert On` solid Orange Primary (radius 999), dropdown multi-assignee dengan chip avatar, pemilih deadline, dan **tombol "Delete Task" dengan konfirmasi pada mode edit** (`LOG-031`, `LOG-035`). | - |
+
+---
+
+### F. Shell Navigasi Bawah & Komponen Global (`common_widgets/`)
+Halaman: `ImpalBottomNavBar`, `HomeHeader`, `PopUpPemberitahuan`.
+
+| Komponen | Fitur yang Sudah Selesai & Terverifikasi (Done) | Apa yang Masih Belum Ada (Incomplete / Backlog) |
+| :--- | :--- | :--- |
+| **Navbar Bawah (`ImpalBottomNavBar`)** | ✅ **SELESAI 100%:** Kurva cutout melengkung eksklusif, tombol bulat oranye melayang yang meluncur (*slide*) horizontal antar 4 tab, persistent shell tanpa reload, dan **penanganan tombol fisik Android Back (`PopScope`) kembali ke Tab 0** (`LOG-031`, `LOG-033`). | 1. **Badge Notifikasi Navbar**: Ikon pada navbar belum memiliki badge dot merah penanda notifikasi baru. |
+| **Sistem Pop-Up (`PopUpPemberitahuan`)** | ✅ **SELESAI 100%:** Dialog dark container (`#282D37`), animasi scale masuk, badge icon tematik, auto-dismiss, **Undo Window SnackBar 4 detik**, serta **penegakan mutlak 100% Bahasa Inggris pada seluruh judul, pesan, dan preset pop-up** (`LOG-031`, `LOG-039`). | - |
+
+---
+
+### G. Modul Notifikasi (`lib/presentation/features/notifikasi/`)
+Halaman: `NotifikasiPage`, `NotificationCard`, `NotificationBellButton`.
+
+| Komponen | Fitur yang Sudah Selesai & Terverifikasi (Done) | Apa yang Masih Belum Ada (Incomplete / Backlog) |
+| :--- | :--- | :--- |
+| **Tombol Lonceng Header (`HomeHeader`)** | ✅ **SELESAI 100%:** Ditempatkan presisi di sebelah kiri avatar pada seluruh header dengan container 42x42 dark card, border halus, badge counter unread reaktif via `ListenableBuilder` (`LOG-012`, `LOG-014`). | - |
+| **Halaman Notifikasi (`NotifikasiPage`)** | ✅ **SELESAI 100%:** 100% English UI, square back button, tombol "Mark Read", pengelompokan tanggal (`TODAY`, `YESTERDAY`), serta filter chips kategori (All, Deadlines, Classes, Teams, AI System) (`LOG-012`). | 1. **Push Notifications Background Service**: Pengingat deadline di background saat app ditutup masih menunggu backend worker (Tiket `REQ-004`). |
+| **Kartu Notifikasi Adaptif (`NotificationCard`)** | ✅ **SELESAI 100%:** Tampilan awal kompak, ketukan memicu *smooth expand* deskripsi lengkap, tombol aksi interaktif (`View Task →`, `Classroom`, `Open Team →`, `AI Reason (XAI)`), serta otomatis menandai unread blue dot menjadi terbaca (`LOG-012`). | 1. **Swipe to Dismiss**: Belum mendukung gestur geser ke samping untuk menghapus notifikasi. |
+
+---
+
+### H. Modul Sistem Cerdas AI Priority (`lib/presentation/features/smart_system/`)
+Halaman: `SmartPriorityPage`, `DetailCardSmartPriority`, `SmartEngineStatusCard`, `SmartPriorityTaskCard`.
+
+| Komponen | Fitur yang Sudah Selesai & Terverifikasi (Done) | Apa yang Masih Belum Ada (Incomplete / Backlog) |
+| :--- | :--- | :--- |
+| **Halaman Peringkat AI (`SmartPriorityPage`)** | ✅ **SELESAI 100%:** Header adaptif, status engine `Mamdani Inference Engine (ACTIVE)` dengan toggle interaktif, filter chips prioritas dinamis, dan kartu tugas berperingkat krisp (`LOG-013`, `LOG-015`). | - |
+| **Modal Penjelasan XAI (`DetailCardSmartPriority`)** | ✅ **SELESAI 100%:** Zero-overflow modal, visualisasi fuzzifikasi parameter input (Time Left & Course Grade Weight dengan grafik derajat keanggotaan $\mu$), Defuzzifikasi Centroid CoG ($z^* = 87.50$), dan narasi alasan "Why is this task Priority?" (`LOG-013`). | - |
+| **Integrasi Multi-Touchpoint (4 Touchpoint)** | ✅ **SELESAI 100%:** Terhubung dari Home banner, Task shortcut bar, Profile fuzzy card tile, dan tombol notifikasi XAI (`LOG-013`, `LOG-015`). | - |
+
+---
+
+## 📋 5. Rekapitulasi Berkas & Status Pengerjaan
+
+| Berkas Target | Rencana Tindakan & Cakupan Modul | Status |
+| :--- | :--- | :--- |
+| [`frontend/lib/presentation/features/task/create_task.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/task/create_task.dart) & [`edit_task.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/task/edit_task.dart) | Penyatuan form Create & Edit Task, arsitektur flat page tanpa kartu pembungkus, tombol toggle `Alert On` oranye solid melingkar, dan tombol hapus tugas | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/team/create_task_team.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/create_task_team.dart) | Arsitektur flat page tanpa inner card, toggle `Alert On` oranye solid melingkar, multi-assignee chips, tombol delete task saat edit | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/team/widgets/pop_up_create_meeting.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/widgets/pop_up_create_meeting.dart) | Konversi menjadi full page form Create & Edit Meeting, AppBar berbingkai, toggle `Alert On` solid oranye, warna `#323846`, dan tombol delete | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/schedule/schedule_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/schedule/schedule_page.dart) | Pembersihan kalender mingguan Mon-Sun, unified CustomScrollView, pemadatan filter bar All/Today/Week/Month (`minHeight: 28dp`) | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/schedule/schedule_form_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/schedule/schedule_form_page.dart) | Arsitektur flat page tanpa inner card pembungkus, toggle `Alert On` oranye solid melingkar, integrasi `ScheduleRepository` | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/common_widgets/impal_schedule_card.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/common_widgets/impal_schedule_card.dart) | Penyelarasan kartu jadwal 100% presisi FigCraft (stripe 5dp, padding 16/18dp, jam solid 15dp) & interaksi toggle lonceng item-level | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/team/models/team_task_repository.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/models/team_task_repository.dart) | Repositori singleton reaktif `TeamTaskRepository`, sinkronisasi otomatis status proyek kelompok & progres persentase ke `TaskRepository` | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/team/widgets/team_task_card.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/widgets/team_task_card.dart) | Penanda deadline due badge di kanan atas, tombol edit pensil 28dp, pembatasan swipe hanya untuk tugas yang di-assign ke user aktif (`isAssignedToCurrentUser`) | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/dashboard/widgets/home_task_card.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/dashboard/widgets/home_task_card.dart) & [`task_expandable_card.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/task/widgets/task_expandable_card.dart) | Eliminasi label `"Team members"` dan nama matkul, gestur swipe-to-complete ke kiri, palet abu-abu murni, dan proteksi anti-swipe manual kartu proyek kelompok | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/task/task_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/task/task_page.dart) & [`dashboard_team_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/dashboard_team_page.dart) | Logika sortir penempatan Completed di posisi teratas, tugas aktif diurutkan deadline terdekat, dan auto-scroll pasca-transisi (kartu selesai di atas baru kelihatan saat scroll ke atas) | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/task/task_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/task/task_page.dart) & [`task_repository.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/task/models/task_repository.dart) | Penyaringan mutlak non-team task (`!task.isTeamTask`): Page Tasks menampilkan seluruh kategori tugas (College & Personal) dan mengecualikan seluruh tugas kelompok (Team Tasks), sinkronisasi timeline counter `nonTeamOnly: true` (`LOG-040`) | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/task/models/task_repository.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/task/models/task_repository.dart) & [`pop_up_pemberitahuan.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/common_widgets/pop_up_pemberitahuan.dart) | Penambahan status `isCompleted`, sorting comparator `compareTaskDeadlines`, persistensi `completeTaskFromHome`, dan preset pop-up `taskCompleted` & `taskReopened` | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/dashboard/home_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/dashboard/home_page.dart) | Filter kategori College/Personal aktif menyaring `Ongoing Task`, tombol "See all" ke Tab 1, penanganan tombol fisik `PopScope`, interaksi lonceng jadwal, dan gestur swipe-to-dismiss tugas ongoing | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/team/dashboard_team_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/dashboard_team_page.dart) | Pembersihan double Scaffold/navbar, filter chip `[All Tasks]` / `[Assigned to Me]`, dan modal daftar anggota kelompok | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/profile/profile_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/profile/profile_page.dart) & [`edit_profile_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/profile/edit_profile_page.dart) | Modul profil lengkap, pengaturan alert 3 pilar, Daily Morning Briefing kustom, mode suara/getar, seksi Account, dan form edit | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/smart_system/smart_priority_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/smart_system/smart_priority_page.dart) & [`detail_card_smart_priority.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/smart_system/detail_card_smart_priority.dart) | Implementasi AI Fuzzy Mamdani Min-Max, visualisasi XAI, dan sinkronisasi toggle status di seluruh touchpoint | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/notifikasi/notifikasi_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/notifikasi/notifikasi_page.dart) & [`notification_bell_button.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/notifikasi/widgets/notification_bell_button.dart) | Notifikasi adaptif 100% English UI, tombol lonceng unread counter di seluruh header, dan aksi detail XAI | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/auth/terms_privacy_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/auth/terms_privacy_page.dart) & [`verification_code_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/auth/verification_code_page.dart) | Halaman terpadu Terms & Privacy dual-mode dan timer countdown mundur 60 detik pada pengiriman OTP | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/common_widgets/impal_bottom_nav_bar.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/common_widgets/impal_bottom_nav_bar.dart) | Persistent scooped bottom navbar dengan cutout melengkung eksklusif dan navigasi meluncur halus | ✅ **SELESAI (100%)** |
