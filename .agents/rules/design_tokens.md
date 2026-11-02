@@ -1,4 +1,5 @@
 # 🎨 Design Tokens Manifest — IMPAL Smart ToDoList
+<!-- Lokasi Resmi: .agents/rules/design_tokens.md -->
 
 Issued by: **UI Art Director (Subagent 1)**  
 Compliance: `AGENTS.md` & Figma Design Tokens Specifications  
@@ -103,4 +104,3 @@ static const List<BoxShadow> dialogShadow = [
   ),
 ];
 ```
-

@@ -1,4 +1,5 @@
 # Panduan & Template Desain IMPAL: Tipografi, Ukuran Tombol, Sistem Spacing & Pop-up Pemberitahuan
+<!-- Lokasi Resmi: .agents/rules/typography_rules.md -->
 
 Dokumen ini adalah **single source of truth** untuk skala tipografi (ukuran font, font weight, letter spacing, line height, warna teks), **standarisasi ukuran semua tombol**, **aturan sistem spacing (8-point Grid System)**, serta **standar pop-up pemberitahuan atas (top notification banner)** yang serasi di seluruh aplikasi **IMPAL**.
 

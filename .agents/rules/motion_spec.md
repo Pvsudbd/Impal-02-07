@@ -1,7 +1,8 @@
-# 🎞️ Motion Design Spec — 60 FPS Anti-Jank Engine
+# 🎞️ Motion Design Spec — 60 FPS Anti-Jank Engine (IMPAL)
+<!-- Lokasi Resmi: .agents/rules/motion_spec.md -->
 
-Issued by: **Motion Animator & VFX Engineer (Subagent 3)**  
-Compliance: `AGENTS.md` Section 4 & Section 2 (HP Kentang Optimization)  
+Issued by: **Motion Animator & VFX Engineer (Subagent 4)**  
+Compliance: `AGENTS.md` Section 6 & Section 2 (HP Kentang Optimization)  
 Status: **Locked & Active**
 
 ---
@@ -51,4 +52,3 @@ AnimatedScale(
 )
 ```
 Teks label tombol **tetap dipertahankan** di samping spinner saat loading untuk mencegah layout shift.
-
