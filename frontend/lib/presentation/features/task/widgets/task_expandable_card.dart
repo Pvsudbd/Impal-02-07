@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
+import '../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../models/task_item_model.dart';
 
 /// Expandable Task Card based directly on the signature HomeTaskCard design.
@@ -17,6 +19,7 @@ class TaskExpandableCard extends StatefulWidget {
   final VoidCallback? onEdit;
   final bool isInitiallyExpanded;
   final bool isLast;
+  final VoidCallback? onToggleCompletion;
 
   const TaskExpandableCard({
     super.key,
@@ -24,6 +27,7 @@ class TaskExpandableCard extends StatefulWidget {
     this.onEdit,
     this.isInitiallyExpanded = false,
     this.isLast = false,
+    this.onToggleCompletion,
   });
 
   @override
@@ -58,18 +62,20 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
 
     final isUrgent = task.priority == TaskPriorityLevel.high;
 
-    return RepaintBoundary(
+    final cardContent = RepaintBoundary(
       child: AnimatedContainer(
         width: double.infinity,
         duration: disableMotion ? Duration.zero : const Duration(milliseconds: 260),
         curve: Curves.easeInOutCubic,
         margin: EdgeInsets.only(bottom: widget.isLast ? 0 : 10),
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: task.isCompleted ? const Color(0xFF252932) : AppColors.bgCard,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _isExpanded ? AppColors.borderMedium : AppColors.borderSubtle,
-            width: _isExpanded ? 1.0 : 0.6,
+            color: task.isCompleted
+                ? const Color(0xFF383E4C)
+                : (_isExpanded ? AppColors.borderMedium : AppColors.borderSubtle),
+            width: _isExpanded ? 1.0 : 0.8,
           ),
           boxShadow: const [
             BoxShadow(
@@ -111,8 +117,14 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                             task.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: task.isCompleted
+                                  ? const Color(0xFF7E8696)
+                                  : Colors.white,
+                              decoration: task.isCompleted
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              decorationColor: const Color(0xFF7E8696),
                               fontSize: 15,
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.w700,
@@ -199,15 +211,21 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                               Container(
                                 width: 14,
                                 height: 14,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFFF826E),
+                                decoration: BoxDecoration(
+                                  color: task.isCompleted
+                                      ? const Color(0xFF363C48)
+                                      : const Color(0xFFFF826E),
                                   shape: BoxShape.circle,
                                 ),
                                 alignment: Alignment.center,
-                                child: const Icon(
-                                  Icons.access_time_filled_rounded,
+                                child: Icon(
+                                  task.isCompleted
+                                      ? Icons.check_rounded
+                                      : Icons.access_time_filled_rounded,
                                   size: 9.5,
-                                  color: Colors.white,
+                                  color: task.isCompleted
+                                      ? const Color(0xFF8E95A5)
+                                      : Colors.white,
                                 ),
                               ),
                               const SizedBox(width: 5),
@@ -216,12 +234,14 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                                   task.formattedDeadline,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: AppColors.textMuted,
+                                  style: TextStyle(
+                                    color: task.isCompleted
+                                        ? const Color(0xFF7E8696)
+                                        : AppColors.textMuted,
                                     fontSize: 11,
                                     fontFamily: 'Inter',
                                     fontWeight: FontWeight.w500,
-                                    fontFeatures: [FontFeature.tabularFigures()],
+                                    fontFeatures: const [FontFeature.tabularFigures()],
                                   ),
                                 ),
                               ),
@@ -432,8 +452,12 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                             key: ValueKey('edit_task_button_${task.id}'),
                             onPressed: widget.onEdit,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
+                              backgroundColor: task.isCompleted
+                                  ? const Color(0xFF363C48)
+                                  : AppColors.primary,
+                              foregroundColor: task.isCompleted
+                                  ? const Color(0xFF8E95A5)
+                                  : Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -443,7 +467,9 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                             child: Text(
                               'Edit',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: task.isCompleted
+                                    ? const Color(0xFF8E95A5)
+                                    : Colors.white,
                                 fontSize: context.rFont(15, min: 13, max: 17),
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w700,
@@ -460,6 +486,68 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
           ),
         ),
       ),
+    );
+
+    if (widget.onToggleCompletion == null) {
+      return cardContent;
+    }
+
+    return Dismissible(
+      key: ValueKey('task_dismiss_${task.id.isNotEmpty ? task.id : task.title}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) async {
+        if (task.isTeamTask) {
+          HapticFeedback.vibrate();
+          PopUpPemberitahuan.teamProjectWarning(context);
+          return false;
+        }
+        widget.onToggleCompletion?.call();
+        return false;
+      },
+      background: Container(
+        margin: EdgeInsets.only(bottom: widget.isLast ? 0 : 10),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: task.isCompleted
+              ? const Color(0xFF5B93FF).withValues(alpha: 0.18)
+              : const Color(0xFF10B981).withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: task.isCompleted
+                ? const Color(0xFF5B93FF).withValues(alpha: 0.4)
+                : const Color(0xFF10B981).withValues(alpha: 0.4),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              task.isCompleted ? 'Reopen' : 'Completed',
+              style: TextStyle(
+                color: task.isCompleted
+                    ? const Color(0xFF5B93FF)
+                    : const Color(0xFF10B981),
+                fontSize: 13,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              task.isCompleted
+                  ? Icons.refresh_rounded
+                  : Icons.check_circle_rounded,
+              color: task.isCompleted
+                  ? const Color(0xFF5B93FF)
+                  : const Color(0xFF10B981),
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+      child: cardContent,
     );
   }
 
@@ -561,16 +649,26 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
   }
 
   Widget _buildTag(TaskTagModel tag) {
+    final bg = widget.task.isCompleted
+        ? const Color(0xFF2B303C)
+        : tag.backgroundColor.withValues(alpha: 0.25);
+    final textColor = widget.task.isCompleted
+        ? const Color(0xFF7E8696)
+        : tag.backgroundColor;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: tag.backgroundColor.withValues(alpha: 0.25),
+        color: bg,
         borderRadius: BorderRadius.circular(999),
+        border: widget.task.isCompleted
+            ? Border.all(color: const Color(0xFF383E4C), width: 0.8)
+            : null,
       ),
       child: Text(
         tag.label,
         style: TextStyle(
-          color: tag.backgroundColor,
+          color: textColor,
           fontSize: 10.5,
           fontFamily: 'Inter',
           fontWeight: FontWeight.w600,
@@ -581,6 +679,26 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
   }
 
   Widget _buildPriorityBadge(TaskPriorityLevel priority) {
+    if (widget.task.isCompleted) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+        decoration: BoxDecoration(
+          color: const Color(0xFF363C48),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          widget.task.priorityLabel,
+          style: const TextStyle(
+            color: Color(0xFF8E95A5),
+            fontSize: 10.5,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.1,
+          ),
+        ),
+      );
+    }
+
     Color bg;
     Color textColor;
     String label;
@@ -623,6 +741,27 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
   }
 
   Widget _buildDurationBadge(TaskItemModel task) {
+    if (task.isCompleted) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+        decoration: BoxDecoration(
+          color: const Color(0xFF363C48),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          task.durationBadge,
+          style: const TextStyle(
+            color: Color(0xFF8E95A5),
+            fontSize: 10.5,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.1,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
       decoration: BoxDecoration(

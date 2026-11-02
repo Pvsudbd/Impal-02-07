@@ -79,6 +79,7 @@ class TaskItemModel {
   final bool isAssignedToUser;
   final bool isCollegeTask;
   final bool isAlertEnabled;
+  final bool isCompleted;
 
   const TaskItemModel({
     required this.id,
@@ -104,6 +105,7 @@ class TaskItemModel {
     this.isAssignedToUser = true,
     this.isCollegeTask = true,
     this.isAlertEnabled = true,
+    this.isCompleted = false,
   });
 
   String get priorityLabel {
@@ -171,6 +173,7 @@ class TaskItemModel {
     bool? isAssignedToUser,
     bool? isCollegeTask,
     bool? isAlertEnabled,
+    bool? isCompleted,
   }) {
     return TaskItemModel(
       id: id ?? this.id,
@@ -197,7 +200,42 @@ class TaskItemModel {
       isAssignedToUser: isAssignedToUser ?? this.isAssignedToUser,
       isCollegeTask: isCollegeTask ?? this.isCollegeTask,
       isAlertEnabled: isAlertEnabled ?? this.isAlertEnabled,
+      isCompleted: isCompleted ?? this.isCompleted,
     );
+  }
+
+  /// Helper comparator to sort tasks by nearest deadline first.
+  static int compareTaskDeadlines(TaskItemModel a, TaskItemModel b) {
+    int getHours(String badge, TaskPriorityLevel p) {
+      final clean = badge.trim().toLowerCase();
+      if (clean == 'overdue') return -1;
+      if (clean.endsWith('h')) {
+        return int.tryParse(clean.replaceAll('h', '')) ?? 24;
+      }
+      if (clean.endsWith('d')) {
+        return (int.tryParse(clean.replaceAll('d', '')) ?? 1) * 24;
+      }
+      switch (p) {
+        case TaskPriorityLevel.high:
+          return 12;
+        case TaskPriorityLevel.medium:
+          return 24;
+        case TaskPriorityLevel.low:
+          return 48;
+      }
+    }
+
+    final aHours = getHours(a.durationBadge, a.priority);
+    final bHours = getHours(b.durationBadge, b.priority);
+
+    if (aHours != bHours) {
+      return aHours.compareTo(bHours);
+    }
+
+    final dateCmp = a.deadlineDate.compareTo(b.deadlineDate);
+    if (dateCmp != 0) return dateCmp;
+
+    return a.priority.index.compareTo(b.priority.index);
   }
 
   /// Default mock tasks reflecting the exact Figma design screenshots.
@@ -315,6 +353,78 @@ class TaskItemModel {
           warningNotice: '*This task is asigned to you, and you can’t delete',
           notes: 'Analysis of deductive and inductive paragraph structures in editorial articles.',
           isAutomaticWeight: true,
+        ),
+        TaskItemModel(
+          id: 'task_4',
+          title: 'Mobile App Testing Report',
+          priority: TaskPriorityLevel.high,
+          durationBadge: '6h',
+          durationBadgeColor: const Color(0xFF5B93FF),
+          durationTextColor: Colors.white,
+          subtitle: 'Unit testing & widget test coverage',
+          deadlineDate: DateTime(2026, 10, 11, 18, 00),
+          formattedDeadline: 'Sat 11 Oct 2026, 18: 00 WIB',
+          memberAvatars: const [],
+          progressPercent: null,
+          tags: const [
+            TaskTagModel(
+              label: 'College',
+              backgroundColor: Color(0xFF786FA6),
+              textColor: Color(0xFF4A3C8C),
+            ),
+            TaskTagModel(
+              label: 'Testing',
+              backgroundColor: Color(0xFFFF7D65),
+              textColor: Color(0xFF991B1B),
+            ),
+          ],
+          groupMembers: const [
+            'Personal Task • Jarvis',
+          ],
+          course: 'SSIF-04-REG • Software Testing & Implementation',
+          dateCreated: 'Monday, 07 Oct 2026',
+          centroidDefuzzification: 'z* = 87.5',
+          centroidScale: 'scale(0-100)',
+          warningNotice: '*This task is assigned to you, and you can’t delete',
+          notes: 'Execute widget test suite and collect coverage reports.',
+          isAutomaticWeight: true,
+          isCollegeTask: true,
+        ),
+        TaskItemModel(
+          id: 'task_5',
+          title: 'Academic Advisory Consultation',
+          priority: TaskPriorityLevel.low,
+          durationBadge: '2d',
+          durationBadgeColor: const Color(0xFF5B93FF),
+          durationTextColor: Colors.white,
+          subtitle: 'Semester study plan discussion',
+          deadlineDate: DateTime(2026, 10, 13, 14, 00),
+          formattedDeadline: 'Mon 13 Oct 2026, 14: 00 WIB',
+          memberAvatars: const [],
+          progressPercent: null,
+          tags: const [
+            TaskTagModel(
+              label: 'Personal',
+              backgroundColor: Color(0xFF786FA6),
+              textColor: Color(0xFF4A3C8C),
+            ),
+            TaskTagModel(
+              label: 'Advising',
+              backgroundColor: Color(0xFF6EE7B7),
+              textColor: Color(0xFF064E3B),
+            ),
+          ],
+          groupMembers: const [
+            'Personal Task • Jarvis',
+          ],
+          course: 'ADVISING • Faculty of Informatics',
+          dateCreated: 'Tuesday, 08 Oct 2026',
+          centroidDefuzzification: 'z* = 12.0',
+          centroidScale: 'scale(0-100)',
+          warningNotice: '*This task is assigned to you, and you can’t delete',
+          notes: 'Prepare transcript and draft curriculum plan for consultation.',
+          isAutomaticWeight: false,
+          isCollegeTask: false,
         ),
       ];
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
+import '../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../models/dashboard_models.dart';
 
 /// Task card component for ongoing tasks on dashboard with smooth expandable details.
@@ -9,6 +11,7 @@ class HomeTaskCard extends StatefulWidget {
   final bool isLast;
   final VoidCallback? onEdit;
   final bool isInitiallyExpanded;
+  final VoidCallback? onDismissed;
 
   const HomeTaskCard({
     super.key,
@@ -16,6 +19,7 @@ class HomeTaskCard extends StatefulWidget {
     this.isLast = false,
     this.onEdit,
     this.isInitiallyExpanded = false,
+    this.onDismissed,
   });
 
   @override
@@ -46,7 +50,7 @@ class _HomeTaskCardState extends State<HomeTaskCard> {
         task.tags.any((t) => t.label.toLowerCase() == 'kelompok');
     final effectiveProgress = task.progress ?? (isGroup ? 0.46 : null);
 
-    return RepaintBoundary(
+    final cardContent = RepaintBoundary(
       child: AnimatedContainer(
         width: double.infinity,
         duration: disableMotion ? Duration.zero : const Duration(milliseconds: 260),
@@ -439,6 +443,58 @@ class _HomeTaskCardState extends State<HomeTaskCard> {
           ),
         ),
       ),
+    );
+
+    if (widget.onDismissed == null) {
+      return cardContent;
+    }
+
+    return Dismissible(
+      key: ValueKey('home_dismiss_${task.id.isNotEmpty ? task.id : task.title}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) async {
+        if (task.isTeamTask) {
+          HapticFeedback.vibrate();
+          PopUpPemberitahuan.teamProjectWarning(context);
+          return false;
+        }
+        return true;
+      },
+      onDismissed: (_) => widget.onDismissed?.call(),
+      background: Container(
+        margin: EdgeInsets.only(bottom: widget.isLast ? 0 : 10),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF10B981).withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFF10B981).withValues(alpha: 0.4),
+            width: 1,
+          ),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Completed',
+              style: TextStyle(
+                color: Color(0xFF10B981),
+                fontSize: 13,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(width: 8),
+            Icon(
+              Icons.check_circle_rounded,
+              color: Color(0xFF10B981),
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+      child: cardContent,
     );
   }
 

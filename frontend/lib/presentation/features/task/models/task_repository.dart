@@ -39,13 +39,57 @@ class TaskRepository with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Toggles completion status of a task by its ID.
+  void toggleTaskCompletion(String id) {
+    final index = _tasks.indexWhere((t) => t.id == id);
+    if (index != -1) {
+      final task = _tasks[index];
+      _tasks[index] = task.copyWith(isCompleted: !task.isCompleted);
+      notifyListeners();
+    }
+  }
+
+  /// Completes a task dismissed from Homepage and ensures it exists in repository.
+  void completeTaskFromHome(TaskItemModel homeTask) {
+    final index = _tasks.indexWhere((t) => t.id == homeTask.id);
+    if (index != -1) {
+      _tasks[index] = _tasks[index].copyWith(isCompleted: true);
+    } else {
+      _tasks.insert(0, homeTask.copyWith(isCompleted: true));
+    }
+    notifyListeners();
+  }
+
+  /// Automatically synchronizes completion status and progress percentage of team project tasks.
+  void syncTeamProjectStatus({
+    required bool isCompleted,
+    required int progressPercent,
+  }) {
+    bool changed = false;
+    for (int i = 0; i < _tasks.length; i++) {
+      if (_tasks[i].isTeamTask) {
+        _tasks[i] = _tasks[i].copyWith(
+          isCompleted: isCompleted,
+          progressPercent: progressPercent,
+        );
+        changed = true;
+      }
+    }
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
   /// Calculates counts by priority level for timeline counters.
-  Map<TaskPriorityLevel, int> getPriorityCounts() {
+  Map<TaskPriorityLevel, int> getPriorityCounts({bool nonTeamOnly = false}) {
     int high = 0;
     int med = 0;
     int low = 0;
 
-    for (final task in _tasks) {
+    final targetList =
+        nonTeamOnly ? _tasks.where((t) => !t.isTeamTask) : _tasks;
+
+    for (final task in targetList) {
       switch (task.priority) {
         case TaskPriorityLevel.high:
           high++;
@@ -59,11 +103,10 @@ class TaskRepository with ChangeNotifier {
       }
     }
 
-    // Default minimum counts to match Figma mockups if list is small
     return {
-      TaskPriorityLevel.high: high < 3 ? 3 : high,
-      TaskPriorityLevel.medium: med < 1 ? 1 : med,
-      TaskPriorityLevel.low: low < 2 ? 2 : low,
+      TaskPriorityLevel.high: high,
+      TaskPriorityLevel.medium: med,
+      TaskPriorityLevel.low: low,
     };
   }
 }

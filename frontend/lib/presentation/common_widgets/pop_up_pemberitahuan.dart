@@ -383,6 +383,52 @@ class PopUpPemberitahuan extends StatefulWidget {
     );
   }
 
+  /// Preset notification when a task is completed (Positif -> Hijau).
+  static void taskCompleted(BuildContext context, {required String taskName}) {
+    show(
+      context,
+      title: 'Task Completed',
+      message: 'Task "$taskName" has been marked as completed.',
+      icon: Icons.check_circle_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a task is reopened (Netral -> Slate/Biru).
+  static void taskReopened(BuildContext context, {required String taskName}) {
+    show(
+      context,
+      title: 'Task Reopened',
+      message: 'Task "$taskName" has been moved back to active tasks.',
+      icon: Icons.refresh_rounded,
+      iconBgColor: const Color(0xFF5B93FF),
+    );
+  }
+
+  /// Preset notification when a user attempts to manually swipe a team project card.
+  static void teamProjectWarning(BuildContext context) {
+    show(
+      context,
+      title: 'Team Project',
+      message:
+          'Team projects cannot be completed manually. Complete all member tasks in Team Dashboard to complete this project.',
+      icon: Icons.group_work_outlined,
+      iconBgColor: const Color(0xFF5B93FF),
+    );
+  }
+
+  /// Preset notification when a user attempts to complete a task assigned to someone else.
+  static void taskAccessDenied(BuildContext context,
+      {required String assignedTo}) {
+    show(
+      context,
+      title: 'Access Denied',
+      message: 'You can only complete tasks assigned to you ($assignedTo).',
+      icon: Icons.lock_outline_rounded,
+      iconBgColor: negativeColor,
+    );
+  }
+
   static void _removeEntry() {
     if (_activeState != null && _activeState!.mounted) {
       _activeState!.dismiss();

@@ -246,7 +246,8 @@ Tugas utamamu adalah memimpin tim pengembang antarmuka multi-agent berbasis arsi
   - **Pengaturan Pengingat & AI Fuzzy:** Pengaturan switch `Deadline Alerts`, `Sound & Vibration`, pemilih jam `Daily Morning Briefing` via `showImpalTimePicker`, serta status kartu `Fuzzy Inference Model`.
   - **Formulir Edit Profil:** Form input terstandarisasi (`ProfileTextField`) dengan leading icon, pill verified pada email kampus, notice banner SSO, dan pop-up `PopUpPemberitahuan.profileUpdated`.
 
-* **Protokol Pop-Up Pemberitahuan Aksi:**
+* **Protokol Pop-Up Pemberitahuan Aksi (100% English UI Mandate):**
+  - **ATURAN MUTLAK BAHASA INGGRIS:** Seluruh teks notifikasi (`PopUpPemberitahuan`), judul, deskripsi pesan, toast feedback, validasi form, dialog konfirmasi (`PopUpKonfirmasiDelete`), dan alert sistem **WAJIB 100% MENGGUNAKAN BAHASA INGGRIS** tanpa kompromi. Dilarang keras menggunakan bahasa Indonesia pada string UI / pop-up.
   - Setiap aksi yang memicu manipulasi data (Create, Update, Delete, Submit Form) **wajib memicu Pop-Up Pemberitahuan** (`PopUpPemberitahuan` / `PopUpPemberitahuanTeam`).
   - **Gunakan template yang sudah ada di projek**. Jika belum ada aksi spesifik, buatkan metode preset pada template pop-up yang sudah ada. Jika pop-up belum ada sama sekali di projek, rancang komponen UI pop-up baru berbasis dark container (`#282D37`), icon badge berwarna, dan auto-dismiss.
 

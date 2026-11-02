@@ -291,5 +291,74 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('PopUpPemberitahuan.teamProjectWarning displays English notice', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  PopUpPemberitahuan.teamProjectWarning(context);
+                },
+                child: const Text('Show Warning'),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Show Warning'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Team Project'), findsOneWidget);
+    expect(
+      find.text(
+        'Team projects cannot be completed manually. Complete all member tasks in Team Dashboard to complete this project.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('PopUpPemberitahuan.taskAccessDenied displays English notice with assignee name', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () {
+                  PopUpPemberitahuan.taskAccessDenied(
+                    context,
+                    assignedTo: 'Ahmad Sahroni',
+                  );
+                },
+                child: const Text('Denied'),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Denied'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Access Denied'), findsOneWidget);
+    expect(
+      find.text('You can only complete tasks assigned to you (Ahmad Sahroni).'),
+      findsOneWidget,
+    );
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
 }
 

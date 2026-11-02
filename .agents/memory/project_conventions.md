@@ -35,9 +35,10 @@
 - **Single Column List** $\to$ **Master-Detail Split View** (panel kiri 380 dp daftar tugas, panel kanan detail & editor).
 - **Modal Bottom Sheet** $\to$ **Centered Dialog Box**.
 
-### 7. Pop-Up Pemberitahuan & Aksi
+### 7. Pop-Up Pemberitahuan, Dialog & Aksi (100% English UI Mandate)
+- **ATURAN MUTLAK BAHASA INGGRIS:** Seluruh teks notifikasi (`PopUpPemberitahuan`), judul, pesan, dialog konfirmasi (`PopUpKonfirmasiDelete`), toast SnackBar, validasi form, dan alert sistem **WAJIB 100% MENGGUNAKAN BAHASA INGGRIS** tanpa terkecuali. Dilarang keras menggunakan bahasa Indonesia pada string UI / pop-up.
 - Setiap aksi mutasi data (Create, Update, Delete, Submit Form) wajib memicu `PopUpPemberitahuan` / `PopUpPemberitahuanTeam`.
-- Desain: Dark container (`#282D37`), icon badge berwarna, auto-dismiss.
+- Desain: Dark container (`#323846` / `#282D37`), icon badge berwarna (Hijau untuk positif, Orange/Coral untuk peringatan/negatif, Sky Blue untuk info/netral), auto-dismiss.
 
 ### 8. Dokumentasi & Roadmap Wajib
 - Selesai mengerjakan fitur, bugfix, atau refactoring, **WAJIB** memperbarui [ROADMAP_AUDIT_DAN_PENINGKATAN.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/ROADMAP_AUDIT_DAN_PENINGKATAN.md).

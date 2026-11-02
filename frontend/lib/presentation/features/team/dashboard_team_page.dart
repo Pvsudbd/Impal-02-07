@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
@@ -10,6 +11,7 @@ import 'pop_up_create_meeting.dart';
 import 'widgets/team_dashboard_header.dart';
 import 'widgets/team_schedule_section.dart';
 import 'widgets/team_task_card.dart';
+import 'models/team_task_repository.dart';
 
 export 'models/team_task_model.dart';
 
@@ -48,43 +50,61 @@ class DashboardTeamPage extends StatefulWidget {
 
 class _DashboardTeamPageState extends State<DashboardTeamPage> {
   final int _currentTab = 2; // Team tab active by default
-  late List<TeamTaskModel> _tasks;
+  final TeamTaskRepository _teamTaskRepository = TeamTaskRepository();
+  final ScrollController _scrollController = ScrollController();
   bool _assignedToMeOnly = false;
+  final GlobalKey _firstActiveTeamTaskKey = GlobalKey();
+  bool _hasAutoScrolled = false;
 
   @override
   void initState() {
     super.initState();
     ScheduleRepository().init();
-    _tasks = [
-      const TeamTaskModel(
-        id: 'task_1',
-        title: 'Create team UI page',
-        priority: TaskPriority.high,
-        assignedTo: 'Yoga Perkasa Didik',
-        assigneeColor: Color(0xFFF3A683),
-        timeRange: '09:30 - 11:30 WIB',
-        dueBadge: '12h',
-      ),
-      const TeamTaskModel(
-        id: 'task_2',
-        title: 'Create home UI page',
-        priority: TaskPriority.medium,
-        assignedTo: 'Ahmad Sahroni, Muhammad Kafi Rijal',
-        assigneeColor: Color(0xFF63CDDA),
-        assigneeColors: [Color(0xFF63CDDA), Color(0xFF786FA6)],
-        timeRange: '09:30 - 11:30 WIB',
-        dueBadge: '18h',
-      ),
-      const TeamTaskModel(
-        id: 'task_3',
-        title: 'Create task form UI',
-        priority: TaskPriority.low,
-        assignedTo: 'Yoga Perkasa Didik',
-        assigneeColor: Color(0xFFF3A683),
-        timeRange: '09:30 - 11:30 WIB',
-        dueBadge: '2d',
-      ),
-    ];
+    _teamTaskRepository.init();
+    _teamTaskRepository.addListener(_onRepositoryChanged);
+    _triggerAutoScroll();
+  }
+
+  void _onRepositoryChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _teamTaskRepository.removeListener(_onRepositoryChanged);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _triggerAutoScroll() {
+    if (_hasAutoScrolled) return;
+    Future.delayed(const Duration(milliseconds: 240), () {
+      if (!mounted || _hasAutoScrolled) return;
+      if (_firstActiveTeamTaskKey.currentContext != null) {
+        Scrollable.ensureVisible(
+          _firstActiveTeamTaskKey.currentContext!,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+          alignment: 0.22,
+        );
+        _hasAutoScrolled = true;
+      }
+    });
+  }
+
+  bool _isAssignedToCurrentUser(TeamTaskModel task) {
+    final userLower = widget.userName.toLowerCase();
+    final assignedLower = task.assignedTo.toLowerCase();
+    if (assignedLower.contains(userLower)) return true;
+    if (userLower == 'jarvis' &&
+        (assignedLower.contains('yoga') || assignedLower.contains('jarvis'))) {
+      return true;
+    }
+    final parts = userLower.split(' ').where((s) => s.length > 2);
+    for (final p in parts) {
+      if (assignedLower.contains(p)) return true;
+    }
+    return false;
   }
 
   Future<void> _openCreateMeeting() async {
@@ -134,18 +154,16 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       MaterialPageRoute(
         builder: (_) => CreateTaskTeamPage(
           onTaskCreated: (task) {
-            setState(() {
-              _tasks.insert(0, task);
-            });
+            _teamTaskRepository.addTask(widget.teamCode, task);
           },
         ),
       ),
     );
     if (result != null && mounted) {
-      if (!_tasks.any((t) => t.id == result.id)) {
-        setState(() {
-          _tasks.insert(0, result);
-        });
+      if (!_teamTaskRepository
+          .getTasks(widget.teamCode)
+          .any((t) => t.id == result.id)) {
+        _teamTaskRepository.addTask(widget.teamCode, result);
       }
     }
   }
@@ -156,23 +174,13 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         builder: (_) => CreateTaskTeamPage(
           existingTask: task,
           onTaskUpdated: (updatedTask) {
-            setState(() {
-              final index = _tasks.indexWhere((t) => t.id == updatedTask.id);
-              if (index != -1) {
-                _tasks[index] = updatedTask;
-              }
-            });
+            _teamTaskRepository.updateTask(widget.teamCode, updatedTask);
           },
         ),
       ),
     );
     if (result != null && mounted) {
-      setState(() {
-        final index = _tasks.indexWhere((t) => t.id == result.id);
-        if (index != -1) {
-          _tasks[index] = result;
-        }
-      });
+      _teamTaskRepository.updateTask(widget.teamCode, result);
     }
   }
 
@@ -183,6 +191,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
 
     final dashboardScrollContent = CustomScrollView(
       key: const ValueKey('team_dashboard_scroll_view'),
+      controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverPadding(
@@ -458,13 +467,16 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   }
 
   Widget _buildTeamTaskSection() {
-    final displayedTasks = _assignedToMeOnly
-        ? _tasks
-            .where((t) =>
-                t.assignedTo.toLowerCase().contains(widget.userName.toLowerCase()) ||
-                t.assignedTo.toLowerCase().contains('yoga'))
-            .toList()
-        : _tasks;
+    final allTasks = _teamTaskRepository.getTasks(widget.teamCode);
+    final filtered = _assignedToMeOnly
+        ? allTasks.where(_isAssignedToCurrentUser).toList()
+        : allTasks;
+
+    final completed = filtered.where((t) => t.isDone).toList();
+    final active = filtered.where((t) => !t.isDone).toList();
+    active.sort(TeamTaskModel.compareTeamTaskDeadlines);
+    final displayedTasks = [...completed, ...active];
+    final firstActiveId = active.map((t) => t.id).firstOrNull;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -548,9 +560,42 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         else
           for (int i = 0; i < displayedTasks.length; i++) ...[
             TeamTaskCard(
+              key: displayedTasks[i].id == firstActiveId
+                  ? _firstActiveTeamTaskKey
+                  : ValueKey('team_task_${displayedTasks[i].id}'),
               task: displayedTasks[i],
+              isAssignedToCurrentUser:
+                  _isAssignedToCurrentUser(displayedTasks[i]),
               onTap: () => _openEditTaskPage(displayedTasks[i]),
               onEdit: () => _openEditTaskPage(displayedTasks[i]),
+              onToggleCompletion: () {
+                HapticFeedback.lightImpact();
+                final willComplete = !displayedTasks[i].isDone;
+                _teamTaskRepository.toggleTaskCompletion(
+                  teamCode: widget.teamCode,
+                  taskId: displayedTasks[i].id,
+                );
+                if (willComplete) {
+                  final allDone =
+                      _teamTaskRepository.areAllTasksCompleted(widget.teamCode);
+                  if (allDone) {
+                    PopUpPemberitahuan.show(
+                      context,
+                      title: 'All Team Tasks Completed! 🎉',
+                      message:
+                          'All tasks in this dashboard are finished. Team Project is now marked completed!',
+                      icon: Icons.celebration_rounded,
+                      iconBgColor: const Color(0xFF10B981),
+                    );
+                  } else {
+                    PopUpPemberitahuan.taskCompleted(context,
+                        taskName: displayedTasks[i].title);
+                  }
+                } else {
+                  PopUpPemberitahuan.taskReopened(context,
+                      taskName: displayedTasks[i].title);
+                }
+              },
             ),
             if (i < displayedTasks.length - 1) const SizedBox(height: 10),
           ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
+import '../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../models/team_member_model.dart';
 import '../models/team_task_model.dart';
 
@@ -9,12 +11,16 @@ class TeamTaskCard extends StatelessWidget {
   final TeamTaskModel task;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
+  final VoidCallback? onToggleCompletion;
+  final bool isAssignedToCurrentUser;
 
   const TeamTaskCard({
     super.key,
     required this.task,
     this.onTap,
     this.onEdit,
+    this.onToggleCompletion,
+    this.isAssignedToCurrentUser = true,
   });
 
   List<TeamMemberModel> _resolveAssignedMembers() {
@@ -68,7 +74,9 @@ class TeamTaskCard extends StatelessWidget {
         color: member.avatarColor,
         shape: BoxShape.circle,
         border: Border.all(
-          color: hasOverlapBorder ? AppColors.bgCard : const Color(0xFF434A59),
+          color: hasOverlapBorder
+              ? (task.isDone ? const Color(0xFF252932) : AppColors.bgCard)
+              : const Color(0xFF434A59),
           width: hasOverlapBorder ? 2.0 : 1.5,
         ),
       ),
@@ -112,7 +120,12 @@ class TeamTaskCard extends StatelessWidget {
         break;
     }
 
-    return Material(
+    if (task.isDone) {
+      priorityColor = const Color(0xFF363C48);
+      priorityTextColor = const Color(0xFF8E95A5);
+    }
+
+    final cardContent = Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
@@ -121,8 +134,12 @@ class TeamTaskCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
           decoration: BoxDecoration(
-            color: AppColors.bgCard,
+            color: task.isDone ? const Color(0xFF252932) : AppColors.bgCard,
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: task.isDone ? const Color(0xFF383E4C) : Colors.transparent,
+              width: 0.8,
+            ),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x33000000),
@@ -143,7 +160,9 @@ class TeamTaskCard extends StatelessWidget {
                     child: Text(
                       task.title,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: task.isDone ? const Color(0xFF7E8696) : Colors.white,
+                        decoration: task.isDone ? TextDecoration.lineThrough : null,
+                        decorationColor: const Color(0xFF7E8696),
                         fontSize: context.rFont(14.5, min: 13, max: 16),
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w700,
@@ -184,15 +203,17 @@ class TeamTaskCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                         decoration: BoxDecoration(
-                          color: task.isUrgent
-                              ? const Color(0xFFFF7D65)
-                              : const Color(0xFF5B93FF),
+                          color: task.isDone
+                              ? const Color(0xFF363C48)
+                              : (task.isUrgent
+                                  ? const Color(0xFFFF7D65)
+                                  : const Color(0xFF5B93FF)),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
                           task.effectiveDueBadge,
                           style: TextStyle(
-                            color: Colors.white,
+                            color: task.isDone ? const Color(0xFF8E95A5) : Colors.white,
                             fontSize: context.rFont(9.5, min: 8.5, max: 11),
                             fontFamily: 'Inter',
                             fontWeight: FontWeight.w700,
@@ -213,7 +234,7 @@ class TeamTaskCard extends StatelessWidget {
                   Text(
                     'Assign to:',
                     style: TextStyle(
-                      color: AppColors.textMuted,
+                      color: task.isDone ? const Color(0xFF6B7280) : AppColors.textMuted,
                       fontSize: context.rFont(11, min: 10, max: 12),
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w500,
@@ -225,21 +246,23 @@ class TeamTaskCard extends StatelessWidget {
                         width: 15,
                         height: 15,
                         decoration: BoxDecoration(
-                          color: AppColors.primaryAccent.withValues(alpha: 0.2),
+                          color: task.isDone
+                              ? const Color(0xFF363C48)
+                              : AppColors.primaryAccent.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.access_time_filled_rounded,
+                        child: Icon(
+                          task.isDone ? Icons.check_rounded : Icons.access_time_filled_rounded,
                           size: 9,
-                          color: AppColors.primaryAccent,
+                          color: task.isDone ? const Color(0xFF8E95A5) : AppColors.primaryAccent,
                         ),
                       ),
                       const SizedBox(width: 5),
                       Text(
                         task.timeRange,
                         style: TextStyle(
-                          color: AppColors.textMuted,
+                          color: task.isDone ? const Color(0xFF7E8696) : AppColors.textMuted,
                           fontSize: context.rFont(10.5, min: 9.5, max: 12),
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w500,
@@ -284,7 +307,7 @@ class TeamTaskCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: const Color(0xFFCBD5E1),
+                        color: task.isDone ? const Color(0xFF7E8696) : const Color(0xFFCBD5E1),
                         fontSize: context.rFont(12, min: 11, max: 13),
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w600,
@@ -297,14 +320,14 @@ class TeamTaskCard extends StatelessWidget {
                     child: InkWell(
                       onTap: onEdit ?? onTap,
                       borderRadius: BorderRadius.circular(6),
-                      child: const SizedBox(
+                      child: SizedBox(
                         width: 28,
                         height: 28,
                         child: Center(
                           child: Icon(
                             Icons.edit_rounded,
                             size: 16,
-                            color: AppColors.textMuted,
+                            color: task.isDone ? const Color(0xFF6B7280) : AppColors.textMuted,
                           ),
                         ),
                       ),
@@ -316,6 +339,62 @@ class TeamTaskCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    if (onToggleCompletion == null) {
+      return cardContent;
+    }
+
+    return Dismissible(
+      key: ValueKey('team_task_dismiss_${task.id.isNotEmpty ? task.id : task.title}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) async {
+        if (!isAssignedToCurrentUser) {
+          HapticFeedback.vibrate();
+          PopUpPemberitahuan.taskAccessDenied(context,
+              assignedTo: task.assignedTo);
+          return false;
+        }
+        onToggleCompletion?.call();
+        return false;
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: task.isDone
+              ? const Color(0xFF5B93FF).withValues(alpha: 0.18)
+              : const Color(0xFF10B981).withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: task.isDone
+                ? const Color(0xFF5B93FF).withValues(alpha: 0.4)
+                : const Color(0xFF10B981).withValues(alpha: 0.4),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              task.isDone ? 'Reopen' : 'Completed',
+              style: TextStyle(
+                color: task.isDone ? const Color(0xFF5B93FF) : const Color(0xFF10B981),
+                fontSize: 13,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              task.isDone ? Icons.refresh_rounded : Icons.check_circle_rounded,
+              color: task.isDone ? const Color(0xFF5B93FF) : const Color(0xFF10B981),
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+      child: cardContent,
     );
   }
 }

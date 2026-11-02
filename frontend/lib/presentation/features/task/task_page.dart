@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
 import '../dashboard/widgets/home_header.dart';
 import '../smart_system/models/smart_priority_repository.dart';
@@ -109,19 +111,40 @@ class TaskContentView extends StatefulWidget {
 
 class _TaskContentViewState extends State<TaskContentView> {
   final TaskRepository _repository = TaskRepository();
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _firstActiveTaskKey = GlobalKey();
   String _selectedFilter = 'Today';
   String? _selectedPriority;
+  bool _hasAutoScrolled = false;
 
   @override
   void initState() {
     super.initState();
     _repository.init();
     _repository.addListener(_onRepositoryChanged);
+    _triggerAutoScroll();
+  }
+
+  void _triggerAutoScroll() {
+    if (_hasAutoScrolled) return;
+    Future.delayed(const Duration(milliseconds: 240), () {
+      if (!mounted || _hasAutoScrolled) return;
+      if (_firstActiveTaskKey.currentContext != null) {
+        Scrollable.ensureVisible(
+          _firstActiveTaskKey.currentContext!,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+          alignment: 0.22,
+        );
+        _hasAutoScrolled = true;
+      }
+    });
   }
 
   @override
   void dispose() {
     _repository.removeListener(_onRepositoryChanged);
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -130,7 +153,8 @@ class _TaskContentViewState extends State<TaskContentView> {
   }
 
   List<TaskItemModel> get _filteredTasks {
-    final all = _repository.tasks;
+    // Only non-team tasks (displays all categories: College, Personal, etc. except team tasks)
+    final all = _repository.tasks.where((t) => !t.isTeamTask).toList();
     var list = all;
     if (_selectedFilter == 'Next 7 Days') {
       list = list.where((t) => t.priority != TaskPriorityLevel.low).toList();
@@ -146,6 +170,15 @@ class _TaskContentViewState extends State<TaskContentView> {
           .toList();
     }
     return list;
+  }
+
+  List<TaskItemModel> get _sortedTasks {
+    final list = _filteredTasks;
+    final completed = list.where((t) => t.isCompleted).toList();
+    final active = list.where((t) => !t.isCompleted).toList();
+
+    active.sort(TaskItemModel.compareTaskDeadlines);
+    return [...completed, ...active];
   }
 
   Future<void> _openCreateTask() async {
@@ -217,13 +250,15 @@ class _TaskContentViewState extends State<TaskContentView> {
 
   @override
   Widget build(BuildContext context) {
-    final counts = _repository.getPriorityCounts();
-    final highCount = counts[TaskPriorityLevel.high] ?? 3;
-    final mediumCount = counts[TaskPriorityLevel.medium] ?? 1;
-    final lowCount = counts[TaskPriorityLevel.low] ?? 2;
-    final tasks = _filteredTasks;
+    final counts = _repository.getPriorityCounts(nonTeamOnly: true);
+    final highCount = counts[TaskPriorityLevel.high] ?? 0;
+    final mediumCount = counts[TaskPriorityLevel.medium] ?? 0;
+    final lowCount = counts[TaskPriorityLevel.low] ?? 0;
+    final tasks = _sortedTasks;
+    final firstActiveId = tasks.where((t) => !t.isCompleted).map((t) => t.id).firstOrNull;
 
     return CustomScrollView(
+      controller: _scrollController,
       physics: const BouncingScrollPhysics(),
       slivers: [
         SliverPadding(
@@ -484,7 +519,9 @@ class _TaskContentViewState extends State<TaskContentView> {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final task = tasks[index];
+                  final isFirstActive = task.id == firstActiveId;
                   return Padding(
+                    key: isFirstActive ? _firstActiveTaskKey : null,
                     padding: EdgeInsets.only(
                       bottom: context.rSpacing(10),
                     ),
@@ -493,6 +530,16 @@ class _TaskContentViewState extends State<TaskContentView> {
                       task: task,
                       isLast: index == tasks.length - 1,
                       onEdit: () => _openEditTask(task),
+                      onToggleCompletion: () {
+                        HapticFeedback.lightImpact();
+                        final willComplete = !task.isCompleted;
+                        _repository.toggleTaskCompletion(task.id);
+                        if (willComplete) {
+                          PopUpPemberitahuan.taskCompleted(context, taskName: task.title);
+                        } else {
+                          PopUpPemberitahuan.taskReopened(context, taskName: task.title);
+                        }
+                      },
                     ),
                   );
                 },

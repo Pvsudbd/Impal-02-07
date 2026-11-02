@@ -133,5 +133,38 @@ class TeamTaskModel {
       isAlertEnabled: isAlertEnabled ?? this.isAlertEnabled,
     );
   }
+
+  /// Helper comparator to sort team tasks by nearest deadline first.
+  static int compareTeamTaskDeadlines(TeamTaskModel a, TeamTaskModel b) {
+    int getHours(String badge, TaskPriority p) {
+      final clean = badge.trim().toLowerCase();
+      if (clean == 'overdue') return -1;
+      if (clean.endsWith('h')) {
+        return int.tryParse(clean.replaceAll('h', '')) ?? 24;
+      }
+      if (clean.endsWith('d')) {
+        return (int.tryParse(clean.replaceAll('d', '')) ?? 1) * 24;
+      }
+      switch (p) {
+        case TaskPriority.high:
+          return 12;
+        case TaskPriority.medium:
+          return 24;
+        case TaskPriority.low:
+          return 48;
+      }
+    }
+
+    final aHours = getHours(a.effectiveDueBadge, a.priority);
+    final bHours = getHours(b.effectiveDueBadge, b.priority);
+
+    if (aHours != bHours) {
+      return aHours.compareTo(bHours);
+    }
+    if (a.deadline != null && b.deadline != null) {
+      return a.deadline!.compareTo(b.deadline!);
+    }
+    return a.priority.index.compareTo(b.priority.index);
+  }
 }
 

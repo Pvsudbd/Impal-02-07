@@ -60,6 +60,7 @@ class TaskItem {
   final String warningNotice;
   final String notes;
   final bool isCollegeTask;
+  final bool isCompleted;
 
   const TaskItem({
     this.id = '',
@@ -85,6 +86,7 @@ class TaskItem {
     this.warningNotice = '*This task is asigned to you, and you can’t delete',
     this.notes = '',
     this.isCollegeTask = true,
+    this.isCompleted = false,
   });
 
   bool get isTeamTask =>
@@ -115,6 +117,7 @@ class TaskItem {
     String? warningNotice,
     String? notes,
     bool? isCollegeTask,
+    bool? isCompleted,
   }) {
     return TaskItem(
       id: id ?? this.id,
@@ -136,6 +139,7 @@ class TaskItem {
       warningNotice: warningNotice ?? this.warningNotice,
       notes: notes ?? this.notes,
       isCollegeTask: isCollegeTask ?? this.isCollegeTask,
+      isCompleted: isCompleted ?? this.isCompleted,
     );
   }
 
@@ -161,6 +165,7 @@ class TaskItem {
       warningNotice: warningNotice,
       notes: notes,
       isCollegeTask: isCollegeTask,
+      isCompleted: isCompleted,
     );
   }
 
@@ -185,6 +190,7 @@ class TaskItem {
       warningNotice: model.warningNotice,
       notes: model.notes,
       isCollegeTask: model.isCollegeTask,
+      isCompleted: model.isCompleted,
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
@@ -10,6 +11,7 @@ import '../schedule/schedule_form_page.dart';
 import '../schedule/schedule_page.dart';
 import '../smart_system/models/smart_priority_repository.dart';
 import '../smart_system/smart_priority_page.dart';
+import '../task/models/task_repository.dart';
 import '../task/task_page.dart';
 import '../team/dashboard_team_page.dart';
 import '../team/pop_up_create_meeting.dart';
@@ -614,12 +616,22 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _handleTaskCompleted(TaskItem task) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _tasks.removeWhere((t) => t.id == task.id || (t.id.isEmpty && t.title == task.title));
+    });
+    TaskRepository().completeTaskFromHome(task.toTaskItemModel());
+    PopUpPemberitahuan.taskCompleted(context, taskName: task.title);
+  }
+
   Widget _buildOngoingTaskSection() {
+    final activeTasks = _tasks.where((t) => !t.isCompleted).toList();
     final displayedTasks = _selectedCategory == 'All'
-        ? _tasks
+        ? activeTasks
         : _selectedCategory.toLowerCase() == 'college'
-            ? _tasks.where((t) => t.isCollegeTask).toList()
-            : _tasks.where((t) => !t.isCollegeTask).toList();
+            ? activeTasks.where((t) => t.isCollegeTask).toList()
+            : activeTasks.where((t) => !t.isCollegeTask).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -690,9 +702,11 @@ class _HomePageState extends State<HomePage> {
           for (int i = 0; i < displayedTasks.length; i++)
             RepaintBoundary(
               child: HomeTaskCard(
+                key: ValueKey('home_task_${displayedTasks[i].id.isNotEmpty ? displayedTasks[i].id : displayedTasks[i].title}'),
                 task: displayedTasks[i],
                 isLast: i == displayedTasks.length - 1,
                 onEdit: () => _openEditTask(displayedTasks[i]),
+                onDismissed: () => _handleTaskCompleted(displayedTasks[i]),
               ),
             ),
       ],
