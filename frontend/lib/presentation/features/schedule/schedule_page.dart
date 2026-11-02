@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/impal_schedule_card.dart';
+import '../../common_widgets/impal_search_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
 import '../profile/models/user_profile_model.dart';
@@ -189,6 +190,7 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _todayTargetKey = GlobalKey();
   String _selectedFilter = 'All';
+  String _searchQuery = '';
   bool _didInitialScroll = false;
 
   @override
@@ -272,24 +274,39 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
+    List<ScheduleModel> filtered;
     if (_selectedFilter == 'Today') {
-      return list.where((s) {
+      filtered = list.where((s) {
         final d = DateTime(s.date.year, s.date.month, s.date.day);
         return d.isAtSameMomentAs(today);
       }).toList();
     } else if (_selectedFilter == 'Week') {
       final endOfWeek = today.add(const Duration(days: 7));
-      return list.where((s) {
+      filtered = list.where((s) {
         final d = DateTime(s.date.year, s.date.month, s.date.day);
         return !d.isBefore(today) && d.isBefore(endOfWeek);
       }).toList();
     } else if (_selectedFilter == 'Month') {
-      return list.where((s) {
+      filtered = list.where((s) {
         return s.date.month == now.month && s.date.year == now.year;
+      }).toList();
+    } else {
+      filtered = list;
+    }
+
+    if (_searchQuery.trim().isNotEmpty) {
+      final q = _searchQuery.trim().toLowerCase();
+      filtered = filtered.where((s) {
+        final titleMatch = s.title.toLowerCase().contains(q);
+        final courseMatch = s.course?.toLowerCase().contains(q) ?? false;
+        final locationMatch = s.location?.toLowerCase().contains(q) ?? false;
+        final notesMatch = s.notes?.toLowerCase().contains(q) ?? false;
+        final teamMatch = s.teamName?.toLowerCase().contains(q) ?? false;
+        return titleMatch || courseMatch || locationMatch || notesMatch || teamMatch;
       }).toList();
     }
 
-    return list;
+    return filtered;
   }
 
   List<_ScheduleDateGroup> _groupByDate(List<ScheduleModel> list) {
@@ -411,7 +428,17 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
                       setState(() => _selectedFilter = f);
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+
+                  // Quick Search Bar
+                  ImpalSearchBar(
+                    key: const ValueKey('schedule_search_bar'),
+                    hintText: 'Search schedule by title, course, location...',
+                    initialValue: _searchQuery,
+                    onChanged: (q) => setState(() => _searchQuery = q),
+                    onClear: () => setState(() => _searchQuery = ''),
+                  ),
+                  const SizedBox(height: 14),
 
                   // 3. "Add Schedule" Action Button
                   _buildAddScheduleButton(),
@@ -419,7 +446,10 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
 
                   // 5. Schedule Items List / Empty State
                   if (groups.isEmpty)
-                    const ScheduleEmptyState()
+                    if (_searchQuery.trim().isNotEmpty)
+                      _buildSearchEmptyState()
+                    else
+                      const ScheduleEmptyState()
                   else
                     ...groups.asMap().entries.map((indexedEntry) {
                       final index = indexedEntry.key;
@@ -549,6 +579,68 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
             },
           ),
       ],
+    );
+  }
+
+  Widget _buildSearchEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderSubtle, width: 0.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppColors.primaryAccent.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.search_off_rounded,
+              color: AppColors.primaryAccent,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'No Matching Schedules',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'No schedules match "$_searchQuery". Try searching with another keyword.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 12,
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _searchQuery = ''),
+            icon: const Icon(Icons.clear_rounded, size: 16),
+            label: const Text('Clear Search'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primaryAccent,
+              side: const BorderSide(color: AppColors.primaryAccent, width: 1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

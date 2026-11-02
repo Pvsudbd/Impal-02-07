@@ -7,6 +7,7 @@ import '../schedule/models/schedule_model.dart';
 import '../schedule/models/schedule_repository.dart';
 import '../profile/models/user_profile_model.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../schedule/pop_up_schedule_conflict_dialog.dart';
 import '../schedule/widgets/team_meeting_autocomplete.dart';
 
 /// Aliases for backwards compatibility with routes & components
@@ -105,6 +106,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
   late final TextEditingController _nameController;
   late final TextEditingController _teamController;
   late final TextEditingController _locationController;
+  late final TextEditingController _meetingUrlController;
   late final TextEditingController _descController;
   late bool _isTeamMeeting;
   late DateTime _selectedDate;
@@ -123,6 +125,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
     if (existing != null) {
       _nameController = TextEditingController(text: existing.title);
       _locationController = TextEditingController(text: existing.location ?? '');
+      _meetingUrlController = TextEditingController(text: existing.meetingUrl ?? '');
       _descController = TextEditingController(text: existing.notes ?? '');
       _selectedDate = existing.date;
       _startTime = _parseTimeOfDay(existing.timeStart);
@@ -148,6 +151,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
             ? widget.initialLocation
             : 'Online / Google Meet',
       );
+      _meetingUrlController = TextEditingController();
       _descController = TextEditingController(text: widget.initialDescription);
       _selectedDate = widget.initialDate ?? DateTime.now();
       _startTime = widget.initialTime ??
@@ -185,8 +189,20 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
     _nameController.dispose();
     _teamController.dispose();
     _locationController.dispose();
+    _meetingUrlController.dispose();
     _descController.dispose();
     super.dispose();
+  }
+
+  List<ScheduleModel> get _currentConflicts {
+    final startStr = _formatTime(_startTime).replaceAll(' WIB', '');
+    final endStr = _formatTime(_endTime).replaceAll(' WIB', '');
+    return ScheduleRepository().findConflicts(
+      date: _selectedDate,
+      timeStart: startStr,
+      timeEnd: endStr,
+      excludeId: widget.existingSchedule?.id,
+    );
   }
 
   String _formatDate(DateTime dt) {
@@ -269,12 +285,25 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
             : null;
 
     final scheduleDate = _selectedDate;
+    final meetingUrlVal = _meetingUrlController.text.trim().isNotEmpty
+        ? _meetingUrlController.text.trim()
+        : null;
+
+    final conflicts = _currentConflicts;
+    if (conflicts.isNotEmpty) {
+      final proceed = await PopUpScheduleConflictDialog.show(
+        context,
+        conflicts: conflicts,
+      );
+      if (proceed != true || !mounted) return;
+    }
 
     if (isEdit) {
       final updated = widget.existingSchedule!.copyWith(
         title: name,
         type: 'Meeting',
         location: location,
+        meetingUrl: meetingUrlVal,
         notes: _descController.text.trim(),
         date: scheduleDate,
         timeStart: _formatTime(_startTime).replaceAll(' WIB', ''),
@@ -288,6 +317,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
 
       if (!mounted) return;
       widget.onUpdated?.call(updated);
+      PopUpPemberitahuan.meetingUpdated(context);
       Navigator.of(context).pop(updated);
     } else {
       final newSchedule = ScheduleModel(
@@ -300,6 +330,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
           timeEnd: _formatTime(_endTime).replaceAll(' WIB', ''),
         ),
         location: location,
+        meetingUrl: meetingUrlVal,
         notes: _descController.text.trim(),
         date: scheduleDate,
         timeStart: _formatTime(_startTime).replaceAll(' WIB', ''),
@@ -313,6 +344,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
 
       if (!mounted) return;
       widget.onCreated?.call(newSchedule);
+      PopUpPemberitahuan.meetingCreated(context);
       Navigator.of(context).pop(newSchedule);
     }
   }
@@ -638,6 +670,28 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                       ],
                     ),
                   ),
+                  if (_currentConflicts.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _buildConflictWarningBanner(_currentConflicts),
+                  ],
+                  const SizedBox(height: 16),
+
+                  // Meeting URL (Optional)
+                  const Text(
+                    'Meeting Link / URL (Optional)',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    key: const ValueKey('create_meeting_url_input'),
+                    controller: _meetingUrlController,
+                    hint: 'https://meet.google.com/... or Zoom link',
+                    prefixIcon: Icons.videocam_outlined,
+                  ),
                   const SizedBox(height: 16),
 
                   // 6. Description (Optional)
@@ -844,6 +898,57 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
           borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+    );
+  }
+
+  Widget _buildConflictWarningBanner(List<ScheduleModel> conflicts) {
+    final conflict = conflicts.first;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF282D37),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF3B4150),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: Color(0xFFFBBF24),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Schedule Conflict Detected',
+                  style: TextStyle(
+                    color: Color(0xFFFBBF24),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Overlaps with "${conflict.title}" (${conflict.formattedTime})',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

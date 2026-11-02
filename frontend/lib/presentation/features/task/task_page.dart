@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
+import '../../common_widgets/impal_search_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
 import '../dashboard/widgets/home_header.dart';
@@ -117,6 +118,7 @@ class _TaskContentViewState extends State<TaskContentView> {
   final GlobalKey _firstActiveTaskKey = GlobalKey();
   String _selectedFilter = 'Today';
   String? _selectedPriority;
+  String _searchQuery = '';
   bool _hasAutoScrolled = false;
 
   @override
@@ -240,6 +242,26 @@ class _TaskContentViewState extends State<TaskContentView> {
               _selectedPriority!.toLowerCase())
           .toList();
     }
+
+    if (_searchQuery.trim().isNotEmpty) {
+      final q = _searchQuery.trim().toLowerCase();
+      list = list.where((t) {
+        final titleMatch = t.title.toLowerCase().contains(q);
+        final courseMatch = t.course.toLowerCase().contains(q);
+        final notesMatch = t.notes.toLowerCase().contains(q);
+        final subtitleMatch = t.subtitle?.toLowerCase().contains(q) ?? false;
+        final teamMatch = t.teamName?.toLowerCase().contains(q) ?? false;
+        final tagsMatch =
+            t.tags.any((tag) => tag.label.toLowerCase().contains(q));
+        return titleMatch ||
+            courseMatch ||
+            notesMatch ||
+            subtitleMatch ||
+            teamMatch ||
+            tagsMatch;
+      }).toList();
+    }
+
     return list;
   }
 
@@ -480,9 +502,19 @@ class _TaskContentViewState extends State<TaskContentView> {
                 selectedFilter: _selectedFilter,
                 onFilterSelected: (f) => setState(() => _selectedFilter = f),
               ),
-              SizedBox(height: context.rSpacing(16)),
+              SizedBox(height: context.rSpacing(14)),
 
-              // 4. "Add Task" Action Button
+              // 4. Quick Search Bar
+              ImpalSearchBar(
+                key: const ValueKey('task_search_bar'),
+                hintText: 'Search tasks by title, course, or tag...',
+                initialValue: _searchQuery,
+                onChanged: (q) => setState(() => _searchQuery = q),
+                onClear: () => setState(() => _searchQuery = ''),
+              ),
+              SizedBox(height: context.rSpacing(14)),
+
+              // 5. "Add Task" Action Button
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -510,7 +542,7 @@ class _TaskContentViewState extends State<TaskContentView> {
               ),
               SizedBox(height: context.rSpacing(20)),
 
-              // 5. "Today Task" Section Title
+              // 6. "Today Task" Section Title
               Text(
                 'Today Task',
                 style: TextStyle(
@@ -552,19 +584,27 @@ class _TaskContentViewState extends State<TaskContentView> {
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.15),
+                        color: _searchQuery.trim().isNotEmpty
+                            ? AppColors.primaryAccent.withValues(alpha: 0.15)
+                            : AppColors.primary.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.check_circle_outline_rounded,
-                        color: AppColors.primary,
+                      child: Icon(
+                        _searchQuery.trim().isNotEmpty
+                            ? Icons.search_off_rounded
+                            : Icons.check_circle_outline_rounded,
+                        color: _searchQuery.trim().isNotEmpty
+                            ? AppColors.primaryAccent
+                            : AppColors.primary,
                         size: 28,
                       ),
                     ),
                     SizedBox(height: context.rSpacing(12)),
                     Text(
-                      'No Tasks Found',
+                      _searchQuery.trim().isNotEmpty
+                          ? 'No Matching Tasks'
+                          : 'No Tasks Found',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: context.rFont(16, min: 14, max: 18),
@@ -574,7 +614,9 @@ class _TaskContentViewState extends State<TaskContentView> {
                     ),
                     SizedBox(height: context.rSpacing(6)),
                     Text(
-                      'No tasks match the selected filter criteria.',
+                      _searchQuery.trim().isNotEmpty
+                          ? 'No tasks match "$_searchQuery". Try searching with another keyword.'
+                          : 'No tasks match the selected filter criteria.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textMuted,
@@ -586,12 +628,25 @@ class _TaskContentViewState extends State<TaskContentView> {
                     OutlinedButton.icon(
                       onPressed: () {
                         setState(() {
-                          _selectedFilter = 'All';
-                          _selectedPriority = null;
+                          if (_searchQuery.trim().isNotEmpty) {
+                            _searchQuery = '';
+                          } else {
+                            _selectedFilter = 'All';
+                            _selectedPriority = null;
+                          }
                         });
                       },
-                      icon: const Icon(Icons.refresh_rounded, size: 16),
-                      label: const Text('Reset Filter'),
+                      icon: Icon(
+                        _searchQuery.trim().isNotEmpty
+                            ? Icons.clear_rounded
+                            : Icons.refresh_rounded,
+                        size: 16,
+                      ),
+                      label: Text(
+                        _searchQuery.trim().isNotEmpty
+                            ? 'Clear Search'
+                            : 'Reset Filter',
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primaryAccent,
                         side: const BorderSide(

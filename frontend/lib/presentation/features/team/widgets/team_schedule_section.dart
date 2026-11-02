@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive_context.dart';
 import '../../../common_widgets/impal_schedule_card.dart';
 import '../../schedule/models/schedule_model.dart';
 import '../../schedule/models/schedule_repository.dart';
@@ -122,136 +123,151 @@ class TeamScheduleSection extends StatelessWidget {
           return dtA.compareTo(dtB);
         });
 
-        Widget scheduleContent;
-        if (teamSchedules.isEmpty) {
-          scheduleContent = isDashboard
-              ? ImpalScheduleCard(
-                  schedule: ScheduleRepository.defaultTeamSchedule,
-                  isHorizontal: false,
-                  isLast: true,
-                  customTimeText: _formatScheduleTime(ScheduleRepository.defaultTeamSchedule),
-                  onEdit: () => onEditSchedule(ScheduleRepository.defaultTeamSchedule),
-                  onDelete: () => onDeleteSchedule(ScheduleRepository.defaultTeamSchedule),
-                )
-              : Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: AppColors.bgCard,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'No team schedules yet',
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final availableWidth = constraints.maxWidth;
+
+            Widget scheduleContent;
+            if (teamSchedules.isEmpty) {
+              scheduleContent = isDashboard
+                  ? ImpalScheduleCard(
+                      schedule: ScheduleRepository.defaultTeamSchedule,
+                      isHorizontal: false,
+                      isLast: true,
+                      width: availableWidth,
+                      customTimeText: _formatScheduleTime(
+                          ScheduleRepository.defaultTeamSchedule),
+                      onEdit: () => onEditSchedule(
+                          ScheduleRepository.defaultTeamSchedule),
+                      onDelete: () => onDeleteSchedule(
+                          ScheduleRepository.defaultTeamSchedule),
+                    )
+                  : Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 20),
+                      decoration: BoxDecoration(
+                        color: AppColors.bgCard,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'No team schedules yet',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 13,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: onAddScheduleTap ?? onActionTap,
+                            child: const Text(
+                              '+ Add Team Schedule',
+                              style: TextStyle(
+                                color: AppColors.primaryLight,
+                                fontSize: 12.5,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+            } else if (teamSchedules.length == 1) {
+              scheduleContent = ImpalScheduleCard(
+                schedule: teamSchedules.first,
+                isHorizontal: false,
+                isLast: true,
+                width: availableWidth,
+                customTimeText: _formatScheduleTime(teamSchedules.first),
+                onEdit: () => onEditSchedule(teamSchedules.first),
+                onDelete: () => onDeleteSchedule(teamSchedules.first),
+              );
+            } else {
+              scheduleContent = ImpalHorizontalScheduleList(
+                scrollKey: isDashboard
+                    ? const ValueKey('team_dashboard_schedules_horizontal_scroll')
+                    : const ValueKey('team_schedules_horizontal_scroll'),
+                schedules: teamSchedules,
+                cardWidth: availableWidth,
+                customTimeFormatter: _formatScheduleTime,
+                onEdit: onEditSchedule,
+                onDelete: onDeleteSchedule,
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        "Team's Schedule",
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 13,
+                          color: Colors.white,
+                          fontSize: 18,
                           fontFamily: 'Inter',
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                    ),
+                    const SizedBox(width: 8),
+                    if (isDashboard)
                       GestureDetector(
-                        onTap: onAddScheduleTap ?? onActionTap,
-                        child: const Text(
-                          '+ Add Team Schedule',
-                          style: TextStyle(
-                            color: AppColors.primaryLight,
-                            fontSize: 12.5,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
+                        key: const ValueKey('dashboard_create_meeting_button'),
+                        onTap: onActionTap,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            '+ Create Meeting',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9.5,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      GestureDetector(
+                        key: const ValueKey('team_schedule_see_all'),
+                        onTap: onActionTap,
+                        child: const Padding(
+                          padding:
+                              EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                          child: Text(
+                            'See all',
+                            style: TextStyle(
+                              color: AppColors.primaryLight,
+                              fontSize: 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                );
-        } else if (teamSchedules.length == 1) {
-          scheduleContent = ImpalScheduleCard(
-            schedule: teamSchedules.first,
-            isHorizontal: false,
-            isLast: true,
-            customTimeText: _formatScheduleTime(teamSchedules.first),
-            onEdit: () => onEditSchedule(teamSchedules.first),
-            onDelete: () => onDeleteSchedule(teamSchedules.first),
-          );
-        } else {
-          scheduleContent = ImpalHorizontalScheduleList(
-            scrollKey: isDashboard
-                ? const ValueKey('team_dashboard_schedules_horizontal_scroll')
-                : const ValueKey('team_schedules_horizontal_scroll'),
-            schedules: teamSchedules,
-            customTimeFormatter: _formatScheduleTime,
-            onEdit: onEditSchedule,
-            onDelete: onDeleteSchedule,
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Expanded(
-                  child: Text(
-                    "Team's Schedule",
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                if (isDashboard)
-                  GestureDetector(
-                    key: const ValueKey('dashboard_create_meeting_button'),
-                    onTap: onActionTap,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text(
-                        '+ Create Meeting',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 9.5,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  GestureDetector(
-                    key: const ValueKey('team_schedule_see_all'),
-                    onTap: onActionTap,
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                      child: Text(
-                        'See all',
-                        style: TextStyle(
-                          color: AppColors.primaryLight,
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
+                SizedBox(height: context.rSpacing(12)),
+                scheduleContent,
               ],
-            ),
-            const SizedBox(height: 10),
-            scheduleContent,
-          ],
+            );
+          },
         );
       },
     );

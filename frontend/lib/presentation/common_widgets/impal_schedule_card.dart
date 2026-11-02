@@ -1,7 +1,10 @@
 import 'dart:ui' show PointerDeviceKind, FontFeature;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/utils/responsive_context.dart';
 import '../features/schedule/models/schedule_model.dart';
+import 'pop_up_pemberitahuan.dart';
 
 /// Reusable Schedule Card matching the sleek IMPAL Design System.
 /// Supports both vertical list layouts and horizontal carousels.
@@ -192,11 +195,15 @@ class ImpalScheduleCard extends StatelessWidget {
                               ),
                             ),
 
-                            // Quick Actions if provided (Edit & Delete)
-                            if (onEdit != null || onDelete != null)
+                            // Quick Actions if provided (Edit & Delete) and Join Call Pill
+                            if (schedule.hasMeetingUrl || onEdit != null || onDelete != null)
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  if (schedule.hasMeetingUrl) ...[
+                                    _buildJoinCallButton(context),
+                                    if (onEdit != null || onDelete != null) const SizedBox(width: 8),
+                                  ],
                                   if (onEdit != null)
                                     InkWell(
                                       onTap: onEdit,
@@ -273,6 +280,99 @@ class ImpalScheduleCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildJoinCallButton(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: ValueKey('join_call_${schedule.id}'),
+        onTap: () => _handleLaunchMeetingUrl(context, schedule.meetingUrl!),
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.5),
+          decoration: BoxDecoration(
+            color: const Color(0xFF10B981),
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x3310B981),
+                blurRadius: 6,
+                offset: Offset(0, 1.5),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.videocam_rounded,
+                color: Colors.white,
+                size: 13.0,
+              ),
+              SizedBox(width: 4.0),
+              Text(
+                'Join Call',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10.0,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Future<void> _handleLaunchMeetingUrl(
+    BuildContext context,
+    String rawUrl,
+  ) async {
+    var url = rawUrl.trim();
+    if (url.isEmpty) return;
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://$url';
+    }
+
+    final uri = Uri.tryParse(url);
+    bool launched = false;
+    if (uri != null) {
+      try {
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        launched = false;
+      }
+    }
+
+    // Copy to clipboard as helper & fallback
+    await Clipboard.setData(ClipboardData(text: url));
+
+    if (context.mounted) {
+      if (launched) {
+        PopUpPemberitahuan.show(
+          context,
+          title: 'Opening Meeting Call',
+          message:
+              'Launching meeting in browser or app. Link also copied to clipboard.',
+          icon: Icons.videocam_rounded,
+          iconBgColor: PopUpPemberitahuan.positiveColor,
+        );
+      } else {
+        PopUpPemberitahuan.show(
+          context,
+          title: 'Meeting Link Copied',
+          message:
+              'Could not launch browser directly. Link has been copied to your clipboard.',
+          icon: Icons.link_rounded,
+          iconBgColor: PopUpPemberitahuan.positiveColor,
+        );
+      }
+    }
   }
 }
 

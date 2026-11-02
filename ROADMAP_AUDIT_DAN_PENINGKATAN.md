@@ -1,6 +1,6 @@
 # 📑 Dokumen Audit & Roadmap Peningkatan Aplikasi: IMPAL Smart Task Manager
 > **Status Dokumen:** Master Roadmap & Living Audit Document  
-> **Terakhir Diperbarui:** 02 November 2026 (Progress Ring Eksklusif Milestone & Penyelarasan Lebar Kartu Milestone ke Kategori Home)  
+> **Terakhir Diperbarui:** 02 November 2026 (Implementasi Lengkap Prioritas 1: Deteksi Bentrok Jadwal, Search Bar Cepat, & Tautan Virtual Meeting Join Call)  
 > **Arsitektur:** Flutter Feature-First, Single-Shell Navigation, ResponsiveContext, 60 FPS HP Kentang Compliance  
 > **Kepatuhan Mutu:** `dart analyze` — 0 Error, 0 Warning, 0 Deprecations  
 
@@ -13,10 +13,10 @@ Bagian ini ditempatkan di posisi teratas sebagai panduan kerja utama tim pengemb
 ```text
         Dampak UX Tinggi
                ▲
-               │  [P1] Quick Complete Checkmark di Kartu Personal
-               │  [P1] Deteksi Bentrok Jadwal (Conflict Warning)
-               │  [P1] Kolom Pencarian Tugas & Jadwal (Search Bar)
-               │  [P1] Tautan Virtual Meeting (Zoom/GMeet/Discord) & "Join Call"
+               │  [SELESAI] Quick Complete Checkmark di Kartu Personal (LOG-037)
+               │  [SELESAI] Deteksi Bentrok Jadwal (Conflict Warning) (LOG-049)
+               │  [SELESAI] Kolom Pencarian Tugas & Jadwal (Search Bar) (LOG-050)
+               │  [SELESAI] Tautan Virtual Meeting & "Join Call" (LOG-051)
                │
                │  [P2] Menu Keluar Tim (Leave Team) / Hapus Tim
                │  [P2] Checklist Subtask pada Tugas Tim (2/4 Done)
@@ -45,17 +45,15 @@ Fitur-fitur dengan dampak kenyamanan langsung pada interaksi harian mahasiswa:
 1. **[SELESAI — LOG-037] Swipe-to-Complete ke Kiri pada Kartu Personal & Tim:**
    - ✅ **Telah Diimplementasikan:** Geser ke kiri untuk menandai tugas selesai (`isCompleted = true`), kartu bertransformasi menjadi abu-abu murni (*grayed-out* dengan coret judul tanpa badge completed), dismiss langsung di Home tersinkronisasi ke Task Page, serta pengurutan Completed di atas disusul deadline paling dekat dengan auto-scroll fokus langsung ke deadline terdekat saat halaman dibuka.
 
-2. **Deteksi Bentrok Jadwal (*Schedule Conflict Warning*):**
-   - **Masalah Saat Ini:** Mahasiswa bisa membuat jadwal kuliah atau rapat kelompok pada jam dan hari yang sama persis tanpa ada peringatan.
-   - **Solusi Implementasi:** Pasang validasi `ScheduleRepository.hasConflict(day, startTime, endTime)` di [`ScheduleFormPage`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/schedule/schedule_form_page.dart) dan [`pop_up_create_meeting.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/widgets/pop_up_create_meeting.dart). Tampilkan banner peringatan oranye *"Time conflict detected with [Nama Jadwal]"* dengan tombol konfirmasi tetap simpan / sesuaikan jam.
+2. **[SELESAI — LOG-049] Deteksi Bentrok Jadwal (*Schedule Conflict Warning*):**
+   - ✅ **Telah Diimplementasikan:** Validasi interval tumpang tindih waktu mutlak `(startA < endB) && (endA > startB)` pada tanggal kalender yang sama pada `ScheduleRepository.findConflicts()`. Banner peringatan dark card berbingkai slate halus (`#3B4150`, non-kuning) muncul secara real-time di bawah pemilih waktu pada `ScheduleFormPage` dan `PopUpCreateMeeting`. Menampilkan dialog protektif `PopUpScheduleConflictDialog` dengan border kontainer slate (`#3B4150`) dan tombol konfirmasi *"Adjust Time"* atau *"Save Anyway"*.
+   - ✅ **Alur Direct Save Anyway:** Saat pengguna menekan *"Save Anyway"*, jadwal langsung tersimpan dan pop-up sukses hijau (`PopUpPemberitahuan.scheduleCreated` / `meetingCreated`) langsung dimunculkan seketika tanpa menampilkan pop-up konfirmasi ganda (`PopUpMakeSchedule` / `PopUpKonfirmasiEdit`).
 
-3. **Kolom Pencarian Cepat (*Search Bar*) Tugas & Jadwal:**
-   - **Masalah Saat Ini:** Mahasiswa dengan banyak mata kuliah harus melakukan *scroll* panjang untuk mencari tugas atau jadwal spesifik.
-   - **Solusi Implementasi:** Tambahkan search bar lipat (*collapsible search bar*) berlatar `#323846` dengan border `#3B4150` dan debounce 300ms pada [`TaskPage`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/task/task_page.dart) dan [`SchedulePage`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/schedule/schedule_page.dart) untuk memfilter berdasarkan nama tugas, matkul, atau ruangan.
+3. **[SELESAI — LOG-050] Kolom Pencarian Cepat (*Search Bar*) Tugas & Jadwal:**
+   - ✅ **Telah Diimplementasikan:** Komponen modular murni reusable `ImpalSearchBar` dengan tinggi 44dp, container dark `#323846`, border fokus primary `#3B4150` $\rightarrow$ `#FF5E4D`, ikon pencarian, serta tombol hapus (*clear button*). Terintegrasi mulus dengan penyaringan instan multi-parameter di `TaskPage` (judul, matkul, catatan, subtitle, nama tim, dan label tags) serta `SchedulePage` (judul, matkul, lokasi, catatan, nama tim), dilengkapi tampilan empty search state yang rapi dan tombol *"Clear Search"*.
 
-4. **Tautan Meeting Daring (Zoom / Google Meet / Discord Link) & Tombol "Join Call":**
-   - **Masalah Saat Ini:** Jadwal rapat tim atau kelas daring tidak memiliki tautan langsung.
-   - **Solusi Implementasi:** Tambahkan field opsional `Meeting URL` pada formulir jadwal & meeting. Jika terisi, kartu jadwal [`ImpalScheduleCard`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/common_widgets/impal_schedule_card.dart) menampilkan tombol *"Join Call"* dengan ikon video yang membuka link langsung melalui `url_launcher`.
+4. **[SELESAI — LOG-051] Tautan Meeting Daring (Virtual Meeting URL) & Tombol "Join Call":**
+   - ✅ **Telah Diimplementasikan:** Dukungan field `meetingUrl` pada `ScheduleModel` dan formulir tambah/edit jadwal serta rapat kelompok. Tombol kapsul pill `[🎥 Join Call]` hijau emerald (`#10B981`) tampil otomatis pada `ImpalScheduleCard` saat jadwal memiliki tautan daring. Terintegrasi dengan `url_launcher` untuk membuka tautan eksternal (Google Meet/Zoom/Teams) secara otomatis dengan fallback aman penyalinan link ke clipboard (`Clipboard.setData`) dan feedback banner `PopUpPemberitahuan`.
 
 ---
 
@@ -306,3 +304,8 @@ Halaman: `SmartPriorityPage`, `DetailCardSmartPriority`, `SmartEngineStatusCard`
 | [`frontend/lib/presentation/features/notifikasi/notifikasi_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/notifikasi/notifikasi_page.dart) & [`notification_bell_button.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/notifikasi/widgets/notification_bell_button.dart) | Notifikasi adaptif 100% English UI, tombol lonceng unread counter di seluruh header, dan aksi detail XAI | ✅ **SELESAI (100%)** |
 | [`frontend/lib/presentation/features/auth/terms_privacy_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/auth/terms_privacy_page.dart) & [`verification_code_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/auth/verification_code_page.dart) | Halaman terpadu Terms & Privacy dual-mode dan timer countdown mundur 60 detik pada pengiriman OTP | ✅ **SELESAI (100%)** |
 | [`frontend/lib/presentation/common_widgets/impal_bottom_nav_bar.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/common_widgets/impal_bottom_nav_bar.dart) | Persistent scooped bottom navbar dengan cutout melengkung eksklusif dan navigasi meluncur halus | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/schedule/pop_up_schedule_conflict_dialog.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/schedule/pop_up_schedule_conflict_dialog.dart) & [`schedule_repository.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/schedule/models/schedule_repository.dart) | Deteksi Bentrok Jadwal (*Schedule Conflict Warning*): Algoritma overlap interval `(startA < endB) && (endA > startB)`, banner warning amber real-time, dialog modal protektif `Adjust Time` vs `Save Anyway` (`LOG-049`) | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/common_widgets/impal_search_bar.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/common_widgets/impal_search_bar.dart), [`task_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/task/task_page.dart), & [`schedule_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/schedule/schedule_page.dart) | Kolom Pencarian Cepat (*Search Bar*): Reusable search component dark card 44dp, filter reaktif multi-parameter, empty search state dan tombol Clear Search (`LOG-050`) | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/common_widgets/impal_schedule_card.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/common_widgets/impal_schedule_card.dart), [`schedule_model.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/schedule/models/schedule_model.dart), [`schedule_form_page.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/schedule/schedule_form_page.dart), & [`pop_up_create_meeting.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/pop_up_create_meeting.dart) | Tautan Virtual Meeting Daring & Tombol `[🎥 Join Call]`: Field input `meetingUrl`, tombol pill hijau emerald `#10B981` pada kartu jadwal, integrasi `url_launcher` dan fallback penyalinan otomatis ke clipboard (`LOG-051`) | ✅ **SELESAI (100%)** |
+| [`frontend/test/unit/schedule_conflict_test.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/test/unit/schedule_conflict_test.dart) & [`frontend/test/widget/search_bar_test.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/test/widget/search_bar_test.dart) | Rangkaian pengujian unit deteksi bentrok jadwal (overlap, contain, adjacent, different date, exclude self) dan widget test ImpalSearchBar | ✅ **SELESAI (100%)** |
+| [`frontend/lib/presentation/features/team/widgets/team_schedule_section.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/widgets/team_schedule_section.dart) | Penyelarasan Lebar Kartu Jadwal Tim: Integrasi `LayoutBuilder` & `availableWidth` pada `TeamListPage` dan `DashboardTeamPage` sehingga ukuran kartu jadwal 100% presisi sama dengan kartu jadwal di `HomePage` | ✅ **SELESAI (100%)** |

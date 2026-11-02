@@ -9,6 +9,7 @@ import 'models/schedule_repository.dart';
 import 'pop_up_konfirmasi_delete.dart';
 import 'pop_up_konfirmasi_edit.dart';
 import 'pop_up_make_schedule.dart';
+import 'pop_up_schedule_conflict_dialog.dart';
 import 'widgets/schedule_date_time_section.dart';
 import 'widgets/schedule_type_selector.dart';
 import 'widgets/team_meeting_autocomplete.dart';
@@ -55,6 +56,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
   final _titleController = TextEditingController();
   final _teamController = TextEditingController();
   final _locationController = TextEditingController();
+  final _meetingUrlController = TextEditingController();
   final _notesController = TextEditingController();
 
   String _selectedType = 'Lecture';
@@ -81,6 +83,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       }
       _titleController.text = (_selectedType == 'Lecture' ? (s.course ?? s.title) : s.title);
       _locationController.text = s.location ?? '';
+      _meetingUrlController.text = s.meetingUrl ?? '';
       _notesController.text = s.notes ?? '';
       _selectedDate = s.date;
       _repeatWeekly = s.repeat;
@@ -104,6 +107,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       _endTime = const TimeOfDay(hour: 11, minute: 30);
       _isTeamMeeting = false;
       _teamController.text = '';
+      _meetingUrlController.text = '';
     }
   }
 
@@ -126,8 +130,18 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
     _titleController.dispose();
     _teamController.dispose();
     _locationController.dispose();
+    _meetingUrlController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  List<ScheduleModel> get _currentConflicts {
+    return ScheduleRepository().findConflicts(
+      date: _selectedDate,
+      timeStart: _formatTime(_startTime),
+      timeEnd: _formatTime(_endTime),
+      excludeId: widget.schedule?.id,
+    );
   }
 
   String _formatTime(TimeOfDay t) {
@@ -222,11 +236,33 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
         ? _locationController.text.trim()
         : defaultLocation;
 
-    if (isEdit) {
-      final confirmed = await PopUpKonfirmasiEdit.show(context);
-      if (confirmed != true) {
-        setState(() => _isSubmitting = false);
+    final conflicts = _currentConflicts;
+    bool conflictConfirmed = false;
+    if (conflicts.isNotEmpty) {
+      final proceed = await PopUpScheduleConflictDialog.show(
+        context,
+        conflicts: conflicts,
+      );
+      if (proceed != true || !mounted) {
+        if (mounted) setState(() => _isSubmitting = false);
         return;
+      }
+      conflictConfirmed = true;
+    }
+
+    if (!mounted) return;
+
+    final meetingUrlValue = _meetingUrlController.text.trim().isNotEmpty
+        ? _meetingUrlController.text.trim()
+        : null;
+
+    if (isEdit) {
+      if (!conflictConfirmed) {
+        final confirmed = await PopUpKonfirmasiEdit.show(context);
+        if (confirmed != true || !mounted) {
+          if (mounted) setState(() => _isSubmitting = false);
+          return;
+        }
       }
 
       final scheduleDate = _selectedDate;
@@ -243,6 +279,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
         course: _selectedType == 'Lecture' ? enteredText : null,
         teamName: teamNameValue,
         location: locationValue,
+        meetingUrl: meetingUrlValue,
         date: scheduleDate,
         timeStart: _formatTime(_startTime),
         timeEnd: _formatTime(_endTime),
@@ -263,10 +300,12 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
         Navigator.of(context).pop(true);
       }
     } else {
-      final confirmed = await PopUpMakeSchedule.show(context);
-      if (confirmed != true) {
-        setState(() => _isSubmitting = false);
-        return;
+      if (!conflictConfirmed) {
+        final confirmed = await PopUpMakeSchedule.show(context);
+        if (confirmed != true || !mounted) {
+          if (mounted) setState(() => _isSubmitting = false);
+          return;
+        }
       }
 
       final scheduleDate = _selectedDate;
@@ -278,6 +317,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
         course: _selectedType == 'Lecture' ? enteredText : null,
         teamName: teamNameValue,
         location: locationValue,
+        meetingUrl: meetingUrlValue,
         status: ScheduleModel.calculateStatus(
           date: scheduleDate,
           timeStart: _formatTime(_startTime),
@@ -491,6 +531,29 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                         onSelectEndTime: _selectEndTime,
                         onToggleRepeat: (val) => setState(() => _repeatWeekly = val),
                       ),
+                      if (_currentConflicts.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildConflictWarningBanner(_currentConflicts),
+                      ],
+                      const SizedBox(height: 16),
+
+                      // Meeting URL (Optional)
+                      const Text(
+                        'Meeting Link / URL (Optional)',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildTextField(
+                        key: const ValueKey('schedule_meeting_url_input'),
+                        controller: _meetingUrlController,
+                        maxLength: 250,
+                        hint: 'https://meet.google.com/... or Zoom link',
+                        prefixIcon: Icons.videocam_outlined,
+                      ),
                       const SizedBox(height: 16),
 
                       // 6. Notes (Optional)
@@ -690,6 +753,57 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildConflictWarningBanner(List<ScheduleModel> conflicts) {
+    final conflict = conflicts.first;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF282D37),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF3B4150),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: Color(0xFFFBBF24),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Schedule Conflict Detected',
+                  style: TextStyle(
+                    color: Color(0xFFFBBF24),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Overlaps with "${conflict.title}" (${conflict.formattedTime})',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

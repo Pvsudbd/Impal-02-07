@@ -13,6 +13,7 @@ class ScheduleModel {
   final String timeEnd; // '11:30'
   final String timeZone; // 'WIB'
   final String? notes;
+  final String? meetingUrl;
   final bool repeat;
   final bool isAlertEnabled;
 
@@ -29,6 +30,7 @@ class ScheduleModel {
     required this.timeEnd,
     this.timeZone = 'WIB',
     this.notes,
+    this.meetingUrl,
     this.repeat = false,
     this.isAlertEnabled = true,
   });
@@ -48,6 +50,9 @@ class ScheduleModel {
         timeEnd: timeEnd,
         now: now,
       );
+
+  /// Convenience check whether this schedule has a valid virtual meeting link
+  bool get hasMeetingUrl => meetingUrl != null && meetingUrl!.trim().isNotEmpty;
 
   /// Pure static method to calculate status given date and time range:
   /// - 'Ongoing' if current date & time is within [startDateTime, endDateTime]
@@ -153,6 +158,7 @@ class ScheduleModel {
     String? timeEnd,
     String? timeZone,
     String? notes,
+    String? meetingUrl,
     bool? repeat,
     bool? isAlertEnabled,
   }) {
@@ -169,6 +175,7 @@ class ScheduleModel {
       timeEnd: timeEnd ?? this.timeEnd,
       timeZone: timeZone ?? this.timeZone,
       notes: notes ?? this.notes,
+      meetingUrl: meetingUrl ?? this.meetingUrl,
       repeat: repeat ?? this.repeat,
       isAlertEnabled: isAlertEnabled ?? this.isAlertEnabled,
     );
@@ -188,6 +195,7 @@ class ScheduleModel {
       'timeEnd': timeEnd,
       'timeZone': timeZone,
       'notes': notes,
+      'meetingUrl': meetingUrl,
       'repeat': repeat,
     };
   }
@@ -208,6 +216,7 @@ class ScheduleModel {
       timeEnd: map['timeEnd'] ?? '11:30',
       timeZone: map['timeZone'] ?? 'WIB',
       notes: map['notes'],
+      meetingUrl: map['meetingUrl'],
       repeat: map['repeat'] == true,
     );
   }

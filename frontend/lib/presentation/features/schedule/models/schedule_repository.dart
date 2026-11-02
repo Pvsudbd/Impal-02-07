@@ -77,6 +77,47 @@ class ScheduleRepository {
     schedulesNotifier.value = _defaultSchedules;
   }
 
+  /// Detects whether a proposed schedule overlaps in time with any existing schedule on the same date.
+  /// Returns a list of all conflicting schedules.
+  List<ScheduleModel> findConflicts({
+    required DateTime date,
+    required String timeStart,
+    required String timeEnd,
+    String? excludeId,
+  }) {
+    final startMinutes = _timeStringToMinutes(timeStart);
+    final endMinutes = _timeStringToMinutes(timeEnd);
+    if (startMinutes == null || endMinutes == null) return [];
+
+    return schedulesNotifier.value.where((s) {
+      if (excludeId != null && s.id == excludeId) return false;
+      // Must be on the exact same calendar day
+      if (s.date.year != date.year ||
+          s.date.month != date.month ||
+          s.date.day != date.day) {
+        return false;
+      }
+      final sStart = _timeStringToMinutes(s.timeStart);
+      final sEnd = _timeStringToMinutes(s.timeEnd);
+      if (sStart == null || sEnd == null) return false;
+
+      // Interval overlap: (startA < endB) && (endA > startB)
+      return startMinutes < sEnd && endMinutes > sStart;
+    }).toList();
+  }
+
+  static int? _timeStringToMinutes(String timeStr) {
+    try {
+      final parts = timeStr.trim().split(':');
+      if (parts.length < 2) return null;
+      final h = int.parse(parts[0].trim());
+      final m = int.parse(parts[1].trim().split(' ')[0]);
+      return h * 60 + m;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static ScheduleModel get defaultTeamSchedule {
     final now = DateTime.now();
     return ScheduleModel(
