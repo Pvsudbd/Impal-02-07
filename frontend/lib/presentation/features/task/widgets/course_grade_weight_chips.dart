@@ -60,7 +60,7 @@ class CourseGradeWeightChips extends StatelessWidget {
                     width: 16,
                     height: 16,
                     decoration: BoxDecoration(
-                      color: isAutomatic ? AppColors.primary : const Color(0xFF1E232D),
+                      color: isAutomatic ? AppColors.primary : AppColors.bgCard,
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(
                         color: isAutomatic ? AppColors.primary : AppColors.borderSubtle,
@@ -152,11 +152,11 @@ class CourseGradeWeightChips extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary.withValues(alpha: 0.2)
-              : const Color(0xFF1E232D),
+              : AppColors.bgCard,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.borderSubtle,
-            width: isSelected ? 1.5 : 0.8,
+            width: isSelected ? 1.5 : 1.0,
           ),
         ),
         alignment: Alignment.center,

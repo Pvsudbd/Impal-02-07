@@ -222,160 +222,73 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
                   _buildTopHeader(context),
                   SizedBox(height: context.rSpacing(18)),
 
-                  // Main Form Card
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: context.rSpacing(20),
-                      vertical: context.rSpacing(24),
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.bgCard,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: AppColors.cardShadow,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Card Title & Alert Bell Toggle Button
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              _isEditing ? 'Edit Task' : 'Create Task',
-                              style: TextStyle(
-                                color: AppColors.textWhite,
-                                fontSize: context.rFont(22, min: 20, max: 26),
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.1,
-                              ),
-                            ),
-                            Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  setState(() => _isAlertEnabled = !_isAlertEnabled);
-                                  final categoryConfig =
-                                      UserProfileRepository().profile.teamTaskAlerts;
-                                  PopUpPemberitahuanTeam.show(
-                                    context,
-                                    title: _isAlertEnabled
-                                        ? 'Team Alert Active'
-                                        : 'Team Alert Muted',
-                                    message: _isAlertEnabled
-                                        ? 'Team task alerts enabled (Following Profile: ${categoryConfig.summary}).'
-                                        : 'Alerts muted for this team task.',
-                                    icon: _isAlertEnabled
-                                        ? Icons.notifications_active_rounded
-                                        : Icons.notifications_off_outlined,
-                                    iconBgColor: _isAlertEnabled
-                                        ? const Color(0xFF10B981)
-                                        : const Color(0xFF475569),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(20),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _isAlertEnabled
-                                        ? const Color(0xFFFBBF24).withValues(alpha: 0.18)
-                                        : const Color(0xFF334155).withValues(alpha: 0.35),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: _isAlertEnabled
-                                          ? const Color(0xFFFBBF24)
-                                          : const Color(0xFF475569),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        _isAlertEnabled
-                                            ? Icons.notifications_active_rounded
-                                            : Icons.notifications_off_outlined,
-                                        size: 15,
-                                        color: _isAlertEnabled
-                                            ? const Color(0xFFFBBF24)
-                                            : const Color(0xFF94A3B8),
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        _isAlertEnabled ? 'Alert On' : 'Alert Off',
-                                        style: TextStyle(
-                                          color: _isAlertEnabled
-                                              ? const Color(0xFFFBBF24)
-                                              : const Color(0xFF94A3B8),
-                                          fontSize: context.rFont(11.5, min: 10, max: 13),
-                                          fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                  // Header Row with Title & Alert Bell Toggle Button (Direct page layout without card)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _isEditing ? 'Edit Team Task' : 'Team Task Details',
+                        style: TextStyle(
+                          color: AppColors.textWhite,
+                          fontSize: context.rFont(18, min: 16, max: 22),
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.1,
                         ),
-                        SizedBox(height: context.rSpacing(16)),
-
-                        // Task Name Field
-                        _buildSectionLabel(context, 'Task Name'),
-                        SizedBox(height: context.rSpacing(8)),
-                        _buildInputField(
-                          context,
-                          controller: _taskNameController,
-                          hintText: 'Name meeting',
-                          minLines: 1,
-                          maxLines: 1,
-                        ),
-                        SizedBox(height: context.rSpacing(16)),
-
-                        // Description Field
-                        _buildSectionLabel(context, 'Description'),
-                        SizedBox(height: context.rSpacing(8)),
-                        _buildInputField(
-                          context,
-                          controller: _descriptionController,
-                          hintText: 'Write a description here',
-                          minLines: 4,
-                          maxLines: 5,
-                        ),
-                        SizedBox(height: context.rSpacing(16)),
-
-                        // Submission Deadline (Date & Time)
-                        SubmissionDeadlinePicker(
-                          selectedDate: _selectedDate,
-                          selectedTime: _selectedTime,
-                          onDateChanged: (d) => setState(() => _selectedDate = d),
-                          onTimeChanged: (t) => setState(() => _selectedTime = t),
-                        ),
-                        SizedBox(height: context.rSpacing(16)),
-
-                        // Assign To Dropdown (Multi-Select)
-                        AssigneeDropdown(
-                          members: TeamMemberModel.defaultMembers,
-                          selectedMembers: _selectedMembers,
-                          onMembersChanged: (members) =>
-                              setState(() => _selectedMembers = members),
-                        ),
-                        SizedBox(height: context.rSpacing(24)),
-
-                        // Submit Button (Dynamic: "Save Changes" or "Create Task")
-                        _buildSubmitButton(context),
-                        if (_isEditing) ...[
-                          SizedBox(height: context.rSpacing(12)),
-                          _buildDeleteButton(context),
-                        ],
-                      ],
-                    ),
+                      ),
+                      _buildAlertToggle(context),
+                    ],
                   ),
+                  SizedBox(height: context.rSpacing(16)),
+
+                  // Task Name Field
+                  _buildSectionLabel(context, 'Task Name'),
+                  SizedBox(height: context.rSpacing(8)),
+                  _buildInputField(
+                    context,
+                    controller: _taskNameController,
+                    hintText: 'e.g. Design System Implementation',
+                    minLines: 1,
+                    maxLines: 1,
+                  ),
+                  SizedBox(height: context.rSpacing(16)),
+
+                  // Description Field
+                  _buildSectionLabel(context, 'Description'),
+                  SizedBox(height: context.rSpacing(8)),
+                  _buildInputField(
+                    context,
+                    controller: _descriptionController,
+                    hintText: 'Write a description here',
+                    minLines: 4,
+                    maxLines: 5,
+                  ),
+                  SizedBox(height: context.rSpacing(16)),
+
+                  // Submission Deadline (Date & Time)
+                  SubmissionDeadlinePicker(
+                    selectedDate: _selectedDate,
+                    selectedTime: _selectedTime,
+                    onDateChanged: (d) => setState(() => _selectedDate = d),
+                    onTimeChanged: (t) => setState(() => _selectedTime = t),
+                  ),
+                  SizedBox(height: context.rSpacing(16)),
+
+                  // Assign To Dropdown (Multi-Select)
+                  AssigneeDropdown(
+                    members: TeamMemberModel.defaultMembers,
+                    selectedMembers: _selectedMembers,
+                    onMembersChanged: (members) =>
+                        setState(() => _selectedMembers = members),
+                  ),
+                  SizedBox(height: context.rSpacing(24)),
+
+                  // Submit Button (Dynamic: "Save Changes" or "Create Task")
+                  _buildSubmitButton(context),
+                  if (_isEditing) ...[
+                    SizedBox(height: context.rSpacing(12)),
+                    _buildDeleteButton(context),
+                  ],
                 ],
               ),
             ),
@@ -480,6 +393,87 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
     );
   }
 
+  Widget _buildAlertToggle(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() => _isAlertEnabled = !_isAlertEnabled);
+          final categoryConfig =
+              UserProfileRepository().profile.teamTaskAlerts;
+          PopUpPemberitahuanTeam.show(
+            context,
+            title: _isAlertEnabled ? 'Team Alert Active' : 'Team Alert Muted',
+            message: _isAlertEnabled
+                ? 'Team task alerts enabled (Following Profile: ${categoryConfig.summary}).'
+                : 'Alerts muted for this team task.',
+            icon: _isAlertEnabled
+                ? Icons.notifications_active_rounded
+                : Icons.notifications_off_outlined,
+            iconBgColor: _isAlertEnabled
+                ? const Color(0xFF10B981)
+                : const Color(0xFF475569),
+          );
+        },
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: _isAlertEnabled
+                ? AppColors.primary
+                : const Color(0xFF323846),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: _isAlertEnabled
+                  ? AppColors.primary
+                  : AppColors.borderSubtle,
+              width: 1,
+            ),
+            boxShadow: _isAlertEnabled
+                ? const [
+                    BoxShadow(
+                      color: Color(0x40FA6144),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _isAlertEnabled
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_off_outlined,
+                size: 15,
+                color: _isAlertEnabled
+                    ? Colors.white
+                    : AppColors.textMuted,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _isAlertEnabled ? 'Alert On' : 'Alert Off',
+                style: TextStyle(
+                  color: _isAlertEnabled
+                      ? Colors.white
+                      : AppColors.textMuted,
+                  fontSize: context.rFont(12, min: 11, max: 13),
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInputField(
     BuildContext context, {
     required TextEditingController controller,
@@ -489,10 +483,10 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: AppColors.bgCard,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: AppColors.borderSubtle.withValues(alpha: 0.5),
+          color: AppColors.borderSubtle,
           width: 1,
         ),
       ),

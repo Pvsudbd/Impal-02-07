@@ -126,19 +126,9 @@ class _HomeTaskCardState extends State<HomeTaskCard> {
                             ),
                           ],
 
-                          // Team members section (only for group tasks)
+                          // Team members avatar stack (only for group tasks)
                           if (isGroup && task.members != null && task.members!.isNotEmpty) ...[
                             const SizedBox(height: 5),
-                            const Text(
-                              'Team members',
-                              style: TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 11,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
                             _buildAvatarStack(task.members!),
                           ],
 

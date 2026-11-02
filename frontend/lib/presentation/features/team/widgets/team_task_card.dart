@@ -119,7 +119,7 @@ class TeamTaskCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
           decoration: BoxDecoration(
             color: AppColors.bgCard,
             borderRadius: BorderRadius.circular(16),
@@ -296,10 +296,10 @@ class TeamTaskCard extends StatelessWidget {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: onEdit ?? onTap,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                       child: const SizedBox(
-                        width: 48,
-                        height: 48,
+                        width: 28,
+                        height: 28,
                         child: Center(
                           child: Icon(
                             Icons.edit_rounded,

@@ -18,35 +18,36 @@ class ScheduleFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: filters.map((f) {
-          final isSelected = selectedFilter.toLowerCase() == f.toLowerCase();
-          return Padding(
-            padding: EdgeInsets.only(right: context.rSpacing(8)),
+    return Row(
+      children: filters.asMap().entries.map((entry) {
+        final index = entry.key;
+        final f = entry.value;
+        final isSelected = selectedFilter.toLowerCase() == f.toLowerCase();
+        final isLast = index == filters.length - 1;
+
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: isLast ? 0 : context.rSpacing(8)),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
                 onTap: () => onFilterChanged(f),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
-                  constraints: const BoxConstraints(minHeight: 34),
+                  constraints: const BoxConstraints(minHeight: 28),
                   padding: EdgeInsets.symmetric(
-                    horizontal: context.rSpacing(14),
-                    vertical: context.rSpacing(6),
+                    horizontal: context.rSpacing(4),
+                    vertical: context.rSpacing(4.5),
                   ),
                   decoration: BoxDecoration(
                     color: isSelected ? AppColors.primary : AppColors.bgCard,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.primary
                           : AppColors.borderSubtle,
-                      width: 0.8,
+                      width: 0.6,
                     ),
                     boxShadow: isSelected
                         ? [
@@ -59,23 +60,26 @@ class ScheduleFilterBar extends StatelessWidget {
                         : null,
                   ),
                   alignment: Alignment.center,
-                  child: Text(
-                    f,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : AppColors.textMuted,
-                      fontSize: context.rFont(12, min: 11, max: 13.5),
-                      fontFamily: 'Inter',
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
-                      letterSpacing: 0.15,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      f,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : AppColors.textMuted,
+                        fontSize: context.rFont(11, min: 10, max: 12.5),
+                        fontFamily: 'Inter',
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                        letterSpacing: 0.15,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          );
-        }).toList(),
-      ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

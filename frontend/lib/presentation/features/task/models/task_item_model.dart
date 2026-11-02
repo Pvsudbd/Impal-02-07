@@ -209,7 +209,6 @@ class TaskItemModel {
           durationBadge: '12h',
           durationBadgeColor: const Color(0xFF5B93FF),
           durationTextColor: Colors.white,
-          subtitle: 'SSIF-04-REG • Software Testing',
           deadlineDate: DateTime(2026, 10, 11, 23, 59),
           formattedDeadline: 'Sat 11 Oct 2026, 23: 59 WIB',
           memberAvatars: const [
@@ -286,7 +285,6 @@ class TaskItemModel {
           durationBadge: '20h',
           durationBadgeColor: const Color(0xFFFF7D65),
           durationTextColor: Colors.white,
-          subtitle: 'LING-02 • Linguistics & Communication',
           deadlineDate: DateTime(2026, 10, 15, 23, 59),
           formattedDeadline: 'Wed 15 Oct 2026, 23: 59 WIB',
           memberAvatars: const [

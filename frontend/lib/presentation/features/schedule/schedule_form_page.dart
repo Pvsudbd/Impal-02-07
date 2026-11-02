@@ -64,6 +64,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
   TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 30);
   TimeOfDay _endTime = const TimeOfDay(hour: 11, minute: 30);
   bool _repeatWeekly = true;
+  bool _isAlertEnabled = true;
 
   @override
   void initState() {
@@ -369,6 +370,26 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Header Row with Title & Alert Bell Toggle Button
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            isEdit
+                                ? (_selectedType == 'Meeting' ? 'Edit Meeting' : 'Edit Schedule')
+                                : (_selectedType == 'Meeting' ? 'Meeting Details' : 'Schedule Details'),
+                            style: const TextStyle(
+                              color: AppColors.textWhite,
+                              fontSize: 18,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          _buildAlertToggle(),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
                       // 1. Schedule Type selector
                       ScheduleTypeSelector(
                         selectedType: _selectedType,
@@ -590,6 +611,85 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+    );
+  }
+
+  Widget _buildAlertToggle() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() => _isAlertEnabled = !_isAlertEnabled);
+          PopUpPemberitahuan.show(
+            context,
+            title: _isAlertEnabled ? 'Schedule Alert Active' : 'Schedule Alert Muted',
+            message: _isAlertEnabled
+                ? 'Schedule reminder notifications enabled.'
+                : 'Schedule reminder notifications muted.',
+            icon: _isAlertEnabled
+                ? Icons.notifications_active_rounded
+                : Icons.notifications_off_outlined,
+            iconBgColor: _isAlertEnabled
+                ? PopUpPemberitahuan.positiveColor
+                : PopUpPemberitahuan.neutralColor,
+          );
+        },
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: _isAlertEnabled
+                ? AppColors.primary
+                : const Color(0xFF323846),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: _isAlertEnabled
+                  ? AppColors.primary
+                  : AppColors.borderSubtle,
+              width: 1,
+            ),
+            boxShadow: _isAlertEnabled
+                ? const [
+                    BoxShadow(
+                      color: Color(0x40FA6144),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _isAlertEnabled
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_off_outlined,
+                size: 15,
+                color: _isAlertEnabled
+                    ? Colors.white
+                    : AppColors.textMuted,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _isAlertEnabled ? 'Alert On' : 'Alert Off',
+                style: TextStyle(
+                  color: _isAlertEnabled
+                      ? Colors.white
+                      : AppColors.textMuted,
+                  fontSize: 12,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -24,15 +24,16 @@ class TaskFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: defaultFilters.map((filter) {
-          final isSelected = filter.toLowerCase() == selectedFilter.toLowerCase();
-          return Padding(
-            padding: EdgeInsets.only(right: context.rSpacing(8)),
+    return Row(
+      children: defaultFilters.asMap().entries.map((entry) {
+        final index = entry.key;
+        final filter = entry.value;
+        final isSelected = filter.toLowerCase() == selectedFilter.toLowerCase();
+        final isLast = index == defaultFilters.length - 1;
+
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: isLast ? 0 : context.rSpacing(8)),
             child: InkWell(
               onTap: () => onFilterSelected(filter),
               borderRadius: BorderRadius.circular(6),
@@ -41,8 +42,8 @@ class TaskFilterBar extends StatelessWidget {
                 curve: Curves.easeInOut,
                 constraints: const BoxConstraints(minHeight: 28),
                 padding: EdgeInsets.symmetric(
-                  horizontal: context.rSpacing(12),
-                  vertical: context.rSpacing(4.5),
+                  horizontal: context.rSpacing(4),
+                  vertical: context.rSpacing(5.5),
                 ),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.primary : AppColors.bgCard,
@@ -53,20 +54,23 @@ class TaskFilterBar extends StatelessWidget {
                   ),
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  filter,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : AppColors.textMuted,
-                    fontSize: context.rFont(11.5, min: 10, max: 13),
-                    fontFamily: 'Inter',
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    filter,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : AppColors.textMuted,
+                      fontSize: context.rFont(11.5, min: 9.5, max: 13),
+                      fontFamily: 'Inter',
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
             ),
-          );
-        }).toList(),
-      ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

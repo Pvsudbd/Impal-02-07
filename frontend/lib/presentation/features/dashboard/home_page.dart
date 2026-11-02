@@ -203,6 +203,24 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _toggleScheduleAlert(ScheduleModel item) {
+    final updated = item.copyWith(isAlertEnabled: !item.isAlertEnabled);
+    ScheduleRepository().updateSchedule(updated);
+    PopUpPemberitahuan.show(
+      context,
+      title: updated.isAlertEnabled ? 'Schedule Alert Active' : 'Schedule Alert Muted',
+      message: updated.isAlertEnabled
+          ? 'Reminders enabled for "${updated.title}".'
+          : 'Reminders muted for "${updated.title}".',
+      icon: updated.isAlertEnabled
+          ? Icons.notifications_active_rounded
+          : Icons.notifications_off_outlined,
+      iconBgColor: updated.isAlertEnabled
+          ? PopUpPemberitahuan.positiveColor
+          : PopUpPemberitahuan.neutralColor,
+    );
+  }
+
   Future<void> _deleteSchedule(ScheduleModel item) async {
     final isMeeting = item.type.trim().toLowerCase() == 'meeting';
     final confirmed = await PopUpKonfirmasiDelete.show(
@@ -321,6 +339,7 @@ class _HomePageState extends State<HomePage> {
                 onSeeAll: () => _onTabSelected(3),
                 onEditSchedule: _openEditSchedule,
                 onDeleteSchedule: _deleteSchedule,
+                onToggleAlert: _toggleScheduleAlert,
               ),
               const SizedBox(height: 16),
               HomeCategoriesSection(

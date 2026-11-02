@@ -13,6 +13,7 @@ class HomeScheduleSection extends StatelessWidget {
   final VoidCallback onSeeAll;
   final void Function(ScheduleModel) onEditSchedule;
   final void Function(ScheduleModel) onDeleteSchedule;
+  final void Function(ScheduleModel)? onToggleAlert;
 
   const HomeScheduleSection({
     super.key,
@@ -20,6 +21,7 @@ class HomeScheduleSection extends StatelessWidget {
     required this.onSeeAll,
     required this.onEditSchedule,
     required this.onDeleteSchedule,
+    this.onToggleAlert,
   });
 
   @override
@@ -122,6 +124,9 @@ class HomeScheduleSection extends StatelessWidget {
             onTap: onSeeAll,
             onEdit: () => onEditSchedule(sortedItems.first),
             onDelete: () => onDeleteSchedule(sortedItems.first),
+            onToggleAlert: onToggleAlert != null
+                ? () => onToggleAlert!(sortedItems.first)
+                : null,
           );
         } else {
           scheduleContent = ImpalHorizontalScheduleList(
@@ -131,6 +136,7 @@ class HomeScheduleSection extends StatelessWidget {
             onCardTap: (s) => onSeeAll(),
             onEdit: (s) => onEditSchedule(s),
             onDelete: (s) => onDeleteSchedule(s),
+            onToggleAlert: onToggleAlert,
           );
         }
 

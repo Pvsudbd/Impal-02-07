@@ -77,11 +77,11 @@ class TaskCategorySelector extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary.withValues(alpha: 0.18)
-              : const Color(0xFF1E232D),
+              : AppColors.bgCard,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.borderSubtle,
-            width: isSelected ? 1.5 : 0.8,
+            width: isSelected ? 1.5 : 1.0,
           ),
         ),
         child: Row(

@@ -6,24 +6,25 @@ import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../profile/models/user_profile_model.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
 import '../team/widgets/submission_deadline_picker.dart';
-import 'edit_task.dart';
 import 'models/task_item_model.dart';
 import 'models/task_repository.dart';
 import 'widgets/course_grade_weight_chips.dart';
 import 'widgets/task_category_selector.dart';
 
 // Backward compatibility aliases matching Figma exports
-export 'edit_task.dart';
 export 'models/task_item_model.dart';
 
 typedef AddNewTask = CreateTaskPage;
 typedef TaskFormPage = CreateTaskPage;
+typedef EditTaskPage = CreateTaskPage;
+typedef EditTask = CreateTaskPage;
 
 /// Unified dual-mode Form for Creating and Editing Tasks.
 ///
 /// Complies strictly with AGENTS.md, ResponsiveContext, UnfocusOnTap,
 /// loading button label retention, and PopUpPemberitahuan standards.
 class CreateTaskPage extends StatefulWidget {
+  final TaskItemModel? task;
   final TaskItemModel? existingTask;
   final void Function(TaskItemModel task)? onTaskCreated;
   final void Function(TaskItemModel updatedTask)? onTaskUpdated;
@@ -32,12 +33,15 @@ class CreateTaskPage extends StatefulWidget {
 
   const CreateTaskPage({
     super.key,
+    this.task,
     this.existingTask,
     this.onTaskCreated,
     this.onTaskUpdated,
     this.onBack,
     this.userInitials = 'JS',
   });
+
+  TaskItemModel? get targetTask => task ?? existingTask;
 
   @override
   State<CreateTaskPage> createState() => _CreateTaskPageState();
@@ -57,12 +61,12 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   late bool _isAlertEnabled;
   bool _isSubmitting = false;
 
-  bool get _isEditing => widget.existingTask != null;
+  bool get _isEditing => widget.targetTask != null;
 
   @override
   void initState() {
     super.initState();
-    final task = widget.existingTask;
+    final task = widget.targetTask;
     if (task != null) {
       _isCollegeTask = task.isCollegeTask;
       _titleController = TextEditingController(text: task.title);
@@ -137,11 +141,11 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
     final formattedDeadline = _formatDeadline(_selectedDate, _selectedTime);
 
     if (_isEditing) {
-      final updated = widget.existingTask!.copyWith(
+      final updated = widget.targetTask!.copyWith(
         title: title,
         course: course.isNotEmpty
             ? course
-            : (_isCollegeTask ? widget.existingTask!.course : ''),
+            : (_isCollegeTask ? widget.targetTask!.course : ''),
         notes: notes,
         deadlineDate: _selectedDate,
         formattedDeadline: formattedDeadline,
@@ -151,6 +155,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
         isAlertEnabled: _isAlertEnabled,
       );
 
+      TaskRepository().updateTask(updated);
       widget.onTaskUpdated?.call(updated);
       if (mounted) {
         PopUpPemberitahuan.taskUpdated(context, taskName: title);
@@ -214,238 +219,216 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
               context.rSpacing(20),
               context.rSpacing(32),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Bar: Back & User Initials Avatar
-                _buildTopBar(context),
-                SizedBox(height: context.rSpacing(18)),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Bar: Back & User Initials Avatar
+                  _buildTopBar(context),
+                  SizedBox(height: context.rSpacing(18)),
 
-                      // Main Form Card Container
-                      Container(
-                        padding: EdgeInsets.all(context.rSpacing(20)),
-                        decoration: BoxDecoration(
-                          color: AppColors.bgCard,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: AppColors.borderSubtle,
-                            width: 0.6,
-                          ),
-                          boxShadow: AppColors.cardShadow,
-                        ),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Card Title & Alert Bell Toggle Button
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    _isEditing ? 'Edit Task' : 'Add New Task',
-                                    style: TextStyle(
-                                      color: AppColors.textWhite,
-                                      fontSize:
-                                          context.rFont(18, min: 16, max: 22),
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: () {
-                                        setState(() => _isAlertEnabled =
-                                            !_isAlertEnabled);
-                                        final categoryConfig =
-                                            UserProfileRepository()
-                                                .profile
-                                                .taskDeadlineAlerts;
-                                        PopUpPemberitahuan.show(
-                                          context,
-                                          title: _isAlertEnabled
-                                              ? 'Alert Active'
-                                              : 'Alert Muted',
-                                          message: _isAlertEnabled
-                                              ? 'Task deadline alerts enabled (Following Profile: ${categoryConfig.summary}).'
-                                              : 'Alerts muted for this task.',
-                                          icon: _isAlertEnabled
-                                              ? Icons.notifications_active_rounded
-                                              : Icons
-                                                  .notifications_off_outlined,
-                                          iconBgColor: _isAlertEnabled
-                                              ? PopUpPemberitahuan.positiveColor
-                                              : PopUpPemberitahuan
-                                                  .neutralColor,
-                                        );
-                                      },
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 5,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _isAlertEnabled
-                                              ? const Color(0xFFFF5E4D)
-                                                  .withValues(alpha: 0.18)
-                                              : const Color(0xFF334155)
-                                                  .withValues(alpha: 0.35),
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                          border: Border.all(
-                                            color: _isAlertEnabled
-                                                ? const Color(0xFFFF7D65)
-                                                : const Color(0xFF475569),
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              _isAlertEnabled
-                                                  ? Icons
-                                                      .notifications_active_rounded
-                                                  : Icons
-                                                      .notifications_off_outlined,
-                                              size: 15,
-                                              color: _isAlertEnabled
-                                                  ? const Color(0xFFFF7D65)
-                                                  : const Color(0xFF94A3B8),
-                                            ),
-                                            const SizedBox(width: 5),
-                                            Text(
-                                              _isAlertEnabled
-                                                  ? 'Alert On'
-                                                  : 'Alert Off',
-                                              style: TextStyle(
-                                                color: _isAlertEnabled
-                                                    ? const Color(0xFFFF7D65)
-                                                    : const Color(0xFF94A3B8),
-                                                fontSize: context.rFont(11.5,
-                                                    min: 10, max: 13),
-                                                fontFamily: 'Inter',
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: context.rSpacing(16)),
-
-                              // Field 0: Task Category Selector (Tugas Kuliah vs Non-Kuliah)
-                              TaskCategorySelector(
-                                isCollegeTask: _isCollegeTask,
-                                onCategoryChanged: (isCollege) {
-                                  setState(() => _isCollegeTask = isCollege);
-                                },
-                              ),
-                              SizedBox(height: context.rSpacing(14)),
-
-                              // Field 1: Task Title
-                              _buildFieldLabel(context, 'Task Title'),
-                              const SizedBox(height: 6),
-                              _buildTextField(
-                                controller: _titleController,
-                                hintText: 'IMPAL Architecture Analysis',
-                                maxLength: 80,
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Please enter task title';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: context.rSpacing(14)),
-
-                              // Field 2: Course (Only visible if Tugas Kuliah)
-                              AnimatedCrossFade(
-                                duration: disableMotion
-                                    ? Duration.zero
-                                    : const Duration(milliseconds: 220),
-                                crossFadeState: _isCollegeTask
-                                    ? CrossFadeState.showFirst
-                                    : CrossFadeState.showSecond,
-                                firstChild: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    _buildFieldLabel(context, 'Course'),
-                                    const SizedBox(height: 6),
-                                    _buildTextField(
-                                      controller: _courseController,
-                                      hintText:
-                                          'SSIF-04-REG • Software Testing & Implementa...',
-                                      maxLength: 80,
-                                    ),
-                                    SizedBox(height: context.rSpacing(14)),
-                                  ],
-                                ),
-                                secondChild: const SizedBox(
-                                  width: double.infinity,
-                                  height: 0,
-                                ),
-                              ),
-
-                              // Field 3: Submission Deadline (Date & Time)
-                              SubmissionDeadlinePicker(
-                                selectedDate: _selectedDate,
-                                selectedTime: _selectedTime,
-                                onDateChanged: (d) =>
-                                    setState(() => _selectedDate = d),
-                                onTimeChanged: (t) =>
-                                    setState(() => _selectedTime = t),
-                              ),
-                              SizedBox(height: context.rSpacing(14)),
-
-                              // Field 4: Course Grade Weight Chips
-                              CourseGradeWeightChips(
-                                selectedPriority: _selectedPriority,
-                                isAutomatic: _isAutomaticWeight,
-                                onPriorityChanged: (p) =>
-                                    setState(() => _selectedPriority = p),
-                                onAutomaticChanged: (a) =>
-                                    setState(() => _isAutomaticWeight = a),
-                              ),
-                              SizedBox(height: context.rSpacing(14)),
-
-                              // Field 5: Notes & Instructions
-                              _buildFieldLabel(context, 'Notes & Instructions'),
-                              const SizedBox(height: 6),
-                              _buildTextField(
-                                controller: _notesController,
-                                hintText: 'Add assignment details or links here...',
-                                maxLines: 4,
-                                maxLength: 500,
-                              ),
-                              SizedBox(height: context.rSpacing(20)),
-
-                              // Submit Button with Loading State
-                              _buildSubmitButton(context),
-                              if (_isEditing &&
-                                  widget.existingTask != null &&
-                                  !widget.existingTask!.isTeamTask) ...[
-                                SizedBox(height: context.rSpacing(12)),
-                                _buildDeleteButton(context),
-                              ],
-                            ],
-                          ),
+                  // Section Title & Alert Bell Toggle Button (Direct page layout without card)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _isEditing ? 'Edit Task Details' : 'Task Details',
+                        style: TextStyle(
+                          color: AppColors.textWhite,
+                          fontSize: context.rFont(18, min: 16, max: 22),
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
+                      _buildAlertToggle(context),
                     ],
                   ),
-                ),
+                  SizedBox(height: context.rSpacing(16)),
+
+                  // Field 0: Task Category Selector (Tugas Kuliah vs Non-Kuliah)
+                  TaskCategorySelector(
+                    isCollegeTask: _isCollegeTask,
+                    onCategoryChanged: (isCollege) {
+                      setState(() => _isCollegeTask = isCollege);
+                    },
+                  ),
+                  SizedBox(height: context.rSpacing(14)),
+
+                  // Field 1: Task Title
+                  _buildFieldLabel(context, 'Task Title'),
+                  const SizedBox(height: 6),
+                  _buildTextField(
+                    controller: _titleController,
+                    hintText: 'IMPAL Architecture Analysis',
+                    maxLength: 80,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter task title';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: context.rSpacing(14)),
+
+                  // Field 2: Course (Only visible if Tugas Kuliah)
+                  AnimatedCrossFade(
+                    duration: disableMotion
+                        ? Duration.zero
+                        : const Duration(milliseconds: 220),
+                    crossFadeState: _isCollegeTask
+                        ? CrossFadeState.showFirst
+                        : CrossFadeState.showSecond,
+                    firstChild: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildFieldLabel(context, 'Course'),
+                        const SizedBox(height: 6),
+                        _buildTextField(
+                          controller: _courseController,
+                          hintText:
+                              'SSIF-04-REG • Software Testing & Implementa...',
+                          maxLength: 80,
+                        ),
+                        SizedBox(height: context.rSpacing(14)),
+                      ],
+                    ),
+                    secondChild: const SizedBox(
+                      width: double.infinity,
+                      height: 0,
+                    ),
+                  ),
+
+                  // Field 3: Submission Deadline (Date & Time)
+                  SubmissionDeadlinePicker(
+                    selectedDate: _selectedDate,
+                    selectedTime: _selectedTime,
+                    onDateChanged: (d) =>
+                        setState(() => _selectedDate = d),
+                    onTimeChanged: (t) =>
+                        setState(() => _selectedTime = t),
+                  ),
+                  SizedBox(height: context.rSpacing(14)),
+
+                  // Field 4: Course Grade Weight Chips
+                  CourseGradeWeightChips(
+                    selectedPriority: _selectedPriority,
+                    isAutomatic: _isAutomaticWeight,
+                    onPriorityChanged: (p) =>
+                        setState(() => _selectedPriority = p),
+                    onAutomaticChanged: (a) =>
+                        setState(() => _isAutomaticWeight = a),
+                  ),
+                  SizedBox(height: context.rSpacing(14)),
+
+                  // Field 5: Notes & Instructions
+                  _buildFieldLabel(context, 'Notes & Instructions'),
+                  const SizedBox(height: 6),
+                  _buildTextField(
+                    controller: _notesController,
+                    hintText: 'Add assignment details or links here...',
+                    maxLines: 4,
+                    maxLength: 500,
+                  ),
+                  SizedBox(height: context.rSpacing(24)),
+
+                  // Submit Button with Loading State
+                  _buildSubmitButton(context),
+                  if (_isEditing &&
+                      widget.targetTask != null &&
+                      !widget.targetTask!.isTeamTask) ...[
+                    SizedBox(height: context.rSpacing(12)),
+                    _buildDeleteButton(context),
+                  ],
+                ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlertToggle(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() => _isAlertEnabled = !_isAlertEnabled);
+          final categoryConfig =
+              UserProfileRepository().profile.taskDeadlineAlerts;
+          PopUpPemberitahuan.show(
+            context,
+            title: _isAlertEnabled ? 'Alert Active' : 'Alert Muted',
+            message: _isAlertEnabled
+                ? 'Task deadline alerts enabled (Following Profile: ${categoryConfig.summary}).'
+                : 'Alerts muted for this task.',
+            icon: _isAlertEnabled
+                ? Icons.notifications_active_rounded
+                : Icons.notifications_off_outlined,
+            iconBgColor: _isAlertEnabled
+                ? PopUpPemberitahuan.positiveColor
+                : PopUpPemberitahuan.neutralColor,
           );
+        },
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: _isAlertEnabled
+                ? AppColors.primary
+                : const Color(0xFF323846),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: _isAlertEnabled
+                  ? AppColors.primary
+                  : AppColors.borderSubtle,
+              width: 1,
+            ),
+            boxShadow: _isAlertEnabled
+                ? const [
+                    BoxShadow(
+                      color: Color(0x40FA6144),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _isAlertEnabled
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_off_outlined,
+                size: 15,
+                color: _isAlertEnabled
+                    ? Colors.white
+                    : AppColors.textMuted,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _isAlertEnabled ? 'Alert On' : 'Alert Off',
+                style: TextStyle(
+                  color: _isAlertEnabled
+                      ? Colors.white
+                      : AppColors.textMuted,
+                  fontSize: context.rFont(12, min: 11, max: 13),
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildTopBar(BuildContext context) {
@@ -547,7 +530,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       validator: validator,
       decoration: InputDecoration(
         filled: true,
-        fillColor: const Color(0xFF1E232D),
+        fillColor: AppColors.bgCard,
         hintText: hintText,
         hintStyle: const TextStyle(
           color: AppColors.textMuted,
@@ -556,19 +539,19 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.borderSubtle, width: 0.8),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.borderSubtle, width: 1.0),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.borderSubtle, width: 0.8),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.borderSubtle, width: 1.0),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.error, width: 1.0),
         ),
       ),
@@ -643,10 +626,10 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                 'Are you sure you want to delete this personal task? This action cannot be undone.',
           );
           if (confirmed == true && context.mounted) {
-            TaskRepository().deleteTask(widget.existingTask!.id);
+            TaskRepository().deleteTask(widget.targetTask!.id);
             PopUpPemberitahuan.taskDeleted(
               context,
-              taskName: widget.existingTask!.title,
+              taskName: widget.targetTask!.title,
             );
             Navigator.of(context).pop();
           }

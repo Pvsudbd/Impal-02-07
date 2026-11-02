@@ -343,10 +343,22 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
       appBar: AppBar(
         backgroundColor: AppColors.bgPrimary,
         elevation: 0,
-        leading: IconButton(
-          key: const ValueKey('close_create_meeting_button'),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-          onPressed: () => Navigator.of(context).maybePop(),
+        leading: Center(
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFF323846),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF3B4150), width: 1.0),
+            ),
+            child: IconButton(
+              key: const ValueKey('close_create_meeting_button'),
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ),
         ),
         title: Text(
           isEdit ? 'Edit Meeting' : 'Create Meeting',
@@ -359,39 +371,11 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            tooltip: _isAlertEnabled ? 'Alert Active' : 'Alert Muted',
-            icon: Icon(
-              _isAlertEnabled
-                  ? Icons.notifications_active_rounded
-                  : Icons.notifications_off_outlined,
-              color: _isAlertEnabled
-                  ? const Color(0xFFFBBF24)
-                  : AppColors.textMuted,
-            ),
-            onPressed: () {
-              setState(() => _isAlertEnabled = !_isAlertEnabled);
-              final categoryConfig =
-                  UserProfileRepository().profile.teamMeetingAlerts;
-              PopUpPemberitahuan.show(
-                context,
-                title: _isAlertEnabled ? 'Meeting Alert Active' : 'Meeting Alert Muted',
-                message: _isAlertEnabled
-                    ? 'Meeting alerts enabled (Following Profile: ${categoryConfig.summary}).'
-                    : 'Alerts muted for this meeting.',
-                icon: _isAlertEnabled
-                    ? Icons.notifications_active_rounded
-                    : Icons.notifications_off_outlined,
-                iconBgColor: _isAlertEnabled
-                    ? const Color(0xFF10B981)
-                    : const Color(0xFF475569),
-              );
-            },
-          ),
           if (isEdit) ...[
             IconButton(
               key: const ValueKey('delete_meeting_button'),
               icon: const Icon(Icons.delete_outline_rounded, color: AppColors.primary),
+              tooltip: 'Delete Meeting',
               onPressed: _handleDelete,
             ),
             const SizedBox(width: 8),
@@ -408,6 +392,24 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Header Row with Title & Alert Bell Toggle Button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isEdit ? 'Edit Meeting Details' : 'Meeting Details',
+                        style: const TextStyle(
+                          color: AppColors.textWhite,
+                          fontSize: 18,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      _buildAlertToggle(),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
                   // 1. Meeting Title
                   const Text(
                     'Meeting Name',
@@ -473,13 +475,13 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                   InkWell(
                     key: const ValueKey('create_meeting_date_picker_button'),
                     onTap: _pickDate,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     child: Container(
                       height: 48,
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
                         color: AppColors.bgCard,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: AppColors.borderSubtle),
                       ),
                       child: Row(
@@ -526,13 +528,13 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                             InkWell(
                               key: const ValueKey('create_meeting_time_picker_button'),
                               onTap: _pickStartTime,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                               child: Container(
                                 height: 48,
                                 padding: const EdgeInsets.symmetric(horizontal: 14),
                                 decoration: BoxDecoration(
                                   color: AppColors.bgCard,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(10),
                                   border: Border.all(color: AppColors.borderSubtle),
                                 ),
                                 child: Row(
@@ -568,13 +570,13 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                             InkWell(
                               key: const ValueKey('create_meeting_end_time_picker_button'),
                               onTap: _pickEndTime,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                               child: Container(
                                 height: 48,
                                 padding: const EdgeInsets.symmetric(horizontal: 14),
                                 decoration: BoxDecoration(
                                   color: AppColors.bgCard,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(10),
                                   border: Border.all(color: AppColors.borderSubtle),
                                 ),
                                 child: Row(
@@ -602,7 +604,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
                       color: AppColors.bgCard,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.borderSubtle),
                     ),
                     child: Row(
@@ -668,7 +670,7 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       onPressed: _handleSave,
@@ -684,10 +686,125 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                       ),
                     ),
                   ),
+                  if (isEdit) ...[
+                    const SizedBox(height: 12),
+                    _buildDeleteButton(),
+                  ],
                   const SizedBox(height: 24),
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlertToggle() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() => _isAlertEnabled = !_isAlertEnabled);
+          final categoryConfig =
+              UserProfileRepository().profile.teamMeetingAlerts;
+          PopUpPemberitahuan.show(
+            context,
+            title: _isAlertEnabled ? 'Meeting Alert Active' : 'Meeting Alert Muted',
+            message: _isAlertEnabled
+                ? 'Meeting alerts enabled (Following Profile: ${categoryConfig.summary}).'
+                : 'Alerts muted for this meeting.',
+            icon: _isAlertEnabled
+                ? Icons.notifications_active_rounded
+                : Icons.notifications_off_outlined,
+            iconBgColor: _isAlertEnabled
+                ? PopUpPemberitahuan.positiveColor
+                : PopUpPemberitahuan.neutralColor,
+          );
+        },
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: _isAlertEnabled
+                ? AppColors.primary
+                : const Color(0xFF323846),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: _isAlertEnabled
+                  ? AppColors.primary
+                  : AppColors.borderSubtle,
+              width: 1,
+            ),
+            boxShadow: _isAlertEnabled
+                ? const [
+                    BoxShadow(
+                      color: Color(0x40FA6144),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _isAlertEnabled
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_off_outlined,
+                size: 15,
+                color: _isAlertEnabled
+                    ? Colors.white
+                    : AppColors.textMuted,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _isAlertEnabled ? 'Alert On' : 'Alert Off',
+                style: TextStyle(
+                  color: _isAlertEnabled
+                      ? Colors.white
+                      : AppColors.textMuted,
+                  fontSize: 12,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeleteButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: _handleDelete,
+        icon: const Icon(
+          Icons.delete_outline_rounded,
+          color: Color(0xFFFF5E4D),
+          size: 18,
+        ),
+        label: const Text(
+          'Delete Meeting',
+          style: TextStyle(
+            color: Color(0xFFFF5E4D),
+            fontSize: 14,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFFFF5E4D), width: 1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
       ),
@@ -715,16 +832,16 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
         filled: true,
         fillColor: AppColors.bgCard,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.borderSubtle),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.borderSubtle),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),

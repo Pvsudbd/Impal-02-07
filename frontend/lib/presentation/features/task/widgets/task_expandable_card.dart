@@ -120,8 +120,9 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                             ),
                           ),
 
-                          // Subtitle if available (prevent duplicate if equal to 'Team members')
-                          if (task.subtitle != null &&
+                          // Subtitle if available (only for non-group tasks; team cards remain clean like Home)
+                          if (!isGroup &&
+                              task.subtitle != null &&
                               task.subtitle!.isNotEmpty &&
                               task.subtitle!.trim().toLowerCase() != 'team members') ...[
                             const SizedBox(height: 2),
@@ -138,19 +139,9 @@ class _TaskExpandableCardState extends State<TaskExpandableCard> {
                             ),
                           ],
 
-                          // Team members section (for group tasks)
+                          // Team members avatar stack (for group tasks)
                           if (isGroup && task.memberAvatars.isNotEmpty) ...[
                             const SizedBox(height: 5),
-                            const Text(
-                              'Team members',
-                              style: TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 11,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
                             _buildAvatarStack(task.memberAvatars),
                           ],
 

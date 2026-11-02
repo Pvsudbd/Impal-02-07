@@ -284,6 +284,7 @@ class ImpalHorizontalScheduleList extends StatefulWidget {
   final void Function(ScheduleModel schedule)? onCardTap;
   final void Function(ScheduleModel schedule)? onEdit;
   final void Function(ScheduleModel schedule)? onDelete;
+  final void Function(ScheduleModel schedule)? onToggleAlert;
   final double cardWidth;
   final double cardSpacing;
   final Key? scrollKey;
@@ -295,6 +296,7 @@ class ImpalHorizontalScheduleList extends StatefulWidget {
     this.onCardTap,
     this.onEdit,
     this.onDelete,
+    this.onToggleAlert,
     this.cardWidth = 285.0,
     this.cardSpacing = 12.0,
     this.scrollKey,
@@ -407,6 +409,9 @@ class _ImpalHorizontalScheduleListState
                     : null,
                 onDelete: widget.onDelete != null
                     ? () => widget.onDelete!(widget.schedules[i])
+                    : null,
+                onToggleAlert: widget.onToggleAlert != null
+                    ? () => widget.onToggleAlert!(widget.schedules[i])
                     : null,
               ),
           ],

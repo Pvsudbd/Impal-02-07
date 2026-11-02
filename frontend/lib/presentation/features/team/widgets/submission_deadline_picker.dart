@@ -123,10 +123,10 @@ class _PickerTile extends StatelessWidget {
           height: 44,
           padding: EdgeInsets.symmetric(horizontal: context.rSpacing(10)),
           decoration: BoxDecoration(
-            color: AppColors.bgPrimary,
+            color: AppColors.bgCard,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: AppColors.borderSubtle.withValues(alpha: 0.5),
+              color: AppColors.borderSubtle,
               width: 1,
             ),
           ),
@@ -143,10 +143,10 @@ class _PickerTile extends StatelessWidget {
                 child: Text(
                   text,
                   style: TextStyle(
-                    color: AppColors.textMuted,
+                    color: AppColors.textWhite,
                     fontSize: context.rFont(12, min: 11, max: 14),
                     fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w500,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                   overflow: TextOverflow.ellipsis,
