@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/network/api_client.dart';
 import 'schedule_model.dart';
 
 class ScheduleRepository {
@@ -15,8 +16,40 @@ class ScheduleRepository {
 
   bool _initialized = false;
 
+  Future<String?> _getToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('auth_token');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Sinkronisasi data jadwal terbaru dari Backend API
+  Future<void> fetchSchedulesFromApi() async {
+    final token = await _getToken();
+    if (token == null || token.isEmpty) return;
+
+    try {
+      final response = await ApiClient.get('/api/agenda', token: token);
+      if (response['status'] == 'success' && response['data'] is List) {
+        final List<dynamic> rawList = response['data'];
+        final list = rawList
+            .map((item) => ScheduleModel.fromMap(item as Map<String, dynamic>))
+            .toList();
+        schedulesNotifier.value = list;
+        await _persist();
+      }
+    } catch (e) {
+      debugPrint('[SCHEDULE_REPO] fetchSchedulesFromApi error: $e');
+    }
+  }
+
   Future<void> init() async {
-    if (_initialized) return;
+    if (_initialized) {
+      await fetchSchedulesFromApi();
+      return;
+    }
     _initialized = true;
 
     final prefs = await SharedPreferences.getInstance();
@@ -29,14 +62,15 @@ class ScheduleRepository {
             .map((item) =>
                 ScheduleModel.fromMap(item as Map<String, dynamic>))
             .toList();
-        return;
       } catch (_) {
-        // Fallback to default
+        schedulesNotifier.value = _defaultSchedules;
       }
+    } else {
+      schedulesNotifier.value = _defaultSchedules;
     }
 
-    schedulesNotifier.value = _defaultSchedules;
-    await _persist();
+    // Ambil data terbaru dari backend MySQL
+    await fetchSchedulesFromApi();
   }
 
   List<ScheduleModel> get schedules => schedulesNotifier.value;
@@ -50,13 +84,57 @@ class ScheduleRepository {
   }
 
   Future<void> addSchedule(ScheduleModel item) async {
+    // 1. Optimistic update tampilan lokal
     final current = List<ScheduleModel>.from(schedulesNotifier.value);
     current.insert(0, item);
     schedulesNotifier.value = current;
     await _persist();
+
+    // 2. Kirim dan simpan ke Backend API & MySQL
+    final token = await _getToken();
+    if (token != null && token.isNotEmpty) {
+      try {
+        String dayName(DateTime dt) {
+          const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+          return days[dt.weekday - 1];
+        }
+
+        final isCourse = item.type.toLowerCase() == 'lecture';
+        final body = {
+          'id': item.id,
+          'title': item.title,
+          'type': item.type,
+          'agendaType': isCourse ? 'COURSE' : 'PERSONAL',
+          'timeStart': item.timeStart,
+          'timeEnd': item.timeEnd,
+          'date': item.date.toIso8601String(),
+          'courseCode': item.course ?? item.title,
+          'day': dayName(item.date),
+          'room': item.location ?? 'Classroom',
+          'category': isCourse ? 'Kuliah' : 'Personal',
+          'location': item.location ?? '',
+          'notes': item.notes ?? '',
+        };
+
+        final response = await ApiClient.post('/api/agenda', body, token: token);
+        if (response['status'] == 'success' && response['data'] != null) {
+          final serverItem = ScheduleModel.fromMap(response['data'] as Map<String, dynamic>);
+          final updatedList = List<ScheduleModel>.from(schedulesNotifier.value);
+          final idx = updatedList.indexWhere((s) => s.id == item.id);
+          if (idx != -1) {
+            updatedList[idx] = serverItem;
+            schedulesNotifier.value = updatedList;
+            await _persist();
+          }
+        }
+      } catch (e) {
+        debugPrint('[SCHEDULE_REPO] addSchedule API error: $e');
+      }
+    }
   }
 
   Future<void> updateSchedule(ScheduleModel item) async {
+    // 1. Optimistic update tampilan lokal
     final current = List<ScheduleModel>.from(schedulesNotifier.value);
     final index = current.indexWhere((s) => s.id == item.id);
     if (index != -1) {
@@ -64,13 +142,56 @@ class ScheduleRepository {
       schedulesNotifier.value = current;
       await _persist();
     }
+
+    // 2. Kirim update ke Backend API & MySQL
+    final token = await _getToken();
+    if (token != null && token.isNotEmpty) {
+      try {
+        String dayName(DateTime dt) {
+          const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+          return days[dt.weekday - 1];
+        }
+
+        final isCourse = item.type.toLowerCase() == 'lecture';
+        final body = {
+          'id': item.id,
+          'title': item.title,
+          'type': item.type,
+          'agendaType': isCourse ? 'COURSE' : 'PERSONAL',
+          'timeStart': item.timeStart,
+          'timeEnd': item.timeEnd,
+          'date': item.date.toIso8601String(),
+          'courseCode': item.course ?? item.title,
+          'day': dayName(item.date),
+          'room': item.location ?? 'Classroom',
+          'category': isCourse ? 'Kuliah' : 'Personal',
+          'location': item.location ?? '',
+          'notes': item.notes ?? '',
+        };
+
+        await ApiClient.put('/api/agenda/${item.id}', body, token: token);
+      } catch (e) {
+        debugPrint('[SCHEDULE_REPO] updateSchedule API error: $e');
+      }
+    }
   }
 
   Future<void> deleteSchedule(String id) async {
+    // 1. Optimistic delete tampilan lokal
     final current = List<ScheduleModel>.from(schedulesNotifier.value);
     current.removeWhere((s) => s.id == id);
     schedulesNotifier.value = current;
     await _persist();
+
+    // 2. Hapus di Backend API & MySQL
+    final token = await _getToken();
+    if (token != null && token.isNotEmpty) {
+      try {
+        await ApiClient.delete('/api/agenda/$id', token: token);
+      } catch (e) {
+        debugPrint('[SCHEDULE_REPO] deleteSchedule API error: $e');
+      }
+    }
   }
 
   void resetToDefault() {

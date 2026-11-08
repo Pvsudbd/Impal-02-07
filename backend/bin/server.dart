@@ -5,6 +5,7 @@ import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
 import '../lib/config/db.dart';
 import '../lib/routes/auth/auth_routes.dart';
+import '../lib/routes/agenda/agenda_routes.dart';
 
 void main(List<String> args) async {
   Database.init();
@@ -72,6 +73,9 @@ void main(List<String> args) async {
   // Mount Auth routes under /api/auth
   app.mount('/api/auth', AuthRoutes().router);
 
+  // Mount Agenda routes under /api/agenda
+  app.mount('/api/agenda', AgendaRoutes().router);
+
   // Robust CORS Middleware for Chrome / Flutter Web
   Handler corsMiddleware(Handler innerHandler) {
     return (Request request) async {
@@ -104,5 +108,8 @@ void main(List<String> args) async {
   print('📊 Test DB : http://localhost:${server.port}/test-db');
   print('📋 Tabel   : http://localhost:${server.port}/tables');
   print('🔐 Auth    : http://localhost:${server.port}/api/auth/login');
+  print('📅 Jadwal  : http://localhost:${server.port}/api/agenda');
+  print('📅 Kuliah  : http://localhost:${server.port}/api/agenda/course');
+  print('📅 Personal: http://localhost:${server.port}/api/agenda/personal');
   print('========================================================');
 }

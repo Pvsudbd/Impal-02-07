@@ -38,4 +38,38 @@ class ApiClient {
     final response = await http.get(uri, headers: headers);
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
+
+  static Future<Map<String, dynamic>> put(
+    String endpoint,
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
+    final uri = Uri.parse('$baseUrl$endpoint');
+    final headers = {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+
+    final response = await http.put(
+      uri,
+      headers: headers,
+      body: jsonEncode(body),
+    );
+
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> delete(
+    String endpoint, {
+    String? token,
+  }) async {
+    final uri = Uri.parse('$baseUrl$endpoint');
+    final headers = {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+
+    final response = await http.delete(uri, headers: headers);
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
 }
