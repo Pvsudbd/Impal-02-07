@@ -7,6 +7,25 @@ export '../../common_widgets/pop_up_pemberitahuan.dart';
 /// Specialized PopUp Pemberitahuan helpers for Team operations
 /// follows the exact IMPAL notification template (Positive -> Green, Negative -> Orange)
 class PopUpPemberitahuanTeam {
+  /// General show delegate
+  static void show(
+    BuildContext context, {
+    required String title,
+    required String message,
+    IconData icon = Icons.check_circle_outline_rounded,
+    Color iconBgColor = PopUpPemberitahuan.positiveColor,
+    Duration duration = const Duration(milliseconds: 2800),
+  }) {
+    PopUpPemberitahuan.show(
+      context,
+      title: title,
+      message: message,
+      icon: icon,
+      iconBgColor: iconBgColor,
+      duration: duration,
+    );
+  }
+
   /// Notifikasi ketika invite code berhasil disalin ke clipboard
   static void codeCopied(BuildContext context, {String? code}) {
     PopUpPemberitahuan.codeCopied(context, code: code);
@@ -48,6 +67,76 @@ class PopUpPemberitahuanTeam {
       context,
       title: title,
       message: message,
+    );
+  }
+
+  /// Notifikasi ketika tugas kelompok berhasil dibuat
+  static void taskCreated(
+    BuildContext context, {
+    required String taskName,
+    String? assignees,
+  }) {
+    PopUpPemberitahuan.taskCreated(
+      context,
+      taskName: taskName,
+      assignees: assignees,
+    );
+  }
+
+  /// Notifikasi ketika tugas kelompok berhasil diperbarui
+  static void taskUpdated(
+    BuildContext context, {
+    required String taskName,
+  }) {
+    PopUpPemberitahuan.taskUpdated(
+      context,
+      taskName: taskName,
+    );
+  }
+
+  /// Notifikasi ketika tugas kelompok berhasil dihapus
+  static void taskDeleted(
+    BuildContext context, {
+    String? taskName,
+  }) {
+    PopUpPemberitahuan.taskDeleted(
+      context,
+      taskName: taskName,
+    );
+  }
+
+  /// Notifikasi ketika milestone berhasil dibuat (Positif -> Hijau)
+  static void milestoneCreated(
+    BuildContext context, {
+    required String title,
+    int taskCount = 0,
+  }) {
+    PopUpPemberitahuan.milestoneCreated(
+      context,
+      title: title,
+      taskCount: taskCount,
+    );
+  }
+
+  /// Notifikasi ketika milestone berhasil diperbarui (Positif -> Hijau)
+  static void milestoneUpdated(
+    BuildContext context, {
+    required String title,
+  }) {
+    PopUpPemberitahuan.milestoneUpdated(
+      context,
+      title: title,
+    );
+  }
+
+  /// Notifikasi ketika milestone dihapus (Negatif/Hapus -> Orange)
+  static void milestoneDeleted(
+    BuildContext context, {
+    String? title,
+  }) {
+    PopUpPemberitahuan.milestoneDeleted(
+      context,
+      title: title,
     );
   }
 }

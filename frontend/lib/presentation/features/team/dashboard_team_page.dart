@@ -1,61 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../dashboard/home_page.dart';
-import '../jadwal/models/schedule_model.dart';
-import '../jadwal/models/schedule_repository.dart';
-import '../jadwal/schedule_page.dart';
+import '../schedule/models/schedule_model.dart';
+import '../schedule/models/schedule_repository.dart';
+import '../schedule/pop_up_konfirmasi_delete.dart';
+import 'create_task_team.dart';
 import 'pop_up_create_meeting.dart';
+import 'widgets/pop_up_create_milestone.dart';
+import 'widgets/team_dashboard_header.dart';
+import 'widgets/team_milestones_section.dart';
+import 'widgets/team_schedule_section.dart';
+import 'widgets/team_task_card.dart';
+import 'models/team_task_repository.dart';
+
+export 'models/team_task_model.dart';
 
 /// Aliases for backward compatibility with Figma export & routes
 typedef DashboardKelompok = DashboardTeamPage;
 typedef DashboardTeamPageAlias = DashboardTeamPage;
-
-/// Priority level for team tasks
-enum TaskPriority { high, medium, low }
-
-/// Model representing a task in the team dashboard
-class TeamTaskModel {
-  final String id;
-  final String title;
-  final TaskPriority priority;
-  final String assignedTo;
-  final Color assigneeColor;
-  final String timeRange;
-  final bool isDone;
-
-  const TeamTaskModel({
-    required this.id,
-    required this.title,
-    required this.priority,
-    required this.assignedTo,
-    required this.assigneeColor,
-    required this.timeRange,
-    this.isDone = false,
-  });
-
-  TeamTaskModel copyWith({
-    String? id,
-    String? title,
-    TaskPriority? priority,
-    String? assignedTo,
-    Color? assigneeColor,
-    String? timeRange,
-    bool? isDone,
-  }) {
-    return TeamTaskModel(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      priority: priority ?? this.priority,
-      assignedTo: assignedTo ?? this.assignedTo,
-      assigneeColor: assigneeColor ?? this.assigneeColor,
-      timeRange: timeRange ?? this.timeRange,
-      isDone: isDone ?? this.isDone,
-    );
-  }
-}
 
 /// Standalone & embedded Team Dashboard Page
 class DashboardTeamPage extends StatefulWidget {
@@ -87,48 +51,92 @@ class DashboardTeamPage extends StatefulWidget {
 }
 
 class _DashboardTeamPageState extends State<DashboardTeamPage> {
-  int _currentTab = 2; // Team tab active by default
-  late List<TeamTaskModel> _tasks;
+  final int _currentTab = 2; // Team tab active by default
+  final TeamTaskRepository _teamTaskRepository = TeamTaskRepository();
+  final ScrollController _scrollController = ScrollController();
+  final ScrollController _milestonesScrollController = ScrollController();
+  bool _assignedToMeOnly = false;
+  String? _selectedMilestoneId;
+  final GlobalKey _firstActiveTeamTaskKey = GlobalKey();
+  final GlobalKey _firstActiveMilestoneKey = GlobalKey();
+  bool _hasAutoScrolled = false;
+
+  void _toggleMilestoneSelection(String milestoneId) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (_selectedMilestoneId == milestoneId) {
+        _selectedMilestoneId = null; // Toggle off: show all tasks!
+      } else {
+        _selectedMilestoneId = milestoneId; // Filter to this milestone!
+      }
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     ScheduleRepository().init();
-    _tasks = [
-      const TeamTaskModel(
-        id: 'task_1',
-        title: 'Membuat ui page kelompok',
-        priority: TaskPriority.high,
-        assignedTo: 'Yoga Perkasa Didik',
-        assigneeColor: Color(0xFFF3A683),
-        timeRange: '09:30 - 11:30 WIB',
-      ),
-      const TeamTaskModel(
-        id: 'task_2',
-        title: 'Membuat ui page home',
-        priority: TaskPriority.medium,
-        assignedTo: 'Yoga Perkasa Didik',
-        assigneeColor: Color(0xFFF3A683),
-        timeRange: '09:30 - 11:30 WIB',
-      ),
-      const TeamTaskModel(
-        id: 'task_3',
-        title: 'Membuat ui form tugas',
-        priority: TaskPriority.low,
-        assignedTo: 'Yoga Perkasa Didik',
-        assigneeColor: Color(0xFFF3A683),
-        timeRange: '09:30 - 11:30 WIB',
-      ),
-    ];
+    _teamTaskRepository.init();
+    _teamTaskRepository.addListener(_onRepositoryChanged);
+    _triggerAutoScroll();
   }
 
-  /// Copy team invite code and show notification pop-up
-  Future<void> _copyTeamCode() async {
-    HapticFeedback.lightImpact();
-    PopUpPemberitahuan.codeCopied(context, code: widget.teamCode);
-    try {
-      await Clipboard.setData(ClipboardData(text: widget.teamCode));
-    } catch (_) {}
+  void _onRepositoryChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _teamTaskRepository.removeListener(_onRepositoryChanged);
+    _scrollController.dispose();
+    _milestonesScrollController.dispose();
+    super.dispose();
+  }
+
+  void _triggerAutoScroll() {
+    if (_hasAutoScrolled) return;
+    Future.delayed(const Duration(milliseconds: 240), () {
+      if (!mounted || _hasAutoScrolled) return;
+      if (_firstActiveTeamTaskKey.currentContext != null) {
+        Scrollable.ensureVisible(
+          _firstActiveTeamTaskKey.currentContext!,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+          alignment: 0.22,
+        );
+        _hasAutoScrolled = true;
+      }
+      // Auto-scroll horizontal milestone bar to first active milestone
+      // so completed milestones remain to the left and user scrolls left to see them
+      if (_firstActiveMilestoneKey.currentContext != null) {
+        final milestones = _teamTaskRepository.getMilestones(widget.teamCode);
+        final allTasks = _teamTaskRepository.getTasks(widget.teamCode);
+        final hasCompleted = milestones.any((m) => m.isAllCompleted(allTasks));
+        if (hasCompleted) {
+          Scrollable.ensureVisible(
+            _firstActiveMilestoneKey.currentContext!,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+            alignment: 0.0,
+          );
+        }
+      }
+    });
+  }
+
+  bool _isAssignedToCurrentUser(TeamTaskModel task) {
+    final userLower = widget.userName.toLowerCase();
+    final assignedLower = task.assignedTo.toLowerCase();
+    if (assignedLower.contains(userLower)) return true;
+    if (userLower == 'jarvis' &&
+        (assignedLower.contains('yoga') || assignedLower.contains('jarvis'))) {
+      return true;
+    }
+    final parts = userLower.split(' ').where((s) => s.length > 2);
+    for (final p in parts) {
+      if (assignedLower.contains(p)) return true;
+    }
+    return false;
   }
 
   Future<void> _openCreateMeeting() async {
@@ -137,7 +145,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       teamName: widget.teamName,
     );
     if (result != null && mounted) {
-      PopUpPemberitahuan.scheduleCreated(context);
+      PopUpPemberitahuan.meetingCreated(context);
     }
   }
 
@@ -148,244 +156,161 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       teamName: widget.teamName,
     );
     if (result != null && mounted) {
-      PopUpPemberitahuan.scheduleUpdated(context);
+      PopUpPemberitahuan.meetingUpdated(context);
     }
   }
 
-  void _showCreateTaskDialog() {
-    final titleController = TextEditingController();
-    TaskPriority selectedPriority = TaskPriority.medium;
+  Future<void> _deleteSchedule(ScheduleModel item) async {
+    final isMeeting = item.type.toLowerCase() == 'meeting';
+    final confirmed = await PopUpKonfirmasiDelete.show(
+      context,
+      title: isMeeting ? 'Delete Meeting?' : 'Delete Schedule?',
+      message: isMeeting
+          ? 'Are you sure you want to delete this meeting? This action cannot be undone.'
+          : 'Are you sure you want to delete this schedule? This action cannot be undone.',
+    );
+    if (confirmed == true) {
+      await ScheduleRepository().deleteSchedule(item.id);
+      if (mounted) {
+        if (isMeeting) {
+          PopUpPemberitahuan.meetingDeleted(context);
+        } else {
+          PopUpPemberitahuan.scheduleDeleted(context);
+        }
+      }
+    }
+  }
 
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (dialogCtx, setDialogState) {
-            return Dialog(
-              backgroundColor: const Color(0xFF282D37),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: Color(0xFF3B4150), width: 1),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Create Team Task',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Color(0xFF8E95A5), size: 18),
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: titleController,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: 'Task Title (e.g. Slicing UI)',
-                        hintStyle: const TextStyle(color: Color(0xFF8E95A5), fontSize: 13),
-                        filled: true,
-                        fillColor: const Color(0xFF323846),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      'Priority',
-                      style: TextStyle(
-                        color: Color(0xFF8E95A5),
-                        fontSize: 12,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        for (final p in TaskPriority.values) ...[
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setDialogState(() => selectedPriority = p),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: selectedPriority == p
-                                      ? const Color(0xFFFA6144)
-                                      : const Color(0xFF323846),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  p.name.toUpperCase(),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: selectedPriority == p
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (p != TaskPriority.values.last) const SizedBox(width: 8),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFA6144),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () {
-                          final text = titleController.text.trim();
-                          if (text.isNotEmpty) {
-                            setState(() {
-                              _tasks.insert(
-                                0,
-                                TeamTaskModel(
-                                  id: 'task_${DateTime.now().millisecondsSinceEpoch}',
-                                  title: text,
-                                  priority: selectedPriority,
-                                  assignedTo: widget.userName,
-                                  assigneeColor: widget.memberColors.first,
-                                  timeRange: 'Today',
-                                ),
-                              );
-                            });
-                            Navigator.of(ctx).pop();
-                            PopUpPemberitahuan.success(
-                              context,
-                              title: 'Task Created',
-                              message: 'Team task "$text" has been added.',
-                            );
-                          }
-                        },
-                        child: const Text(
-                          'Add Task',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+  Future<void> _openCreateTaskPage() async {
+    final result = await Navigator.of(context).push<TeamTaskModel>(
+      MaterialPageRoute(
+        builder: (_) => CreateTaskTeamPage(
+          onTaskCreated: (task) {
+            _teamTaskRepository.addTask(widget.teamCode, task);
           },
-        );
-      },
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      if (!_teamTaskRepository
+          .getTasks(widget.teamCode)
+          .any((t) => t.id == result.id)) {
+        _teamTaskRepository.addTask(widget.teamCode, result);
+      }
+    }
+  }
+
+  Future<void> _openEditTaskPage(TeamTaskModel task) async {
+    final result = await Navigator.of(context).push<TeamTaskModel>(
+      MaterialPageRoute(
+        builder: (_) => CreateTaskTeamPage(
+          existingTask: task,
+          onTaskUpdated: (updatedTask) {
+            _teamTaskRepository.updateTask(widget.teamCode, updatedTask);
+          },
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      _teamTaskRepository.updateTask(widget.teamCode, result);
+    }
+  }
+
+  Future<void> _openCreateMilestone() async {
+    await PopUpCreateMilestone.show(
+      context,
+      teamCode: widget.teamCode,
     );
   }
 
-  String _getUserInitials(String name) {
-    if (name.trim().isEmpty) return 'JS';
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  Future<void> _openEditMilestone(TeamMilestoneModel milestone) async {
+    await PopUpCreateMilestone.show(
+      context,
+      teamCode: widget.teamCode,
+      existingMilestone: milestone,
+    );
+  }
+
+  Future<void> _deleteMilestone(TeamMilestoneModel milestone) async {
+    final confirmed = await PopUpKonfirmasiDelete.show(
+      context,
+      title: 'Delete Milestone?',
+      message:
+          'Are you sure you want to delete "${milestone.title}"? Member tasks will remain in the dashboard.',
+    );
+    if (confirmed == true && mounted) {
+      _teamTaskRepository.deleteMilestone(widget.teamCode, milestone.id);
+      PopUpPemberitahuan.milestoneDeleted(context, title: milestone.title);
     }
-    return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.isStandalone) {
-      return CustomScrollView(
-        key: const ValueKey('dashboard_team_scroll_view'),
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                // 1. Header (Greeting + User Profile Initials)
-                _buildHeader(),
-                const SizedBox(height: 16),
-
-                // 2. Team Info (Name, Member Avatars, Copy Code)
-                _buildTeamInfoBar(),
-                const SizedBox(height: 16),
-
-                // 3. Team's Schedule Section
-                _buildTeamScheduleSection(),
-                const SizedBox(height: 16),
-
-                // 4. Team Task Section
-                _buildTeamTaskSection(),
-              ]),
-            ),
-          ),
-        ],
-      );
-    }
-
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
-    final content = Stack(
-      children: [
-        CustomScrollView(
-          key: const ValueKey('dashboard_team_scroll_view'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  // 1. Header (Greeting + User Profile Initials)
-                  _buildHeader(),
-                  const SizedBox(height: 16),
-
-                  // 2. Team Info (Name, Member Avatars, Copy Code)
-                  _buildTeamInfoBar(),
-                  const SizedBox(height: 16),
-
-                  // 3. Team's Schedule Section
-                  _buildTeamScheduleSection(),
-                  const SizedBox(height: 16),
-
-                  // 4. Team Task Section
-                  _buildTeamTaskSection(),
-                ]),
+    final dashboardScrollContent = CustomScrollView(
+      key: const ValueKey('team_dashboard_scroll_view'),
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              TeamDashboardHeader(
+                userName: widget.userName,
+                teamName: widget.teamName,
+                teamCode: widget.teamCode,
+                memberColors: widget.memberColors,
+                showBackButton: Navigator.of(context).canPop() || widget.onBack != null,
+                onBack: widget.onBack,
+                onMembersTap: _showTeamMembersModal,
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TeamScheduleSection(
+                isDashboard: true,
+                onActionTap: _openCreateMeeting,
+                onEditSchedule: _openEditSchedule,
+                onDeleteSchedule: _deleteSchedule,
+              ),
+              const SizedBox(height: 16),
+              TeamMilestonesSection(
+                milestones: _teamTaskRepository.getMilestones(widget.teamCode),
+                allTasks: _teamTaskRepository.getTasks(widget.teamCode),
+                selectedMilestoneId: _selectedMilestoneId,
+                onMilestoneSelected: _toggleMilestoneSelection,
+                onAddMilestone: _openCreateMilestone,
+                onEditMilestone: _openEditMilestone,
+                onDeleteMilestone: _deleteMilestone,
+                scrollController: _milestonesScrollController,
+                firstActiveMilestoneKey: _firstActiveMilestoneKey,
+              ),
+              const SizedBox(height: 16),
+              _buildTeamTaskSection(),
+            ]),
+          ),
         ),
-        // Floating Bottom Navigation Bar
+      ],
+    );
+
+    // If embedded inside HomePage shell, return scroll content directly
+    // to prevent duplicate Scaffolds, SafeAreas, and BottomNavBars
+    if (!widget.isStandalone) {
+      return dashboardScrollContent;
+    }
+
+    final scaffoldContent = Stack(
+      children: [
+        dashboardScrollContent,
         Positioned(
           left: 0,
           right: 0,
           bottom: 0,
-          child: _buildBottomNavBar(),
+          child: ImpalBottomNavBar(
+            currentTab: _currentTab,
+            onTabSelected: _onTabSelected,
+          ),
         ),
       ],
     );
@@ -393,11 +318,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     if (isMobile) {
       return Scaffold(
         backgroundColor: const Color(0xFF282D37),
-        body: SafeArea(
-          top: true,
-          bottom: false,
-          child: content,
-        ),
+        body: SafeArea(top: true, bottom: false, child: scaffoldContent),
       );
     }
 
@@ -408,10 +329,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 410,
-                maxHeight: 844,
-              ),
+              constraints: const BoxConstraints(maxWidth: 410, maxHeight: 844),
               child: Container(
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
@@ -426,7 +344,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                     ),
                   ],
                 ),
-                child: content,
+                child: scaffoldContent,
               ),
             ),
           ),
@@ -435,539 +353,240 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     );
   }
 
-  // --- UI Sections ---
+  void _showTeamMembersModal() {
+    final members = [
+      {
+        'name': 'Andi Sukamoto',
+        'role': 'Team Leader',
+        'color': const Color(0xFFF3A683),
+        'email': 'andi@student.telkomuniversity.ac.id',
+      },
+      {
+        'name': 'Rayya Gemintang',
+        'role': 'UI/UX Designer',
+        'color': const Color(0xFF786FA6),
+        'email': 'rayya@student.telkomuniversity.ac.id',
+      },
+      {
+        'name': 'Muhammad Kafi Rijal',
+        'role': 'Frontend Engineer',
+        'color': const Color(0xFF63CDDA),
+        'email': 'kafi@student.telkomuniversity.ac.id',
+      },
+      {
+        'name': 'Yoga Perkasa Didik',
+        'role': 'Backend Engineer',
+        'color': const Color(0xFFE77F67),
+        'email': 'yoga@student.telkomuniversity.ac.id',
+      },
+      {
+        'name': widget.userName,
+        'role': 'Quality Assurance',
+        'color': const Color(0xFF778BEB),
+        'email': 'jarvis@student.telkomuniversity.ac.id',
+      },
+    ];
 
-  Widget _buildHeader() {
-    final initials = _getUserInitials(widget.userName);
-    final canPop = !widget.isStandalone || Navigator.of(context).canPop() || widget.onBack != null;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              if (canPop) ...[
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: widget.onBack ?? () => Navigator.of(context).maybePop(),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF323846),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF3B4150), width: 1),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.arrow_back_ios_new_rounded,
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        decoration: const BoxDecoration(
+          color: Color(0xFF282D37),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF434A59),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Team Members (${members.length})',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            for (final m in members) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF323846),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF3B4150), width: 0.5),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: m['color'] as Color,
+                      child: Text(
+                        (m['name'] as String).substring(0, 1).toUpperCase(),
+                        style: const TextStyle(
                           color: Colors.white,
-                          size: 16,
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Hi ${widget.userName}',
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.3,
-                        height: 1.2,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            m['name'] as String,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            m['email'] as String,
+                            style: const TextStyle(
+                              color: Color(0xFF8E95A5),
+                              fontSize: 11,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    const Text(
-                      'Team Dashboard',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Color(0xFFFF7D65),
-                        fontSize: 12.5,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.15,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: (m['role'] as String).contains('Leader')
+                            ? const Color(0xFFFF7D65).withValues(alpha: 0.15)
+                            : const Color(0xFF5B93FF).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        m['role'] as String,
+                        style: TextStyle(
+                          color: (m['role'] as String).contains('Leader')
+                              ? const Color(0xFFFF7D65)
+                              : const Color(0xFF5B93FF),
+                          fontSize: 10,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
             ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: const Color(0xFF323846),
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFF3B4150), width: 1),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            initials,
-            style: const TextStyle(
-              color: Color(0xFF8E95A5),
-              fontSize: 13.5,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAvatarCircle(Color bgColor, {double size = 28}) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: bgColor,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0xFF282D37),
-          width: 2,
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.person,
-          size: size * 0.60,
-          color: Colors.white.withValues(alpha: 0.95),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTeamInfoBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Left: Team name & Overlapping Avatars (blended with base background)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.teamName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.04,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Overlapping avatar circles with person silhouettes
-                SizedBox(
-                  height: 28,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      for (int i = 0; i < widget.memberColors.length; i++)
-                        Positioned(
-                          left: i * 20.0,
-                          child: _buildAvatarCircle(widget.memberColors[i], size: 28),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Right: Team Code Button (Tap to copy + show notification)
-          GestureDetector(
-            key: const ValueKey('team_dashboard_copy_code_button'),
-            behavior: HitTestBehavior.opaque,
-            onTap: _copyTeamCode,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF282D37),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFFFA6144),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.copy_rounded,
-                    color: Color(0xFFFA6144),
-                    size: 13,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    widget.teamCode,
-                    style: const TextStyle(
-                      color: Color(0xFFFA6144),
-                      fontSize: 14.5,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.03,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTeamScheduleSection() {
-    return ValueListenableBuilder<List<ScheduleModel>>(
-      valueListenable: ScheduleRepository().schedulesNotifier,
-      builder: (context, allSchedules, _) {
-        // Filter strictly for team meetings (no lectures or generic external tasks)
-        final teamSchedules = allSchedules.where((s) {
-          final type = s.type.trim().toLowerCase();
-          if (type == 'lecture') return false;
-          final isExplicitMeeting = type == 'meeting' ||
-              type == 'team meeting' ||
-              type == 'rapat' ||
-              type == 'team';
-          final t = s.title.toLowerCase();
-          final n = (s.notes ?? '').toLowerCase();
-          final loc = (s.location ?? '').toLowerCase();
-          final hasMeetingKeyword = t.contains('meet') ||
-              t.contains('rapat') ||
-              n.contains('meet') ||
-              loc.contains('meet') ||
-              loc.contains('zoom') ||
-              loc.contains('google meet');
-          return isExplicitMeeting || hasMeetingKeyword;
-        }).toList();
-
-        // Sort items: Ongoing (0) -> Upcoming (1) -> Overdue (2)
-        // Then chronologically by start time (09:00 before 10:00)
-        teamSchedules.sort((a, b) {
-          int statusWeight(String s) {
-            final st = s.toLowerCase();
-            if (st == 'ongoing') return 0;
-            if (st == 'upcoming') return 1;
-            return 2;
-          }
-
-          final wA = statusWeight(a.status);
-          final wB = statusWeight(b.status);
-          if (wA != wB) return wA.compareTo(wB);
-
-          final dtA = a.startDateTime ?? DateTime(2000);
-          final dtB = b.startDateTime ?? DateTime(2000);
-          return dtA.compareTo(dtB);
-        });
-
-        Widget scheduleContent;
-        if (teamSchedules.isEmpty) {
-          scheduleContent = _buildScheduleCard(
-            ScheduleRepository.defaultTeamSchedule,
-            isHorizontal: false,
-            isLast: true,
-          );
-        } else if (teamSchedules.length == 1) {
-          scheduleContent = _buildScheduleCard(
-            teamSchedules.first,
-            isHorizontal: false,
-            isLast: true,
-          );
-        } else {
-          scheduleContent = ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context).copyWith(
-              dragDevices: {
-                PointerDeviceKind.touch,
-                PointerDeviceKind.mouse,
-                PointerDeviceKind.trackpad,
-              },
-            ),
-            child: SingleChildScrollView(
-              key: const ValueKey('team_dashboard_schedules_horizontal_scroll'),
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              clipBehavior: Clip.none,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (int i = 0; i < teamSchedules.length; i++)
-                    _buildScheduleCard(
-                      teamSchedules[i],
-                      isHorizontal: true,
-                      isLast: i == teamSchedules.length - 1,
-                    ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Expanded(
-                  child: Text(
-                    "Team's Schedule",
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.04,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // + Create Meeting Action
-                GestureDetector(
-                  key: const ValueKey('dashboard_create_meeting_button'),
-                  onTap: _openCreateMeeting,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFA6144),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      '+ Create Meeting',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 9.5,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            // Schedule Card / Horizontal Scroll
-            scheduleContent,
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildScheduleCard(
-    ScheduleModel schedule, {
-    bool isHorizontal = false,
-    bool isLast = false,
-  }) {
-    return Container(
-      width: isHorizontal ? 285 : double.infinity,
-      margin: EdgeInsets.only(
-        right: isHorizontal ? (isLast ? 0 : 12) : 0,
-        bottom: !isHorizontal ? (isLast ? 0 : 10) : 0,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
+  Widget _buildAssigneeFilterChip(String label, bool isSelected, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFF7D65) : const Color(0xFF323846),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFF7D65) : const Color(0xFF3B4150),
+            width: 1,
           ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _openEditSchedule(schedule),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Left accent stripe
-                Container(
-                  width: 5,
-                  color: schedule.accentColor,
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                schedule.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14.5,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            // Status Pill matching schedule_page style (Overdue gray, Ongoing coral, Upcoming gray)
-                            if (schedule.status.toLowerCase() == 'ongoing')
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2.5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF826E),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: const Text(
-                                  'Ongoing',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9.5,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.25,
-                                  ),
-                                ),
-                              )
-                            else if (schedule.status.toLowerCase() == 'overdue' ||
-                                schedule.status.toLowerCase() == 'completed')
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2.5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-                                    width: 0.8,
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Overdue',
-                                  style: TextStyle(
-                                    color: Color(0xFF8E95A5),
-                                    fontSize: 9.5,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.25,
-                                  ),
-                                ),
-                              )
-                            else
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2.5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-                                    width: 0.8,
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Upcoming',
-                                  style: TextStyle(
-                                    color: Color(0xFF8E95A5),
-                                    fontSize: 9.5,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.25,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        if (schedule.location != null &&
-                            schedule.location!.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            schedule.location!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF8E95A5),
-                              fontSize: 11,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Container(
-                              width: 15,
-                              height: 15,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF8E95A5).withValues(alpha: 0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                Icons.access_time_filled_rounded,
-                                size: 9,
-                                color: Color(0xFF8E95A5),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              schedule.formattedTime,
-                              style: const TextStyle(
-                                color: Color(0xFF8E95A5),
-                                fontSize: 10.8,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : const Color(0xFF8E95A5),
+            fontSize: 11,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
     );
+  }
+
+  void _handleTaskToggleCompletion(TeamTaskModel task) {
+    HapticFeedback.lightImpact();
+    final willComplete = !task.isDone;
+    _teamTaskRepository.toggleTaskCompletion(
+      teamCode: widget.teamCode,
+      taskId: task.id,
+    );
+    if (willComplete) {
+      final allDone =
+          _teamTaskRepository.areAllTasksCompleted(widget.teamCode);
+      if (allDone) {
+        PopUpPemberitahuan.show(
+          context,
+          title: 'All Team Tasks Completed! 🎉',
+          message:
+              'All tasks in this dashboard are finished. Team Project is now marked completed!',
+          icon: Icons.celebration_rounded,
+          iconBgColor: const Color(0xFF10B981),
+        );
+      } else {
+        PopUpPemberitahuan.taskCompleted(context, taskName: task.title);
+      }
+    } else {
+      PopUpPemberitahuan.taskReopened(context, taskName: task.title);
+    }
   }
 
   Widget _buildTeamTaskSection() {
+    final allTasks = _teamTaskRepository.getTasks(widget.teamCode);
+    final milestones = _teamTaskRepository.getMilestones(widget.teamCode);
+
+    final selectedMilestone = _selectedMilestoneId != null
+        ? milestones.where((m) => m.id == _selectedMilestoneId).firstOrNull
+        : null;
+
+    final targetTasks = selectedMilestone != null
+        ? selectedMilestone.getMemberTasks(allTasks)
+        : allTasks;
+
+    final filtered = _assignedToMeOnly
+        ? targetTasks.where(_isAssignedToCurrentUser).toList()
+        : targetTasks;
+
+    final completed = filtered.where((t) => t.isDone).toList();
+    final active = filtered.where((t) => !t.isDone).toList();
+    active.sort(TeamTaskModel.compareTeamTaskDeadlines);
+    final displayedTasks = [...completed, ...active];
+    final firstActiveId = active.map((t) => t.id).firstOrNull;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -989,12 +608,12 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
               ),
             ),
             const SizedBox(width: 8),
-            // + Create Task Action
             GestureDetector(
               key: const ValueKey('dashboard_create_task_button'),
-              onTap: _showCreateTaskDialog,
+              onTap: _openCreateTaskPage,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFA6144),
                   borderRadius: BorderRadius.circular(6),
@@ -1013,216 +632,87 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           ],
         ),
         const SizedBox(height: 10),
-        // Task Cards List
-        for (int i = 0; i < _tasks.length; i++) ...[
-          _buildTaskCard(_tasks[i]),
-          if (i < _tasks.length - 1) const SizedBox(height: 10),
-        ],
+        Row(
+          children: [
+            _buildAssigneeFilterChip(
+              'All Tasks',
+              !_assignedToMeOnly,
+              () => setState(() => _assignedToMeOnly = false),
+            ),
+            const SizedBox(width: 8),
+            _buildAssigneeFilterChip(
+              'Assigned to Me',
+              _assignedToMeOnly,
+              () => setState(() => _assignedToMeOnly = true),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (displayedTasks.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF323846),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Center(
+              child: Text(
+                selectedMilestone != null
+                    ? (_assignedToMeOnly
+                        ? 'No tasks assigned to you in "${selectedMilestone.title}".'
+                        : 'No tasks added to "${selectedMilestone.title}" yet.')
+                    : (_assignedToMeOnly
+                        ? 'No tasks assigned to you in this team.'
+                        : 'No team tasks found in this dashboard.'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF8E95A5),
+                  fontSize: 13,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ),
+          )
+        else
+          for (int i = 0; i < displayedTasks.length; i++) ...[
+            TeamTaskCard(
+              key: displayedTasks[i].id == firstActiveId
+                  ? _firstActiveTeamTaskKey
+                  : ValueKey('team_task_${displayedTasks[i].id}'),
+              task: displayedTasks[i],
+              isAssignedToCurrentUser:
+                  _isAssignedToCurrentUser(displayedTasks[i]),
+              onTap: () => _openEditTaskPage(displayedTasks[i]),
+              onEdit: () => _openEditTaskPage(displayedTasks[i]),
+              onToggleCompletion: () =>
+                  _handleTaskToggleCompletion(displayedTasks[i]),
+            ),
+            if (i < displayedTasks.length - 1) const SizedBox(height: 10),
+          ],
       ],
     );
   }
 
-  Widget _buildTaskCard(TeamTaskModel task) {
-    Color priorityColor;
-    Color priorityTextColor;
-    String priorityText;
-
-    switch (task.priority) {
-      case TaskPriority.high:
-        priorityColor = const Color(0xFFFA6144);
-        priorityTextColor = Colors.white;
-        priorityText = 'HIGH';
-        break;
-      case TaskPriority.medium:
-        priorityColor = const Color(0xFFFBBF24);
-        priorityTextColor = const Color(0xFF1F2937);
-        priorityText = 'MEDIUM';
-        break;
-      case TaskPriority.low:
-        priorityColor = const Color(0xFF6EE7B7);
-        priorityTextColor = const Color(0xFF064E3B);
-        priorityText = 'LOW';
-        break;
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title + Priority Tag
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  task.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.8,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                decoration: BoxDecoration(
-                  color: priorityColor,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  priorityText,
-                  style: TextStyle(
-                    color: priorityTextColor,
-                    fontSize: 9.5,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // "Assign to:" label & Deadline/Time
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Assign to:',
-                style: TextStyle(
-                  color: Color(0xFF8E95A5),
-                  fontSize: 11,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Row(
-                children: [
-                  Container(
-                    width: 15,
-                    height: 15,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF7D65).withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.access_time_filled_rounded,
-                      size: 9,
-                      color: Color(0xFFFF7D65),
-                    ),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    task.timeRange,
-                    style: const TextStyle(
-                      color: Color(0xFF8E95A5),
-                      fontSize: 10.8,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-
-          // Assignee Profile
-          Row(
-            children: [
-              Container(
-                width: 26,
-                height: 26,
-                decoration: BoxDecoration(
-                  color: task.assigneeColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFF434A59),
-                    width: 1.5,
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.person,
-                    size: 16,
-                    color: Colors.white.withValues(alpha: 0.95),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  task.assignedTo,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFFCBD5E1),
-                    fontSize: 12,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Bottom Navigation Bar ---
-
-  Widget _buildBottomNavBar() {
-    return ImpalBottomNavBar(
-      currentTab: _currentTab,
-      onTabSelected: _onTabSelected,
-    );
-  }
-
   void _onTabSelected(int index) {
-    if (index == _currentTab) return;
-    setState(() => _currentTab = index);
-
-    if (index == 0) {
-      // Home
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomePage()),
-        (route) => false,
-      );
-    } else if (index == 2) {
-      // Team List / Kelompok
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
+    if (index == _currentTab) {
+      if (index == 2 && widget.onBack != null) {
+        widget.onBack!();
       }
-    } else if (index == 3) {
-      // Schedule
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => SchedulePage(
-            userName: widget.userName,
-            isStandalone: true,
-          ),
-        ),
-      );
+      return;
     }
+    if (index == 2 && widget.onBack != null) {
+      widget.onBack!();
+      return;
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => HomePage(
+          userName: widget.userName,
+          initialTab: index,
+        ),
+      ),
+      (route) => false,
+    );
   }
 }

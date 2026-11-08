@@ -27,6 +27,7 @@ class PopUpPemberitahuan extends StatefulWidget {
   // Standard color constants based on user rules
   static const Color positiveColor = Color(0xFF10B981); // Hijau untuk hal positif
   static const Color negativeColor = Color(0xFFFA6144); // Orange untuk hal negatif/warning
+  static const Color neutralColor = Color(0xFF64748B); // Abu-abu netral untuk muted/info
 
   static OverlayEntry? _activeEntry;
   static _PopUpPemberitahuanWidgetState? _activeState;
@@ -159,6 +160,41 @@ class PopUpPemberitahuan extends StatefulWidget {
     );
   }
 
+  // --- Meeting Preset Notifications ---
+
+  /// Preset notification when a meeting is created (Positif -> Hijau).
+  static void meetingCreated(BuildContext context) {
+    show(
+      context,
+      title: 'Meeting Created',
+      message: 'Your meeting has been successfully created.',
+      icon: Icons.groups_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a meeting is updated (Positif -> Hijau).
+  static void meetingUpdated(BuildContext context) {
+    show(
+      context,
+      title: 'Meeting Updated',
+      message: 'Your meeting has been successfully updated.',
+      icon: Icons.check_circle_outline_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a meeting is deleted (Negatif -> Orange).
+  static void meetingDeleted(BuildContext context) {
+    show(
+      context,
+      title: 'Meeting Deleted',
+      message: 'Your meeting has been successfully removed.',
+      icon: Icons.delete_outline_rounded,
+      iconBgColor: negativeColor,
+    );
+  }
+
   // --- Auth Preset Notifications ---
 
   /// Preset notification when an account is registered (Positif -> Hijau).
@@ -233,6 +269,28 @@ class PopUpPemberitahuan extends StatefulWidget {
     );
   }
 
+  /// Preset notification when user profile details have been saved (Positif -> Hijau).
+  static void profileUpdated(BuildContext context) {
+    show(
+      context,
+      title: 'Profile Updated',
+      message: 'Your profile changes have been saved successfully.',
+      icon: Icons.badge_outlined,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when user changes avatar picture (Positif -> Hijau).
+  static void profilePictureUpdated(BuildContext context) {
+    show(
+      context,
+      title: 'Photo Updated',
+      message: 'Profile picture has been updated successfully.',
+      icon: Icons.camera_alt_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
   // --- Team Preset Notifications ---
 
   /// Preset notification when a team invite code is copied to clipboard (Positif -> Hijau).
@@ -284,6 +342,129 @@ class PopUpPemberitahuan extends StatefulWidget {
       title: title,
       message: message,
       icon: Icons.warning_amber_rounded,
+      iconBgColor: negativeColor,
+    );
+  }
+
+  /// Preset notification when a team task is created (Positif -> Hijau).
+  static void taskCreated(BuildContext context, {required String taskName, String? assignees}) {
+    show(
+      context,
+      title: 'Task Created',
+      message: assignees != null && assignees.trim().isNotEmpty
+          ? 'Task "$taskName" assigned to $assignees.'
+          : 'Task "$taskName" has been successfully created.',
+      icon: Icons.checklist_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a team task is updated (Positif -> Hijau).
+  static void taskUpdated(BuildContext context, {required String taskName}) {
+    show(
+      context,
+      title: 'Task Updated',
+      message: 'Changes to "$taskName" have been saved successfully.',
+      icon: Icons.check_circle_outline_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a task is deleted (Negatif -> Orange).
+  static void taskDeleted(BuildContext context, {String? taskName}) {
+    show(
+      context,
+      title: 'Task Deleted',
+      message: taskName != null && taskName.trim().isNotEmpty
+          ? 'Task "$taskName" has been successfully removed.'
+          : 'Your task has been successfully removed.',
+      icon: Icons.delete_outline_rounded,
+      iconBgColor: negativeColor,
+    );
+  }
+
+  /// Preset notification when a task is completed (Positif -> Hijau).
+  static void taskCompleted(BuildContext context, {required String taskName}) {
+    show(
+      context,
+      title: 'Task Completed',
+      message: 'Task "$taskName" has been marked as completed.',
+      icon: Icons.check_circle_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a task is reopened (Netral -> Slate/Biru).
+  static void taskReopened(BuildContext context, {required String taskName}) {
+    show(
+      context,
+      title: 'Task Reopened',
+      message: 'Task "$taskName" has been moved back to active tasks.',
+      icon: Icons.refresh_rounded,
+      iconBgColor: const Color(0xFF5B93FF),
+    );
+  }
+
+  /// Preset notification when a user attempts to manually swipe a team project card.
+  static void teamProjectWarning(BuildContext context) {
+    show(
+      context,
+      title: 'Team Project',
+      message:
+          'Team projects cannot be completed manually. Complete all member tasks in Team Dashboard to complete this project.',
+      icon: Icons.group_work_outlined,
+      iconBgColor: const Color(0xFF5B93FF),
+    );
+  }
+
+  /// Preset notification when a user attempts to complete a task assigned to someone else.
+  static void taskAccessDenied(BuildContext context,
+      {required String assignedTo}) {
+    show(
+      context,
+      title: 'Access Denied',
+      message: 'You can only complete tasks assigned to you ($assignedTo).',
+      icon: Icons.lock_outline_rounded,
+      iconBgColor: negativeColor,
+    );
+  }
+
+  // --- Milestone Preset Notifications ---
+
+  /// Preset notification when a milestone is created (Positif -> Hijau).
+  static void milestoneCreated(BuildContext context,
+      {required String title, int taskCount = 0}) {
+    show(
+      context,
+      title: 'Milestone Created',
+      message: taskCount > 0
+          ? 'Milestone "$title" with $taskCount tasks created.'
+          : 'Milestone "$title" has been successfully created.',
+      icon: Icons.flag_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a milestone is updated (Positif -> Hijau).
+  static void milestoneUpdated(BuildContext context, {required String title}) {
+    show(
+      context,
+      title: 'Milestone Updated',
+      message: 'Milestone "$title" has been updated successfully.',
+      icon: Icons.flag_circle_rounded,
+      iconBgColor: positiveColor,
+    );
+  }
+
+  /// Preset notification when a milestone is deleted (Negatif/Hapus -> Orange).
+  static void milestoneDeleted(BuildContext context, {String? title}) {
+    show(
+      context,
+      title: 'Milestone Deleted',
+      message: title != null && title.trim().isNotEmpty
+          ? 'Milestone "$title" has been removed.'
+          : 'Milestone has been removed. Member tasks remain in this team.',
+      icon: Icons.delete_outline_rounded,
       iconBgColor: negativeColor,
     );
   }

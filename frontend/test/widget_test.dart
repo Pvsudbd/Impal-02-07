@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:impal_smart_todolist/presentation/features/auth/login_page.dart';
-import 'package:impal_smart_todolist/presentation/features/jadwal/schedule_page.dart';
-import 'package:impal_smart_todolist/presentation/features/jadwal/models/schedule_model.dart';
-import 'package:impal_smart_todolist/presentation/features/jadwal/models/schedule_repository.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/schedule_page.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/models/schedule_model.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/models/schedule_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
 import 'package:impal_smart_todolist/presentation/features/team/team_list_page.dart';
-import 'package:impal_smart_todolist/presentation/features/jadwal/schedule_form_page.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/schedule_form_page.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_time_picker_dialog.dart';
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_date_picker_dialog.dart';
 import 'package:impal_smart_todolist/presentation/features/team/pop_up_create_team.dart';
@@ -14,6 +14,9 @@ import 'package:impal_smart_todolist/presentation/features/team/pop_up_join_team
 import 'package:impal_smart_todolist/presentation/common_widgets/impal_bottom_nav_bar.dart';
 import 'package:impal_smart_todolist/presentation/features/team/dashboard_team_page.dart';
 import 'package:impal_smart_todolist/presentation/features/team/pop_up_create_meeting.dart';
+import 'package:impal_smart_todolist/presentation/common_widgets/impal_schedule_card.dart';
+import 'package:impal_smart_todolist/presentation/common_widgets/pop_up_pemberitahuan.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/pop_up_konfirmasi_delete.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -161,7 +164,7 @@ void main() {
     expect(find.text("Team's Schedule"), findsOneWidget);
     expect(find.text('MEETING IMPAL'), findsOneWidget);
     expect(find.text('Discord - Group IMPAL'), findsOneWidget);
-    expect(find.text('Tomorrow 19:00 WIB'), findsOneWidget);
+    expect(find.text('Tomorrow • 19:00 - 20:30 WIB'), findsOneWidget);
     expect(find.text('Team'), findsOneWidget);
     expect(find.text('Join Team'), findsOneWidget);
     expect(find.text('+ Create Team'), findsOneWidget);
@@ -605,7 +608,7 @@ void main() {
     expect((ongoingContainer.decoration as BoxDecoration).color, const Color(0xFFFF826E));
   });
 
-  testWidgets("Today's schedule on HomePage displays Ongoing -> Upcoming -> Overdue and focuses on Ongoing card", (WidgetTester tester) async {
+  testWidgets("Today's schedule on HomePage displays Overdue -> Ongoing -> Upcoming and focuses on Ongoing card", (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 1920);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -647,20 +650,111 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // Verify Ongoing Noon Class is rendered at the front
+    // Verify Ongoing Noon Class is in view
     expect(find.text('Ongoing Noon Class'), findsOneWidget);
 
-    // Check horizontal scroll controller offset points to the Ongoing card at the front (0.0)
+    // Check horizontal scroll controller offset points to the Ongoing card (index 1 -> 297.0)
     final scrollFinder = find.byKey(const ValueKey('today_schedules_horizontal_scroll'));
     expect(scrollFinder, findsOneWidget);
     final SingleChildScrollView scrollView = tester.widget(scrollFinder);
     expect(scrollView.controller, isNotNull);
-    expect(scrollView.controller!.offset, 0.0);
+    expect(scrollView.controller!.offset, greaterThan(0.0));
 
-    // User can scroll to the right (drag left) to view upcoming and overdue schedules
+    // User can scroll to the left (drag right) to view Overdue Morning Class on the left
+    await tester.drag(scrollFinder, const Offset(600, 0));
+    await tester.pumpAndSettle();
+    expect(scrollView.controller!.offset, lessThanOrEqualTo(50.0));
+
+    // User can scroll to the right (drag left) to view Upcoming Evening Class on the right
     await tester.drag(scrollFinder, const Offset(-600, 0));
     await tester.pumpAndSettle();
     expect(scrollView.controller!.offset, greaterThan(200.0));
+  });
+
+  testWidgets("Team's schedule in DashboardTeamPage orders Overdue on left, then Ongoing, then Upcoming, or Overdue then Upcoming when no Ongoing", (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final now = DateTime.now();
+    String fmt(DateTime dt) =>
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+    // Kasus 1: Ada Overdue, Ongoing, dan Upcoming
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 'tm_up',
+        title: 'Meeting Malam (Upcoming)',
+        type: 'Meeting',
+        location: 'Zoom',
+        date: now,
+        timeStart: fmt(now.add(const Duration(hours: 3))),
+        timeEnd: fmt(now.add(const Duration(hours: 4))),
+      ),
+      ScheduleModel(
+        id: 'tm_od',
+        title: 'Meeting Pagi (Overdue)',
+        type: 'Meeting',
+        location: 'Discord',
+        date: now,
+        timeStart: fmt(now.subtract(const Duration(hours: 3))),
+        timeEnd: fmt(now.subtract(const Duration(hours: 2))),
+      ),
+      ScheduleModel(
+        id: 'tm_on',
+        title: 'Meeting Siang (Ongoing)',
+        type: 'Meeting',
+        location: 'Google Meet',
+        date: now,
+        timeStart: fmt(now.subtract(const Duration(minutes: 30))),
+        timeEnd: fmt(now.add(const Duration(minutes: 30))),
+      ),
+    ];
+
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: DashboardTeamPage(
+          teamName: 'Kelompok IMPAL',
+          teamCode: '7X29',
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verifikasi posisi horizontal (Overdue paling kiri, lalu Ongoing, lalu Upcoming)
+    final overdueLeft = tester.getTopLeft(find.text('Meeting Pagi (Overdue)')).dx;
+    final ongoingLeft = tester.getTopLeft(find.text('Meeting Siang (Ongoing)')).dx;
+    final upcomingLeft = tester.getTopLeft(find.text('Meeting Malam (Upcoming)')).dx;
+
+    expect(overdueLeft, lessThan(ongoingLeft));
+    expect(ongoingLeft, lessThan(upcomingLeft));
+
+    // Kasus 2: Tanpa Ongoing (Hanya Overdue dan Upcoming)
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 'tm_up2',
+        title: 'Meeting Malam 2 (Upcoming)',
+        type: 'Meeting',
+        location: 'Zoom',
+        date: now,
+        timeStart: fmt(now.add(const Duration(hours: 3))),
+        timeEnd: fmt(now.add(const Duration(hours: 4))),
+      ),
+      ScheduleModel(
+        id: 'tm_od2',
+        title: 'Meeting Pagi 2 (Overdue)',
+        type: 'Meeting',
+        location: 'Discord',
+        date: now,
+        timeStart: fmt(now.subtract(const Duration(hours: 3))),
+        timeEnd: fmt(now.subtract(const Duration(hours: 2))),
+      ),
+    ];
+    await tester.pumpAndSettle();
+
+    final overdueLeft2 = tester.getTopLeft(find.text('Meeting Pagi 2 (Overdue)')).dx;
+    final upcomingLeft2 = tester.getTopLeft(find.text('Meeting Malam 2 (Upcoming)')).dx;
+    expect(overdueLeft2, lessThan(upcomingLeft2));
   });
 
   testWidgets('ScheduleFormPage (Add mode) form adapts fields based on Lecture vs External and Repeat Weekly toggle', (WidgetTester tester) async {
@@ -678,22 +772,21 @@ void main() {
     expect(find.text('Course'), findsOneWidget);
     expect(find.text('Schedule Title'), findsNothing);
 
-    // 2. By default, Repeat Weekly is ON:
-    // Date field is NOT shown
+    // 2. Date field is ALWAYS visible even when Repeat Weekly is ON:
     expect(find.text('Repeat Weekly'), findsOneWidget);
-    expect(find.text('Date'), findsNothing);
+    expect(find.text('Date'), findsOneWidget);
 
     // 3. Toggle Repeat Weekly OFF:
-    // Date field now appears
+    // Date field remains visible
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
     expect(find.text('Date'), findsOneWidget);
 
     // 4. Toggle Repeat Weekly back ON:
-    // Date field disappears
+    // Date field remains visible
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
-    expect(find.text('Date'), findsNothing);
+    expect(find.text('Date'), findsOneWidget);
 
     // 5. Select 'External' type:
     // Schedule Title appears, Course disappears
@@ -731,12 +824,12 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // Lecture with repeat = true: Course shown, Schedule Title hidden, Date hidden
+    // Lecture with repeat = true: Course shown, Schedule Title hidden, Date remains shown
     expect(find.text('Course'), findsOneWidget);
     expect(find.text('Schedule Title'), findsNothing);
-    expect(find.text('Date'), findsNothing);
+    expect(find.text('Date'), findsOneWidget);
 
-    // Toggle repeat weekly to false: Date should appear
+    // Toggle repeat weekly to false: Date remains visible
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
     expect(find.text('Date'), findsOneWidget);
@@ -916,7 +1009,7 @@ void main() {
     expect(find.text("Team's Schedule"), findsOneWidget);
     expect(find.text('SPRINT RETROSPECTIVE IMPAL'), findsOneWidget);
     expect(find.text('Ruang Lab 2 TULT'), findsOneWidget);
-    expect(find.text('Today 14:00 WIB'), findsOneWidget);
+    expect(find.text('Today • 14:00 - 16:00 WIB'), findsOneWidget);
     expect(find.byIcon(Icons.edit_outlined), findsWidgets);
 
     // Update repository reactively with another title
@@ -936,7 +1029,7 @@ void main() {
     // Verify UI immediately updated with new title and location
     expect(find.text('SCRUM DAILY KELOMPOK 7'), findsOneWidget);
     expect(find.text('Google Meet'), findsOneWidget);
-    expect(find.text('Tomorrow 20:00 WIB'), findsOneWidget);
+    expect(find.text('Tomorrow • 20:00 - 21:00 WIB'), findsOneWidget);
 
     // Tap schedule card to open PopUpCreateMeeting in edit mode
     await tester.tap(find.text('SCRUM DAILY KELOMPOK 7'));
@@ -1320,6 +1413,9 @@ void main() {
     expect(find.text('Location'), findsOneWidget);
     expect(find.text('Description (Optional)'), findsOneWidget);
     expect(find.text('Date & Time'), findsOneWidget);
+    expect(find.text('Start Time'), findsOneWidget);
+    expect(find.text('End Time (Estimated)'), findsOneWidget);
+    expect(find.text('Repeat Weekly'), findsOneWidget);
 
     // 2. Klik submit tanpa mengisi nama -> validasi muncul
     await tester.tap(find.byKey(const ValueKey('create_meeting_submit_button')));
@@ -1346,6 +1442,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // Toggle repeat weekly ON
+    await tester.tap(find.byKey(const ValueKey('create_meeting_repeat_weekly_switch')));
+    await tester.pumpAndSettle();
+
     // 4. Tekan Submit
     await tester.tap(find.byKey(const ValueKey('create_meeting_submit_button')));
     await tester.pumpAndSettle();
@@ -1356,6 +1456,8 @@ void main() {
     expect(createdResult!.location, equals('Google Meet - Room 4'));
     expect(createdResult!.notes, equals('Review progres UI dan arsitektur'));
     expect(createdResult!.type, equals('Meeting'));
+    expect(createdResult!.repeat, isTrue);
+    expect(createdResult!.timeEnd.isNotEmpty, isTrue);
   });
 
   testWidgets('PopUpCreateMeeting.showEdit renders Edit Meeting and updates existing meeting', (WidgetTester tester) async {
@@ -1373,6 +1475,7 @@ void main() {
       date: DateTime(2026, 10, 25),
       timeStart: '10:00',
       timeEnd: '11:00',
+      repeat: true,
     );
     ScheduleRepository().schedulesNotifier.value = [existing];
 
@@ -1400,6 +1503,15 @@ void main() {
     expect(find.text('Save Changes'), findsOneWidget);
     expect(find.text('Old Title'), findsOneWidget);
     expect(find.text('Old Room'), findsOneWidget);
+    expect(find.text('End Time (Estimated)'), findsOneWidget);
+    expect(find.text('Repeat Weekly'), findsOneWidget);
+
+    // Verify existing repeat is true, toggle to false
+    final switchFinder = find.byKey(const ValueKey('create_meeting_repeat_weekly_switch'));
+    expect(tester.widget<Switch>(switchFinder).value, isTrue);
+    await tester.tap(switchFinder);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Switch>(switchFinder).value, isFalse);
 
     await tester.enterText(
       find.byKey(const ValueKey('create_meeting_name_input')),
@@ -1415,7 +1527,10 @@ void main() {
     expect(editedResult, isNotNull);
     expect(editedResult!.title, equals('New Edited Title'));
     expect(editedResult!.location, equals('New Edited Room'));
+    expect(editedResult!.repeat, isFalse);
+    expect(editedResult!.timeEnd, '11:00');
     expect(ScheduleRepository().getById('existing_meet_1')?.title, 'New Edited Title');
+    expect(ScheduleRepository().getById('existing_meet_1')?.repeat, isFalse);
   });
 
   testWidgets('DashboardTeamPage + Create Meeting button opens PopUpCreateMeeting', (WidgetTester tester) async {
@@ -1475,6 +1590,569 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('close_join_team_button')));
     await tester.pumpAndSettle();
     expect(find.text('Become Member'), findsNothing);
+  });
+
+  testWidgets('Schedule & meeting cards across all pages provide uniform edit and delete action symbols', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
+
+    final now = DateTime.now();
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 'meeting_test_1',
+        title: 'Daily Standup Meeting',
+        type: 'meeting',
+        location: 'Zoom',
+        status: 'Ongoing',
+        date: now,
+        timeStart: '09:00',
+        timeEnd: '09:30',
+      ),
+    ];
+
+    // 1. Verifikasi di SchedulePage
+    await tester.pumpWidget(const MaterialApp(home: SchedulePage()));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.edit_outlined), findsWidgets);
+    expect(find.byIcon(Icons.delete_outline_rounded), findsWidgets);
+
+    // Tap Edit pada meeting di SchedulePage -> membuka PopUpCreateMeeting (Edit Meeting)
+    await tester.tap(find.byIcon(Icons.edit_outlined).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Edit Meeting'), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('close_create_meeting_button')));
+    await tester.pumpAndSettle();
+
+    // 2. Verifikasi di HomePage
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.edit_outlined), findsWidgets);
+    expect(find.byIcon(Icons.delete_outline_rounded), findsWidgets);
+
+    // 3. Verifikasi di DashboardTeamPage
+    await tester.pumpWidget(const MaterialApp(
+      home: DashboardTeamPage(
+        userName: 'Jarvis',
+        teamName: 'Kelompok IMPAL',
+        teamCode: '7X29',
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.edit_outlined), findsWidgets);
+    expect(find.byIcon(Icons.delete_outline_rounded), findsWidgets);
+
+    // 4. Verifikasi di TeamListPage
+    await tester.pumpWidget(const MaterialApp(home: TeamListPage(isStandalone: true)));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.edit_outlined), findsWidgets);
+    expect(find.byIcon(Icons.delete_outline_rounded), findsWidgets);
+
+    // 5. Test fungsi delete dengan PopUpKonfirmasiDelete
+    await tester.tap(find.byIcon(Icons.delete_outline_rounded).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete Meeting?'), findsOneWidget);
+    // Konfirmasi hapus
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(ScheduleRepository().schedulesNotifier.value.where((s) => s.id == 'meeting_test_1'), isEmpty);
+  });
+
+  testWidgets('SchedulePage groups dates chronologically with past on top, Today in middle, and future at bottom', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
+
+    final now = DateTime.now();
+    final yesterday = now.subtract(const Duration(days: 1));
+    final tomorrow = now.add(const Duration(days: 1));
+
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 'sch_future',
+        title: 'Future Workshop',
+        type: 'Lecture',
+        status: 'Upcoming',
+        date: tomorrow,
+        timeStart: '14:00',
+        timeEnd: '16:00',
+      ),
+      ScheduleModel(
+        id: 'sch_past',
+        title: 'Past Assignment',
+        type: 'Lecture',
+        status: 'Overdue',
+        date: yesterday,
+        timeStart: '08:00',
+        timeEnd: '10:00',
+      ),
+      ScheduleModel(
+        id: 'sch_now',
+        title: 'Middle Lecture',
+        type: 'Lecture',
+        status: 'Ongoing',
+        date: now,
+        timeStart: '10:00',
+        timeEnd: '12:00',
+      ),
+    ];
+
+    await tester.pumpWidget(const MaterialApp(home: SchedulePage()));
+    await tester.pumpAndSettle();
+
+    // Verifikasi semua grup tanggal tampil
+    final pastFinder = find.textContaining('Yesterday');
+    final todayFinder = find.textContaining('Today ${now.day}');
+    final tomorrowFinder = find.textContaining('Tomorrow');
+
+    expect(pastFinder, findsOneWidget);
+    expect(todayFinder, findsOneWidget);
+    expect(tomorrowFinder, findsOneWidget);
+
+    // Verifikasi posisi vertikal: Yesterday (atas) < Today (tengah) < Tomorrow (bawah)
+    final pastY = tester.getTopLeft(pastFinder).dy;
+    final todayY = tester.getTopLeft(todayFinder).dy;
+    final tomorrowY = tester.getTopLeft(tomorrowFinder).dy;
+
+    expect(pastY, lessThan(todayY));
+    expect(todayY, lessThan(tomorrowY));
+  });
+
+  testWidgets('SchedulePage orders items within a day: Overdue on top, Ongoing in middle, Upcoming at bottom', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
+
+    final now = DateTime.now();
+
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 'item_upcoming',
+        title: 'Item Upcoming Day',
+        type: 'Lecture',
+        status: 'Upcoming',
+        date: now,
+        timeStart: '16:00',
+        timeEnd: '18:00',
+      ),
+      ScheduleModel(
+        id: 'item_overdue',
+        title: 'Item Overdue Day',
+        type: 'Lecture',
+        status: 'Overdue',
+        date: now,
+        timeStart: '07:00',
+        timeEnd: '09:00',
+      ),
+      ScheduleModel(
+        id: 'item_ongoing',
+        title: 'Item Ongoing Day',
+        type: 'Lecture',
+        status: 'Ongoing',
+        date: now,
+        timeStart: '10:00',
+        timeEnd: '12:00',
+      ),
+    ];
+
+    await tester.pumpWidget(const MaterialApp(home: SchedulePage()));
+    await tester.pumpAndSettle();
+
+    final overdueFinder = find.text('Item Overdue Day');
+    final ongoingFinder = find.text('Item Ongoing Day');
+    final upcomingFinder = find.text('Item Upcoming Day');
+
+    expect(overdueFinder, findsOneWidget);
+    expect(ongoingFinder, findsOneWidget);
+    expect(upcomingFinder, findsOneWidget);
+
+    final overdueY = tester.getTopLeft(overdueFinder).dy;
+    final ongoingY = tester.getTopLeft(ongoingFinder).dy;
+    final upcomingY = tester.getTopLeft(upcomingFinder).dy;
+
+    // Overdue paling atas < Ongoing di tengah < Upcoming di bawah
+    expect(overdueY, lessThan(ongoingY));
+    expect(ongoingY, lessThan(upcomingY));
+  });
+
+  testWidgets('ImpalScheduleCard renders details and fires edit/delete callbacks', (WidgetTester tester) async {
+    bool editCalled = false;
+    bool deleteCalled = false;
+
+    final now = DateTime.now();
+    final startH = (now.hour).toString().padLeft(2, '0');
+    final endH = ((now.hour + 1) % 24).toString().padLeft(2, '0');
+
+    final schedule = ScheduleModel(
+      id: 'test_card_1',
+      title: 'Weekly Standup Impal',
+      type: 'Meeting',
+      date: now,
+      timeStart: '$startH:00',
+      timeEnd: '$endH:00',
+      location: 'Room 302',
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ImpalScheduleCard(
+          schedule: schedule,
+          onEdit: () => editCalled = true,
+          onDelete: () => deleteCalled = true,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Weekly Standup Impal'), findsOneWidget);
+    expect(find.text('Ongoing'), findsOneWidget);
+    expect(find.text('Room 302'), findsOneWidget);
+    expect(find.text('$startH:00 - $endH:00 WIB'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+    expect(editCalled, isTrue);
+
+    await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+    await tester.pumpAndSettle();
+    expect(deleteCalled, isTrue);
+  });
+
+  testWidgets('PopUpKonfirmasiDelete supports custom meeting title and message', (WidgetTester tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () {
+              PopUpKonfirmasiDelete.show(
+                context,
+                title: 'Delete Meeting?',
+                message: 'Are you sure you want to delete this meeting?',
+              );
+            },
+            child: const Text('Open Dialog'),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open Dialog'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete Meeting?'), findsOneWidget);
+    expect(find.text('Are you sure you want to delete this meeting?'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+  });
+
+  testWidgets('PopUpPemberitahuan renders meetingCreated, meetingUpdated, and meetingDeleted toasts', (WidgetTester tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => Column(
+            children: [
+              ElevatedButton(
+                onPressed: () => PopUpPemberitahuan.meetingCreated(context),
+                child: const Text('Show Created'),
+              ),
+              ElevatedButton(
+                onPressed: () => PopUpPemberitahuan.meetingUpdated(context),
+                child: const Text('Show Updated'),
+              ),
+              ElevatedButton(
+                onPressed: () => PopUpPemberitahuan.meetingDeleted(context),
+                child: const Text('Show Deleted'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Show Created'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Meeting Created'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+
+    await tester.tap(find.text('Show Updated'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Meeting Updated'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+
+    await tester.tap(find.text('Show Deleted'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Meeting Deleted'), findsOneWidget);
+  });
+
+  testWidgets('ScheduleFormPage form elements are in logical order with Date always shown', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: ScheduleFormPage(),
+    ));
+    await tester.pumpAndSettle();
+
+    final scheduleTypeFinder = find.text('Schedule Type');
+    final courseFinder = find.text('Course');
+    final locationFinder = find.text('Location / Room');
+    final dateFinder = find.text('Date');
+    final timeDurationFinder = find.text('Time Duration');
+    final repeatWeeklyFinder = find.text('Repeat Weekly');
+
+    expect(scheduleTypeFinder, findsOneWidget);
+    expect(courseFinder, findsOneWidget);
+    expect(locationFinder, findsOneWidget);
+    expect(dateFinder, findsOneWidget);
+    expect(timeDurationFinder, findsOneWidget);
+    expect(repeatWeeklyFinder, findsOneWidget);
+
+    final yType = tester.getTopLeft(scheduleTypeFinder).dy;
+    final yCourse = tester.getTopLeft(courseFinder).dy;
+    final yLocation = tester.getTopLeft(locationFinder).dy;
+    final yDate = tester.getTopLeft(dateFinder).dy;
+    final yTime = tester.getTopLeft(timeDurationFinder).dy;
+    final yRepeat = tester.getTopLeft(repeatWeeklyFinder).dy;
+
+    // Verify ordering: Type < Course < Location < Date < Time Duration < Repeat Weekly
+    expect(yType, lessThan(yCourse));
+    expect(yCourse, lessThan(yLocation));
+    expect(yLocation, lessThan(yDate));
+    expect(yDate, lessThan(yTime));
+    expect(yTime, lessThan(yRepeat));
+  });
+
+  testWidgets('ScheduleFormPage supports Meeting schedule type, Team Meeting checkbox, and joined team suggestions', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const MaterialApp(
+      home: ScheduleFormPage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify 3 schedule type buttons exist
+    expect(find.text('Lecture'), findsOneWidget);
+    expect(find.text('Meeting'), findsOneWidget);
+    expect(find.text('External'), findsOneWidget);
+
+    // Tap Meeting type
+    await tester.tap(find.text('Meeting'));
+    await tester.pumpAndSettle();
+
+    // Verify Title field changes label to 'Meeting Title'
+    expect(find.text('Meeting Title'), findsOneWidget);
+    expect(find.text('Team Meeting'), findsOneWidget);
+
+    // Tap 'Team Meeting' checkbox
+    await tester.tap(find.text('Team Meeting'));
+    await tester.pumpAndSettle();
+
+    // Verify Team Name field & suggestions appear
+    expect(find.text('Team Name'), findsOneWidget);
+    expect(find.text('Joined Teams (Tap to select):'), findsOneWidget);
+    expect(find.text('Kelompok - IMPAL'), findsOneWidget);
+    expect(find.text('Kelompok - IUM'), findsOneWidget);
+
+    // Tap a suggested team to auto-fill
+    await tester.tap(find.text('Kelompok - IMPAL'));
+    await tester.pumpAndSettle();
+
+    // Or freely type a non-joined custom team name
+    await tester.enterText(find.widgetWithText(TextFormField, 'Kelompok - IMPAL'), 'Kelompok Capstone Baru');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kelompok Capstone Baru'), findsOneWidget);
+  });
+
+  testWidgets('DashboardTeamPage meeting cards display date and start-end time', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
+
+    final now = DateTime.now();
+    ScheduleRepository().schedulesNotifier.value = [
+      ScheduleModel(
+        id: 'team_meeting_date_test',
+        title: 'STANDUP KELOMPOK IMPAL',
+        type: 'Meeting',
+        location: 'Discord - Group IMPAL',
+        date: now,
+        timeStart: '09:30',
+        timeEnd: '11:30',
+      ),
+    ];
+
+    await tester.pumpWidget(const MaterialApp(
+      home: DashboardTeamPage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify date is present on the card along with start and end time
+    expect(find.text('STANDUP KELOMPOK IMPAL'), findsOneWidget);
+    expect(find.text('Today • 09:30 - 11:30 WIB'), findsOneWidget);
+  });
+
+  testWidgets('MeetingFormPage (PopUpCreateMeeting) operates as a full page with AppBar, back navigation, and delete action', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
+
+    final existingMeeting = ScheduleModel(
+      id: 'page_meet_edit_1',
+      title: 'Sprint Planning Impal',
+      type: 'Meeting',
+      location: 'Discord Stage',
+      notes: 'Prepare user stories',
+      date: DateTime(2026, 10, 25),
+      timeStart: '13:00',
+      timeEnd: '14:30',
+      repeat: true,
+    );
+    ScheduleRepository().schedulesNotifier.value = [existingMeeting];
+
+    // 1. Test Create Page mode via Navigator.push
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(
+        builder: (ctx) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(ctx).push(
+                MaterialPageRoute(builder: (_) => const MeetingFormPage()),
+              ),
+              child: const Text('Open Meeting Page'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open Meeting Page'));
+    await tester.pumpAndSettle();
+
+    // Verify AppBar and Scaffold Page structure
+    expect(find.text('Create Meeting'), findsWidgets);
+    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byKey(const ValueKey('delete_meeting_button')), findsNothing); // No delete in create mode
+
+    // Tap back button in AppBar
+    await tester.tap(find.byKey(const ValueKey('close_create_meeting_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Open Meeting Page'), findsOneWidget);
+
+    // 2. Test Edit Page mode with delete action
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(
+        builder: (ctx) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => PopUpCreateMeeting.showEdit(
+                ctx,
+                existingSchedule: existingMeeting,
+              ),
+              child: const Text('Open Edit Meeting Page'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open Edit Meeting Page'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Meeting'), findsOneWidget);
+    expect(find.byKey(const ValueKey('delete_meeting_button')), findsOneWidget);
+
+    // Tap delete button in AppBar -> Confirmation Dialog pops up
+    await tester.tap(find.byKey(const ValueKey('delete_meeting_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete Meeting?'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+
+    // Confirm deletion
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    // Verify meeting was removed from repository
+    expect(ScheduleRepository().getById('page_meet_edit_1'), isNull);
+  });
+
+  testWidgets('SchedulePage editing meeting allows changing schedule type to External or Lecture', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(() => ScheduleRepository().resetToDefault());
+
+    final now = DateTime.now();
+    final meetingSchedule = ScheduleModel(
+      id: 'sch_edit_type_test',
+      title: 'Meeting Koordinasi UI',
+      type: 'Meeting',
+      location: 'Zoom Room 1',
+      date: now,
+      timeStart: '10:00',
+      timeEnd: '11:00',
+    );
+    ScheduleRepository().schedulesNotifier.value = [meetingSchedule];
+
+    await tester.pumpWidget(const MaterialApp(
+      home: SchedulePage(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify meeting appears on SchedulePage
+    expect(find.text('Meeting Koordinasi UI'), findsOneWidget);
+
+    // Tap edit button on the schedule card
+    final editBtn = find.byIcon(Icons.edit_outlined).first;
+    await tester.tap(editBtn);
+    await tester.pumpAndSettle();
+
+    // Verify ScheduleFormPage opens with Meeting selected
+    expect(find.text('Edit Meeting'), findsWidgets);
+    expect(find.text('Meeting'), findsOneWidget);
+    expect(find.text('External'), findsOneWidget);
+    expect(find.text('Lecture'), findsOneWidget);
+
+    // Switch schedule type to External
+    await tester.tap(find.text('External'));
+    await tester.pumpAndSettle();
+
+    // Verify AppBar title changed to Edit Schedule
+    expect(find.text('Edit Schedule'), findsOneWidget);
+
+    // Tap Save Changes
+    final submitBtn = find.widgetWithText(ElevatedButton, 'Save Changes');
+    await tester.tap(submitBtn);
+    await tester.pumpAndSettle();
+
+    // PopUpKonfirmasiEdit appears -> confirm
+    expect(find.text('Edit Schedule?'), findsOneWidget);
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    // Verify type was changed to External in ScheduleRepository
+    final updated = ScheduleRepository().getById('sch_edit_type_test');
+    expect(updated, isNotNull);
+    expect(updated!.type, equals('External'));
   });
 }
 

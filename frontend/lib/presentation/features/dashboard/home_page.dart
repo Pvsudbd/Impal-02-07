@@ -1,25 +1,41 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/utils/page_transitions.dart';
-import '../../../core/utils/top_toast.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
-import '../auth/login_page.dart';
-import '../jadwal/schedule_page.dart';
-import '../jadwal/models/schedule_model.dart';
-import '../jadwal/models/schedule_repository.dart';
-import '../team/team_list_page.dart';
+import '../../common_widgets/pop_up_pemberitahuan.dart';
+import '../schedule/models/schedule_model.dart';
+import '../schedule/models/schedule_repository.dart';
+import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../schedule/schedule_form_page.dart';
+import '../schedule/schedule_page.dart';
+import '../smart_system/models/smart_priority_repository.dart';
+import '../smart_system/smart_priority_page.dart';
+import '../task/models/task_repository.dart';
+import '../task/task_page.dart';
 import '../team/dashboard_team_page.dart';
+import '../team/pop_up_create_meeting.dart';
+import '../team/team_list_page.dart';
+import 'models/dashboard_models.dart';
+import 'widgets/home_categories_section.dart';
+import 'widgets/home_header.dart';
+import 'widgets/home_schedule_section.dart';
+import 'widgets/home_task_card.dart';
+
+// Re-export dashboard models for backward compatibility
+export 'models/dashboard_models.dart';
 
 /// Aliases for flexibility
 typedef Home = HomePage;
 
 class HomePage extends StatefulWidget {
   final String userName;
+  final int initialTab;
 
   const HomePage({
     super.key,
     this.userName = 'Jarvis',
+    this.initialTab = 0,
   });
 
   @override
@@ -27,13 +43,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _currentTab = 0;
+  late int _currentTab;
   String _selectedCategory = 'All';
   TeamModel? _selectedTeam;
 
   @override
   void initState() {
     super.initState();
+    _currentTab = widget.initialTab;
     ScheduleRepository().init();
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('is_logged_in', true);
@@ -55,38 +72,61 @@ class _HomePageState extends State<HomePage> {
     CategoryItem(name: 'Personal', count: '05 Tasks', icon: Icons.person_rounded),
   ];
 
-  final List<TaskItem> _tasks = const [
-    TaskItem(
+  final List<TaskItem> _tasks = [
+    const TaskItem(
+      id: 'home_task_1',
       title: 'Wallet App Design',
       dueBadge: '6d',
-      dueColor: Color(0xFF8FC7FF),
-      dueTextColor: Color(0xFF1E3A8A),
+      dueColor: Color(0xFF5B93FF),
+      dueTextColor: Colors.white,
       isUrgent: false,
       members: [Color(0xFFF3A683), Color(0xFF786FA6), Color(0xFF63CDDA)],
       progress: 0.46,
       deadline: 'Sat 11 Oct 2026, 23:59 WIB',
       tags: [
-        TaskTag(label: 'Kelompok', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
+        TaskTag(label: 'Team', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
         TaskTag(label: 'Figma', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
       ],
+      groupMembers: [
+        'Andi sukamoto (Leader)',
+        'Rayya Gemintang Nusasntarra',
+        'Kafi Rijal Perkasa Situmorang',
+      ],
+      course: 'SSIF-04-REG • Software Testing & Implementation',
+      dateCreated: 'Monday, 30 Sep 2026',
+      centroidDefuzzification: 'z* = 28.6',
+      centroidScale: 'scale(0-100)',
+      warningNotice: '*This task is asigned to you, and you can’t delete',
+      isCollegeTask: true,
     ),
-    TaskItem(
-      title: 'Tugas IMPAL Figma',
-      subtitle: 'Membuat ui page kelompok',
+    const TaskItem(
+      id: 'home_task_2',
+      title: 'IMPAL Figma Design',
+      subtitle: 'Create team UI page',
       dueBadge: '6d',
-      dueColor: Color(0xFF8FC7FF),
-      dueTextColor: Color(0xFF1E3A8A),
+      dueColor: Color(0xFF5B93FF),
+      dueTextColor: Colors.white,
       isUrgent: false,
       deadline: 'Sat 11 Oct 2026, 23:59 WIB',
       tags: [
         TaskTag(label: 'Personal', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
         TaskTag(label: 'Figma', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
       ],
+      groupMembers: [
+        'Personal Task • Jarvis',
+      ],
+      course: 'SSIF-04-REG • Software Testing & Implementation',
+      dateCreated: 'Tuesday, 01 Oct 2026',
+      centroidDefuzzification: 'z* = 34.2',
+      centroidScale: 'scale(0-100)',
+      warningNotice: '*This task is asigned to you, and you can’t delete',
+      isCollegeTask: false,
     ),
-    TaskItem(
+    const TaskItem(
+      id: 'home_task_3',
       title: 'Dashboard & Mobile App',
       dueBadge: '4d',
-      dueColor: Color(0xFFFF826E),
+      dueColor: Color(0xFFFF7D65),
       dueTextColor: Colors.white,
       isUrgent: true,
       members: [
@@ -99,22 +139,43 @@ class _HomePageState extends State<HomePage> {
       progress: 0.76,
       deadline: 'Sat 11 Oct 2026, 23:59 WIB',
       tags: [
-        TaskTag(label: 'Kelompok', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
+        TaskTag(label: 'Team', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
         TaskTag(label: 'Code', bg: Color(0xFF63CDDA), text: Color(0xFF1C636D)),
       ],
+      groupMembers: [
+        'Andi sukamoto (Leader)',
+        'Rayya Gemintang Nusasntarra',
+        'Kafi Rijal Perkasa Situmorang',
+      ],
+      course: 'SSIF-04-REG • Software Testing & Implementation',
+      dateCreated: 'Wednesday, 02 Oct 2026',
+      centroidDefuzzification: 'z* = 78.4',
+      centroidScale: 'scale(0-100)',
+      warningNotice: '*This task is asigned to you, and you can’t delete',
+      isCollegeTask: true,
     ),
-    TaskItem(
-      title: 'Tugas IMPAL Frontend',
-      subtitle: 'Membuat frontend page kelompok',
+    const TaskItem(
+      id: 'home_task_4',
+      title: 'IMPAL Frontend Slicing',
+      subtitle: 'Dashboard UI implementation',
       dueBadge: '17d',
-      dueColor: Color(0xFF8FC7FF),
-      dueTextColor: Color(0xFF1E3A8A),
+      dueColor: Color(0xFF5B93FF),
+      dueTextColor: Colors.white,
       isUrgent: false,
       deadline: 'Sat 11 Oct 2026, 23:59 WIB',
       tags: [
         TaskTag(label: 'Personal', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
         TaskTag(label: 'Code', bg: Color(0xFF63CDDA), text: Color(0xFF1C636D)),
       ],
+      groupMembers: [
+        'Personal Task • Jarvis',
+      ],
+      course: 'SSIF-04-REG • Software Testing & Implementation',
+      dateCreated: 'Thursday, 03 Oct 2026',
+      centroidDefuzzification: 'z* = 19.8',
+      centroidScale: 'scale(0-100)',
+      warningNotice: '*This task is asigned to you, and you can’t delete',
+      isCollegeTask: false,
     ),
   ];
 
@@ -124,62 +185,140 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF282D37),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Sign Out',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            fontFamily: 'Inter',
+  void _onTabSelected(int index) {
+    if (index == _currentTab && _selectedTeam == null) return;
+    setState(() {
+      if (index != 2 || _selectedTeam != null) {
+        _selectedTeam = null;
+      }
+      _currentTab = index;
+    });
+  }
+
+  void _openEditSchedule(ScheduleModel item) async {
+    if (item.type.trim().toLowerCase() == 'meeting') {
+      await PopUpCreateMeeting.showEdit(context, existingSchedule: item);
+    } else {
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => ScheduleFormPage(schedule: item)),
+      );
+    }
+  }
+
+  void _toggleScheduleAlert(ScheduleModel item) {
+    final updated = item.copyWith(isAlertEnabled: !item.isAlertEnabled);
+    ScheduleRepository().updateSchedule(updated);
+    PopUpPemberitahuan.show(
+      context,
+      title: updated.isAlertEnabled ? 'Schedule Alert Active' : 'Schedule Alert Muted',
+      message: updated.isAlertEnabled
+          ? 'Reminders enabled for "${updated.title}".'
+          : 'Reminders muted for "${updated.title}".',
+      icon: updated.isAlertEnabled
+          ? Icons.notifications_active_rounded
+          : Icons.notifications_off_outlined,
+      iconBgColor: updated.isAlertEnabled
+          ? PopUpPemberitahuan.positiveColor
+          : PopUpPemberitahuan.neutralColor,
+    );
+  }
+
+  Future<void> _deleteSchedule(ScheduleModel item) async {
+    final isMeeting = item.type.trim().toLowerCase() == 'meeting';
+    final confirmed = await PopUpKonfirmasiDelete.show(
+      context,
+      title: isMeeting ? 'Delete Meeting?' : 'Delete Schedule?',
+      message: isMeeting
+          ? 'Are you sure you want to delete this meeting? This action cannot be undone.'
+          : 'Are you sure you want to delete this schedule? This action cannot be undone.',
+    );
+    if (confirmed == true) {
+      await ScheduleRepository().deleteSchedule(item.id);
+      if (mounted) {
+        if (isMeeting) {
+          PopUpPemberitahuan.meetingDeleted(context);
+        } else {
+          PopUpPemberitahuan.scheduleDeleted(context);
+        }
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 4),
+            backgroundColor: const Color(0xFF323846),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            content: Text(
+              isMeeting ? 'Meeting deleted' : 'Schedule deleted',
+              style: const TextStyle(color: Colors.white, fontFamily: 'Inter'),
+            ),
+            action: SnackBarAction(
+              label: 'UNDO',
+              textColor: const Color(0xFFFF7D65),
+              onPressed: () {
+                ScheduleRepository().addSchedule(item);
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openEditTask(TaskItem item) async {
+    if (item.isTeamTask) {
+      final team = TeamRepository().teams.firstWhere(
+        (t) => item.title.toLowerCase().contains(
+              t.name.toLowerCase().replaceAll('kelompok - ', '').replaceAll(' team', '').trim(),
+            ),
+        orElse: () => TeamRepository().teams.isNotEmpty
+            ? TeamRepository().teams.first
+            : const TeamModel(
+                id: '1',
+                name: 'IMPAL Team',
+                memberColors: [
+                  Color(0xFFF3A683),
+                  Color(0xFF786FA6),
+                  Color(0xFF63CDDA),
+                ],
+              ),
+      );
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => DashboardTeamPage(
+            userName: widget.userName,
+            teamName: team.name,
+            teamCode: '7X29',
+            memberColors: team.memberColors,
+            isStandalone: true,
           ),
         ),
-        content: const Text(
-          'Are you sure you want to log out of your account?',
-          style: TextStyle(
-            color: Color(0xFF8E95A5),
-            fontSize: 14,
-            fontFamily: 'Inter',
-          ),
+      );
+      return;
+    }
+
+    final updatedModel = await Navigator.of(context).push<TaskItemModel>(
+      MaterialPageRoute(
+        builder: (_) => EditTaskPage(
+          task: item.toTaskItemModel(),
+          userInitials: widget.userName.length >= 2
+              ? widget.userName.substring(0, 2).toUpperCase()
+              : 'JS',
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Color(0xFF8E95A5), fontWeight: FontWeight.w600),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFA6144),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('is_logged_in', false);
-              await prefs.remove('auth_user');
-              if (mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  AuthFadeRoute(page: const Login()),
-                );
-              }
-            },
-            child: const Text(
-              'Sign Out',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
       ),
     );
+
+    if (updatedModel != null && mounted) {
+      setState(() {
+        final index = _tasks.indexWhere(
+          (t) => (t.id.isNotEmpty && t.id == updatedModel.id) || t.title == item.title,
+        );
+        if (index != -1) {
+          _tasks[index] = TaskItem.fromTaskItemModel(updatedModel);
+        }
+      });
+      PopUpPemberitahuan.taskUpdated(context, taskName: updatedModel.title);
+    }
   }
 
   @override
@@ -195,11 +334,23 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 96),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              _buildHeader(),
+              HomeHeader(userName: widget.userName),
               const SizedBox(height: 16),
-              _buildTodayScheduleSection(),
+              HomeScheduleSection(
+                fallbackSchedules: _schedules,
+                onSeeAll: () => _onTabSelected(3),
+                onEditSchedule: _openEditSchedule,
+                onDeleteSchedule: _deleteSchedule,
+                onToggleAlert: _toggleScheduleAlert,
+              ),
               const SizedBox(height: 16),
-              _buildCategoriesSection(),
+              HomeCategoriesSection(
+                categories: _categories,
+                selectedCategory: _selectedCategory,
+                onCategorySelected: _onCategorySelected,
+              ),
+              const SizedBox(height: 16),
+              _buildAiSmartPriorityBanner(),
               const SizedBox(height: 16),
               _buildOngoingTaskSection(),
             ]),
@@ -215,17 +366,13 @@ class _HomePageState extends State<HomePage> {
           switchInCurve: Curves.easeInOut,
           switchOutCurve: Curves.easeInOut,
           transitionBuilder: (child, animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
+            return FadeTransition(opacity: animation, child: child);
           },
           child: _currentTab == 3
               ? ScheduleContentView(
                   key: const ValueKey('schedule_tab_content'),
                   userName: widget.userName,
-                  showBackButton: true,
-                  onBack: () => setState(() => _currentTab = 0),
+                  showBackButton: false,
                 )
               : (_currentTab == 2
                   ? (_selectedTeam != null
@@ -241,20 +388,42 @@ class _HomePageState extends State<HomePage> {
                       : TeamListContentView(
                           key: const ValueKey('team_tab_content'),
                           userName: widget.userName,
-                          showBackButton: true,
-                          onBack: () => setState(() => _currentTab = 0),
+                          showBackButton: false,
                           onOpenSchedule: () => setState(() => _currentTab = 3),
                           onTeamSelected: (team) => setState(() => _selectedTeam = team),
                         ))
-                  : dashboardContent),
+                  : (_currentTab == 1
+                      ? TaskContentView(
+                          key: const ValueKey('task_tab_content'),
+                          userName: widget.userName,
+                          showBackButton: false,
+                        )
+                      : dashboardContent)),
         ),
         Positioned(
           left: 0,
           right: 0,
           bottom: 0,
-          child: _buildBottomNavBar(),
+          child: ImpalBottomNavBar(
+            currentTab: _currentTab,
+            onTabSelected: _onTabSelected,
+          ),
         ),
       ],
+    );
+
+    final canPop = _currentTab == 0 && _selectedTeam == null;
+    final wrappedHomeContent = PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_selectedTeam != null) {
+          setState(() => _selectedTeam = null);
+        } else if (_currentTab != 0) {
+          _onTabSelected(0);
+        }
+      },
+      child: homeContent,
     );
 
     if (isMobile) {
@@ -263,7 +432,7 @@ class _HomePageState extends State<HomePage> {
         body: SafeArea(
           top: true,
           bottom: false,
-          child: homeContent,
+          child: wrappedHomeContent,
         ),
       );
     }
@@ -293,7 +462,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-                child: homeContent,
+                child: wrappedHomeContent,
               ),
             ),
           ),
@@ -302,654 +471,19 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Header: Hi Jarvis + 10 task pending + Avatar
-  Widget _buildHeader() {
-    final initials = widget.userName.length >= 2
-        ? widget.userName.substring(0, 2).toUpperCase()
-        : 'JS';
+  Widget _buildAiSmartPriorityBanner() {
+    return ListenableBuilder(
+      listenable: SmartPriorityRepository.instance,
+      builder: (context, _) {
+        final repo = SmartPriorityRepository.instance;
+        final isEngineActive = repo.isEngineActive;
+        final topPriority = repo.topPriority;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hi ${widget.userName}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
-              ),
-            ),
-            const SizedBox(height: 3),
-            const Text(
-              '10 task pending',
-              style: TextStyle(
-                color: Color(0xFFFF7D65),
-                fontSize: 12.5,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(999),
-            onTap: _showLogoutDialog,
-            child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: const Color(0xFF323846),
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF3B4150), width: 1),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  color: Color(0xFF8E95A5),
-                  fontSize: 13.5,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Section 1: Today's schedule
-  Widget _buildTodayScheduleSection() {
-    return ValueListenableBuilder<List<ScheduleModel>>(
-      valueListenable: ScheduleRepository().schedulesNotifier,
-      builder: (context, repoSchedules, _) {
-        final List<ScheduleModel> rawItems;
-        if (repoSchedules.isNotEmpty) {
-          final now = DateTime.now();
-          final todayList = repoSchedules.where((s) {
-            return s.date.year == now.year &&
-                s.date.month == now.month &&
-                s.date.day == now.day;
-          }).toList();
-
-          rawItems = todayList.isNotEmpty ? todayList : repoSchedules;
-        } else {
-          rawItems = [];
-        }
-
-        // Sort items: Ongoing -> Upcoming -> Overdue, then chronologically by start time
-        final sortedItems = List<ScheduleModel>.from(rawItems);
-        sortedItems.sort((a, b) {
-          int statusWeight(String s) {
-            final st = s.toLowerCase();
-            if (st == 'ongoing') return 0;
-            if (st == 'upcoming') return 1;
-            return 2; // Overdue / Completed
-          }
-
-          final wA = statusWeight(a.status);
-          final wB = statusWeight(b.status);
-          if (wA != wB) return wA.compareTo(wB);
-
-          final dtA = a.startDateTime ?? DateTime(2000);
-          final dtB = b.startDateTime ?? DateTime(2000);
-          return dtA.compareTo(dtB);
-        });
-
-        Widget scheduleContent;
-        if (sortedItems.isEmpty && _schedules.isNotEmpty) {
-          final isHorizontal = _schedules.length > 1;
-          final cardWidgets = <Widget>[];
-          for (int i = 0; i < _schedules.length; i++) {
-            final isLast = i == _schedules.length - 1;
-            cardWidgets.add(_buildScheduleCard(
-              _schedules[i],
-              isHorizontal: isHorizontal,
-              isLast: isLast,
-            ));
-          }
-          scheduleContent = isHorizontal
-              ? ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(context).copyWith(
-                    dragDevices: {
-                      PointerDeviceKind.touch,
-                      PointerDeviceKind.mouse,
-                      PointerDeviceKind.trackpad,
-                    },
-                  ),
-                  child: SingleChildScrollView(
-                    key: const ValueKey('today_schedules_horizontal_scroll'),
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    clipBehavior: Clip.none,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: cardWidgets,
-                    ),
-                  ),
-                )
-              : cardWidgets.first;
-        } else if (sortedItems.isEmpty) {
-          scheduleContent = Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF323846),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              'No schedules for today',
-              style: TextStyle(
-                color: Color(0xFF8E95A5),
-                fontSize: 13,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          );
-        } else if (sortedItems.length == 1) {
-          scheduleContent = _buildRepoScheduleCard(
-            sortedItems.first,
-            isHorizontal: false,
-            isLast: true,
-          );
-        } else {
-          scheduleContent = _HorizontalScheduleList(
-            key: const ValueKey('home_today_schedule_list'),
-            schedules: sortedItems,
-            cardBuilder: (schedule, {bool isHorizontal = true, bool isLast = false}) {
-              return _buildRepoScheduleCard(
-                schedule,
-                isHorizontal: isHorizontal,
-                isLast: isLast,
-              );
-            },
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Expanded(
-                  child: Text(
-                    "Today's schedule",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.04,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => _onTabSelected(3),
-                  child: const Text(
-                    'See all',
-                    style: TextStyle(
-                      color: Color(0xFFFF826E),
-                      fontSize: 12,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            scheduleContent,
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildRepoScheduleCard(
-    ScheduleModel schedule, {
-    bool isHorizontal = false,
-    bool isLast = false,
-  }) {
-    return GestureDetector(
-      onTap: () => _onTabSelected(3),
-      child: Container(
-        margin: EdgeInsets.only(
-          right: isHorizontal ? (isLast ? 0 : 12) : 0,
-          bottom: !isHorizontal ? (isLast ? 0 : 10) : 0,
-        ),
-        width: isHorizontal ? 285 : double.infinity,
-        decoration: BoxDecoration(
-          color: const Color(0xFF323846),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 10,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                width: 5,
-                color: schedule.accentColor,
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              schedule.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          if (schedule.status.toLowerCase() == 'ongoing')
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFF826E),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: const Text(
-                                'Ongoing',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9.5,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.25,
-                                ),
-                              ),
-                            )
-                          else if (schedule.status.toLowerCase() == 'overdue' ||
-                              schedule.status.toLowerCase() == 'completed')
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-                                  width: 0.8,
-                                ),
-                              ),
-                              child: const Text(
-                                'Overdue',
-                                style: TextStyle(
-                                  color: Color(0xFF8E95A5),
-                                  fontSize: 9.5,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.25,
-                                ),
-                              ),
-                            )
-                          else
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-                                  width: 0.8,
-                                ),
-                              ),
-                              child: const Text(
-                                'Upcoming',
-                                style: TextStyle(
-                                  color: Color(0xFF8E95A5),
-                                  fontSize: 9.5,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.25,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      if (schedule.location != null && schedule.location!.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          schedule.location!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF8E95A5),
-                            fontSize: 11,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: schedule.accentColor.withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Icon(
-                              Icons.access_time_filled_rounded,
-                              size: 10,
-                              color: schedule.accentColor,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            schedule.formattedTime,
-                            style: const TextStyle(
-                              color: Color(0xFF8E95A5),
-                              fontSize: 11,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildScheduleCard(
-    ScheduleItem schedule, {
-    bool isHorizontal = false,
-    bool isLast = false,
-  }) {
-    return GestureDetector(
-      onTap: () => _onTabSelected(3),
-      child: Container(
-        margin: EdgeInsets.only(
-          right: isHorizontal ? (isLast ? 0 : 12) : 0,
-          bottom: !isHorizontal ? (isLast ? 0 : 10) : 0,
-        ),
-        width: isHorizontal ? 285 : double.infinity,
-        decoration: BoxDecoration(
-          color: const Color(0xFF323846),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 10,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Left primary colored accent stripe
-              Container(
-                width: 5,
-                color: const Color(0xFFFF826E),
-              ),
-              // Card Content
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Title & Ongoing Badge
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              schedule.courseCode,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          if (schedule.status.toLowerCase() == 'ongoing')
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFF826E),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: const Text(
-                                'Ongoing',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9.5,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.25,
-                                ),
-                              ),
-                            )
-                          else if (schedule.status.toLowerCase() == 'overdue' ||
-                              schedule.status.toLowerCase() == 'completed')
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-                                  width: 0.8,
-                                ),
-                              ),
-                              child: const Text(
-                                'Overdue',
-                                style: TextStyle(
-                                  color: Color(0xFF8E95A5),
-                                  fontSize: 9.5,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.25,
-                                ),
-                              ),
-                            )
-                          else
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF8E95A5).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: const Color(0xFF8E95A5).withValues(alpha: 0.35),
-                                  width: 0.8,
-                                ),
-                              ),
-                              child: Text(
-                                schedule.status,
-                                style: const TextStyle(
-                                  color: Color(0xFF8E95A5),
-                                  fontSize: 9.5,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.25,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      // Location info
-                      Text(
-                        schedule.location,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF8E95A5),
-                          fontSize: 11,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      // Time with Clock Icon
-                      Row(
-                        children: [
-                          Container(
-                            width: 16,
-                            height: 16,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFF7D65),
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.access_time_filled_rounded,
-                              size: 10,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            schedule.time,
-                            style: const TextStyle(
-                              color: Color(0xFF8E95A5),
-                              fontSize: 11,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Section 2: Categories
-  Widget _buildCategoriesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Categories',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.2,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            ..._categories.map((cat) {
-              final isSelected = _selectedCategory == cat.name;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: _buildCategoryCard(cat, isSelected),
-                ),
-              );
-            }),
-            // Add Category Button
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  showTopToast(context, 'Add category coming soon!');
-                },
-                child: Container(
-                  width: 44,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF323846),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF434A59), width: 1),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.add_rounded,
-                    color: Color(0xFF8E95A5),
-                    size: 20,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategoryCard(CategoryItem category, bool isSelected) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _onCategorySelected(category.name),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        return Container(
+          width: double.infinity,
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF3D4556) : const Color(0xFF323846),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSelected ? const Color(0xFFFF7D65) : Colors.transparent,
-              width: 1.5,
-            ),
+            color: const Color(0xFF323846),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x22000000),
@@ -958,37 +492,147 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                category.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.5,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
+          clipBehavior: Clip.antiAlias,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SmartPriorityPage(userName: widget.userName),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: isEngineActive
+                            ? const Color(0xFFFA6144)
+                            : const Color(0xFF475569),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          isEngineActive
+                              ? Icons.psychology_rounded
+                              : Icons.psychology_outlined,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              const Flexible(
+                                child: Text(
+                                  'AI Smart Priority',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13.5,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 1.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isEngineActive
+                                      ? const Color(0xFF10B981)
+                                          .withValues(alpha: 0.15)
+                                      : const Color(0xFF334155),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: isEngineActive
+                                        ? const Color(0xFF10B981)
+                                            .withValues(alpha: 0.4)
+                                        : const Color(0xFF64748B),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  isEngineActive
+                                      ? 'Mamdani Active'
+                                      : 'Mamdani Inactive',
+                                  style: TextStyle(
+                                    color: isEngineActive
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFF94A3B8),
+                                    fontSize: 9.5,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            !isEngineActive
+                                ? 'AI prioritization is currently paused'
+                                : (topPriority != null
+                                    ? '#1 ${topPriority.title} (${topPriority.score.toStringAsFixed(1)} High)'
+                                    : 'Mamdani Centroid Defuzzification Active'),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF8E95A5),
+                              fontSize: 11.5,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                      color: Color(0xFFFF7D65),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(
-                category.count,
-                style: const TextStyle(
-                  color: Color(0xFF8E95A5),
-                  fontSize: 11.5,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  // Section 3: Ongoing Task
+  void _handleTaskCompleted(TaskItem task) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _tasks.removeWhere((t) => t.id == task.id || (t.id.isEmpty && t.title == task.title));
+    });
+    TaskRepository().completeTaskFromHome(task.toTaskItemModel());
+    PopUpPemberitahuan.taskCompleted(context, taskName: task.title);
+  }
+
   Widget _buildOngoingTaskSection() {
+    final activeTasks = _tasks.where((t) => !t.isCompleted).toList();
+    final displayedTasks = _selectedCategory == 'All'
+        ? activeTasks
+        : _selectedCategory.toLowerCase() == 'college'
+            ? activeTasks.where((t) => t.isCollegeTask).toList()
+            : activeTasks.where((t) => !t.isCollegeTask).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1009,7 +653,7 @@ class _HomePageState extends State<HomePage> {
             InkWell(
               borderRadius: BorderRadius.circular(6),
               onTap: () {
-                showTopToast(context, 'Showing all ongoing tasks');
+                _onTabSelected(1);
               },
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -1027,559 +671,45 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         const SizedBox(height: 10),
-        for (int i = 0; i < _tasks.length; i++)
-          RepaintBoundary(
-            child: _buildTaskCard(_tasks[i], isLast: i == _tasks.length - 1),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildTaskCard(TaskItem task, {bool isLast = false}) {
-    final isGroup = (task.members != null && task.members!.isNotEmpty) ||
-        task.tags.any((t) => t.label.toLowerCase() == 'kelompok');
-    final effectiveProgress = task.progress ?? (isGroup ? 0.46 : null);
-
-    return Container(
-      width: double.infinity,
-      margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF323846),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Left Column: Title, Subtitle, Team members, Deadline, Tags
-            Padding(
-              padding: EdgeInsets.only(
-                right: (isGroup && effectiveProgress != null) ? 56 : 46,
-              ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Title
-                          Text(
-                            task.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-
-                          // Subtitle if available
-                          if (task.subtitle != null && task.subtitle!.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              task.subtitle!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFF8E95A5),
-                                fontSize: 11.5,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-
-                          // Team members section (only for group tasks)
-                          if (isGroup && task.members != null && task.members!.isNotEmpty) ...[
-                            const SizedBox(height: 5),
-                            const Text(
-                              'Team members',
-                              style: TextStyle(
-                                color: Color(0xFF8E95A5),
-                                fontSize: 11,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            _buildAvatarStack(task.members!),
-                          ],
-
-                          // Linear progress bar for non-group tasks (if specified)
-                          if (!isGroup && task.progress != null) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Progress',
-                                  style: TextStyle(
-                                    color: Color(0xFF8E95A5),
-                                    fontSize: 11,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Text(
-                                  '${(task.progress! * 100).toInt()}%',
-                                  style: const TextStyle(
-                                    color: Color(0xFF60A5FA),
-                                    fontSize: 11,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(999),
-                              child: LinearProgressIndicator(
-                                value: task.progress,
-                                minHeight: 5,
-                                backgroundColor: const Color(0xFF282D37),
-                                valueColor: const AlwaysStoppedAnimation<Color>(
-                                    Color(0xFF60A5FA)),
-                              ),
-                            ),
-                          ],
-
-                          const SizedBox(height: 8),
-
-                          // Deadline Row with Clock
-                          Row(
-                            children: [
-                              Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF826E).withValues(alpha: 0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                alignment: Alignment.center,
-                                child: const Icon(
-                                  Icons.access_time_filled_rounded,
-                                  size: 10,
-                                  color: Color(0xFFFF826E),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  task.deadline,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Color(0xFF8E95A5),
-                                    fontSize: 11,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 7),
-
-                          // Tags row
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children: task.tags.map((tag) => _buildTag(tag)).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Top-Right Due Badge
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 9, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: task.isUrgent
-                              ? const Color(0xFFFF826E)
-                              : task.dueColor,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: task.isUrgent
-                                ? const Color(0xFFFF826E)
-                                : task.dueColor.withValues(alpha: 0.5),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          task.dueBadge,
-                          style: TextStyle(
-                            color: task.isUrgent
-                                ? Colors.white
-                                : task.dueTextColor,
-                            fontSize: 10,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Vertically Centered Circular Progress for Group Tasks
-                    if (isGroup && effectiveProgress != null)
-                      Positioned(
-                        top: 0,
-                        bottom: 0,
-                        right: 0,
-                        child: Center(
-                          child: _buildCircularProgress(
-                            effectiveProgress,
-                            isUrgent: task.isUrgent,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-  Widget _buildAvatarStack(List<Color> colors) {
-    const double size = 22.0;
-    const double overlap = 14.0;
-    final displayColors = colors.take(4).toList();
-    final extraCount = colors.length - displayColors.length;
-
-    return SizedBox(
-      height: size,
-      width: size +
-          (displayColors.length - 1 + (extraCount > 0 ? 1 : 0)) * overlap,
-      child: Stack(
-        children: [
-          for (int i = 0; i < displayColors.length; i++)
-            Positioned(
-              left: i * overlap,
-              child: Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  color: displayColors[i],
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: const Color(0xFF323846), width: 1.5),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.person_rounded,
-                  size: 11.5,
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-              ),
+        if (displayedTasks.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppColors.bgCard,
+              borderRadius: BorderRadius.circular(16),
             ),
-          if (extraCount > 0)
-            Positioned(
-              left: displayColors.length * overlap,
-              child: Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF434A59),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: const Color(0xFF323846), width: 1.5),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.assignment_turned_in_outlined,
+                  color: AppColors.textMuted,
+                  size: 32,
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  '+$extraCount',
+                const SizedBox(height: 8),
+                Text(
+                  'No ongoing tasks in $_selectedCategory',
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
+                    color: AppColors.textMuted,
+                    fontSize: 13,
                     fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
+              ],
+            ),
+          )
+        else
+          for (int i = 0; i < displayedTasks.length; i++)
+            RepaintBoundary(
+              child: HomeTaskCard(
+                key: ValueKey('home_task_${displayedTasks[i].id.isNotEmpty ? displayedTasks[i].id : displayedTasks[i].title}'),
+                task: displayedTasks[i],
+                isLast: i == displayedTasks.length - 1,
+                onEdit: () => _openEditTask(displayedTasks[i]),
+                onDismissed: () => _handleTaskCompleted(displayedTasks[i]),
               ),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCircularProgress(double progress, {bool isUrgent = false}) {
-    final percent = (progress * 100).toInt();
-    final progressColor = isUrgent
-        ? const Color(0xFFFF826E)
-        : const Color(0xFF55E6C1);
-
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: CircularProgressIndicator(
-              value: progress,
-              strokeWidth: 3.6,
-              strokeCap: StrokeCap.round,
-              backgroundColor: const Color(0xFF232834),
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-              semanticsLabel: 'Task progress: $percent%',
-            ),
-          ),
-          Text(
-            '$percent%',
-            style: TextStyle(
-              color: progressColor,
-              fontSize: 11.5,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTag(TaskTag tag) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: tag.bg.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        tag.label,
-        style: TextStyle(
-          color: tag.bg,
-          fontSize: 10.5,
-          fontFamily: 'Inter',
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.1,
-        ),
-      ),
-    );
-  }
-
-  // Scooped Bottom Navigation Bar using standard ImpalBottomNavBar
-  Widget _buildBottomNavBar() {
-    return ImpalBottomNavBar(
-      currentTab: _currentTab,
-      onTabSelected: _onTabSelected,
-    );
-  }
-
-  void _onTabSelected(int index) {
-    setState(() {
-      if (index == 2 || _selectedTeam != null) {
-        _selectedTeam = null;
-      }
-      _currentTab = index;
-    });
-    if (index == 1) {
-      showTopToast(context, 'Tasks section');
-    }
-  }
-}
-
-// Data Models
-class ScheduleItem {
-  final String courseCode;
-  final String status;
-  final String location;
-  final String time;
-
-  const ScheduleItem({
-    required this.courseCode,
-    required this.status,
-    required this.location,
-    required this.time,
-  });
-
-  factory ScheduleItem.fromModel(ScheduleModel model) {
-    return ScheduleItem(
-      courseCode: model.title,
-      status: model.status,
-      location: model.location ?? model.course ?? '',
-      time: model.formattedTime,
-    );
-  }
-}
-
-class CategoryItem {
-  final String name;
-  final String count;
-  final IconData icon;
-
-  const CategoryItem({
-    required this.name,
-    required this.count,
-    required this.icon,
-  });
-}
-
-class TaskItem {
-  final String title;
-  final String? subtitle;
-  final String dueBadge;
-  final Color dueColor;
-  final Color dueTextColor;
-  final bool isUrgent;
-  final List<Color>? members;
-  final double? progress;
-  final String deadline;
-  final List<TaskTag> tags;
-
-  const TaskItem({
-    required this.title,
-    this.subtitle,
-    required this.dueBadge,
-    required this.dueColor,
-    required this.dueTextColor,
-    required this.isUrgent,
-    this.members,
-    this.progress,
-    required this.deadline,
-    required this.tags,
-  });
-}
-
-class TaskTag {
-  final String label;
-  final Color bg;
-  final Color text;
-
-  const TaskTag({
-    required this.label,
-    required this.bg,
-    required this.text,
-  });
-}
-
-class _HorizontalScheduleList extends StatefulWidget {
-  final List<ScheduleModel> schedules;
-  final Widget Function(ScheduleModel schedule, {bool isHorizontal, bool isLast}) cardBuilder;
-
-  const _HorizontalScheduleList({
-    super.key,
-    required this.schedules,
-    required this.cardBuilder,
-  });
-
-  @override
-  State<_HorizontalScheduleList> createState() => _HorizontalScheduleListState();
-}
-
-class _HorizontalScheduleListState extends State<_HorizontalScheduleList> {
-  late ScrollController _scrollController;
-  int _targetIndex = 0;
-
-  int _findTargetIndex(List<ScheduleModel> items) {
-    // 1. Prioritize 'ongoing' schedule so it appears first on home
-    final ongoingIndex = items.indexWhere(
-      (s) => s.status.toLowerCase() == 'ongoing',
-    );
-    if (ongoingIndex != -1) return ongoingIndex;
-
-    // 2. Fallback to first 'upcoming' schedule if no ongoing schedule is currently active
-    final upcomingIndex = items.indexWhere(
-      (s) => s.status.toLowerCase() == 'upcoming',
-    );
-    if (upcomingIndex != -1) return upcomingIndex;
-
-    return 0;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _targetIndex = _findTargetIndex(widget.schedules);
-    final initialOffset = _targetIndex > 0 ? _targetIndex * 297.0 : 0.0;
-    _scrollController = ScrollController(initialScrollOffset: initialOffset);
-
-    if (_targetIndex > 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          final max = _scrollController.position.maxScrollExtent;
-          final target = (_targetIndex * 297.0).clamp(0.0, max);
-          if ((_scrollController.offset - target).abs() > 1.0) {
-            _scrollController.jumpTo(target);
-          }
-        }
-      });
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _HorizontalScheduleList oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final newTarget = _findTargetIndex(widget.schedules);
-    final listChanged = widget.schedules.length != oldWidget.schedules.length ||
-        newTarget != _targetIndex;
-
-    if (listChanged && newTarget > 0) {
-      _targetIndex = newTarget;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          final max = _scrollController.position.maxScrollExtent;
-          final target = (_targetIndex * 297.0).clamp(0.0, max);
-          _scrollController.animateTo(
-            target,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-          );
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ScrollConfiguration(
-      behavior: ScrollConfiguration.of(context).copyWith(
-        dragDevices: {
-          PointerDeviceKind.touch,
-          PointerDeviceKind.mouse,
-          PointerDeviceKind.trackpad,
-        },
-      ),
-      child: SingleChildScrollView(
-        key: const ValueKey('today_schedules_horizontal_scroll'),
-        controller: _scrollController,
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        clipBehavior: Clip.none,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (int i = 0; i < widget.schedules.length; i++)
-              widget.cardBuilder(
-                widget.schedules[i],
-                isHorizontal: true,
-                isLast: i == widget.schedules.length - 1,
-              ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 }

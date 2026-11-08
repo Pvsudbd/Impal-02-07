@@ -475,6 +475,7 @@ class _ImpalTimePickerDialogState extends State<ImpalTimePickerDialog> {
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.5,
                   height: 1.0,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
@@ -608,6 +609,7 @@ class _ImpalTimePickerDialogState extends State<ImpalTimePickerDialog> {
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.5,
                   height: 1.0,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ),

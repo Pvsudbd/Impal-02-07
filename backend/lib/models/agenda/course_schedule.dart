@@ -170,6 +170,12 @@ class CourseSchedule extends Agenda {
     String? day,
     String? room,
   }) async {
+    // 🛡️ BOLA / IDOR Protection: Verifikasi kepemilikan agenda sebelum update
+    final existing = await findById(idAgenda, idStudent);
+    if (existing == null) {
+      throw Exception('Jadwal kuliah tidak ditemukan atau bukan milik Anda.');
+    }
+
     if (courseCode != null) {
       await Database.query(
         '''
@@ -208,9 +214,11 @@ class CourseSchedule extends Agenda {
             day = COALESCE(:day, day),
             room = COALESCE(:room, room)
         WHERE id_agenda = :idAgenda
+          AND id_agenda IN (SELECT id_agenda FROM agenda WHERE id_student = :idStudent)
         ''',
         {
           'idAgenda': idAgenda,
+          'idStudent': idStudent,
           'courseCode': courseCode,
           'day': day,
           'room': room,

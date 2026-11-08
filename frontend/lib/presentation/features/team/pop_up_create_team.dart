@@ -184,20 +184,26 @@ class _PopUpCreateTeamState extends State<PopUpCreateTeam> {
                     key: const ValueKey('close_create_team_button'),
                     onTap: () => Navigator.of(context).pop(),
                     borderRadius: BorderRadius.circular(999),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: ShapeDecoration(
-                        color: const Color(0x33FA6144),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Center(
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: ShapeDecoration(
+                            color: const Color(0x33FA6144),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: Color(0xFFFA6144),
+                            size: 18,
+                          ),
                         ),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.close_rounded,
-                        color: Color(0xFFFA6144),
-                        size: 18,
                       ),
                     ),
                   ),
@@ -210,7 +216,7 @@ class _PopUpCreateTeamState extends State<PopUpCreateTeam> {
                 'Team Name',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 14.75,
+                  fontSize: 14.5,
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.20,
@@ -228,6 +234,8 @@ class _PopUpCreateTeamState extends State<PopUpCreateTeam> {
                 ),
                 child: TextField(
                   controller: _nameController,
+                  maxLength: 50,
+                  buildCounter: (context, {required currentLength, required isFocused, required maxLength}) => null,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -235,7 +243,7 @@ class _PopUpCreateTeamState extends State<PopUpCreateTeam> {
                     fontWeight: FontWeight.w500,
                   ),
                   decoration: const InputDecoration(
-                    hintText: 'Name meeting',
+                    hintText: 'Enter team name',
                     hintStyle: TextStyle(
                       color: Color(0xFF8E95A5),
                       fontSize: 14,
@@ -278,6 +286,8 @@ class _PopUpCreateTeamState extends State<PopUpCreateTeam> {
                 child: TextField(
                   controller: _descController,
                   maxLines: 3,
+                  maxLength: 250,
+                  buildCounter: (context, {required currentLength, required isFocused, required maxLength}) => null,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -311,7 +321,7 @@ class _PopUpCreateTeamState extends State<PopUpCreateTeam> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 14.75,
+                        fontSize: 14.5,
                         fontFamily: 'Inter',
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.20,
@@ -324,7 +334,7 @@ class _PopUpCreateTeamState extends State<PopUpCreateTeam> {
                     onTap: _generateNewCode,
                     borderRadius: BorderRadius.circular(4),
                     child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

@@ -6,6 +6,7 @@ import 'package:shelf_router/shelf_router.dart';
 import '../lib/config/db.dart';
 import '../lib/routes/auth/auth_routes.dart';
 import '../lib/routes/agenda/agenda_routes.dart';
+import '../lib/routes/profile/profile_routes.dart';
 
 void main(List<String> args) async {
   Database.init();
@@ -35,11 +36,11 @@ void main(List<String> args) async {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
+      print('[SERVER] DB connection error: $e');
       return Response.internalServerError(
         body: jsonEncode({
           'status': 'error',
-          'message': 'Gagal konek ke database',
-          'detail': e.toString(),
+          'message': 'Gagal terhubung ke database server.',
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -76,6 +77,11 @@ void main(List<String> args) async {
   // Mount Agenda routes under /api/agenda
   app.mount('/api/agenda', AgendaRoutes().router);
 
+  // Mount Profile routes under /api/profile and /api/student
+  final profileRoutes = ProfileRoutes().router;
+  app.mount('/api/profile', profileRoutes);
+  app.mount('/api/student', profileRoutes);
+
   // Robust CORS Middleware for Chrome / Flutter Web
   Handler corsMiddleware(Handler innerHandler) {
     return (Request request) async {
@@ -111,5 +117,6 @@ void main(List<String> args) async {
   print('📅 Jadwal  : http://localhost:${server.port}/api/agenda');
   print('📅 Kuliah  : http://localhost:${server.port}/api/agenda/course');
   print('📅 Personal: http://localhost:${server.port}/api/agenda/personal');
+  print('👤 Profil  : http://localhost:${server.port}/api/profile');
   print('========================================================');
 }

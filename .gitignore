@@ -41,8 +41,11 @@ frontend/android/app/profile
 frontend/android/app/release
 
 # ----------------------------------------------------
-# Backend (Node / Laravel / Python)
+# Backend (Dart / Node / Laravel / Python)
 # ----------------------------------------------------
+backend/.env
+backend/.dart_tool/
+backend/build/
 backend/node_modules/
 backend/vendor/
 backend/storage/*.key

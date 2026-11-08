@@ -32,12 +32,13 @@ class ImpalBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final totalHeight = barTop + 68.0 + bottomPadding;
+    final disableMotion = MediaQuery.disableAnimationsOf(context);
 
     return SizedBox(
       height: totalHeight,
       child: TweenAnimationBuilder<double>(
         tween: Tween<double>(end: currentTab.toDouble()),
-        duration: const Duration(milliseconds: 350),
+        duration: disableMotion ? Duration.zero : const Duration(milliseconds: 350),
         curve: Curves.easeInOutCubic,
         builder: (context, animValue, child) {
           return LayoutBuilder(
@@ -46,21 +47,22 @@ class ImpalBottomNavBar extends StatelessWidget {
               final tabWidth = width / 4;
               final activeCenterX = (animValue + 0.5) * tabWidth;
 
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // 1. Scooped Navbar Background
-                  CustomPaint(
-                    size: Size(width, totalHeight),
-                    painter: _ScoopedNavBarPainter(
-                      centerX: activeCenterX,
-                      barTop: barTop,
-                      circleCenterY: circleCenterY,
-                      notchRadius: notchRadius,
-                      barColor: barColor,
-                      pocketColor: pocketColor,
+              return RepaintBoundary(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // 1. Scooped Navbar Background
+                    CustomPaint(
+                      size: Size(width, totalHeight),
+                      painter: _ScoopedNavBarPainter(
+                        centerX: activeCenterX,
+                        barTop: barTop,
+                        circleCenterY: circleCenterY,
+                        notchRadius: notchRadius,
+                        barColor: barColor,
+                        pocketColor: pocketColor,
+                      ),
                     ),
-                  ),
 
                   // 2. Inactive Tab Icons
                   Positioned(
@@ -143,8 +145,9 @@ class ImpalBottomNavBar extends StatelessWidget {
                     ),
                   ),
                 ],
-              );
-            },
+              ),
+            );
+          },
           );
         },
       ),

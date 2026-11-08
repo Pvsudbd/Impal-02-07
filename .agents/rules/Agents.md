@@ -81,5 +81,46 @@ backend/lib/
 
 ⚠️ **LARANGAN:** Jangan pernah meletakkan file langsung di root `controllers/`, `models/`, atau `routes/` tanpa dibungkus subfolder nama fiturnya.
 
+---
+
+## 6. 👥 Pembagian Tugas & Kepemilikan Fitur Tim (Team Feature Ownership)
+
+Untuk menjaga batas pengerjaan kode dan mencegah konflik antar-anggota tim saat berkolaborasi:
+
+### 👤 Pengguna (Yoga / User Lead):
+- 🔑 **Autentikasi** (`auth`): Alur Login, Register, Forgot Password, Reset Password, JWT Auth Token, Auth Middleware.
+- 📅 **Jadwal** (`schedule` / `agenda`): Course Schedule, Personal Schedule, CRUD Agenda, API Sync, Deteksi Konflik Jadwal.
+- 👤 **User Profile** (`profile` / `student`): Profil Mahasiswa, Edit Data Diri, Ganti Password, Statistik Akun.
+
+### 👤 Habhindra:
+- 📊 **Dashboard**: Halaman Beranda (Home Dashboard), Ringkasan Statistik, Kartu Agenda Hari Ini, Navigasi Utama.
+- 👥 **Kelompok** (`team` / `kelompok`): Manajemen Kelompok Belajar/Tubes, Join Team via Invite Code, Create Team, Meeting Schedule.
+- 📝 **Task** (`task` / `tugas`): Manajemen Tugas Akademik, Tambah/Edit Tugas, Bobot Nilai & Sisa Waktu, Smart Priority Rekomendasi.
+
+⚠️ **ATURAN AGENT:**
+Saat mengimplementasikan fitur atau memperbaiki bug, Agent **WAJIB** fokus pada ruang lingkup fitur pengguna (Autentikasi, Jadwal, User Profile). **DILARANG** merombak atau memodifikasi logika fitur milik Habhindra (Dashboard, Kelompok, Task) tanpa persetujuan atau instruksi tegas dari pengguna.
+
+---
+
+## 7. 📝 Pencatatan Riwayat Perubahan & Penambahan Fitur Wajib (`.agents/features/`)
+
+Setiap kali Agent melakukan penambahan fitur baru, perbaikan kode (*bug fix*), *security hardening*, atau perubahan logika pada suatu fitur (baik di sisi Frontend maupun Backend):
+
+1. **Lokasi Direktori & Penamaan Berkas Wajib:**
+   - Agent **WAJIB** membuat atau memperbarui berkas dokumentasi di dalam folder:
+     📂 `.agents/features/[nama_fitur].md`
+   - Nama berkas **HARUS** berupa nama fitur yang baru saja diubah atau ditambahkan (misal: `user_profile.md`, `schedule.md`, `auth.md`, `cybersecurity_hardening.md`).
+
+2. **Format & Isi Berkas Wajib Mencakup:**
+   - 📌 **Nama Fitur & Tanggal Perubahan**.
+   - 📂 **Daftar Berkas yang Dibuat / Dimodifikasi** (sertakan path lengkap).
+   - ⚙️ **Rincian Teknis Perubahan** (apa fungsi baru yang ditambahkan, logika apa yang diubah).
+   - 📐 **Rujukan Desain**: Keselarasan dengan `Class_Diagram.md` / `Entity_Relationship_Diagram.md`.
+   - 🛡️ **Pengecekan Keamanan**: Verifikasi terhadap aturan `.agents/cybersecurity.md` (BOLA/IDOR, parameterized queries, auth context, sanitasi input/output).
+
+3. **Kewajiban Otomatis:**
+   - **DILARANG** menyelesaikan respon ke pengguna tanpa mencatat atau memperbarui berkas fitur terkait di folder `.agents/features/`.
+
+
 
 

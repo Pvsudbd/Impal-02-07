@@ -71,7 +71,7 @@ class AuthController {
     } catch (e, stack) {
       print('[AUTH] Login error: $e\n$stack');
       return Response.internalServerError(
-        body: jsonEncode({'status': 'error', 'message': 'Terjadi kesalahan server.', 'detail': e.toString()}),
+        body: jsonEncode({'status': 'error', 'message': 'Terjadi kesalahan pada server saat login.'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -134,7 +134,7 @@ class AuthController {
     } catch (e, stack) {
       print('[AUTH] Register error: $e\n$stack');
       return Response.internalServerError(
-        body: jsonEncode({'status': 'error', 'message': 'Terjadi kesalahan server.', 'detail': e.toString()}),
+        body: jsonEncode({'status': 'error', 'message': 'Terjadi kesalahan pada server saat registrasi.'}),
         headers: {'Content-Type': 'application/json'},
       );
     }

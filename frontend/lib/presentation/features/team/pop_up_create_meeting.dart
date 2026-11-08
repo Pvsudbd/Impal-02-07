@@ -1,22 +1,32 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../common_widgets/impal_date_picker_dialog.dart';
 import '../../common_widgets/impal_time_picker_dialog.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
-import '../jadwal/models/schedule_model.dart';
-import '../jadwal/models/schedule_repository.dart';
+import '../schedule/models/schedule_model.dart';
+import '../schedule/models/schedule_repository.dart';
+import '../profile/models/user_profile_model.dart';
+import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../schedule/pop_up_schedule_conflict_dialog.dart';
+import '../schedule/widgets/team_meeting_autocomplete.dart';
 
-/// Aliases for backwards compatibility with Figma export & routes
+/// Aliases for backwards compatibility with routes & components
 typedef FormCreateMeeting = PopUpCreateMeeting;
 typedef PopUpEditMeeting = PopUpCreateMeeting;
 typedef FormEditMeeting = PopUpCreateMeeting;
+typedef MeetingFormPage = PopUpCreateMeeting;
+typedef CreateMeetingPage = PopUpCreateMeeting;
+typedef EditMeetingPage = PopUpCreateMeeting;
 
-/// Pop up dialog for creating or editing a meeting matching Figma design & IMPAL rules
+/// Screen page for creating or editing a meeting matching the Add Schedule design
 class PopUpCreateMeeting extends StatefulWidget {
   final String initialName;
   final String initialLocation;
   final String initialDescription;
   final DateTime? initialDate;
   final TimeOfDay? initialTime;
+  final TimeOfDay? initialEndTime;
+  final bool initialRepeatWeekly;
   final String? teamName;
   final ScheduleModel? existingSchedule;
   final ValueChanged<ScheduleModel>? onCreated;
@@ -29,13 +39,15 @@ class PopUpCreateMeeting extends StatefulWidget {
     this.initialDescription = '',
     this.initialDate,
     this.initialTime,
+    this.initialEndTime,
+    this.initialRepeatWeekly = false,
     this.teamName,
     this.existingSchedule,
     this.onCreated,
     this.onUpdated,
   });
 
-  /// Helper to show the Create Meeting popup as a modal dialog
+  /// Helper to open the Create Meeting screen as a full Page
   static Future<ScheduleModel?> show(
     BuildContext context, {
     String initialName = '',
@@ -43,25 +55,29 @@ class PopUpCreateMeeting extends StatefulWidget {
     String initialDescription = '',
     DateTime? initialDate,
     TimeOfDay? initialTime,
+    TimeOfDay? initialEndTime,
+    bool initialRepeatWeekly = false,
     String? teamName,
     ValueChanged<ScheduleModel>? onCreated,
   }) {
-    return showDialog<ScheduleModel>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.65),
-      builder: (ctx) => PopUpCreateMeeting(
-        initialName: initialName,
-        initialLocation: initialLocation,
-        initialDescription: initialDescription,
-        initialDate: initialDate,
-        initialTime: initialTime,
-        teamName: teamName,
-        onCreated: onCreated,
+    return Navigator.of(context).push<ScheduleModel>(
+      MaterialPageRoute(
+        builder: (ctx) => PopUpCreateMeeting(
+          initialName: initialName,
+          initialLocation: initialLocation,
+          initialDescription: initialDescription,
+          initialDate: initialDate,
+          initialTime: initialTime,
+          initialEndTime: initialEndTime,
+          initialRepeatWeekly: initialRepeatWeekly,
+          teamName: teamName,
+          onCreated: onCreated,
+        ),
       ),
     );
   }
 
-  /// Helper to show the Edit Meeting popup for an existing schedule
+  /// Helper to open the Edit Meeting screen for an existing schedule
   static Future<ScheduleModel?> showEdit(
     BuildContext context, {
     ScheduleModel? schedule,
@@ -71,13 +87,13 @@ class PopUpCreateMeeting extends StatefulWidget {
   }) {
     final target = schedule ?? existingSchedule;
     assert(target != null, 'Either schedule or existingSchedule must be provided');
-    return showDialog<ScheduleModel>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.65),
-      builder: (ctx) => PopUpCreateMeeting(
-        existingSchedule: target,
-        teamName: teamName,
-        onUpdated: onUpdated,
+    return Navigator.of(context).push<ScheduleModel>(
+      MaterialPageRoute(
+        builder: (ctx) => PopUpCreateMeeting(
+          existingSchedule: target,
+          teamName: teamName,
+          onUpdated: onUpdated,
+        ),
       ),
     );
   }
@@ -88,10 +104,16 @@ class PopUpCreateMeeting extends StatefulWidget {
 
 class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
   late final TextEditingController _nameController;
+  late final TextEditingController _teamController;
   late final TextEditingController _locationController;
+  late final TextEditingController _meetingUrlController;
   late final TextEditingController _descController;
+  late bool _isTeamMeeting;
   late DateTime _selectedDate;
-  late TimeOfDay _selectedTime;
+  late TimeOfDay _startTime;
+  late TimeOfDay _endTime;
+  late bool _repeatWeekly;
+  late bool _isAlertEnabled;
 
   bool get isEdit => widget.existingSchedule != null;
 
@@ -99,12 +121,29 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
   void initState() {
     super.initState();
     final existing = widget.existingSchedule;
+    _isAlertEnabled = existing?.isAlertEnabled ?? true;
     if (existing != null) {
       _nameController = TextEditingController(text: existing.title);
       _locationController = TextEditingController(text: existing.location ?? '');
+      _meetingUrlController = TextEditingController(text: existing.meetingUrl ?? '');
       _descController = TextEditingController(text: existing.notes ?? '');
       _selectedDate = existing.date;
-      _selectedTime = _parseTimeOfDay(existing.timeStart);
+      _startTime = _parseTimeOfDay(existing.timeStart);
+      final parsedEnd = _parseTimeOfDay(existing.timeEnd);
+      if (parsedEnd.hour == _startTime.hour && parsedEnd.minute == _startTime.minute) {
+        _endTime = TimeOfDay(
+          hour: (_startTime.hour + 1) % 24,
+          minute: _startTime.minute,
+        );
+      } else {
+        _endTime = parsedEnd;
+      }
+      _repeatWeekly = existing.repeat;
+      _isTeamMeeting = (existing.teamName != null && existing.teamName!.isNotEmpty) ||
+          (widget.teamName != null && widget.teamName!.isNotEmpty);
+      _teamController = TextEditingController(
+        text: existing.teamName ?? widget.teamName ?? '',
+      );
     } else {
       _nameController = TextEditingController(text: widget.initialName);
       _locationController = TextEditingController(
@@ -112,13 +151,22 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
             ? widget.initialLocation
             : 'Online / Google Meet',
       );
+      _meetingUrlController = TextEditingController();
       _descController = TextEditingController(text: widget.initialDescription);
       _selectedDate = widget.initialDate ?? DateTime.now();
-      _selectedTime = widget.initialTime ??
+      _startTime = widget.initialTime ??
           TimeOfDay(
             hour: (DateTime.now().hour + 1) % 24,
             minute: 0,
           );
+      _endTime = widget.initialEndTime ??
+          TimeOfDay(
+            hour: (_startTime.hour + 1) % 24,
+            minute: _startTime.minute,
+          );
+      _repeatWeekly = widget.initialRepeatWeekly;
+      _isTeamMeeting = widget.teamName != null && widget.teamName!.isNotEmpty;
+      _teamController = TextEditingController(text: widget.teamName ?? '');
     }
   }
 
@@ -139,20 +187,30 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
   @override
   void dispose() {
     _nameController.dispose();
+    _teamController.dispose();
     _locationController.dispose();
+    _meetingUrlController.dispose();
     _descController.dispose();
     super.dispose();
   }
 
+  List<ScheduleModel> get _currentConflicts {
+    final startStr = _formatTime(_startTime).replaceAll(' WIB', '');
+    final endStr = _formatTime(_endTime).replaceAll(' WIB', '');
+    return ScheduleRepository().findConflicts(
+      date: _selectedDate,
+      timeStart: startStr,
+      timeEnd: endStr,
+      excludeId: widget.existingSchedule?.id,
+    );
+  }
+
   String _formatDate(DateTime dt) {
-    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const monthNames = [
+    const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
-    final dayName = dayNames[dt.weekday - 1];
-    final monthName = monthNames[dt.month - 1];
-    return '$dayName ${dt.day} $monthName ${dt.year}';
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
   }
 
   String _formatTime(TimeOfDay time) {
@@ -167,21 +225,42 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
-      title: isEdit ? 'Select Meeting Date' : 'Select Meeting Date',
+      title: 'Select Meeting Date',
     );
     if (picked != null && mounted) {
       setState(() => _selectedDate = picked);
     }
   }
 
-  Future<void> _pickTime() async {
+  Future<void> _pickStartTime() async {
     final picked = await showImpalTimePicker(
       context: context,
-      initialTime: _selectedTime,
-      title: isEdit ? 'Select Meeting Time' : 'Select Meeting Time',
+      initialTime: _startTime,
+      title: 'Select Start Time',
     );
     if (picked != null && mounted) {
-      setState(() => _selectedTime = picked);
+      setState(() {
+        final durationHours = (_endTime.hour - _startTime.hour) % 24;
+        final durationMinutes = _endTime.minute - _startTime.minute;
+        _startTime = picked;
+        if (durationHours <= 0 && durationMinutes <= 0) {
+          _endTime = TimeOfDay(
+            hour: (picked.hour + 1) % 24,
+            minute: picked.minute,
+          );
+        }
+      });
+    }
+  }
+
+  Future<void> _pickEndTime() async {
+    final picked = await showImpalTimePicker(
+      context: context,
+      initialTime: _endTime,
+      title: 'Select End Time (Estimated)',
+    );
+    if (picked != null && mounted) {
+      setState(() => _endTime = picked);
     }
   }
 
@@ -190,450 +269,686 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
     if (name.isEmpty) {
       PopUpPemberitahuan.teamWarning(
         context,
-        title: 'Meeting Name Required',
-        message: 'Please enter meeting name.',
+        title: 'Incomplete Form',
+        message: 'Please enter a meeting name.',
       );
       return;
     }
 
-    try {
-      final startH = _selectedTime.hour.toString().padLeft(2, '0');
-      final startM = _selectedTime.minute.toString().padLeft(2, '0');
-      final endHour = (_selectedTime.hour + 1) % 24;
-      final endH = endHour.toString().padLeft(2, '0');
+    final location = _locationController.text.trim().isNotEmpty
+        ? _locationController.text.trim()
+        : 'Online / Google Meet';
 
-      final meetingDateTime = DateTime(
-        _selectedDate.year,
-        _selectedDate.month,
-        _selectedDate.day,
-        _selectedTime.hour,
-        _selectedTime.minute,
+    final teamNameValue =
+        _isTeamMeeting && _teamController.text.trim().isNotEmpty
+            ? _teamController.text.trim()
+            : null;
+
+    final scheduleDate = _selectedDate;
+    final meetingUrlVal = _meetingUrlController.text.trim().isNotEmpty
+        ? _meetingUrlController.text.trim()
+        : null;
+
+    final conflicts = _currentConflicts;
+    if (conflicts.isNotEmpty) {
+      final proceed = await PopUpScheduleConflictDialog.show(
+        context,
+        conflicts: conflicts,
+      );
+      if (proceed != true || !mounted) return;
+    }
+
+    if (isEdit) {
+      final updated = widget.existingSchedule!.copyWith(
+        title: name,
+        type: 'Meeting',
+        location: location,
+        meetingUrl: meetingUrlVal,
+        notes: _descController.text.trim(),
+        date: scheduleDate,
+        timeStart: _formatTime(_startTime).replaceAll(' WIB', ''),
+        timeEnd: _formatTime(_endTime).replaceAll(' WIB', ''),
+        repeat: _repeatWeekly,
+        teamName: teamNameValue,
+        isAlertEnabled: _isAlertEnabled,
       );
 
-      final now = DateTime.now();
-      final endDateTime = meetingDateTime.add(const Duration(hours: 1));
-      String status = 'Upcoming';
-      if (now.isAfter(endDateTime)) {
-        status = 'Overdue';
-      } else if (now.isAfter(meetingDateTime) && now.isBefore(endDateTime)) {
-        status = 'Ongoing';
-      }
+      await ScheduleRepository().updateSchedule(updated);
 
-      final inputLoc = _locationController.text.trim();
-      final loc = inputLoc.isNotEmpty
-          ? inputLoc
-          : (widget.teamName != null && widget.teamName!.isNotEmpty
-              ? 'Team ${widget.teamName} / Online'
-              : 'Online / Google Meet');
+      if (!mounted) return;
+      widget.onUpdated?.call(updated);
+      PopUpPemberitahuan.meetingUpdated(context);
+      Navigator.of(context).pop(updated);
+    } else {
+      final newSchedule = ScheduleModel(
+        id: 'meeting_${DateTime.now().millisecondsSinceEpoch}',
+        title: name,
+        type: 'Meeting',
+        status: ScheduleModel.calculateStatus(
+          date: scheduleDate,
+          timeStart: _formatTime(_startTime).replaceAll(' WIB', ''),
+          timeEnd: _formatTime(_endTime).replaceAll(' WIB', ''),
+        ),
+        location: location,
+        meetingUrl: meetingUrlVal,
+        notes: _descController.text.trim(),
+        date: scheduleDate,
+        timeStart: _formatTime(_startTime).replaceAll(' WIB', ''),
+        timeEnd: _formatTime(_endTime).replaceAll(' WIB', ''),
+        repeat: _repeatWeekly,
+        teamName: teamNameValue,
+        isAlertEnabled: _isAlertEnabled,
+      );
 
-      if (isEdit && widget.existingSchedule != null) {
-        final updatedSchedule = widget.existingSchedule!.copyWith(
-          title: name,
-          type: 'Meeting',
-          timeStart: '$startH:$startM',
-          timeEnd: '$endH:$startM',
-          timeZone: 'WIB',
-          location: loc,
-          status: status,
-          notes: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-          date: _selectedDate,
-        );
+      await ScheduleRepository().addSchedule(newSchedule);
 
-        await ScheduleRepository().updateSchedule(updatedSchedule);
+      if (!mounted) return;
+      widget.onCreated?.call(newSchedule);
+      PopUpPemberitahuan.meetingCreated(context);
+      Navigator.of(context).pop(newSchedule);
+    }
+  }
 
-        if (widget.onUpdated != null) {
-          widget.onUpdated!(updatedSchedule);
-        }
-        if (widget.onCreated != null) {
-          widget.onCreated!(updatedSchedule);
-        }
+  Future<void> _handleDelete() async {
+    final existing = widget.existingSchedule;
+    if (existing == null) return;
 
-        if (mounted) {
-          Navigator.of(context).pop(updatedSchedule);
-        }
-      } else {
-        final newSchedule = ScheduleModel(
-          id: 'meeting_${DateTime.now().millisecondsSinceEpoch}',
-          title: name,
-          type: 'Meeting',
-          timeStart: '$startH:$startM',
-          timeEnd: '$endH:$startM',
-          timeZone: 'WIB',
-          location: loc,
-          status: status,
-          notes: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-          date: _selectedDate,
-        );
+    final confirmed = await PopUpKonfirmasiDelete.show(
+      context,
+      title: 'Delete Meeting?',
+      message: 'Are you sure you want to delete "${existing.title}"?',
+    );
 
-        await ScheduleRepository().addSchedule(newSchedule);
-
-        if (widget.onCreated != null) {
-          widget.onCreated!(newSchedule);
-        }
-
-        if (mounted) {
-          Navigator.of(context).pop(newSchedule);
-        }
-      }
-    } catch (_) {
+    if (confirmed == true && mounted) {
+      await ScheduleRepository().deleteSchedule(existing.id);
       if (mounted) {
-        PopUpPemberitahuan.teamWarning(
-          context,
-          title: 'Error',
-          message: isEdit
-              ? 'Failed to update meeting. Please try again.'
-              : 'Failed to create meeting. Please try again.',
-        );
+        PopUpPemberitahuan.meetingDeleted(context);
+        Navigator.of(context).pop(existing);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Container(
-        width: 352,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        clipBehavior: Clip.antiAlias,
-        decoration: ShapeDecoration(
-          color: const Color(0xFF323846),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          shadows: const [
-            BoxShadow(
-              color: Color(0x66000000),
-              blurRadius: 30,
-              offset: Offset(0, 15),
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        backgroundColor: AppColors.bgPrimary,
+        elevation: 0,
+        leading: Center(
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFF323846),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF3B4150), width: 1.0),
             ),
-          ],
+            child: IconButton(
+              key: const ValueKey('close_create_meeting_button'),
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: Title & Close Button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
+        title: Text(
+          isEdit ? 'Edit Meeting' : 'Create Meeting',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          if (isEdit) ...[
+            IconButton(
+              key: const ValueKey('delete_meeting_button'),
+              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.primary),
+              tooltip: 'Delete Meeting',
+              onPressed: _handleDelete,
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Flexible(
-                    child: Text(
-                      isEdit ? 'Edit Meeting' : 'Create Meeting',
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.07,
+                  // Header Row with Title & Alert Bell Toggle Button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isEdit ? 'Edit Meeting Details' : 'Meeting Details',
+                        style: const TextStyle(
+                          color: AppColors.textWhite,
+                          fontSize: 18,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
+                      _buildAlertToggle(),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 1. Meeting Title
+                  const Text(
+                    'Meeting Name',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    key: const ValueKey('create_meeting_name_input'),
+                    controller: _nameController,
+                    hint: 'e.g. Weekly Standup Kelompok IMPAL',
+                    prefixIcon: Icons.groups_rounded,
+                  ),
+
+                  // 2. Team Meeting Checkbox & Autocomplete
+                  TeamMeetingAutocomplete(
+                    isTeamMeeting: _isTeamMeeting,
+                    teamController: _teamController,
+                    onToggleTeamMeeting: (val) {
+                      setState(() {
+                        _isTeamMeeting = val;
+                        if (!_isTeamMeeting) {
+                          _teamController.clear();
+                        }
+                      });
+                    },
+                    onTeamChanged: () => setState(() {}),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // 3. Location
+                  const Text(
+                    'Location',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    key: const ValueKey('create_meeting_location_input'),
+                    controller: _locationController,
+                    hint: 'e.g. Ruang Rapat / Google Meet / Discord',
+                    prefixIcon: Icons.location_on_rounded,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 4. Date & Time Section Header
+                  const Text(
+                    'Date & Time',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   InkWell(
-                    key: const ValueKey('close_create_meeting_button'),
-                    onTap: () => Navigator.of(context).pop(),
-                    borderRadius: BorderRadius.circular(999),
+                    key: const ValueKey('create_meeting_date_picker_button'),
+                    onTap: _pickDate,
+                    borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: ShapeDecoration(
-                        color: const Color(0x33FA6144),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                        ),
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.bgCard,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.borderSubtle),
                       ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.close_rounded,
-                        color: Color(0xFFFA6144),
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // Meeting Name Field
-              const Text(
-                'Meeting Name',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.75,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.20,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                decoration: ShapeDecoration(
-                  color: const Color(0xFF282D37),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: TextField(
-                  key: const ValueKey('create_meeting_name_input'),
-                  controller: _nameController,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'Name meeting',
-                    hintStyle: TextStyle(
-                      color: Color(0xFF8E95A5),
-                      fontSize: 14,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Meeting Location Field
-              const Text(
-                'Location',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.75,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.20,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                decoration: ShapeDecoration(
-                  color: const Color(0xFF282D37),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: TextField(
-                  key: const ValueKey('create_meeting_location_input'),
-                  controller: _locationController,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'e.g. Online / Google Meet, Discord, Room 204',
-                    hintStyle: TextStyle(
-                      color: Color(0xFF8E95A5),
-                      fontSize: 14,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Description (Optional)
-              const Text(
-                'Description (Optional)',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.55,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.03,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: ShapeDecoration(
-                  color: const Color(0xFF282D37),
-                  shape: RoundedRectangleBorder(
-                    side: const BorderSide(
-                      width: 1,
-                      color: Color(0xFF282D37),
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: TextField(
-                  key: const ValueKey('create_meeting_desc_input'),
-                  controller: _descController,
-                  maxLines: 3,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'Write a description here',
-                    hintStyle: TextStyle(
-                      color: Color(0xFF8E95A5),
-                      fontSize: 14,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 6),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Date & Time
-              const Text(
-                'Date & Time',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.55,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.03,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  // Date Picker Button
-                  Expanded(
-                    child: InkWell(
-                      key: const ValueKey('create_meeting_date_picker_button'),
-                      onTap: _pickDate,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        decoration: ShapeDecoration(
-                          color: const Color(0xFF282D37),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Flexible(
-                              child: Text(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today_rounded, color: AppColors.textMuted, size: 18),
+                              const SizedBox(width: 10),
+                              Text(
                                 _formatDate(_selectedDate),
-                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 13,
-                                  fontFamily: 'Inter',
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
+                            ],
+                          ),
+                          const Icon(Icons.edit_calendar_rounded, color: AppColors.primary, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Start Time & End Time
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Start Time',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 12,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                            const SizedBox(width: 4),
-                            const Icon(
-                              Icons.calendar_month_rounded,
-                              color: Color(0xFF8E95A5),
-                              size: 16,
+                            const SizedBox(height: 8),
+                            InkWell(
+                              key: const ValueKey('create_meeting_time_picker_button'),
+                              onTap: _pickStartTime,
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                height: 48,
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                decoration: BoxDecoration(
+                                  color: AppColors.bgCard,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.borderSubtle),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.access_time_rounded, color: AppColors.textMuted, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _formatTime(_startTime),
+                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'End Time (Estimated)',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 12,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            InkWell(
+                              key: const ValueKey('create_meeting_end_time_picker_button'),
+                              onTap: _pickEndTime,
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                height: 48,
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                decoration: BoxDecoration(
+                                  color: AppColors.bgCard,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.borderSubtle),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.timer_outlined, color: AppColors.textMuted, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _formatTime(_endTime),
+                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(height: 16),
 
-                  // Time Picker Button
-                  Expanded(
-                    child: InkWell(
-                      key: const ValueKey('create_meeting_time_picker_button'),
-                      onTap: _pickTime,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        decoration: ShapeDecoration(
-                          color: const Color(0xFF282D37),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                  // 5. Repeat Weekly Switch
+                  Container(
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgCard,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.repeat_rounded, color: AppColors.textMuted, size: 18),
+                            SizedBox(width: 10),
+                            Text(
+                              'Repeat Weekly',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Transform.scale(
+                          scale: 0.82,
+                          child: Switch(
+                            key: const ValueKey('create_meeting_repeat_weekly_switch'),
+                            value: _repeatWeekly,
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            activeThumbColor: AppColors.primary,
+                            activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+                            onChanged: (val) => setState(() => _repeatWeekly = val),
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                _formatTime(_selectedTime),
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(
-                              Icons.access_time_rounded,
-                              color: Color(0xFF8E95A5),
-                              size: 16,
-                            ),
-                          ],
+                      ],
+                    ),
+                  ),
+                  if (_currentConflicts.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _buildConflictWarningBanner(_currentConflicts),
+                  ],
+                  const SizedBox(height: 16),
+
+                  // Meeting URL (Optional)
+                  const Text(
+                    'Meeting Link / URL (Optional)',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    key: const ValueKey('create_meeting_url_input'),
+                    controller: _meetingUrlController,
+                    hint: 'https://meet.google.com/... or Zoom link',
+                    prefixIcon: Icons.videocam_outlined,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 6. Description (Optional)
+                  const Text(
+                    'Description (Optional)',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    key: const ValueKey('create_meeting_desc_input'),
+                    controller: _descController,
+                    hint: 'Write meeting agenda, topics, or notes here...',
+                    maxLines: 3,
+                    prefixIcon: Icons.notes_rounded,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 7. Submit Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      key: const ValueKey('create_meeting_submit_button'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: _handleSave,
+                      child: Text(
+                        isEdit ? 'Save Changes' : 'Create Meeting',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.15,
                         ),
                       ),
                     ),
                   ),
+                  if (isEdit) ...[
+                    const SizedBox(height: 12),
+                    _buildDeleteButton(),
+                  ],
+                  const SizedBox(height: 24),
                 ],
               ),
-              const SizedBox(height: 20),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-              // Submit Button
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  key: const ValueKey('create_meeting_submit_button'),
-                  onTap: _handleSave,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-                    decoration: ShapeDecoration(
-                      color: const Color(0xFFFA6144),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+  Widget _buildAlertToggle() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() => _isAlertEnabled = !_isAlertEnabled);
+          final categoryConfig =
+              UserProfileRepository().profile.teamMeetingAlerts;
+          PopUpPemberitahuan.show(
+            context,
+            title: _isAlertEnabled ? 'Meeting Alert Active' : 'Meeting Alert Muted',
+            message: _isAlertEnabled
+                ? 'Meeting alerts enabled (Following Profile: ${categoryConfig.summary}).'
+                : 'Alerts muted for this meeting.',
+            icon: _isAlertEnabled
+                ? Icons.notifications_active_rounded
+                : Icons.notifications_off_outlined,
+            iconBgColor: _isAlertEnabled
+                ? PopUpPemberitahuan.positiveColor
+                : PopUpPemberitahuan.neutralColor,
+          );
+        },
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: _isAlertEnabled
+                ? AppColors.primary
+                : const Color(0xFF323846),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: _isAlertEnabled
+                  ? AppColors.primary
+                  : AppColors.borderSubtle,
+              width: 1,
+            ),
+            boxShadow: _isAlertEnabled
+                ? const [
+                    BoxShadow(
+                      color: Color(0x40FA6144),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      isEdit ? 'Save Changes' : 'Create Meeting',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _isAlertEnabled
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_off_outlined,
+                size: 15,
+                color: _isAlertEnabled
+                    ? Colors.white
+                    : AppColors.textMuted,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _isAlertEnabled ? 'Alert On' : 'Alert Off',
+                style: TextStyle(
+                  color: _isAlertEnabled
+                      ? Colors.white
+                      : AppColors.textMuted,
+                  fontSize: 12,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDeleteButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: _handleDelete,
+        icon: const Icon(
+          Icons.delete_outline_rounded,
+          color: Color(0xFFFF5E4D),
+          size: 18,
+        ),
+        label: const Text(
+          'Delete Meeting',
+          style: TextStyle(
+            color: Color(0xFFFF5E4D),
+            fontSize: 14,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFFFF5E4D), width: 1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    Key? key,
+    required TextEditingController controller,
+    required String hint,
+    IconData? prefixIcon,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      key: key,
+      controller: controller,
+      maxLines: maxLines,
+      style: const TextStyle(color: Colors.white, fontSize: 14),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+        prefixIcon: prefixIcon != null
+            ? Icon(prefixIcon, color: AppColors.textMuted, size: 20)
+            : null,
+        filled: true,
+        fillColor: AppColors.bgCard,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.borderSubtle),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.borderSubtle),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+    );
+  }
+
+  Widget _buildConflictWarningBanner(List<ScheduleModel> conflicts) {
+    final conflict = conflicts.first;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF282D37),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF3B4150),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: Color(0xFFFBBF24),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Schedule Conflict Detected',
+                  style: TextStyle(
+                    color: Color(0xFFFBBF24),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Overlaps with "${conflict.title}" (${conflict.formattedTime})',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

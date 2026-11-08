@@ -164,6 +164,12 @@ class PersonalSchedule extends Agenda {
     String? location,
     String? notes,
   }) async {
+    // 🛡️ BOLA / IDOR Protection: Verifikasi kepemilikan agenda sebelum update
+    final existing = await findById(idAgenda, idStudent);
+    if (existing == null) {
+      throw Exception('Jadwal personal tidak ditemukan atau bukan milik Anda.');
+    }
+
     if (title != null || startTime != null || endTime != null) {
       await Database.query(
         '''
@@ -192,9 +198,11 @@ class PersonalSchedule extends Agenda {
             location = COALESCE(:location, location),
             notes = COALESCE(:notes, notes)
         WHERE id_agenda = :idAgenda
+          AND id_agenda IN (SELECT id_agenda FROM agenda WHERE id_student = :idStudent)
         ''',
         {
           'idAgenda': idAgenda,
+          'idStudent': idStudent,
           'date': date,
           'category': category,
           'location': location,
