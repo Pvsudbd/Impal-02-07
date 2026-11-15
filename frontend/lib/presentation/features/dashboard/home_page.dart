@@ -8,7 +8,9 @@ import '../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../auth/login_page.dart';
-import '../profile/profile_page.dart';
+import '../profile/models/user_profile_model.dart';
+import '../profile/widgets/desktop/desktop_profile_modals.dart';
+import '../profile/widgets/desktop/desktop_profile_settings_view.dart';
 import '../schedule/models/schedule_model.dart';
 import '../schedule/models/schedule_repository.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
@@ -74,6 +76,7 @@ class _HomePageState extends State<HomePage> {
     _currentTab = widget.initialTab;
     ScheduleRepository().init();
     TaskRepository().init();
+    UserProfileRepository().init(userName: widget.userName);
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('is_logged_in', true);
       prefs.setString('auth_user', widget.userName);
@@ -880,14 +883,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _openProfilePage() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ProfilePage(userName: widget.userName),
-      ),
-    );
-  }
-
   void _showDesktopLogoutDialog() {
     showDialog<void>(
       context: context,
@@ -962,6 +957,8 @@ class _HomePageState extends State<HomePage> {
         return DesktopNavDestination.teamMembers;
       case 3:
         return DesktopNavDestination.schedule;
+      case 4:
+        return DesktopNavDestination.settings;
       default:
         return DesktopNavDestination.dashboard;
     }
@@ -990,6 +987,11 @@ class _HomePageState extends State<HomePage> {
           'Weekly Schedule Matrix',
           'Track your weekly lectures, lab sessions, and group study meetings',
         );
+      case 4:
+        return (
+          'Profile & Settings',
+          'Kelola identitas mahasiswa, preferensi sistem cerdas AI, dan keamanan akun',
+        );
       default:
         return (
           'Dashboard Overview',
@@ -1016,7 +1018,7 @@ class _HomePageState extends State<HomePage> {
       case DesktopNavDestination.teamMembers:
         _onTabSelected(2);
       case DesktopNavDestination.settings:
-        _openProfilePage();
+        _onTabSelected(4);
     }
   }
 
@@ -1060,7 +1062,7 @@ class _HomePageState extends State<HomePage> {
                 scheduleCount: scheduleCount,
                 pendingTaskCount: totalPendingCount,
                 teamCount: _desktopTeams.length,
-                onProfileTap: _openProfilePage,
+                onProfileTap: () => _onTabSelected(4),
                 onLogoutTap: _showDesktopLogoutDialog,
               ),
               Expanded(
@@ -1070,30 +1072,38 @@ class _HomePageState extends State<HomePage> {
                       builder: (_) {
                         final isGroupDirectoryRoot =
                             _currentTab == 2 && _selectedTeam == null;
+                        final isProfileSettings = _currentTab == 4;
                         return DesktopTopHeader(
                           title: headerTitle,
                           subtitle: headerSubtitle,
                           searchQuery: _desktopSearchQuery,
-                          searchHint: isGroupDirectoryRoot
-                              ? 'Cari kelompok, mata kuliah...'
-                              : (_currentTab == 3
-                                  ? 'Search schedule or class...'
-                                  : 'Search tasks or courses...'),
-                          searchBgColor: isGroupDirectoryRoot
-                              ? AppColors.bgSidebar
-                              : AppColors.bgCard,
-                          showLeadingSearchIcon: isGroupDirectoryRoot,
+                          searchHint: isProfileSettings
+                              ? 'Search settings...'
+                              : (isGroupDirectoryRoot
+                                  ? 'Cari kelompok, mata kuliah...'
+                                  : (_currentTab == 3
+                                      ? 'Search schedule or class...'
+                                      : 'Search tasks or courses...')),
+                          searchBgColor:
+                              (isGroupDirectoryRoot || isProfileSettings)
+                                  ? AppColors.bgSidebar
+                                  : AppColors.bgCard,
+                          showLeadingSearchIcon:
+                              isGroupDirectoryRoot || isProfileSettings,
                           showShortcutHint: !isGroupDirectoryRoot,
-                          addButtonLabel: isGroupDirectoryRoot
-                              ? '+ Create Team'
-                              : (_currentTab == 3
-                                  ? '+ Add Schedule'
-                                  : (_currentTab == 1
-                                      ? '+ Add New Task'
-                                      : '+ Add Task')),
-                          addButtonColor: isGroupDirectoryRoot
-                              ? AppColors.primaryAccent
-                              : AppColors.primary,
+                          addButtonLabel: isProfileSettings
+                              ? 'Edit Profile'
+                              : (isGroupDirectoryRoot
+                                  ? '+ Create Team'
+                                  : (_currentTab == 3
+                                      ? '+ Add Schedule'
+                                      : (_currentTab == 1
+                                          ? '+ Add New Task'
+                                          : '+ Add Task'))),
+                          addButtonColor:
+                              (isGroupDirectoryRoot || isProfileSettings)
+                                  ? AppColors.primaryAccent
+                                  : AppColors.primary,
                           secondaryButtonLabel:
                               isGroupDirectoryRoot ? 'Join Team' : null,
                           secondaryButtonIcon: isGroupDirectoryRoot
@@ -1102,18 +1112,27 @@ class _HomePageState extends State<HomePage> {
                           onSecondaryButtonTap: isGroupDirectoryRoot
                               ? _openJoinTeamDialog
                               : null,
-                          showNotificationBell:
-                              _currentTab != 3 && !isGroupDirectoryRoot,
+                          showNotificationBell: _currentTab != 3 &&
+                              !isGroupDirectoryRoot &&
+                              !isProfileSettings,
                           titleFontSize: isGroupDirectoryRoot ? 18 : 22,
-                          horizontalPadding: isGroupDirectoryRoot ? 32 : 28,
+                          horizontalPadding:
+                              (isGroupDirectoryRoot || isProfileSettings)
+                                  ? 32
+                                  : 28,
                           onSearchChanged: (value) {
                             setState(() => _desktopSearchQuery = value);
                           },
-                          onAddTaskTap: isGroupDirectoryRoot
-                              ? _openCreateTeamDialog
-                              : (_currentTab == 3
-                                  ? _openCreateSchedule
-                                  : _openCreateTask),
+                          onAddTaskTap: isProfileSettings
+                              ? () => DesktopEditProfileModal.show(
+                                    context,
+                                    profile: UserProfileRepository().profile,
+                                  )
+                              : (isGroupDirectoryRoot
+                                  ? _openCreateTeamDialog
+                                  : (_currentTab == 3
+                                      ? _openCreateSchedule
+                                      : _openCreateTask)),
                         );
                       },
                     ),
@@ -1154,6 +1173,14 @@ class _HomePageState extends State<HomePage> {
           });
         },
         onResetSearch: () => setState(() => _desktopSearchQuery = ''),
+      );
+    }
+
+    if (_currentTab == 4) {
+      return DesktopProfileSettingsView(
+        key: const ValueKey('desktop_profile_settings_view'),
+        searchQuery: _desktopSearchQuery,
+        fallbackUserName: widget.userName,
       );
     }
 

@@ -1,0 +1,424 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:impal_smart_todolist/presentation/features/auth/forgot_password_page.dart';
+import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
+import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_sidebar.dart';
+import 'package:impal_smart_todolist/presentation/features/profile/models/user_profile_model.dart';
+import 'package:impal_smart_todolist/presentation/features/profile/profile_page.dart';
+import 'package:impal_smart_todolist/presentation/features/profile/widgets/daily_briefing_settings_modal.dart';
+import 'package:impal_smart_todolist/presentation/features/profile/widgets/deadline_alert_settings_modal.dart';
+import 'package:impal_smart_todolist/presentation/features/smart_system/smart_priority_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({'is_logged_in': true});
+    UserProfileRepository().init(userName: 'Yoga Perkasa Didik');
+    UserProfileRepository().updateProfile(
+      const UserProfileModel(
+        fullName: 'Yoga Perkasa Didik',
+        studentId: '103072400106',
+        majorCampus: 'S1 Informatika • Telkom University Surabaya',
+        email: 'yogaperkasa@student.telkomuniversity.ac.id',
+        phoneNumber: '+62 812-3456-7890',
+        groupRole: 'Kelompok 7 IMPAL (Lead Architect)',
+        bio:
+            'Informatics Engineering student focused on Flutter & AI systems.',
+      ),
+    );
+  });
+
+  Future<void> setDesktopViewport(
+    WidgetTester tester, {
+    Size size = const Size(1440, 980),
+  }) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  }
+
+  Future<void> pumpDesktopHomeProfile(
+    WidgetTester tester, {
+    Size size = const Size(1440, 980),
+  }) async {
+    await setDesktopViewport(tester, size: size);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: HomePage(userName: 'Yoga Perkasa Didik'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final settingsNav = find.descendant(
+      of: find.byType(DesktopSidebar),
+      matching: find.text('Settings'),
+    );
+    expect(settingsNav, findsOneWidget);
+    await tester.tap(settingsNav);
+    await tester.pumpAndSettle();
+  }
+
+  group('Desktop Profile & Settings (FigCraft + Mobile Features)', () {
+    testWidgets(
+      'Renders 1440x980 shell via Sidebar Settings with zero overflow & mobile additions',
+      (tester) async {
+        await pumpDesktopHomeProfile(tester);
+
+        expect(find.byKey(const Key('desktop_profile_settings_view')),
+            findsOneWidget);
+        expect(find.text('Profile & Settings'), findsOneWidget);
+        expect(find.text('Search settings...'), findsOneWidget);
+        expect(find.text('Edit Profile'), findsWidgets);
+        expect(find.byIcon(Icons.notifications_outlined), findsNothing);
+
+        // Hero card + Mobile additions (Verified badge + Bio box)
+        expect(find.text('Yoga Perkasa Didik'), findsWidgets);
+        expect(find.text('NIM: 103072400106'), findsOneWidget);
+        expect(find.text('Active Student'), findsOneWidget);
+        expect(find.byKey(const Key('desktop_hero_verified_badge')),
+            findsOneWidget);
+        expect(find.byKey(const Key('desktop_hero_bio_box')), findsOneWidget);
+
+        // Academic stats bento
+        expect(find.text('28'), findsOneWidget);
+        expect(find.text('DONE'), findsOneWidget);
+        expect(find.text('6 MK'), findsOneWidget);
+        expect(find.text('19 SKS'), findsOneWidget);
+        expect(find.text('94%'), findsOneWidget);
+
+        // Right panel sections
+        expect(find.text('REMINDERS & SCHEDULE'), findsOneWidget);
+        expect(find.text('Task Deadlines'), findsOneWidget);
+        expect(find.text('Schedule Alerts'), findsOneWidget);
+        expect(find.text('Team Alerts'), findsOneWidget);
+        expect(find.text('Daily Briefing Time'), findsOneWidget);
+        expect(find.text('07:00 WIB'), findsOneWidget);
+        expect(find.text('Sound & Vibration'), findsOneWidget);
+        expect(find.text('INTELLIGENT SYSTEM'), findsOneWidget);
+        expect(find.text('Fuzzy Inference Model'), findsOneWidget);
+        expect(find.text('SYSTEM ENVIRONMENT'), findsOneWidget);
+        expect(
+          find.text('Tel-U SSO Session: Terhubung (CAS Active)'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'Supports minimized 80dp sidebar and 1024x768 compact desktop without overflow',
+      (tester) async {
+        await pumpDesktopHomeProfile(tester, size: const Size(1024, 768));
+
+        expect(find.byKey(const Key('desktop_profile_settings_view')),
+            findsOneWidget);
+        expect(tester.takeException(), isNull);
+
+        // Collapse sidebar to 80dp
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_sidebar_collapse_btn')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('desktop_profile_settings_view')),
+            findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'Direct ProfilePage renders DesktopProfileSettingsView on >= 1024dp',
+      (tester) async {
+        await setDesktopViewport(tester);
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: ProfilePage(userName: 'Yoga Perkasa Didik'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('desktop_profile_settings_view')),
+            findsOneWidget);
+        expect(find.text('Profile & Settings'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'Sidebar User Profile Card tap navigates directly to Profile & Settings tab',
+      (tester) async {
+        await setDesktopViewport(tester);
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: HomePage(userName: 'Yoga Perkasa Didik'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final sidebarProfile = find.descendant(
+          of: find.byType(DesktopSidebar),
+          matching: find.text('Hi Yoga Perkasa Didik'),
+        );
+        expect(sidebarProfile, findsOneWidget);
+        await tester.tap(sidebarProfile);
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('desktop_profile_settings_view')),
+            findsOneWidget);
+        expect(find.text('Profile & Settings'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Header search filters visible sections and shows empty state cleanly',
+      (tester) async {
+        await pumpDesktopHomeProfile(tester);
+
+        final searchField = find.byWidgetPredicate(
+          (w) =>
+              w is TextField &&
+              w.decoration?.hintText == 'Search settings...',
+        );
+        expect(searchField, findsOneWidget);
+
+        await tester.enterText(searchField, 'Mamdani');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Fuzzy Inference Model'), findsOneWidget);
+        expect(find.text('REMINDERS & SCHEDULE'), findsNothing);
+
+        await tester.enterText(searchField, 'zzzz_no_match');
+        await tester.pumpAndSettle();
+
+        expect(find.text('No matching settings'), findsOneWidget);
+
+        await tester.enterText(searchField, '');
+        await tester.pumpAndSettle();
+        expect(find.text('REMINDERS & SCHEDULE'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Mobile Reminders, Briefing Modal, Sound Toggle, XAI Toast, & SmartPriority nav work',
+      (tester) async {
+        await pumpDesktopHomeProfile(tester);
+
+        // Open Task Deadlines modal
+        await tester.ensureVisible(
+          find.byKey(const Key('desktop_alert_row_task')),
+        );
+        await tester.tap(find.byKey(const Key('desktop_alert_row_task')));
+        await tester.pumpAndSettle();
+        expect(find.byType(DeadlineAlertSettingsModal), findsOneWidget);
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+
+        // Open Schedule Alerts modal & toggle switch
+        await tester.ensureVisible(
+          find.byKey(const Key('desktop_alert_row_schedule')),
+        );
+        await tester.tap(find.byKey(const Key('desktop_alert_row_schedule')));
+        await tester.pumpAndSettle();
+        expect(find.byType(DeadlineAlertSettingsModal), findsOneWidget);
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(
+          find.byKey(const Key('desktop_alert_switch_schedule')),
+        );
+        await tester.tap(
+          find.byKey(const Key('desktop_alert_switch_schedule')),
+        );
+        await tester.pumpAndSettle();
+
+        // Open Team Alerts modal & toggle switch
+        await tester.ensureVisible(
+          find.byKey(const Key('desktop_alert_row_team')),
+        );
+        await tester.tap(find.byKey(const Key('desktop_alert_row_team')));
+        await tester.pumpAndSettle();
+        expect(find.byType(DeadlineAlertSettingsModal), findsOneWidget);
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+
+        // Open Daily Briefing modal & toggle switch
+        await tester.ensureVisible(
+          find.byKey(const Key('desktop_daily_briefing_row')),
+        );
+        await tester.tap(find.byKey(const Key('desktop_daily_briefing_row')));
+        await tester.pumpAndSettle();
+        expect(find.byType(DailyBriefingSettingsModal), findsOneWidget);
+        await tester.tapAt(const Offset(20, 20));
+        await tester.pumpAndSettle();
+
+        final beforeBriefing =
+            UserProfileRepository().profile.isDailyBriefingEnabled;
+        await tester.tap(
+          find.byKey(const Key('desktop_daily_briefing_switch')),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          UserProfileRepository().profile.isDailyBriefingEnabled,
+          !beforeBriefing,
+        );
+
+        // Toggle Sound & Vibration switch
+        await tester.ensureVisible(
+          find.byKey(const Key('desktop_sound_vibration_switch')),
+        );
+        final beforeSound = UserProfileRepository().profile.soundVibrationEnabled;
+        await tester.tap(
+          find.byKey(const Key('desktop_sound_vibration_switch')),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          UserProfileRepository().profile.soundVibrationEnabled,
+          !beforeSound,
+        );
+
+        // Toggle XAI switch + verify toast
+        await tester.ensureVisible(find.byKey(const Key('desktop_xai_switch')));
+        await tester.tap(find.byKey(const Key('desktop_xai_switch')));
+        await tester.pump();
+        expect(find.text('XAI Disabled'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 4));
+
+        // Navigate to SmartPriorityPage via Fuzzy Inference Model row
+        await tester.ensureVisible(
+          find.byKey(const Key('desktop_fuzzy_model_row')),
+        );
+        await tester.tap(find.byKey(const Key('desktop_fuzzy_model_row')));
+        await tester.pumpAndSettle();
+        expect(find.byType(SmartPriorityPage), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'DesktopEditProfileModal supports Camera/Gallery picker, notice banner, & saves to Hero Card',
+      (tester) async {
+        await pumpDesktopHomeProfile(tester);
+
+        await tester.tap(
+          find.byKey(const Key('desktop_hero_edit_profile_button')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('desktop_edit_camera_badge')), findsOneWidget);
+        expect(
+          find.byKey(const Key('desktop_edit_notice_banner')),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.byKey(const Key('desktop_change_photo_button')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Take Photo with Camera'), findsOneWidget);
+        expect(find.text('Choose from Gallery'), findsOneWidget);
+
+        await tester.tap(find.text('Take Photo with Camera'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 4));
+
+        await tester.enterText(
+          find.byKey(const Key('desktop_edit_fullname_field')),
+          'Bima Pratama',
+        );
+        await tester.enterText(
+          find.byKey(const Key('desktop_edit_bio_field')),
+          'Updated desktop bio for Smart Task Manager.',
+        );
+
+        await tester.tap(find.byKey(const Key('desktop_edit_save_button')));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 4));
+
+        expect(find.text('Bima Pratama'), findsWidgets);
+        expect(
+          find.text('Updated desktop bio for Smart Task Manager.'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'DesktopChangePasswordModal shows strength meter, match pill, Forgot? flow, & Terms & Sign Out work',
+      (tester) async {
+        await pumpDesktopHomeProfile(tester);
+
+        // Open Terms & Privacy Policy Modal
+        final termsBtn = find.byKey(const Key('desktop_open_terms_button'));
+        await tester.ensureVisible(termsBtn);
+        await tester.tap(termsBtn);
+        await tester.pumpAndSettle();
+
+        expect(find.text('1. Scope of Academic Productivity'), findsOneWidget);
+        expect(find.text('v1.2 Active'), findsOneWidget);
+        await tester.tap(find.byKey(const Key('desktop_terms_close_button')));
+        await tester.pumpAndSettle();
+
+        // Open Change Password Modal & test strength + match
+        final passBtn =
+            find.byKey(const Key('desktop_open_change_password_button'));
+        await tester.ensureVisible(passBtn);
+        await tester.tap(passBtn);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('desktop_password_strength_meter')),
+          findsOneWidget,
+        );
+
+        await tester.enterText(
+          find.byKey(const Key('desktop_current_password_field')),
+          'OldPass123!',
+        );
+        await tester.enterText(
+          find.byKey(const Key('desktop_new_password_field')),
+          'NewPass123!',
+        );
+        await tester.enterText(
+          find.byKey(const Key('desktop_confirm_password_field')),
+          'NewPass123!',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Strong'), findsOneWidget);
+        expect(find.text('✓ Match'), findsOneWidget);
+
+        await tester.tap(
+          find.byKey(const Key('desktop_update_password_button')),
+        );
+        await tester.pump();
+        expect(find.text('Password Updated'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 4));
+
+        // Re-open Change Password modal and click Forgot?
+        await tester.ensureVisible(passBtn);
+        await tester.tap(passBtn);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('desktop_forgot_password_link')));
+        await tester.pumpAndSettle();
+        expect(find.byType(ForgotPassword), findsOneWidget);
+      },
+    );
+
+    testWidgets('Log Out Account opens Sign Out confirmation AlertDialog',
+        (tester) async {
+      await pumpDesktopHomeProfile(tester);
+
+      final logoutBtn = find.byKey(const Key('desktop_profile_logout_button'));
+      await tester.ensureVisible(logoutBtn);
+      await tester.tap(logoutBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign Out'), findsWidgets);
+      expect(find.text('Cancel'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+    });
+  });
+}
