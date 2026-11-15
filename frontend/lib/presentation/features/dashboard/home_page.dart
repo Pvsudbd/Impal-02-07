@@ -18,6 +18,7 @@ import '../smart_system/models/smart_priority_repository.dart';
 import '../smart_system/smart_priority_page.dart';
 import '../task/models/task_repository.dart';
 import '../task/task_page.dart';
+import '../task/widgets/desktop/desktop_tasks_management_view.dart';
 import '../team/dashboard_team_page.dart';
 import '../team/pop_up_create_meeting.dart';
 import '../team/team_list_page.dart';
@@ -848,7 +849,7 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return (
           'Tasks Management',
-          'Filter, prioritize, and track your active assignments',
+          'Organize, prioritize, and track your academic assignments',
         );
       case 2:
         return (
@@ -939,6 +940,8 @@ class _HomePageState extends State<HomePage> {
                       title: headerTitle,
                       subtitle: headerSubtitle,
                       searchQuery: _desktopSearchQuery,
+                      addButtonLabel:
+                          _currentTab == 1 ? '+ Add New Task' : '+ Add Task',
                       onSearchChanged: (value) {
                         setState(() => _desktopSearchQuery = value);
                       },
@@ -968,6 +971,22 @@ class _HomePageState extends State<HomePage> {
     required int completedCount,
     required int totalPendingCount,
   }) {
+    if (_currentTab == 1) {
+      return DesktopTasksManagementView(
+        key: const ValueKey('desktop_tasks_management_view'),
+        userName: widget.userName,
+        searchQuery: _desktopSearchQuery,
+        onOpenScheduleTimeline: () => _onTabSelected(3),
+        onOpenTeamDashboard: (team) {
+          setState(() {
+            _selectedTeam = team;
+            _currentTab = 2;
+          });
+        },
+        onResetSearch: () => setState(() => _desktopSearchQuery = ''),
+      );
+    }
+
     if (_currentTab != 0) {
       final Widget tabBody;
       if (_currentTab == 3) {
@@ -976,7 +995,7 @@ class _HomePageState extends State<HomePage> {
           userName: widget.userName,
           showBackButton: false,
         );
-      } else if (_currentTab == 2) {
+      } else {
         tabBody = _selectedTeam != null
             ? DashboardTeamPage(
                 key: ValueKey('desktop_team_dashboard_${_selectedTeam!.id}'),
@@ -994,12 +1013,6 @@ class _HomePageState extends State<HomePage> {
                 onOpenSchedule: () => _onTabSelected(3),
                 onTeamSelected: (team) => setState(() => _selectedTeam = team),
               );
-      } else {
-        tabBody = TaskContentView(
-          key: const ValueKey('desktop_task_tab'),
-          userName: widget.userName,
-          showBackButton: false,
-        );
       }
 
       return Align(

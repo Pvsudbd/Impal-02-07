@@ -44,7 +44,7 @@ class TaskPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!isStandalone) {
+    if (!isStandalone || context.isDesktop) {
       return HomePage(userName: userName, initialTab: 1);
     }
 
@@ -159,59 +159,6 @@ class _TaskContentViewState extends State<TaskContentView> {
     if (mounted) setState(() {});
   }
 
-  bool _isTeamTaskAssignedToCurrentUser(TeamTaskModel task) {
-    final userLower = widget.userName.toLowerCase();
-    final assignedLower = task.assignedTo.toLowerCase();
-    if (assignedLower.contains(userLower)) return true;
-    if (userLower == 'jarvis' &&
-        (assignedLower.contains('yoga') || assignedLower.contains('jarvis'))) {
-      return true;
-    }
-    final parts = userLower.split(' ').where((s) => s.length > 2);
-    for (final p in parts) {
-      if (assignedLower.contains(p)) return true;
-    }
-    return false;
-  }
-
-  TaskItemModel _convertTeamTaskToTaskItem(TeamTaskModel task) {
-    final priorityLevel = task.priority == TaskPriority.high
-        ? TaskPriorityLevel.high
-        : (task.priority == TaskPriority.medium
-            ? TaskPriorityLevel.medium
-            : TaskPriorityLevel.low);
-
-    return TaskItemModel(
-      id: 'team_task_${task.id}',
-      title: task.title,
-      teamName: 'Kelompok IMPAL',
-      priority: priorityLevel,
-      durationBadge: task.effectiveDueBadge,
-      durationBadgeColor: task.isUrgent
-          ? const Color(0xFFFF7D65)
-          : const Color(0xFF5B93FF),
-      durationTextColor: Colors.white,
-      subtitle: task.assignedTo,
-      deadlineDate: task.deadline ?? DateTime(2026, 10, 18, 23, 59),
-      formattedDeadline: 'Sun 18 Oct 2026, ${task.timeRange}',
-      memberAvatars: task.colors,
-      tags: const [
-        TaskTagModel(
-          label: 'Team',
-          backgroundColor: Color(0xFF786FA6),
-          textColor: Color(0xFF4A3C8C),
-        ),
-      ],
-      groupMembers: [task.assignedTo],
-      course: 'Kelompok IMPAL • 7X29',
-      notes: task.description ?? '',
-      isCompleted: task.isDone,
-      isAssignedToUser: true,
-      isCollegeTask: true,
-      isAlertEnabled: task.isAlertEnabled,
-    );
-  }
-
   List<TaskItemModel> get _filteredTasks {
     // 1. Personal & College tasks, plus Team projects in TaskRepository assigned to user
     final repoTasks = _repository.tasks.where((t) {
@@ -220,13 +167,10 @@ class _TaskContentViewState extends State<TaskContentView> {
     }).toList();
 
     // 2. Team tasks from TeamTaskRepository assigned to current user
-    final teamTasks = _teamTaskRepository
-        .getTasks('7X29')
-        .where(_isTeamTaskAssignedToCurrentUser)
-        .map(_convertTeamTaskToTaskItem)
-        .where((converted) => !repoTasks
-            .any((r) => r.title.toLowerCase() == converted.title.toLowerCase()))
-        .toList();
+    final teamTasks = _teamTaskRepository.getAssignedTaskItemsForUser(
+      widget.userName,
+      repoTasks,
+    );
 
     var list = [...repoTasks, ...teamTasks];
     if (_selectedFilter == 'Next 7 Days') {
@@ -352,13 +296,10 @@ class _TaskContentViewState extends State<TaskContentView> {
       return t.isAssignedToUser;
     }).toList();
 
-    final teamTasks = _teamTaskRepository
-        .getTasks('7X29')
-        .where(_isTeamTaskAssignedToCurrentUser)
-        .map(_convertTeamTaskToTaskItem)
-        .where((converted) => !allPersonalAndAssigned
-            .any((r) => r.title.toLowerCase() == converted.title.toLowerCase()))
-        .toList();
+    final teamTasks = _teamTaskRepository.getAssignedTaskItemsForUser(
+      widget.userName,
+      allPersonalAndAssigned,
+    );
 
     for (final task in [...allPersonalAndAssigned, ...teamTasks]) {
       switch (task.priority) {

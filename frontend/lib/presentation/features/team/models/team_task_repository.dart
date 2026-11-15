@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../task/models/task_item_model.dart';
 import '../../task/models/task_repository.dart';
 import 'team_milestone_model.dart';
 import 'team_task_model.dart';
@@ -254,6 +255,78 @@ class TeamTaskRepository with ChangeNotifier {
       _syncWithTaskRepository(teamCode);
       notifyListeners();
     }
+  }
+
+  /// Returns true when [task] is assigned to [userName].
+  bool isTaskAssignedToUser(TeamTaskModel task, String userName) {
+    final userLower = userName.toLowerCase();
+    final assignedLower = task.assignedTo.toLowerCase();
+    if (assignedLower.contains(userLower)) return true;
+    if (userLower == 'jarvis' &&
+        (assignedLower.contains('yoga') || assignedLower.contains('jarvis'))) {
+      return true;
+    }
+    final parts = userLower.split(' ').where((s) => s.length > 2);
+    for (final p in parts) {
+      if (assignedLower.contains(p)) return true;
+    }
+    return false;
+  }
+
+  /// Converts team tasks assigned to [userName] into [TaskItemModel] items
+  /// not already duplicated by title in [existingRepoTasks].
+  List<TaskItemModel> getAssignedTaskItemsForUser(
+    String userName,
+    List<TaskItemModel> existingRepoTasks, {
+    String teamCode = '7X29',
+  }) {
+    return getTasks(teamCode)
+        .where((t) => isTaskAssignedToUser(t, userName))
+        .map(_convertTeamTaskToTaskItem)
+        .where(
+          (converted) => !existingRepoTasks.any(
+            (r) => r.title.toLowerCase() == converted.title.toLowerCase(),
+          ),
+        )
+        .toList();
+  }
+
+  TaskItemModel _convertTeamTaskToTaskItem(TeamTaskModel task) {
+    final priorityLevel = task.priority == TaskPriority.high
+        ? TaskPriorityLevel.high
+        : (task.priority == TaskPriority.medium
+            ? TaskPriorityLevel.medium
+            : TaskPriorityLevel.low);
+
+    return TaskItemModel(
+      id: 'team_task_${task.id}',
+      title: task.title,
+      teamName: 'Kelompok IMPAL',
+      priority: priorityLevel,
+      durationBadge: task.effectiveDueBadge,
+      durationBadgeColor: task.isUrgent
+          ? const Color(0xFFFF7D65)
+          : const Color(0xFF5B93FF),
+      durationTextColor: Colors.white,
+      subtitle: task.assignedTo,
+      deadlineDate: task.deadline ?? DateTime(2026, 10, 18, 23, 59),
+      formattedDeadline: 'Sun 18 Oct 2026, ${task.timeRange}',
+      memberAvatars: task.colors,
+      tags: const [
+        TaskTagModel(
+          label: 'Team',
+          backgroundColor: Color(0xFF786FA6),
+          textColor: Color(0xFF4A3C8C),
+        ),
+      ],
+      groupMembers: [task.assignedTo],
+      course: 'Kelompok IMPAL • 7X29',
+      notes: task.description ?? '',
+      isCompleted: task.isDone,
+      isAssignedToUser: true,
+      isCollegeTask: true,
+      isAlertEnabled: task.isAlertEnabled,
+    );
   }
 
   /// Private helper to automatically synchronize group task state in TaskRepository.

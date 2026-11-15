@@ -10,6 +10,7 @@ class DesktopTopHeader extends StatefulWidget {
   final String title;
   final String subtitle;
   final String searchQuery;
+  final String addButtonLabel;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onAddTaskTap;
 
@@ -19,6 +20,7 @@ class DesktopTopHeader extends StatefulWidget {
     this.subtitle =
         'Stay productive and keep track of your ongoing courses & tasks',
     required this.searchQuery,
+    this.addButtonLabel = '+ Add Task',
     required this.onSearchChanged,
     required this.onAddTaskTap,
   });
@@ -221,7 +223,7 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '+ Add Task',
+                  widget.addButtonLabel,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: context.rFont(13, min: 12, max: 14),

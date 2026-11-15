@@ -10,11 +10,17 @@ import '../../models/dashboard_models.dart';
 class DesktopTaskGridCard extends StatelessWidget {
   final TaskItem task;
   final VoidCallback onTap;
+  final String? priorityLabel;
+  final Color? priorityBgColor;
+  final Color? priorityTextColor;
 
   const DesktopTaskGridCard({
     super.key,
     required this.task,
     required this.onTap,
+    this.priorityLabel,
+    this.priorityBgColor,
+    this.priorityTextColor,
   });
 
   @override
@@ -25,6 +31,8 @@ class DesktopTaskGridCard extends StatelessWidget {
     final ringColor = (progressValue ?? 0) >= 0.65
         ? const Color(0xFF5B93FF)
         : AppColors.mintAccent;
+    final hasPriorityBadge =
+        priorityLabel != null && priorityLabel!.trim().isNotEmpty;
 
     return RepaintBoundary(
       child: Material(
@@ -36,27 +44,43 @@ class DesktopTaskGridCard extends StatelessWidget {
           hoverColor: Colors.white.withValues(alpha: 0.03),
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            padding: EdgeInsets.symmetric(
+              horizontal: context.rSpacing(18),
+              vertical: context.rSpacing(16),
+            ),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.borderSubtle, width: 0.8),
+              border: Border.all(
+                color: task.isCompleted
+                    ? AppColors.statusCompleted.withValues(alpha: 0.45)
+                    : AppColors.borderSubtle,
+                width: 0.8,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Title + top-right pinned due badge (anti-clustering stack)
+                // Title + top-right pinned badges (anti-clustering stack)
                 Stack(
                   children: [
                     const SizedBox(width: double.infinity),
                     Padding(
-                      padding: const EdgeInsets.only(right: 64),
+                      padding: EdgeInsets.only(
+                        right: hasPriorityBadge ? 128 : 68,
+                      ),
                       child: Text(
                         task.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white,
+                          color: task.isCompleted
+                              ? AppColors.textMuted
+                              : Colors.white,
+                          decoration: task.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
+                          decorationColor: AppColors.textMuted,
                           fontSize: context.rFont(14.5, min: 13.5, max: 16),
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w700,
@@ -67,25 +91,53 @@ class DesktopTaskGridCard extends StatelessWidget {
                     Positioned(
                       top: 0,
                       right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 2.5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: task.dueColor,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          task.dueBadge,
-                          style: TextStyle(
-                            color: task.dueTextColor,
-                            fontSize: 10,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (hasPriorityBadge) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: priorityBgColor ?? AppColors.priorityHighBg,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                priorityLabel!,
+                                style: TextStyle(
+                                  color: priorityTextColor ??
+                                      AppColors.priorityHighText,
+                                  fontSize: 10,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 2.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: task.dueColor,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              task.dueBadge,
+                              style: TextStyle(
+                                color: task.dueTextColor,
+                                fontSize: 10,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ],

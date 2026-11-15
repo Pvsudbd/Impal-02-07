@@ -95,6 +95,21 @@ abstract class AppColors {
   /// Muted slate bar fill (#5A738E)
   static const Color chartSlate = Color(0xFF5A738E);
 
+  /// Overdue pill dark crimson background (#3D2727)
+  static const Color overduePillBg = Color(0xFF3D2727);
+
+  /// Team & Fuzzy banner purple tokens (#786FA6 / #4A3C8C)
+  static const Color purpleAccent = Color(0xFF786FA6);
+  static const Color purpleDeep = Color(0xFF4A3C8C);
+
+  /// Standardized Task Priority Colors (project_conventions.md)
+  static const Color priorityHighBg = Color(0xFFFF5E4D);
+  static const Color priorityHighText = Colors.white;
+  static const Color priorityMediumBg = Color(0xFFFBBF24);
+  static const Color priorityMediumText = Color(0xFF1F2937);
+  static const Color priorityLowBg = Color(0xFF6EE7B7);
+  static const Color priorityLowText = Color(0xFF064E3B);
+
   // --- Layered Shadow Tokens ---
   /// Floating active nav button glow shadow
   static const List<BoxShadow> primaryGlowShadow = [
