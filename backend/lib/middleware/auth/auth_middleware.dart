@@ -22,7 +22,12 @@ Middleware checkAuthMiddleware() {
 
       try {
         final jwt = JWT.verify(token, SecretKey(Database.jwtSecret));
-        final updatedRequest = request.change(context: {'student': jwt.payload});
+        final payload = jwt.payload;
+        // Inject both 'user' and 'student' context for full backwards and future compatibility
+        final updatedRequest = request.change(context: {
+          'user': payload,
+          'student': payload,
+        });
         return await innerHandler(updatedRequest);
       } catch (e) {
         return Response(

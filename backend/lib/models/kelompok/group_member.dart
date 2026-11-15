@@ -12,15 +12,22 @@ class GroupMember {
         _joinedDate = joinedDate;
 
   factory GroupMember.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is DateTime) return val;
+      return DateTime.tryParse(val.toString()) ?? DateTime.now();
+    }
+
     return GroupMember(
-      memberId: json['id_student'] ?? json['id_member'] ?? '',
+      memberId: json['id_user'] ?? json['id_student'] ?? json['id_member'] ?? '',
       role: json['role'] ?? 'MEMBER',
-      joinedDate: DateTime.parse(json['joined_date'] ?? DateTime.now().toIso8601String()),
+      joinedDate: parseDate(json['joined_date'] ?? json['joined_at']),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id_user': _memberId,
       'id_student': _memberId,
       'role': _role,
       'joined_date': _joinedDate.toIso8601String(),

@@ -31,11 +31,17 @@ class Task {
 
   // Conversion for API JSON (Node.js <-> Dart)
   factory Task.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is DateTime) return val;
+      return DateTime.tryParse(val.toString()) ?? DateTime.now();
+    }
+
     return Task(
       taskId: json['id_task'] ?? '',
       taskTitle: json['task_title'] ?? json['title'] ?? '',
       description: json['description'] ?? '',
-      deadline: DateTime.parse(json['deadline']),
+      deadline: parseDate(json['deadline']),
       gradeWeight: (json['grade_weight'] as num?)?.toDouble() ?? 0.0,
       priorityScore: (json['priority_score'] as num?)?.toDouble() ?? 0.0,
       priority: json['priority'] ?? 'MEDIUM',

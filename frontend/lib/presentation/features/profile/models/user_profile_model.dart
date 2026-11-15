@@ -497,6 +497,7 @@ class UserProfileRepository with ChangeNotifier {
   bool _initialized = false;
 
   UserProfileModel get profile => _profile;
+  bool get isInitialized => _initialized;
 
   void init({String? userName}) {
     if (userName != null && userName.trim().isNotEmpty && userName != 'Jarvis') {

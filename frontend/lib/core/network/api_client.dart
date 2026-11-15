@@ -152,7 +152,7 @@ class ApiClient {
     String path, {
     Map<String, String>? queryParams,
     Map<String, String>? headers,
-    bool requiresAuth = true,
+    bool requiresAuth = true, 
     T Function(dynamic json)? parser,
   }) async {
     try {

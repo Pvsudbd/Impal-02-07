@@ -4,7 +4,7 @@ import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:shelf/shelf.dart';
 import 'package:uuid/uuid.dart';
 import '../../config/db.dart';
-import '../../models/auth/student_model.dart';
+import '../../models/auth/user_model.dart';
 
 class AuthController {
   static const _uuid = Uuid();
@@ -31,8 +31,8 @@ class AuthController {
         );
       }
 
-      final student = await StudentModel.findByEmail(email.trim());
-      if (student == null || student.passwordHash == null) {
+      final user = await UserModel.findByEmail(email.trim());
+      if (user == null || user.passwordHash == null) {
         return Response(
           401,
           body: jsonEncode({'status': 'error', 'message': 'Email atau password salah.'}),
@@ -41,7 +41,7 @@ class AuthController {
       }
 
       // Verifikasi BCrypt
-      final bool isMatch = BCrypt.checkpw(password, student.passwordHash!);
+      final bool isMatch = BCrypt.checkpw(password, user.passwordHash!);
       if (!isMatch) {
         return Response(
           401,
@@ -52,9 +52,10 @@ class AuthController {
 
       // Generate JWT
       final jwt = JWT({
-        'idStudent': student.idStudent,
-        'email': student.email,
-        'name': student.name,
+        'idUser': user.idUser,
+        'idStudent': user.idUser, // backward compatibility
+        'email': user.email,
+        'name': user.name,
       });
 
       final token = jwt.sign(SecretKey(Database.jwtSecret), expiresIn: const Duration(days: 7));
@@ -64,14 +65,18 @@ class AuthController {
           'status': 'success',
           'message': 'Login berhasil.',
           'token': token,
-          'user': student.toJson(),
+          'user': user.toJson(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e, stack) {
       print('[AUTH] Login error: $e\n$stack');
       return Response.internalServerError(
-        body: jsonEncode({'status': 'error', 'message': 'Terjadi kesalahan pada server saat login.'}),
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Terjadi kesalahan pada server saat login.',
+          'error': e.toString(),
+        }),
         headers: {'Content-Type': 'application/json'},
       );
     }
@@ -102,8 +107,8 @@ class AuthController {
         );
       }
 
-      // Cek apakah email sudah terdaftar
-      final existing = await StudentModel.findByEmail(email.trim());
+      // Cek apakah email sudah terdaftar di tabel users
+      final existing = await UserModel.findByEmail(email.trim());
       if (existing != null) {
         return Response(
           409,
@@ -112,11 +117,11 @@ class AuthController {
         );
       }
 
-      final idStudent = _uuid.v4();
+      final idUser = _uuid.v4();
       final passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
 
-      await StudentModel.create(
-        idStudent: idStudent,
+      await UserModel.create(
+        idUser: idUser,
         name: name.trim(),
         email: email.trim(),
         passwordHash: passwordHash,
@@ -127,7 +132,8 @@ class AuthController {
         body: jsonEncode({
           'status': 'success',
           'message': 'Registrasi berhasil.',
-          'idStudent': idStudent,
+          'idUser': idUser,
+          'idStudent': idUser, // backward compatibility
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -143,15 +149,15 @@ class AuthController {
   // GET /api/auth/me (Protected)
   static Future<Response> getMe(Request req) async {
     try {
-      final studentPayload = req.context['student'] as Map<String, dynamic>?;
-      if (studentPayload == null) {
+      final userPayload = (req.context['user'] ?? req.context['student']) as Map<String, dynamic>?;
+      if (userPayload == null) {
         return Response(401, body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}));
       }
 
-      final idStudent = studentPayload['idStudent'] as String;
-      final student = await StudentModel.findById(idStudent);
+      final idUser = (userPayload['idUser'] ?? userPayload['idStudent']) as String;
+      final user = await UserModel.findById(idUser);
 
-      if (student == null) {
+      if (user == null) {
         return Response.notFound(
           jsonEncode({'status': 'error', 'message': 'User tidak ditemukan.'}),
           headers: {'Content-Type': 'application/json'},
@@ -159,7 +165,7 @@ class AuthController {
       }
 
       return Response.ok(
-        jsonEncode({'status': 'success', 'user': student.toJson()}),
+        jsonEncode({'status': 'success', 'user': user.toJson()}),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {

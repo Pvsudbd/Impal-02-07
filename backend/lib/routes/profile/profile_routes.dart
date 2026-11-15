@@ -3,7 +3,7 @@ import 'package:shelf_router/shelf_router.dart';
 import '../../controllers/profile/profile_controller.dart';
 import '../../middleware/auth/auth_middleware.dart';
 
-/// Routes for User Profile and Student Class Diagram operations.
+/// Routes for User Profile and User Class Diagram operations.
 class ProfileRoutes {
   Handler get router {
     final router = Router();
@@ -31,7 +31,7 @@ class ProfileRoutes {
       authPipeline.addHandler(ProfileController.changePassword),
     );
 
-    // ─── CLASS DIAGRAM STUDENT METHODS ────────────────────────────────────────
+    // ─── CLASS DIAGRAM USER METHODS ───────────────────────────────────────────
     // GET  /api/profile/daily-agenda     → +viewDailyAgenda(date: Date)
     // GET  /api/profile/course-schedules → +viewCourseSchedule()
     // GET  /api/profile/remaining-tasks  → +viewRemainingTasks()
@@ -60,4 +60,3 @@ class ProfileRoutes {
     return router;
   }
 }
-

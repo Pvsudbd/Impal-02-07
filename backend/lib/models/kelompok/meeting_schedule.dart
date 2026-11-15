@@ -18,11 +18,17 @@ class MeetingSchedule {
         _platformLocation = platformLocation;
 
   factory MeetingSchedule.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is DateTime) return val;
+      return DateTime.tryParse(val.toString()) ?? DateTime.now();
+    }
+
     return MeetingSchedule(
       meetingId: json['id_meeting'] ?? '',
       title: json['meeting_title'] ?? '',
       description: json['description'],
-      startTime: DateTime.parse(json['start_time'] ?? DateTime.now().toIso8601String()),
+      startTime: parseDate(json['start_time']),
       platformLocation: json['platform_location'] ?? '',
     );
   }

@@ -100,6 +100,7 @@ class ScheduleRepository {
         }
 
         final isCourse = item.type.toLowerCase() == 'lecture';
+        final isMeeting = item.type.toLowerCase() == 'meeting';
         final body = {
           'id': item.id,
           'title': item.title,
@@ -111,9 +112,11 @@ class ScheduleRepository {
           'courseCode': item.course ?? item.title,
           'day': dayName(item.date),
           'room': item.location ?? 'Classroom',
-          'category': isCourse ? 'Kuliah' : 'Personal',
+          'category': isCourse ? 'Kuliah' : (isMeeting ? 'Meeting' : 'External'),
           'location': item.location ?? '',
           'notes': item.notes ?? '',
+          if (item.meetingUrl != null && item.meetingUrl!.isNotEmpty) 'meetingUrl': item.meetingUrl,
+          if (item.teamName != null && item.teamName!.isNotEmpty) 'teamName': item.teamName,
         };
 
         final response = await ApiClient.post('/api/agenda', body, token: token);
@@ -153,6 +156,7 @@ class ScheduleRepository {
         }
 
         final isCourse = item.type.toLowerCase() == 'lecture';
+        final isMeeting = item.type.toLowerCase() == 'meeting';
         final body = {
           'id': item.id,
           'title': item.title,
@@ -164,9 +168,11 @@ class ScheduleRepository {
           'courseCode': item.course ?? item.title,
           'day': dayName(item.date),
           'room': item.location ?? 'Classroom',
-          'category': isCourse ? 'Kuliah' : 'Personal',
+          'category': isCourse ? 'Kuliah' : (isMeeting ? 'Meeting' : 'External'),
           'location': item.location ?? '',
           'notes': item.notes ?? '',
+          if (item.meetingUrl != null && item.meetingUrl!.isNotEmpty) 'meetingUrl': item.meetingUrl,
+          if (item.teamName != null && item.teamName!.isNotEmpty) 'teamName': item.teamName,
         };
 
         await ApiClient.put('/api/agenda/${item.id}', body, token: token);

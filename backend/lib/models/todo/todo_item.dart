@@ -18,11 +18,17 @@ class ToDoItem {
         _isDone = isDone;
 
   factory ToDoItem.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is DateTime) return val;
+      return DateTime.tryParse(val.toString()) ?? DateTime.now();
+    }
+
     return ToDoItem(
       itemId: json['id_item'] ?? '',
       activityTitle: json['activity_title'] ?? '',
       notes: json['notes'] ?? '',
-      date: DateTime.parse(json['date']),
+      date: parseDate(json['date']),
       isDone: json['is_done'] == 1 || json['is_done'] == true,
     );
   }

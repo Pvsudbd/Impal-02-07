@@ -21,11 +21,17 @@ class GroupSubTask {
         _isCompleted = isCompleted;
 
   factory GroupSubTask.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is DateTime) return val;
+      return DateTime.tryParse(val.toString()) ?? DateTime.now();
+    }
+
     return GroupSubTask(
       subTaskId: json['id_sub_task'] ?? '',
       subTaskTitle: json['sub_task_title'] ?? '',
       description: json['description'] ?? '',
-      deadline: DateTime.parse(json['deadline']),
+      deadline: parseDate(json['deadline']),
       gradeWeight: (json['grade_weight'] as num?)?.toDouble() ?? 0.0,
       isCompleted: json['is_completed'] == 1 || json['is_completed'] == true,
     );

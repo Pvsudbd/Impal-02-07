@@ -2,33 +2,33 @@ import 'dart:convert';
 import 'package:shelf/shelf.dart';
 import '../../models/profile/profile_model.dart';
 
-/// Controller handling HTTP requests for the User Profile & Student academic domain.
+/// Controller handling HTTP requests for the User Profile & User academic domain.
 /// Adheres strictly to .agents/cybersecurity.md:
-/// - Extracts idStudent solely from verified JWT payload (BOLA/IDOR protection).
+/// - Extracts idUser solely from verified JWT payload (BOLA/IDOR protection).
 /// - Whitelists allowable fields (Mass Assignment protection).
 /// - Sanitizes error responses to prevent internal information leakage.
 class ProfileController {
-  // Helper to extract authenticated student from JWT
-  static Map<String, dynamic>? _getAuthStudent(Request req) {
-    return req.context['student'] as Map<String, dynamic>?;
+  // Helper to extract authenticated user from JWT
+  static Map<String, dynamic>? _getAuthUser(Request req) {
+    return (req.context['user'] ?? req.context['student']) as Map<String, dynamic>?;
   }
 
-  // ─── GET /api/profile ──────────────────────────────────────────────────────
+  // ─── GET /api/profile or /api/user ─────────────────────────────────────────
   static Future<Response> getProfile(Request req) async {
     try {
-      final student = _getAuthStudent(req);
-      if (student == null) {
+      final user = _getAuthUser(req);
+      if (user == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idStudent = student['idStudent'] as String;
-      final profile = await ProfileModel.getProfile(idStudent);
+      final idUser = (user['idUser'] ?? user['idStudent']) as String;
+      final profile = await ProfileModel.getProfile(idUser);
 
       if (profile == null) {
         return Response.notFound(
-          jsonEncode({'status': 'error', 'message': 'Profil mahasiswa tidak ditemukan.'}),
+          jsonEncode({'status': 'error', 'message': 'Profil pengguna tidak ditemukan.'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -50,17 +50,17 @@ class ProfileController {
     }
   }
 
-  // ─── PUT /api/profile ──────────────────────────────────────────────────────
+  // ─── PUT /api/profile or /api/user ─────────────────────────────────────────
   static Future<Response> updateProfile(Request req) async {
     try {
-      final student = _getAuthStudent(req);
-      if (student == null) {
+      final user = _getAuthUser(req);
+      if (user == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idStudent = student['idStudent'] as String;
+      final idUser = (user['idUser'] ?? user['idStudent']) as String;
       final bodyText = await req.readAsString();
       if (bodyText.isEmpty) {
         return Response.badRequest(
@@ -82,12 +82,12 @@ class ProfileController {
       }
 
       await ProfileModel.updateProfile(
-        idStudent,
+        idUser,
         name: name.trim(),
         email: email?.trim(),
       );
 
-      final updated = await ProfileModel.getProfile(idStudent);
+      final updated = await ProfileModel.getProfile(idUser);
 
       return Response.ok(
         jsonEncode({
@@ -109,14 +109,14 @@ class ProfileController {
   // ─── PUT /api/profile/password ─────────────────────────────────────────────
   static Future<Response> changePassword(Request req) async {
     try {
-      final student = _getAuthStudent(req);
-      if (student == null) {
+      final user = _getAuthUser(req);
+      if (user == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idStudent = student['idStudent'] as String;
+      final idUser = (user['idUser'] ?? user['idStudent']) as String;
       final bodyText = await req.readAsString();
       if (bodyText.isEmpty) {
         return Response.badRequest(
@@ -152,7 +152,7 @@ class ProfileController {
       }
 
       final result = await ProfileModel.changePassword(
-        idStudent,
+        idUser,
         currentPassword: currentPassword,
         newPassword: newPassword,
       );
@@ -184,18 +184,18 @@ class ProfileController {
   // ─── GET /api/profile/daily-agenda?date=YYYY-MM-DD ─────────────────────────
   static Future<Response> viewDailyAgenda(Request req) async {
     try {
-      final student = _getAuthStudent(req);
-      if (student == null) {
+      final user = _getAuthUser(req);
+      if (user == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idStudent = student['idStudent'] as String;
+      final idUser = (user['idUser'] ?? user['idStudent']) as String;
       final dateQuery = req.url.queryParameters['date'];
       final targetDate = dateQuery != null ? DateTime.tryParse(dateQuery) ?? DateTime.now() : DateTime.now();
 
-      final agendas = await ProfileModel.viewDailyAgenda(idStudent, targetDate);
+      final agendas = await ProfileModel.viewDailyAgenda(idUser, targetDate);
 
       return Response.ok(
         jsonEncode({
@@ -219,15 +219,15 @@ class ProfileController {
   // ─── GET /api/profile/course-schedules ─────────────────────────────────────
   static Future<Response> viewCourseSchedule(Request req) async {
     try {
-      final student = _getAuthStudent(req);
-      if (student == null) {
+      final user = _getAuthUser(req);
+      if (user == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idStudent = student['idStudent'] as String;
-      final courses = await ProfileModel.viewCourseSchedule(idStudent);
+      final idUser = (user['idUser'] ?? user['idStudent']) as String;
+      final courses = await ProfileModel.viewCourseSchedule(idUser);
 
       return Response.ok(
         jsonEncode({
@@ -250,15 +250,15 @@ class ProfileController {
   // ─── GET /api/profile/remaining-tasks ──────────────────────────────────────
   static Future<Response> viewRemainingTasks(Request req) async {
     try {
-      final student = _getAuthStudent(req);
-      if (student == null) {
+      final user = _getAuthUser(req);
+      if (user == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idStudent = student['idStudent'] as String;
-      final tasks = await ProfileModel.viewRemainingTasks(idStudent);
+      final idUser = (user['idUser'] ?? user['idStudent']) as String;
+      final tasks = await ProfileModel.viewRemainingTasks(idUser);
 
       return Response.ok(
         jsonEncode({
@@ -281,14 +281,14 @@ class ProfileController {
   // ─── POST /api/profile/join-group ──────────────────────────────────────────
   static Future<Response> joinGroup(Request req) async {
     try {
-      final student = _getAuthStudent(req);
-      if (student == null) {
+      final user = _getAuthUser(req);
+      if (user == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idStudent = student['idStudent'] as String;
+      final idUser = (user['idUser'] ?? user['idStudent']) as String;
       final bodyText = await req.readAsString();
       if (bodyText.isEmpty) {
         return Response.badRequest(
@@ -307,7 +307,7 @@ class ProfileController {
         );
       }
 
-      final result = await ProfileModel.joinGroup(idStudent, inviteCode);
+      final result = await ProfileModel.joinGroup(idUser, inviteCode);
       if (result['success'] != true) {
         return Response(
           400,

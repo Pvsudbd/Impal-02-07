@@ -1,5 +1,5 @@
 import 'group_sub_task.dart';
-import '../auth/student_model.dart';
+import '../auth/user_model.dart';
 
 class GroupTask {
   String _groupTaskId;
@@ -10,7 +10,7 @@ class GroupTask {
   String _priority;
   bool _isFuzzyAuto;
   bool _isCompleted;
-  Student? _pic;
+  User? _pic;
   final List<GroupSubTask> _subTasks = [];
 
   GroupTask({
@@ -32,11 +32,17 @@ class GroupTask {
         _isCompleted = isCompleted;
 
   factory GroupTask.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is DateTime) return val;
+      return DateTime.tryParse(val.toString()) ?? DateTime.now();
+    }
+
     return GroupTask(
       groupTaskId: json['id_group_task'] ?? '',
       taskTitle: json['task_title'] ?? '',
       description: json['description'] ?? '',
-      deadline: DateTime.parse(json['deadline']),
+      deadline: parseDate(json['deadline']),
       gradeWeight: (json['grade_weight'] as num?)?.toDouble() ?? 0.0,
       priority: json['priority'] ?? 'MEDIUM',
       isFuzzyAuto: json['is_fuzzy_auto'] == 1 || json['is_fuzzy_auto'] == true,
@@ -65,10 +71,10 @@ class GroupTask {
   String get priority => _priority;
   bool get isFuzzyAuto => _isFuzzyAuto;
   bool get isCompleted => _isCompleted;
-  Student? get pic => _pic;
+  User? get pic => _pic;
 
-  void assignPIC(Student student) {
-    _pic = student;
+  void assignPIC(User user) {
+    _pic = user;
   }
 
   void setCompletionStatus(bool status) {

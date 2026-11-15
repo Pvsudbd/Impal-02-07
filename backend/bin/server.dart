@@ -24,13 +24,14 @@ void main(List<String> args) async {
   // Test DB connection
   app.get('/test-db', (Request request) async {
     try {
-      final results = await Database.query('SELECT COUNT(*) AS total FROM student');
+      final results = await Database.query('SELECT COUNT(*) AS total FROM users');
       final total = results.rows.isNotEmpty ? results.rows.first.colAt(0) : 0;
       return Response.ok(
         jsonEncode({
           'status': 'success',
           'message': 'Koneksi ke database berhasil!',
           'database': Database.dbName,
+          'totalUsers': total,
           'totalStudents': total,
         }),
         headers: {'Content-Type': 'application/json'},
@@ -40,7 +41,7 @@ void main(List<String> args) async {
       return Response.internalServerError(
         body: jsonEncode({
           'status': 'error',
-          'message': 'Gagal terhubung ke database server.',
+          'message': 'Gagal terhubung ke database server: $e',
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -50,7 +51,9 @@ void main(List<String> args) async {
   // Test get tables
   app.get('/tables', (Request request) async {
     try {
-      final results = await Database.query('SHOW TABLES');
+      final results = await Database.query(
+        "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename",
+      );
       final tables = results.rows.map((r) => r.colAt(0)?.toString() ?? '').toList();
       return Response.ok(
         jsonEncode({
@@ -77,9 +80,10 @@ void main(List<String> args) async {
   // Mount Agenda routes under /api/agenda
   app.mount('/api/agenda', AgendaRoutes().router);
 
-  // Mount Profile routes under /api/profile and /api/student
+  // Mount Profile routes under /api/profile, /api/user, and /api/student (for backwards compatibility)
   final profileRoutes = ProfileRoutes().router;
   app.mount('/api/profile', profileRoutes);
+  app.mount('/api/user', profileRoutes);
   app.mount('/api/student', profileRoutes);
 
   // Robust CORS Middleware for Chrome / Flutter Web
@@ -118,5 +122,6 @@ void main(List<String> args) async {
   print('📅 Kuliah  : http://localhost:${server.port}/api/agenda/course');
   print('📅 Personal: http://localhost:${server.port}/api/agenda/personal');
   print('👤 Profil  : http://localhost:${server.port}/api/profile');
+  print('👤 User    : http://localhost:${server.port}/api/user');
   print('========================================================');
 }

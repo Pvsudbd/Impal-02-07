@@ -7,25 +7,25 @@ import '../../models/agenda/personal_schedule.dart';
 class AgendaController {
   static const _uuid = Uuid();
 
-  // Helper helper untuk mengambil idStudent dari context JWT
-  static String? _getStudentId(Request req) {
-    final student = req.context['student'] as Map<String, dynamic>?;
-    return student?['idStudent'] as String?;
+  // Helper untuk mengambil idUser dari context JWT (dengan fallback idStudent)
+  static String? _getUserId(Request req) {
+    final user = (req.context['user'] ?? req.context['student']) as Map<String, dynamic>?;
+    return (user?['idUser'] ?? user?['idStudent']) as String?;
   }
 
   // ─── UNIFIED SCHEDULES (Semua Jadwal untuk Kalender / List) ───────────────────
   // GET /api/agenda
   static Future<Response> getAllSchedules(Request req) async {
     try {
-      final idStudent = _getStudentId(req);
-      if (idStudent == null) {
+      final idUser = _getUserId(req);
+      if (idUser == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final courses = await CourseSchedule.findByStudent(idStudent);
-      final personals = await PersonalSchedule.findByStudent(idStudent);
+      final courses = await CourseSchedule.findByUser(idUser);
+      final personals = await PersonalSchedule.findByUser(idUser);
 
       final combined = [
         ...courses.map((c) => c.toJson()),
@@ -54,14 +54,14 @@ class AgendaController {
   // GET /api/agenda/course
   static Future<Response> getCourseSchedules(Request req) async {
     try {
-      final idStudent = _getStudentId(req);
-      if (idStudent == null) {
+      final idUser = _getUserId(req);
+      if (idUser == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final schedules = await CourseSchedule.findByStudent(idStudent);
+      final schedules = await CourseSchedule.findByUser(idUser);
 
       return Response.ok(
         jsonEncode({
@@ -83,8 +83,8 @@ class AgendaController {
   // POST /api/agenda/course
   static Future<Response> createCourseSchedule(Request req) async {
     try {
-      final idStudent = _getStudentId(req);
-      if (idStudent == null) {
+      final idUser = _getUserId(req);
+      if (idUser == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
@@ -120,7 +120,7 @@ class AgendaController {
 
       await CourseSchedule.create(
         idAgenda: idAgenda,
-        idStudent: idStudent,
+        idUser: idUser,
         title: title,
         startTime: _normalizeTime(startTime),
         endTime: _normalizeTime(endTime),
@@ -129,7 +129,7 @@ class AgendaController {
         room: room,
       );
 
-      final created = await CourseSchedule.findById(idAgenda, idStudent);
+      final created = await CourseSchedule.findById(idAgenda, idUser);
 
       return Response(
         201,
@@ -152,14 +152,14 @@ class AgendaController {
   // PUT /api/agenda/course/<idAgenda>
   static Future<Response> updateCourseSchedule(Request req, String idAgenda) async {
     try {
-      final idStudent = _getStudentId(req);
-      if (idStudent == null) {
+      final idUser = _getUserId(req);
+      if (idUser == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final existing = await CourseSchedule.findById(idAgenda, idStudent);
+      final existing = await CourseSchedule.findById(idAgenda, idUser);
       if (existing == null) {
         return Response(404,
             body: jsonEncode({'status': 'error', 'message': 'Jadwal kuliah tidak ditemukan'}),
@@ -178,7 +178,7 @@ class AgendaController {
 
       await CourseSchedule.update(
         idAgenda: idAgenda,
-        idStudent: idStudent,
+        idUser: idUser,
         title: title,
         startTime: startTime,
         endTime: endTime,
@@ -187,7 +187,7 @@ class AgendaController {
         room: room,
       );
 
-      final updated = await CourseSchedule.findById(idAgenda, idStudent);
+      final updated = await CourseSchedule.findById(idAgenda, idUser);
 
       return Response.ok(
         jsonEncode({
@@ -209,21 +209,21 @@ class AgendaController {
   // DELETE /api/agenda/course/<idAgenda>
   static Future<Response> deleteCourseSchedule(Request req, String idAgenda) async {
     try {
-      final idStudent = _getStudentId(req);
-      if (idStudent == null) {
+      final idUser = _getUserId(req);
+      if (idUser == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final existing = await CourseSchedule.findById(idAgenda, idStudent);
+      final existing = await CourseSchedule.findById(idAgenda, idUser);
       if (existing == null) {
         return Response(404,
             body: jsonEncode({'status': 'error', 'message': 'Jadwal kuliah tidak ditemukan'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      await CourseSchedule.delete(idAgenda, idStudent);
+      await CourseSchedule.delete(idAgenda, idUser);
 
       return Response.ok(
         jsonEncode({'status': 'success', 'message': 'Jadwal kuliah berhasil dihapus'}),
@@ -243,14 +243,14 @@ class AgendaController {
   // GET /api/agenda/personal
   static Future<Response> getPersonalSchedules(Request req) async {
     try {
-      final idStudent = _getStudentId(req);
-      if (idStudent == null) {
+      final idUser = _getUserId(req);
+      if (idUser == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final schedules = await PersonalSchedule.findByStudent(idStudent);
+      final schedules = await PersonalSchedule.findByUser(idUser);
 
       return Response.ok(
         jsonEncode({
@@ -272,8 +272,8 @@ class AgendaController {
   // POST /api/agenda/personal
   static Future<Response> createPersonalSchedule(Request req) async {
     try {
-      final idStudent = _getStudentId(req);
-      if (idStudent == null) {
+      final idUser = _getUserId(req);
+      if (idUser == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
@@ -292,8 +292,14 @@ class AgendaController {
       final startTime = (body['timeStart'] ?? body['startTime']) as String?;
       final endTime = (body['timeEnd'] ?? body['endTime']) as String?;
       final date = (body['date']?.toString().split('T')[0]) ?? _getTodayDateString();
-      final category = (body['category'] ?? 'Personal') as String?;
-      final location = (body['location'] ?? '') as String?;
+      final rawType = (body['type'] ?? body['agendaType'] ?? '').toString().toLowerCase();
+      var category = (body['category'] ?? 'Personal') as String?;
+      if ((rawType == 'meeting' || rawType.contains('meet')) && (category == null || category == 'Personal')) {
+        category = 'Meeting';
+      } else if (rawType == 'external' && (category == null || category == 'Personal')) {
+        category = 'External';
+      }
+      final location = (body['location'] ?? body['meetingUrl'] ?? '') as String?;
       final notes = body['notes'] as String?;
 
       if (title == null || startTime == null || endTime == null) {
@@ -310,7 +316,7 @@ class AgendaController {
 
       await PersonalSchedule.create(
         idAgenda: idAgenda,
-        idStudent: idStudent,
+        idUser: idUser,
         title: title,
         startTime: _normalizeTime(startTime),
         endTime: _normalizeTime(endTime),
@@ -320,7 +326,7 @@ class AgendaController {
         notes: notes,
       );
 
-      final created = await PersonalSchedule.findById(idAgenda, idStudent);
+      final created = await PersonalSchedule.findById(idAgenda, idUser);
 
       return Response(
         201,
@@ -343,14 +349,14 @@ class AgendaController {
   // PUT /api/agenda/personal/<idAgenda>
   static Future<Response> updatePersonalSchedule(Request req, String idAgenda) async {
     try {
-      final idStudent = _getStudentId(req);
-      if (idStudent == null) {
+      final idUser = _getUserId(req);
+      if (idUser == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final existing = await PersonalSchedule.findById(idAgenda, idStudent);
+      final existing = await PersonalSchedule.findById(idAgenda, idUser);
       if (existing == null) {
         return Response(404,
             body: jsonEncode({'status': 'error', 'message': 'Jadwal personal tidak ditemukan'}),
@@ -363,14 +369,14 @@ class AgendaController {
       final title = body['title'] as String?;
       final startTime = body['timeStart'] != null ? _normalizeTime(body['timeStart'] as String) : null;
       final endTime = body['timeEnd'] != null ? _normalizeTime(body['timeEnd'] as String) : null;
-      final date = body['date'] != null ? body['date'].toString().split('T')[0] : null;
+      final date = body['date']?.toString().split('T')[0];
       final category = body['category'] as String?;
-      final location = body['location'] as String?;
+      final location = (body['location'] ?? body['room']) as String?;
       final notes = body['notes'] as String?;
 
       await PersonalSchedule.update(
         idAgenda: idAgenda,
-        idStudent: idStudent,
+        idUser: idUser,
         title: title,
         startTime: startTime,
         endTime: endTime,
@@ -380,7 +386,7 @@ class AgendaController {
         notes: notes,
       );
 
-      final updated = await PersonalSchedule.findById(idAgenda, idStudent);
+      final updated = await PersonalSchedule.findById(idAgenda, idUser);
 
       return Response.ok(
         jsonEncode({
@@ -402,21 +408,21 @@ class AgendaController {
   // DELETE /api/agenda/personal/<idAgenda>
   static Future<Response> deletePersonalSchedule(Request req, String idAgenda) async {
     try {
-      final idStudent = _getStudentId(req);
-      if (idStudent == null) {
+      final idUser = _getUserId(req);
+      if (idUser == null) {
         return Response(401,
             body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final existing = await PersonalSchedule.findById(idAgenda, idStudent);
+      final existing = await PersonalSchedule.findById(idAgenda, idUser);
       if (existing == null) {
         return Response(404,
             body: jsonEncode({'status': 'error', 'message': 'Jadwal personal tidak ditemukan'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      await PersonalSchedule.delete(idAgenda, idStudent);
+      await PersonalSchedule.delete(idAgenda, idUser);
 
       return Response.ok(
         jsonEncode({'status': 'success', 'message': 'Jadwal personal berhasil dihapus'}),
@@ -455,8 +461,8 @@ class AgendaController {
 
   // PUT /api/agenda/<idAgenda> (Cek apakah Course atau Personal, lalu perbarui)
   static Future<Response> updateAgenda(Request req, String idAgenda) async {
-    final idStudent = _getStudentId(req);
-    if (idStudent == null) {
+    final idUser = _getUserId(req);
+    if (idUser == null) {
       return Response(401,
           body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
           headers: {'Content-Type': 'application/json'});
@@ -472,12 +478,12 @@ class AgendaController {
 
     final clonedRequest = req.change(body: bodyText);
 
-    final course = await CourseSchedule.findById(idAgenda, idStudent);
+    final course = await CourseSchedule.findById(idAgenda, idUser);
     if (course != null) {
       return updateCourseSchedule(clonedRequest, idAgenda);
     }
 
-    final personal = await PersonalSchedule.findById(idAgenda, idStudent);
+    final personal = await PersonalSchedule.findById(idAgenda, idUser);
     if (personal != null) {
       return updatePersonalSchedule(clonedRequest, idAgenda);
     }
@@ -489,17 +495,17 @@ class AgendaController {
 
   // DELETE /api/agenda/<idAgenda> (Cek apakah Course atau Personal, lalu hapus)
   static Future<Response> deleteAgenda(Request req, String idAgenda) async {
-    final idStudent = _getStudentId(req);
-    if (idStudent == null) {
+    final idUser = _getUserId(req);
+    if (idUser == null) {
       return Response(401,
           body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
           headers: {'Content-Type': 'application/json'});
     }
 
     // Coba hapus dari course
-    final course = await CourseSchedule.findById(idAgenda, idStudent);
+    final course = await CourseSchedule.findById(idAgenda, idUser);
     if (course != null) {
-      await CourseSchedule.delete(idAgenda, idStudent);
+      await CourseSchedule.delete(idAgenda, idUser);
       return Response.ok(
         jsonEncode({'status': 'success', 'message': 'Jadwal kuliah berhasil dihapus'}),
         headers: {'Content-Type': 'application/json'},
@@ -507,9 +513,9 @@ class AgendaController {
     }
 
     // Coba hapus dari personal
-    final personal = await PersonalSchedule.findById(idAgenda, idStudent);
+    final personal = await PersonalSchedule.findById(idAgenda, idUser);
     if (personal != null) {
-      await PersonalSchedule.delete(idAgenda, idStudent);
+      await PersonalSchedule.delete(idAgenda, idUser);
       return Response.ok(
         jsonEncode({'status': 'success', 'message': 'Jadwal personal berhasil dihapus'}),
         headers: {'Content-Type': 'application/json'},
@@ -549,4 +555,3 @@ class AgendaController {
     }
   }
 }
-
