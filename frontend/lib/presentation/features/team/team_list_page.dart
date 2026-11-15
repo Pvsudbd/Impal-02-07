@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/responsive_context.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../schedule/models/schedule_model.dart';
@@ -52,11 +53,8 @@ class _TeamListPageState extends State<TeamListPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.isStandalone) {
-      return TeamListContentView(
-        userName: widget.userName,
-        showBackButton: false,
-      );
+    if (!widget.isStandalone || context.isDesktop) {
+      return HomePage(userName: widget.userName, initialTab: 2);
     }
 
     final screenWidth = MediaQuery.of(context).size.width;

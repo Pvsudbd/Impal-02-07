@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/responsive_context.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/impal_schedule_card.dart';
 import '../../common_widgets/impal_search_bar.dart';
@@ -49,16 +50,16 @@ class _SchedulePageState extends State<SchedulePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.isStandalone || context.isDesktop) {
+      return HomePage(
+        userName: widget.userName,
+        initialTab: 3,
+      );
+    }
+
     final canPop = Navigator.of(context).canPop();
     final effectiveShowBack =
         widget.showBackButton ?? (widget.isStandalone && canPop);
-
-    if (!widget.isStandalone) {
-      return ScheduleContentView(
-        userName: widget.userName,
-        showBackButton: false,
-      );
-    }
 
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;

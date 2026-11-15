@@ -10,7 +10,18 @@ class DesktopTopHeader extends StatefulWidget {
   final String title;
   final String subtitle;
   final String searchQuery;
+  final String searchHint;
+  final Color searchBgColor;
+  final bool showLeadingSearchIcon;
+  final bool showShortcutHint;
   final String addButtonLabel;
+  final Color addButtonColor;
+  final String? secondaryButtonLabel;
+  final IconData? secondaryButtonIcon;
+  final VoidCallback? onSecondaryButtonTap;
+  final bool showNotificationBell;
+  final double? titleFontSize;
+  final double? horizontalPadding;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onAddTaskTap;
 
@@ -20,7 +31,18 @@ class DesktopTopHeader extends StatefulWidget {
     this.subtitle =
         'Stay productive and keep track of your ongoing courses & tasks',
     required this.searchQuery,
+    this.searchHint = 'Search tasks or courses...',
+    this.searchBgColor = AppColors.bgCard,
+    this.showLeadingSearchIcon = false,
+    this.showShortcutHint = true,
     this.addButtonLabel = '+ Add Task',
+    this.addButtonColor = AppColors.primary,
+    this.secondaryButtonLabel,
+    this.secondaryButtonIcon,
+    this.onSecondaryButtonTap,
+    this.showNotificationBell = true,
+    this.titleFontSize,
+    this.horizontalPadding,
     required this.onSearchChanged,
     required this.onAddTaskTap,
   });
@@ -73,7 +95,7 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
       child: Container(
         constraints: const BoxConstraints(minHeight: 72),
         padding: EdgeInsets.symmetric(
-          horizontal: context.rSpacing(28),
+          horizontal: widget.horizontalPadding ?? context.rSpacing(28),
           vertical: 14,
         ),
         decoration: const BoxDecoration(
@@ -95,7 +117,8 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: context.rFont(20, min: 18, max: 22),
+                      fontSize: widget.titleFontSize ??
+                          context.rFont(20, min: 18, max: 22),
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.3,
@@ -118,8 +141,15 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
             ),
             const SizedBox(width: 16),
             _buildSearchBox(context),
-            const SizedBox(width: 12),
-            const NotificationBellButton(size: 40, iconSize: 19),
+            if (widget.secondaryButtonLabel != null &&
+                widget.onSecondaryButtonTap != null) ...[
+              const SizedBox(width: 12),
+              _buildSecondaryButton(context),
+            ],
+            if (widget.showNotificationBell) ...[
+              const SizedBox(width: 12),
+              const NotificationBellButton(size: 40, iconSize: 19),
+            ],
             const SizedBox(width: 12),
             _buildAddTaskButton(context),
           ],
@@ -134,14 +164,24 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
     return Container(
       width: 260,
       height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.showLeadingSearchIcon ? 14 : 12,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: widget.searchBgColor,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.borderSubtle, width: 1),
       ),
       child: Row(
         children: [
+          if (widget.showLeadingSearchIcon) ...[
+            const Icon(
+              Icons.search_rounded,
+              size: 16,
+              color: AppColors.textMuted,
+            ),
+            const SizedBox(width: 10),
+          ],
           Expanded(
             child: TextField(
               key: const ValueKey('desktop_search_field'),
@@ -154,21 +194,21 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w500,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 8),
-                hintText: 'Search tasks or courses...',
-                hintStyle: TextStyle(
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                hintText: widget.searchHint,
+                hintStyle: const TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 12,
                   fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          if (hasText || widget.showShortcutHint) const SizedBox(width: 8),
           if (hasText)
             InkWell(
               onTap: () {
@@ -185,7 +225,7 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
                 ),
               ),
             )
-          else
+          else if (widget.showShortcutHint)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -207,9 +247,51 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
     );
   }
 
+  Widget _buildSecondaryButton(BuildContext context) {
+    return Material(
+      color: AppColors.bgCard,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        key: const ValueKey('desktop_header_secondary_btn'),
+        onTap: widget.onSecondaryButtonTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.borderSubtle, width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.secondaryButtonIcon != null) ...[
+                Icon(
+                  widget.secondaryButtonIcon,
+                  size: 15,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                widget.secondaryButtonLabel!,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: context.rFont(13, min: 12, max: 14),
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAddTaskButton(BuildContext context) {
     return Material(
-      color: AppColors.primary,
+      color: widget.addButtonColor,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         key: const ValueKey('desktop_add_task_btn'),
@@ -218,7 +300,7 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 40),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

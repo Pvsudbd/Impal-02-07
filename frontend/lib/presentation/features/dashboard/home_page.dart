@@ -14,14 +14,19 @@ import '../schedule/models/schedule_repository.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
 import '../schedule/schedule_form_page.dart';
 import '../schedule/schedule_page.dart';
+import '../schedule/widgets/desktop/desktop_schedule_matrix_view.dart';
 import '../smart_system/models/smart_priority_repository.dart';
 import '../smart_system/smart_priority_page.dart';
 import '../task/models/task_repository.dart';
 import '../task/task_page.dart';
 import '../task/widgets/desktop/desktop_tasks_management_view.dart';
 import '../team/dashboard_team_page.dart';
+import '../team/models/desktop_team_directory_models.dart';
 import '../team/pop_up_create_meeting.dart';
+import '../team/pop_up_create_team.dart';
+import '../team/pop_up_join_team.dart';
 import '../team/team_list_page.dart';
+import '../team/widgets/desktop/desktop_group_directory_view.dart';
 import 'models/dashboard_models.dart';
 import 'widgets/desktop/desktop_hero_focus_card.dart';
 import 'widgets/desktop/desktop_ongoing_tasks_section.dart';
@@ -57,8 +62,11 @@ class _HomePageState extends State<HomePage> {
   late int _currentTab;
   String _selectedCategory = 'All';
   TeamModel? _selectedTeam;
+  String _selectedTeamCode = '7X29';
   bool _isSidebarCollapsed = false;
   String _desktopSearchQuery = '';
+  late final List<DesktopTeamCardData> _desktopTeams =
+      List<DesktopTeamCardData>.of(DesktopTeamDirectoryFixtures.defaultTeams);
 
   @override
   void initState() {
@@ -757,6 +765,121 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _openCreateSchedule() async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => const ScheduleFormPage(),
+      ),
+    );
+  }
+
+  void _handleJoinTeamByCode(String rawCode) {
+    final code = rawCode.trim().toUpperCase();
+    if (code.length < 4) {
+      PopUpPemberitahuan.teamWarning(
+        context,
+        title: 'Invalid Invite Code',
+        message: 'Please enter a valid 4+ character team invite code.',
+      );
+      return;
+    }
+
+    final existing = _desktopTeams
+        .where((team) => team.inviteCode.toUpperCase() == code)
+        .toList();
+    if (existing.isNotEmpty) {
+      PopUpPemberitahuan.teamJoined(
+        context,
+        teamName: existing.first.name,
+        inviteCode: code,
+      );
+      return;
+    }
+
+    final newCard = DesktopTeamCardData(
+      id: 'team_joined_${DateTime.now().millisecondsSinceEpoch}',
+      name: 'Kelompok $code',
+      subtitle: 'Tim kolaborasi via kode undangan $code',
+      badgeLabel: 'Mata Kuliah',
+      badgeBgColor: const Color(0xFF47373B),
+      badgeTextColor: AppColors.primaryAccent,
+      category: TeamDirectoryCategory.mataKuliah,
+      members: [
+        TeamMemberAvatar(
+          initials: widget.userName.isNotEmpty
+              ? widget.userName[0].toUpperCase()
+              : 'R',
+          bgColor: AppColors.primaryAccent,
+        ),
+      ],
+      completedTasks: 1,
+      totalTasks: 5,
+      progressColor: AppColors.primaryAccent,
+      percentTextColor: AppColors.primaryAccent,
+      inviteCode: code,
+      isPrimaryAction: true,
+    );
+
+    setState(() {
+      _desktopTeams.add(newCard);
+    });
+    TeamRepository().addTeam(newCard.toTeamModel());
+
+    PopUpPemberitahuan.teamJoined(
+      context,
+      teamName: newCard.name,
+      inviteCode: code,
+    );
+  }
+
+  Future<void> _openJoinTeamDialog() async {
+    final code = await PopUpJoinTeam.show(context);
+    if (!mounted || code == null) return;
+    _handleJoinTeamByCode(code);
+  }
+
+  Future<void> _openCreateTeamDialog() async {
+    final result = await PopUpCreateTeam.show(context);
+    if (!mounted || result == null) return;
+
+    final newCard = DesktopTeamCardData(
+      id: 'team_created_${DateTime.now().millisecondsSinceEpoch}',
+      name: result.name,
+      subtitle: result.description.isNotEmpty
+          ? result.description
+          : 'Kelompok kolaborasi baru',
+      badgeLabel: 'Mata Kuliah',
+      badgeBgColor: const Color(0xFF47373B),
+      badgeTextColor: AppColors.primaryAccent,
+      category: TeamDirectoryCategory.mataKuliah,
+      members: [
+        TeamMemberAvatar(
+          initials: widget.userName.isNotEmpty
+              ? widget.userName[0].toUpperCase()
+              : 'R',
+          bgColor: AppColors.primaryAccent,
+        ),
+      ],
+      completedTasks: 0,
+      totalTasks: 5,
+      progressColor: AppColors.primaryAccent,
+      percentTextColor: AppColors.primaryAccent,
+      inviteCode: result.inviteCode,
+      isPrimaryAction: true,
+    );
+
+    setState(() {
+      _desktopTeams.add(newCard);
+    });
+    TeamRepository().addTeam(newCard.toTeamModel());
+
+    PopUpPemberitahuan.teamCreated(
+      context,
+      teamName: result.name,
+      inviteCode: result.inviteCode,
+    );
+  }
+
   void _openProfilePage() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -852,14 +975,20 @@ class _HomePageState extends State<HomePage> {
           'Organize, prioritize, and track your academic assignments',
         );
       case 2:
+        if (_selectedTeam != null) {
+          return (
+            _selectedTeam!.name,
+            'Collaborate with teammates, milestones, and shared deadlines',
+          );
+        }
         return (
-          _selectedTeam != null ? _selectedTeam!.name : 'Team Directory',
-          'Collaborate with teammates, milestones, and shared deadlines',
+          'Kelompok & Tim Belajar',
+          'Kelola kelompok mata kuliah, jadwal meeting tim, dan progress kolaborasi',
         );
       case 3:
         return (
-          'Schedule Matrix',
-          'Stay ahead of classes, meetings, and daily timelines',
+          'Weekly Schedule Matrix',
+          'Track your weekly lectures, lab sessions, and group study meetings',
         );
       default:
         return (
@@ -930,22 +1059,63 @@ class _HomePageState extends State<HomePage> {
                 userName: widget.userName,
                 scheduleCount: scheduleCount,
                 pendingTaskCount: totalPendingCount,
+                teamCount: _desktopTeams.length,
                 onProfileTap: _openProfilePage,
                 onLogoutTap: _showDesktopLogoutDialog,
               ),
               Expanded(
                 child: Column(
                   children: [
-                    DesktopTopHeader(
-                      title: headerTitle,
-                      subtitle: headerSubtitle,
-                      searchQuery: _desktopSearchQuery,
-                      addButtonLabel:
-                          _currentTab == 1 ? '+ Add New Task' : '+ Add Task',
-                      onSearchChanged: (value) {
-                        setState(() => _desktopSearchQuery = value);
+                    Builder(
+                      builder: (_) {
+                        final isGroupDirectoryRoot =
+                            _currentTab == 2 && _selectedTeam == null;
+                        return DesktopTopHeader(
+                          title: headerTitle,
+                          subtitle: headerSubtitle,
+                          searchQuery: _desktopSearchQuery,
+                          searchHint: isGroupDirectoryRoot
+                              ? 'Cari kelompok, mata kuliah...'
+                              : (_currentTab == 3
+                                  ? 'Search schedule or class...'
+                                  : 'Search tasks or courses...'),
+                          searchBgColor: isGroupDirectoryRoot
+                              ? AppColors.bgSidebar
+                              : AppColors.bgCard,
+                          showLeadingSearchIcon: isGroupDirectoryRoot,
+                          showShortcutHint: !isGroupDirectoryRoot,
+                          addButtonLabel: isGroupDirectoryRoot
+                              ? '+ Create Team'
+                              : (_currentTab == 3
+                                  ? '+ Add Schedule'
+                                  : (_currentTab == 1
+                                      ? '+ Add New Task'
+                                      : '+ Add Task')),
+                          addButtonColor: isGroupDirectoryRoot
+                              ? AppColors.primaryAccent
+                              : AppColors.primary,
+                          secondaryButtonLabel:
+                              isGroupDirectoryRoot ? 'Join Team' : null,
+                          secondaryButtonIcon: isGroupDirectoryRoot
+                              ? Icons.group_add_outlined
+                              : null,
+                          onSecondaryButtonTap: isGroupDirectoryRoot
+                              ? _openJoinTeamDialog
+                              : null,
+                          showNotificationBell:
+                              _currentTab != 3 && !isGroupDirectoryRoot,
+                          titleFontSize: isGroupDirectoryRoot ? 18 : 22,
+                          horizontalPadding: isGroupDirectoryRoot ? 32 : 28,
+                          onSearchChanged: (value) {
+                            setState(() => _desktopSearchQuery = value);
+                          },
+                          onAddTaskTap: isGroupDirectoryRoot
+                              ? _openCreateTeamDialog
+                              : (_currentTab == 3
+                                  ? _openCreateSchedule
+                                  : _openCreateTask),
+                        );
                       },
-                      onAddTaskTap: _openCreateTask,
                     ),
                     Expanded(
                       child: _buildDesktopBody(
@@ -987,39 +1157,46 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
+    if (_currentTab == 3) {
+      return DesktopScheduleMatrixView(
+        key: const ValueKey('desktop_schedule_matrix_view'),
+        searchQuery: _desktopSearchQuery,
+      );
+    }
+
     if (_currentTab != 0) {
-      final Widget tabBody;
-      if (_currentTab == 3) {
-        tabBody = ScheduleContentView(
-          key: const ValueKey('desktop_schedule_tab'),
-          userName: widget.userName,
-          showBackButton: false,
+      if (_selectedTeam == null) {
+        return DesktopGroupDirectoryView(
+          key: const ValueKey('desktop_team_tab'),
+          searchQuery: _desktopSearchQuery,
+          teams: _desktopTeams,
+          onJoinByCode: _handleJoinTeamByCode,
+          onTeamSelected: (team) {
+            final match = _desktopTeams
+                .where((item) => item.id == team.id)
+                .toList();
+            setState(() {
+              _selectedTeam = team;
+              _selectedTeamCode =
+                  match.isNotEmpty ? match.first.inviteCode : '7X29';
+            });
+          },
         );
-      } else {
-        tabBody = _selectedTeam != null
-            ? DashboardTeamPage(
-                key: ValueKey('desktop_team_dashboard_${_selectedTeam!.id}'),
-                userName: widget.userName,
-                teamName: _selectedTeam!.name,
-                teamCode: '7X29',
-                memberColors: _selectedTeam!.memberColors,
-                isStandalone: false,
-                onBack: () => setState(() => _selectedTeam = null),
-              )
-            : TeamListContentView(
-                key: const ValueKey('desktop_team_tab'),
-                userName: widget.userName,
-                showBackButton: false,
-                onOpenSchedule: () => _onTabSelected(3),
-                onTeamSelected: (team) => setState(() => _selectedTeam = team),
-              );
       }
 
       return Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 820),
-          child: tabBody,
+          child: DashboardTeamPage(
+            key: ValueKey('desktop_team_dashboard_${_selectedTeam!.id}'),
+            userName: widget.userName,
+            teamName: _selectedTeam!.name,
+            teamCode: _selectedTeamCode,
+            memberColors: _selectedTeam!.memberColors,
+            isStandalone: false,
+            onBack: () => setState(() => _selectedTeam = null),
+          ),
         ),
       );
     }

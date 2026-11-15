@@ -59,6 +59,35 @@ void main() {
       expect(find.text('October 2026'), findsOneWidget);
       expect(find.text('Fuzzy Mamdani Priority Weight'), findsOneWidget);
       expect(find.text('Active Team Collaborators'), findsOneWidget);
+      expect(find.text('Sort: Deadline ▾'), findsOneWidget);
+      expect(find.text('Type: All ▾'), findsOneWidget);
+
+      // Verify Row Filters Bar matches FigCraft hug-content & horizontal layout
+      final filterBarRect = tester.getRect(find.byType(DesktopTaskFilterBar));
+      final allRect =
+          tester.getRect(find.byKey(const ValueKey('desktop_filter_All Tasks')));
+      final todayRect =
+          tester.getRect(find.byKey(const ValueKey('desktop_filter_Today')));
+      final next7Rect = tester
+          .getRect(find.byKey(const ValueKey('desktop_filter_Next 7 Days')));
+      final overdueRect =
+          tester.getRect(find.byKey(const ValueKey('desktop_filter_Overdue')));
+      final sortRect =
+          tester.getRect(find.byKey(const ValueKey('desktop_sort_dropdown')));
+      final typeRect =
+          tester.getRect(find.byKey(const ValueKey('desktop_type_dropdown')));
+
+      // Pills must be hug-content (far narrower than the filter bar width)
+      expect(allRect.width, lessThan(filterBarRect.width * 0.4));
+      expect(todayRect.width, lessThan(filterBarRect.width * 0.4));
+      expect(next7Rect.width, lessThan(filterBarRect.width * 0.4));
+      expect(overdueRect.width, lessThan(filterBarRect.width * 0.4));
+
+      // Dropdowns stay pinned to the right side of the filter bar Row (not stacked below)
+      expect((sortRect.center.dy - typeRect.center.dy).abs(), lessThan(4.0));
+      expect(sortRect.left, greaterThan(allRect.right));
+      expect(typeRect.left, greaterThan(sortRect.right));
+
       expect(find.byType(DesktopTaskGridCard), findsWidgets);
       expect(
         find.descendant(
@@ -101,6 +130,16 @@ void main() {
 
       await tester.pumpWidget(buildHarness(const Size(1440, 980)));
       await tester.pumpAndSettle();
+
+      // Filter pill switching (Today & Next 7 Days)
+      await tester.tap(find.byKey(const ValueKey('desktop_filter_Next 7 Days')));
+      await tester.pump();
+      expect(find.text('Academic Advisory Consultation'), findsOneWidget);
+      expect(find.text('AI System Final Project'), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('desktop_filter_All Tasks')));
+      await tester.pump();
+      expect(find.text('AI System Final Project'), findsOneWidget);
 
       // KPI High Priority toggle filters down tasks cleanly
       await tester.tap(find.byKey(const ValueKey('desktop_kpi_high')));
@@ -176,7 +215,7 @@ void main() {
         find.byKey(const ValueKey('desktop_view_timeline_calendar_btn')),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Schedule Matrix'), findsOneWidget);
+      expect(find.text('Weekly Schedule Matrix'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       // Standalone TaskPage on desktop also renders desktop Tasks Management view
@@ -188,6 +227,68 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(DesktopTasksManagementView), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'renders DesktopTaskFilterBar on a single horizontal row when width fits FigCraft proportions',
+        (tester) async {
+      // Simulate a wide enough viewport (1800dp) so even Ahem square glyphs
+      // fit all 4 pills + 2 dropdowns on one line, verifying single-row Row(spaceBetween).
+      tester.view.physicalSize = const Size(1800, 980);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        buildHarness(
+          const Size(1800, 980),
+          child: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 1400,
+                child: DesktopTaskFilterBar(
+                  selectedTimeFilter: 'Today',
+                  allCount: 10,
+                  todayCount: 4,
+                  next7DaysCount: 3,
+                  overdueCount: 3,
+                  sortBy: 'Deadline',
+                  taskTypeFilter: 'All',
+                  onTimeFilterSelected: (_) {},
+                  onSortChanged: (_) {},
+                  onTaskTypeChanged: (_) {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final allRect =
+          tester.getRect(find.byKey(const ValueKey('desktop_filter_All Tasks')));
+      final todayRect =
+          tester.getRect(find.byKey(const ValueKey('desktop_filter_Today')));
+      final next7Rect = tester
+          .getRect(find.byKey(const ValueKey('desktop_filter_Next 7 Days')));
+      final overdueRect =
+          tester.getRect(find.byKey(const ValueKey('desktop_filter_Overdue')));
+      final sortRect =
+          tester.getRect(find.byKey(const ValueKey('desktop_sort_dropdown')));
+      final typeRect =
+          tester.getRect(find.byKey(const ValueKey('desktop_type_dropdown')));
+
+      expect(todayRect.left, greaterThan(allRect.right));
+      expect(next7Rect.left, greaterThan(todayRect.right));
+      expect(overdueRect.left, greaterThan(next7Rect.right));
+      expect(sortRect.left, greaterThan(overdueRect.right));
+      expect(typeRect.left, greaterThan(sortRect.right));
+
+      expect((allRect.center.dy - todayRect.center.dy).abs(), lessThan(4.0));
+      expect((todayRect.center.dy - next7Rect.center.dy).abs(), lessThan(4.0));
+      expect((next7Rect.center.dy - overdueRect.center.dy).abs(), lessThan(4.0));
+      expect((overdueRect.center.dy - sortRect.center.dy).abs(), lessThan(4.0));
+      expect((sortRect.center.dy - typeRect.center.dy).abs(), lessThan(4.0));
       expect(tester.takeException(), isNull);
     });
   });

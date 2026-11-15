@@ -22,6 +22,7 @@ class DesktopSidebar extends StatelessWidget {
   final String userName;
   final int scheduleCount;
   final int pendingTaskCount;
+  final int teamCount;
   final VoidCallback onProfileTap;
   final VoidCallback onLogoutTap;
 
@@ -34,6 +35,7 @@ class DesktopSidebar extends StatelessWidget {
     required this.userName,
     this.scheduleCount = 1,
     this.pendingTaskCount = 10,
+    this.teamCount = 4,
     required this.onProfileTap,
     required this.onLogoutTap,
   });
@@ -143,6 +145,9 @@ class DesktopSidebar extends StatelessWidget {
                             _NavItem(
                               icon: Icons.people_outline_rounded,
                               label: 'Team Members',
+                              badgeText: '$teamCount',
+                              badgeBg: AppColors.primary,
+                              badgeTextColor: Colors.white,
                               isActive: activeDestination ==
                                   DesktopNavDestination.teamMembers,
                               isCompact: showCompact,

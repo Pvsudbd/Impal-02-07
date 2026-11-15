@@ -123,7 +123,7 @@ class _DesktopTasksManagementViewState
           .toList();
     } else if (_selectedTimeFilter == 'Next 7 Days') {
       list = list
-          .where((t) => _classifyBucket(t) != _TaskScheduleBucket.overdue)
+          .where((t) => _classifyBucket(t) == _TaskScheduleBucket.upcoming)
           .toList();
     } else if (_selectedTimeFilter == 'Overdue') {
       list = list
@@ -332,7 +332,7 @@ class _DesktopTasksManagementViewState
         .where((t) => _classifyBucket(t) == _TaskScheduleBucket.today)
         .length;
     final next7DaysAllCount = allTasks
-        .where((t) => _classifyBucket(t) != _TaskScheduleBucket.overdue)
+        .where((t) => _classifyBucket(t) == _TaskScheduleBucket.upcoming)
         .length;
     final overdueAllCount = allTasks
         .where((t) => _classifyBucket(t) == _TaskScheduleBucket.overdue)
@@ -356,9 +356,8 @@ class _DesktopTasksManagementViewState
         )
         .toSet();
 
-    final showTodaySection = _selectedTimeFilter == 'All Tasks' ||
-        _selectedTimeFilter == 'Today' ||
-        (_selectedTimeFilter == 'Next 7 Days' && todayTasks.isNotEmpty);
+    final showTodaySection =
+        _selectedTimeFilter == 'All Tasks' || _selectedTimeFilter == 'Today';
     final showUpcomingSection = _selectedTimeFilter == 'All Tasks' ||
         _selectedTimeFilter == 'Next 7 Days' ||
         _selectedTimeFilter == 'Overdue';

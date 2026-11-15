@@ -59,58 +59,73 @@ class DesktopTaskFilterBar extends StatelessWidget {
       ),
     ];
 
-    return SizedBox(
-      width: double.infinity,
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: context.rSpacing(10),
-        runSpacing: context.rSpacing(8),
-        children: [
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: context.rSpacing(8),
-            runSpacing: context.rSpacing(8),
-            children: [
-              for (final item in filterItems)
-                _FilterPill(
-                  pillKey: ValueKey('desktop_filter_${item.id}'),
-                  label: item.label,
-                  isActive: selectedTimeFilter == item.id,
-                  isOverdueTone: item.isOverdueTone,
-                  onTap: () => onTimeFilterSelected(item.id),
-                ),
-              if (activeExtraFilterLabel != null &&
-                  onClearExtraFilter != null)
-                _ClearChip(
-                  label: activeExtraFilterLabel!,
-                  onTap: onClearExtraFilter!,
-                ),
-            ],
+    final leftPills = Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: context.rSpacing(8),
+      runSpacing: context.rSpacing(8),
+      children: [
+        for (final item in filterItems)
+          _FilterPill(
+            pillKey: ValueKey('desktop_filter_${item.id}'),
+            label: item.label,
+            isActive: selectedTimeFilter == item.id,
+            isOverdueTone: item.isOverdueTone,
+            onTap: () => onTimeFilterSelected(item.id),
           ),
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: context.rSpacing(8),
-            runSpacing: context.rSpacing(8),
-            children: [
-              _DropdownPill(
-                menuKey: const ValueKey('desktop_sort_dropdown'),
-                label: 'Sort: $sortBy',
-                options: const ['Deadline', 'Priority', 'Title'],
-                selected: sortBy,
-                onSelected: onSortChanged,
-              ),
-              _DropdownPill(
-                menuKey: const ValueKey('desktop_type_dropdown'),
-                label: 'Type: $taskTypeFilter',
-                options: const ['All', 'College', 'Personal', 'Team'],
-                selected: taskTypeFilter,
-                onSelected: onTaskTypeChanged,
-              ),
-            ],
+        if (activeExtraFilterLabel != null && onClearExtraFilter != null)
+          _ClearChip(
+            label: activeExtraFilterLabel!,
+            onTap: onClearExtraFilter!,
           ),
-        ],
-      ),
+      ],
+    );
+
+    final rightDropdowns = Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: context.rSpacing(8),
+      runSpacing: context.rSpacing(8),
+      children: [
+        _DropdownPill(
+          menuKey: const ValueKey('desktop_sort_dropdown'),
+          label: 'Sort: $sortBy',
+          options: const ['Deadline', 'Priority', 'Title'],
+          selected: sortBy,
+          onSelected: onSortChanged,
+        ),
+        _DropdownPill(
+          menuKey: const ValueKey('desktop_type_dropdown'),
+          label: 'Type: $taskTypeFilter',
+          options: const ['All', 'College', 'Personal', 'Team'],
+          selected: taskTypeFilter,
+          onSelected: onTaskTypeChanged,
+        ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 620) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Flexible(child: leftPills),
+              SizedBox(width: context.rSpacing(10)),
+              rightDropdowns,
+            ],
+          );
+        }
+        return SizedBox(
+          width: double.infinity,
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: context.rSpacing(10),
+            runSpacing: context.rSpacing(8),
+            children: [leftPills, rightDropdowns],
+          ),
+        );
+      },
     );
   }
 }
@@ -146,20 +161,24 @@ class _FilterPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color bgColor;
     final Color textColor;
-    final Color borderColor;
+    final Border? border;
+    final FontWeight fontWeight;
 
     if (isActive) {
       bgColor = AppColors.primary;
       textColor = Colors.white;
-      borderColor = AppColors.primary;
+      border = null;
+      fontWeight = FontWeight.w700;
     } else if (isOverdueTone) {
       bgColor = AppColors.overduePillBg;
       textColor = AppColors.primary;
-      borderColor = AppColors.primary;
+      border = Border.all(color: AppColors.primary, width: 1.0);
+      fontWeight = FontWeight.w700;
     } else {
-      bgColor = AppColors.bgCard;
+      bgColor = AppColors.bgPrimary;
       textColor = AppColors.textMuted;
-      borderColor = AppColors.borderSubtle;
+      border = null;
+      fontWeight = FontWeight.w500;
     }
 
     return Material(
@@ -169,26 +188,32 @@ class _FilterPill extends StatelessWidget {
         key: pillKey,
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
+        hoverColor: Colors.white.withValues(alpha: 0.05),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 34),
           padding: EdgeInsets.symmetric(
-            horizontal: context.rSpacing(13),
-            vertical: context.rSpacing(7),
+            horizontal: context.rSpacing(14),
+            vertical: context.rSpacing(6),
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: borderColor, width: 0.9),
+            border: border,
           ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: textColor,
-              fontSize: context.rFont(11.5, min: 10.5, max: 12.5),
-              fontFamily: 'Inter',
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: context.rFont(12, min: 11, max: 13),
+                  fontFamily: 'Inter',
+                  fontWeight: fontWeight,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -211,10 +236,9 @@ class _ClearChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 34),
           padding: EdgeInsets.symmetric(
             horizontal: context.rSpacing(10),
-            vertical: context.rSpacing(6),
+            vertical: context.rSpacing(5),
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
@@ -308,10 +332,9 @@ class _DropdownPill extends StatelessWidget {
           ),
       ],
       child: Container(
-        constraints: const BoxConstraints(minHeight: 34),
         padding: EdgeInsets.symmetric(
           horizontal: context.rSpacing(10),
-          vertical: context.rSpacing(6),
+          vertical: context.rSpacing(5),
         ),
         decoration: BoxDecoration(
           color: AppColors.bgPrimary,
@@ -322,19 +345,13 @@ class _DropdownPill extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              label,
+              '$label ▾',
               style: TextStyle(
                 color: AppColors.textMuted,
                 fontSize: context.rFont(11, min: 10, max: 12),
                 fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: context.rIcon(15),
-              color: AppColors.textMuted,
             ),
           ],
         ),
