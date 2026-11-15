@@ -1188,6 +1188,7 @@ class _HomePageState extends State<HomePage> {
       return DesktopScheduleMatrixView(
         key: const ValueKey('desktop_schedule_matrix_view'),
         searchQuery: _desktopSearchQuery,
+        onResetSearch: () => setState(() => _desktopSearchQuery = ''),
       );
     }
 
@@ -1198,6 +1199,7 @@ class _HomePageState extends State<HomePage> {
           searchQuery: _desktopSearchQuery,
           teams: _desktopTeams,
           onJoinByCode: _handleJoinTeamByCode,
+          onOpenScheduleTap: () => _onTabSelected(3),
           onTeamSelected: (team) {
             final match = _desktopTeams
                 .where((item) => item.id == team.id)
@@ -1211,20 +1213,14 @@ class _HomePageState extends State<HomePage> {
         );
       }
 
-      return Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 820),
-          child: DashboardTeamPage(
-            key: ValueKey('desktop_team_dashboard_${_selectedTeam!.id}'),
-            userName: widget.userName,
-            teamName: _selectedTeam!.name,
-            teamCode: _selectedTeamCode,
-            memberColors: _selectedTeam!.memberColors,
-            isStandalone: false,
-            onBack: () => setState(() => _selectedTeam = null),
-          ),
-        ),
+      return DashboardTeamPage(
+        key: ValueKey('desktop_team_dashboard_${_selectedTeam!.id}'),
+        userName: widget.userName,
+        teamName: _selectedTeam!.name,
+        teamCode: _selectedTeamCode,
+        memberColors: _selectedTeam!.memberColors,
+        isStandalone: false,
+        onBack: () => setState(() => _selectedTeam = null),
       );
     }
 
@@ -1299,12 +1295,15 @@ class _HomePageState extends State<HomePage> {
                 DesktopOngoingTasksSection(
                   tasks: filteredTasks,
                   totalPendingCount: totalPendingCount,
+                  collegeCount: collegeCount,
+                  personalCount: personalCount,
                   selectedCategory: _selectedCategory,
                   onCategorySelected: (cat) {
                     setState(() => _selectedCategory = cat);
                   },
                   onSeeAllTap: () => _onTabSelected(1),
                   onTaskTap: _openEditTask,
+                  onTaskToggleComplete: _handleTaskCompleted,
                   onClearFilterTap: () {
                     setState(() {
                       _selectedCategory = 'All';

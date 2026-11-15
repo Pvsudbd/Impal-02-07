@@ -34,6 +34,8 @@ class DesktopScheduleMatrixTable extends StatelessWidget {
   final List<ScheduleMatrixItem> items;
   final int? focusedDayIndex;
   final ValueChanged<ScheduleMatrixItem>? onCardTap;
+  final ValueChanged<ScheduleMatrixItem>? onDeleteCard;
+  final ValueChanged<ScheduleMatrixItem>? onToggleAlertCard;
 
   const DesktopScheduleMatrixTable({
     super.key,
@@ -42,6 +44,8 @@ class DesktopScheduleMatrixTable extends StatelessWidget {
     required this.items,
     this.focusedDayIndex,
     this.onCardTap,
+    this.onDeleteCard,
+    this.onToggleAlertCard,
   });
 
   static const double _timeColWidth = 80.0;
@@ -257,23 +261,38 @@ class DesktopScheduleMatrixTable extends StatelessWidget {
     required int slotIndex,
     required bool isTodayColumn,
   }) {
-    ScheduleMatrixItem? match;
-    for (final item in items) {
-      if (item.dayIndex == dayIndex && item.slotIndex == slotIndex) {
-        match = item;
-        break;
-      }
+    final matches = items
+        .where((item) => item.dayIndex == dayIndex && item.slotIndex == slotIndex)
+        .toList();
+
+    Widget buildCard(ScheduleMatrixItem item) {
+      return DesktopScheduleMatrixCard(
+        item: item,
+        onTap: onCardTap == null ? null : () => onCardTap!(item),
+        onDelete: onDeleteCard == null ? null : () => onDeleteCard!(item),
+        onToggleAlert:
+            onToggleAlertCard == null ? null : () => onToggleAlertCard!(item),
+      );
     }
 
     return Container(
       color: isTodayColumn ? const Color(0xFF252B35) : Colors.transparent,
       padding: const EdgeInsets.all(5),
-      child: match == null
+      child: matches.isEmpty
           ? const SizedBox.expand()
-          : DesktopScheduleMatrixCard(
-              item: match,
-              onTap: onCardTap == null ? null : () => onCardTap!(match!),
-            ),
+          : (matches.length == 1
+              ? buildCard(matches.first)
+              : SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (int i = 0; i < matches.length; i++) ...[
+                        if (i > 0) const SizedBox(height: 6),
+                        SizedBox(height: 82, child: buildCard(matches[i])),
+                      ],
+                    ],
+                  ),
+                )),
     );
   }
 }

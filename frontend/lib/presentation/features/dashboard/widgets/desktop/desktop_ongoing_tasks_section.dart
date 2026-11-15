@@ -1,33 +1,153 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/responsive_context.dart';
+import '../../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../models/dashboard_models.dart';
 import 'desktop_task_grid_card.dart';
 
-/// Desktop `Ongoing Tasks` section with header (`See all (N)`), optional category
-/// filter badge, and responsive 2-column task grid.
-class DesktopOngoingTasksSection extends StatelessWidget {
+/// Desktop `Ongoing Tasks` section with header (`See all (N)`), category
+/// filter pills with live counts & custom category creation, and responsive 2-column task grid.
+class DesktopOngoingTasksSection extends StatefulWidget {
   final List<TaskItem> tasks;
   final int totalPendingCount;
+  final int? collegeCount;
+  final int? personalCount;
   final String selectedCategory;
   final ValueChanged<String> onCategorySelected;
   final VoidCallback onSeeAllTap;
   final ValueChanged<TaskItem> onTaskTap;
+  final ValueChanged<TaskItem>? onTaskToggleComplete;
   final VoidCallback? onClearFilterTap;
 
   const DesktopOngoingTasksSection({
     super.key,
     required this.tasks,
     required this.totalPendingCount,
+    this.collegeCount,
+    this.personalCount,
     required this.selectedCategory,
     required this.onCategorySelected,
     required this.onSeeAllTap,
     required this.onTaskTap,
+    this.onTaskToggleComplete,
     this.onClearFilterTap,
   });
 
   @override
+  State<DesktopOngoingTasksSection> createState() =>
+      _DesktopOngoingTasksSectionState();
+}
+
+class _DesktopOngoingTasksSectionState
+    extends State<DesktopOngoingTasksSection> {
+  final List<String> _customCategories = <String>[];
+
+  Future<void> _openAddCategoryDialog() async {
+    final controller = TextEditingController();
+    final created = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.bgCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.borderSubtle),
+        ),
+        title: const Text(
+          'Add Custom Category',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white, fontFamily: 'Inter'),
+          decoration: InputDecoration(
+            hintText: 'e.g., Organization, Lab, Quiz',
+            hintStyle: const TextStyle(color: AppColors.textMuted),
+            filled: true,
+            fillColor: AppColors.bgPrimary,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.borderSubtle),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.borderSubtle),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.primaryAccent),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isNotEmpty) {
+                Navigator.pop(ctx, text);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Add',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (!mounted || created == null || created.isEmpty) return;
+    setState(() {
+      if (!_customCategories.any(
+        (c) => c.toLowerCase() == created.toLowerCase(),
+      )) {
+        _customCategories.add(created);
+      }
+    });
+    widget.onCategorySelected(created);
+    PopUpPemberitahuan.success(
+      context,
+      title: 'Category Added',
+      message: 'Category "$created" added to dashboard quick filters.',
+      icon: Icons.label_outline_rounded,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final categories = <String>['All', 'College', 'Personal', ..._customCategories];
+    final displayedTasks =
+        (widget.selectedCategory == 'All' ||
+                widget.selectedCategory == 'College' ||
+                widget.selectedCategory == 'Personal')
+            ? widget.tasks
+            : widget.tasks.where((task) {
+                final q = widget.selectedCategory.toLowerCase();
+                return task.title.toLowerCase().contains(q) ||
+                    task.course.toLowerCase().contains(q) ||
+                    task.tags.any((t) => t.label.toLowerCase().contains(q));
+              }).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -56,8 +176,13 @@ class DesktopOngoingTasksSection extends StatelessWidget {
                     ),
                   ),
                   _CategoryQuickFilterRow(
-                    selectedCategory: selectedCategory,
-                    onCategorySelected: onCategorySelected,
+                    categories: categories,
+                    selectedCategory: widget.selectedCategory,
+                    totalPendingCount: widget.totalPendingCount,
+                    collegeCount: widget.collegeCount,
+                    personalCount: widget.personalCount,
+                    onCategorySelected: widget.onCategorySelected,
+                    onAddCategoryTap: _openAddCategoryDialog,
                   ),
                 ],
               ),
@@ -65,7 +190,7 @@ class DesktopOngoingTasksSection extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   key: const ValueKey('desktop_see_all_tasks_btn'),
-                  onTap: onSeeAllTap,
+                  onTap: widget.onSeeAllTap,
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -73,7 +198,7 @@ class DesktopOngoingTasksSection extends StatelessWidget {
                       vertical: 6,
                     ),
                     child: Text(
-                      'See all ($totalPendingCount)',
+                      'See all (${widget.totalPendingCount})',
                       style: const TextStyle(
                         color: AppColors.primaryAccent,
                         fontSize: 13,
@@ -90,10 +215,10 @@ class DesktopOngoingTasksSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        if (tasks.isEmpty)
+        if (displayedTasks.isEmpty)
           _EmptyTasksState(
-            selectedCategory: selectedCategory,
-            onClearFilterTap: onClearFilterTap,
+            selectedCategory: widget.selectedCategory,
+            onClearFilterTap: widget.onClearFilterTap,
           )
         else
           LayoutBuilder(
@@ -103,12 +228,16 @@ class DesktopOngoingTasksSection extends StatelessWidget {
               if (!twoColumns) {
                 return Column(
                   children: [
-                    for (int i = 0; i < tasks.length; i++) ...[
+                    for (int i = 0; i < displayedTasks.length; i++) ...[
                       DesktopTaskGridCard(
-                        task: tasks[i],
-                        onTap: () => onTaskTap(tasks[i]),
+                        task: displayedTasks[i],
+                        onTap: () => widget.onTaskTap(displayedTasks[i]),
+                        onToggleComplete: widget.onTaskToggleComplete != null
+                            ? () => widget.onTaskToggleComplete!(displayedTasks[i])
+                            : null,
                       ),
-                      if (i < tasks.length - 1) const SizedBox(height: gap),
+                      if (i < displayedTasks.length - 1)
+                        const SizedBox(height: gap),
                     ],
                   ],
                 );
@@ -119,12 +248,15 @@ class DesktopOngoingTasksSection extends StatelessWidget {
                 spacing: gap,
                 runSpacing: gap,
                 children: [
-                  for (final task in tasks)
+                  for (final task in displayedTasks)
                     SizedBox(
                       width: cardWidth,
                       child: DesktopTaskGridCard(
                         task: task,
-                        onTap: () => onTaskTap(task),
+                        onTap: () => widget.onTaskTap(task),
+                        onToggleComplete: widget.onTaskToggleComplete != null
+                            ? () => widget.onTaskToggleComplete!(task)
+                            : null,
                       ),
                     ),
                 ],
@@ -137,52 +269,138 @@ class DesktopOngoingTasksSection extends StatelessWidget {
 }
 
 class _CategoryQuickFilterRow extends StatelessWidget {
+  final List<String> categories;
   final String selectedCategory;
+  final int totalPendingCount;
+  final int? collegeCount;
+  final int? personalCount;
   final ValueChanged<String> onCategorySelected;
+  final VoidCallback onAddCategoryTap;
 
   const _CategoryQuickFilterRow({
+    required this.categories,
     required this.selectedCategory,
+    required this.totalPendingCount,
+    this.collegeCount,
+    this.personalCount,
     required this.onCategorySelected,
+    required this.onAddCategoryTap,
   });
+
+  int? _countFor(String cat) {
+    switch (cat) {
+      case 'All':
+        return totalPendingCount;
+      case 'College':
+        return collegeCount;
+      case 'Personal':
+        return personalCount;
+      default:
+        return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    const categories = ['All', 'College', 'Personal'];
-
     return Wrap(
       spacing: 6,
+      runSpacing: 6,
       children: [
         for (final cat in categories)
-          InkWell(
-            onTap: () => onCategorySelected(cat),
+          Builder(
+            builder: (context) {
+              final isSelected = selectedCategory == cat;
+              final count = _countFor(cat);
+              return InkWell(
+                onTap: () => onCategorySelected(cat),
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.16)
+                        : AppColors.bgCard,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.borderSubtle,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        cat,
+                        style: TextStyle(
+                          color: isSelected
+                              ? AppColors.primaryAccent
+                              : AppColors.textMuted,
+                          fontSize: 11,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (count != null) ...[
+                        const SizedBox(width: 5),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primary.withValues(alpha: 0.25)
+                                : AppColors.bgPrimary,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: TextStyle(
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppColors.textMuted,
+                              fontSize: 9.5,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        Tooltip(
+          message: 'Add custom category',
+          child: InkWell(
+            key: const ValueKey('desktop_add_category_btn'),
+            onTap: onAddCategoryTap,
             borderRadius: BorderRadius.circular(999),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: selectedCategory == cat
-                    ? AppColors.primary.withValues(alpha: 0.16)
-                    : AppColors.bgCard,
+                color: AppColors.bgCard,
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: selectedCategory == cat
-                      ? AppColors.primary
-                      : AppColors.borderSubtle,
-                  width: 1,
-                ),
+                border: Border.all(color: AppColors.borderSubtle, width: 1),
               ),
-              child: Text(
-                cat,
-                style: TextStyle(
-                  color: selectedCategory == cat
-                      ? AppColors.primaryAccent
-                      : AppColors.textMuted,
-                  fontSize: 11,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w600,
-                ),
+              child: const Icon(
+                Icons.add_rounded,
+                size: 13,
+                color: AppColors.textMuted,
               ),
             ),
           ),
+        ),
       ],
     );
   }

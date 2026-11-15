@@ -4,8 +4,14 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/responsive_context.dart';
 import '../../../../common_widgets/pop_up_pemberitahuan.dart';
+import '../../../schedule/models/schedule_model.dart';
+import '../../../schedule/models/schedule_repository.dart';
+import '../../../schedule/pop_up_konfirmasi_delete.dart';
 import '../../models/desktop_team_directory_models.dart';
 import '../../models/team_model.dart';
+import '../../models/team_task_model.dart';
+import '../../models/team_task_repository.dart';
+import '../../pop_up_create_meeting.dart';
 import 'desktop_team_directory_card.dart';
 import 'desktop_team_right_panel.dart';
 import 'desktop_team_schedule_banner.dart';
@@ -17,6 +23,7 @@ class DesktopGroupDirectoryView extends StatefulWidget {
   final List<DesktopTeamCardData> teams;
   final ValueChanged<TeamModel> onTeamSelected;
   final ValueChanged<String> onJoinByCode;
+  final VoidCallback? onOpenScheduleTap;
 
   const DesktopGroupDirectoryView({
     super.key,
@@ -24,6 +31,7 @@ class DesktopGroupDirectoryView extends StatefulWidget {
     required this.teams,
     required this.onTeamSelected,
     required this.onJoinByCode,
+    this.onOpenScheduleTap,
   });
 
   @override
@@ -33,6 +41,9 @@ class DesktopGroupDirectoryView extends StatefulWidget {
 
 class _DesktopGroupDirectoryViewState extends State<DesktopGroupDirectoryView> {
   TeamDirectoryCategory _selectedCategory = TeamDirectoryCategory.all;
+  final ScheduleRepository _scheduleRepo = ScheduleRepository();
+  final TeamTaskRepository _teamTaskRepo = TeamTaskRepository();
+  int _scheduleIndex = 0;
 
   List<DesktopTeamCardData> get _filteredTeams {
     var list = widget.teams;
@@ -77,44 +88,273 @@ class _DesktopGroupDirectoryViewState extends State<DesktopGroupDirectoryView> {
     );
   }
 
+  List<ScheduleModel> _teamMeetings(List<ScheduleModel> allSchedules) {
+    return allSchedules.where((s) {
+      final type = s.type.trim().toLowerCase();
+      if (type == 'lecture') return false;
+      if (type == 'team' ||
+          type == 'team meeting' ||
+          type == 'meeting' ||
+          type == 'rapat' ||
+          type == 'group') {
+        return true;
+      }
+      final t = s.title.toLowerCase();
+      final n = (s.notes ?? '').toLowerCase();
+      final loc = (s.location ?? '').toLowerCase();
+      if (t.contains('ujian') ||
+          t.contains('uts') ||
+          t.contains('uas') ||
+          t.contains('kuis')) {
+        return false;
+      }
+      return t.contains('meet') ||
+          t.contains('rapat') ||
+          t.contains('diskusi') ||
+          t.contains('team') ||
+          t.contains('tim') ||
+          t.contains('kelompok') ||
+          t.contains('mentoring') ||
+          t.contains('briefing') ||
+          t.contains('standup') ||
+          t.contains('sync') ||
+          t.contains('sprint') ||
+          t.contains('evaluasi') ||
+          t.contains('koordinasi') ||
+          n.contains('meet') ||
+          n.contains('rapat') ||
+          n.contains('diskusi') ||
+          n.contains('kelompok') ||
+          n.contains('mentoring') ||
+          n.contains('sprint') ||
+          loc.contains('group') ||
+          (s.teamName?.trim().isNotEmpty ?? false);
+    }).toList();
+  }
+
+  Future<void> _handleCreateMeeting() async {
+    final created = await PopUpCreateMeeting.show(
+      context,
+      teamName: 'Group IMPAL',
+    );
+    if (mounted) {
+      final meetings = _teamMeetings(_scheduleRepo.schedulesNotifier.value);
+      final idx = created == null
+          ? -1
+          : meetings.indexWhere((m) => m.id == created.id);
+      setState(() {
+        _scheduleIndex = idx >= 0 ? idx : 0;
+      });
+    }
+  }
+
+  Future<void> _handleEditMeeting(ScheduleModel meeting) async {
+    final team = meeting.teamName?.trim() ?? '';
+    await PopUpCreateMeeting.showEdit(
+      context,
+      existingSchedule: meeting,
+      teamName: team.isNotEmpty ? team : 'Group IMPAL',
+    );
+  }
+
+  Future<void> _handleDeleteMeeting(ScheduleModel meeting) async {
+    final confirmed = await PopUpKonfirmasiDelete.show(
+      context,
+      title: 'Delete Meeting?',
+      message:
+          'Are you sure you want to delete "${meeting.title}"? This action cannot be undone.',
+    );
+    if (confirmed == true && mounted) {
+      _scheduleRepo.deleteSchedule(meeting.id);
+      setState(() {
+        if (_scheduleIndex > 0) _scheduleIndex -= 1;
+      });
+      PopUpPemberitahuan.meetingDeleted(context);
+    }
+  }
+
+  Future<void> _handleJoinMeeting(ScheduleModel? meeting) async {
+    final urlText = meeting?.meetingUrl?.trim() ?? '';
+    if (urlText.isEmpty) {
+      await _handleJoinDiscordVoice();
+      return;
+    }
+    final uri = Uri.tryParse(urlText);
+    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) return;
+    }
+    await Clipboard.setData(ClipboardData(text: urlText));
+    if (mounted) {
+      PopUpPemberitahuan.codeCopied(context, code: urlText);
+    }
+  }
+
+  List<DesktopTeamDeadlineItem> _buildLiveDeadlines() {
+    final items = <DesktopTeamDeadlineItem>[
+      ...DesktopTeamDirectoryFixtures.defaultDeadlines,
+    ];
+    final existingTitles = items.map((e) => e.title.toLowerCase()).toSet();
+    final repoTasks = _teamTaskRepo
+        .getTasks('7X29')
+        .where((t) => !t.isDone)
+        .toList();
+
+    for (final task in repoTasks) {
+      if (existingTitles.contains(task.title.toLowerCase())) continue;
+      existingTitles.add(task.title.toLowerCase());
+      late final Color bg;
+      late final Color fg;
+      switch (task.priority) {
+        case TaskPriority.high:
+          bg = const Color(0xFFFF5E4D);
+          fg = Colors.white;
+        case TaskPriority.medium:
+          bg = const Color(0xFFFBBF24);
+          fg = const Color(0xFF1F2937);
+        case TaskPriority.low:
+          bg = const Color(0xFF6EE7B7);
+          fg = const Color(0xFF064E3B);
+      }
+      items.add(
+        DesktopTeamDeadlineItem(
+          title: task.title,
+          timeText: task.timeRange.isNotEmpty
+              ? task.timeRange
+              : task.effectiveDueBadge,
+          priorityLabel: task.priority.label,
+          pillBgColor: bg,
+          pillTextColor: fg,
+        ),
+      );
+    }
+    return items;
+  }
+
+  Widget _buildLiveScheduleBanner(List<ScheduleModel> meetings) {
+    if (meetings.isEmpty) {
+      return DesktopTeamScheduleBanner(
+        title: 'No Team Meeting Scheduled',
+        platformLabel: 'Team Schedule',
+        agendaText: 'Tap Create Meeting to schedule your next team sync.',
+        ctaLabel: 'Create Meeting',
+        onJoinMeetingTap: _handleCreateMeeting,
+        onCreateMeetingTap: _handleCreateMeeting,
+        onSeeAllTap: widget.onOpenScheduleTap,
+      );
+    }
+
+    final safeIndex = _scheduleIndex.clamp(0, meetings.length - 1);
+    final current = meetings[safeIndex];
+    final defaultSch = ScheduleRepository.defaultTeamSchedule;
+    final isUnmodifiedDefault =
+        current.id == defaultSch.id &&
+        current.title == defaultSch.title &&
+        current.location == defaultSch.location &&
+        current.teamName == defaultSch.teamName &&
+        current.notes == defaultSch.notes &&
+        current.date.year == defaultSch.date.year &&
+        current.date.month == defaultSch.date.month &&
+        current.date.day == defaultSch.date.day &&
+        current.timeStart == defaultSch.timeStart;
+
+    final loc = current.location?.trim() ?? '';
+    final team = current.teamName?.trim() ?? '';
+    final notes = current.notes?.trim() ?? '';
+
+    final platformLabel = isUnmodifiedDefault
+        ? 'Discord • Group IMPAL'
+        : '${loc.isNotEmpty ? loc : 'Online'} • ${team.isNotEmpty ? team : 'Team'}';
+    final agendaText = isUnmodifiedDefault
+        ? 'Tomorrow 19:00 WIB • Agenda: Sprint 1 Review & UI Demo Prototype'
+        : (notes.isNotEmpty
+              ? '${current.formattedTime} • Agenda: $notes'
+              : current.formattedTime);
+    final ctaLabel =
+        isUnmodifiedDefault || loc.toLowerCase().contains('discord')
+        ? 'Join Discord Voice'
+        : 'Join Meeting';
+
+    return DesktopTeamScheduleBanner(
+      title: current.title,
+      platformLabel: platformLabel,
+      agendaText: agendaText,
+      ctaLabel: ctaLabel,
+      currentIndex: safeIndex,
+      totalCount: meetings.length,
+      onPrevTap: meetings.length > 1
+          ? () {
+              setState(() {
+                _scheduleIndex =
+                    (safeIndex - 1 + meetings.length) % meetings.length;
+              });
+            }
+          : null,
+      onNextTap: meetings.length > 1
+          ? () {
+              setState(() {
+                _scheduleIndex = (safeIndex + 1) % meetings.length;
+              });
+            }
+          : null,
+      onJoinMeetingTap: () => _handleJoinMeeting(current),
+      onCreateMeetingTap: _handleCreateMeeting,
+      onSeeAllTap: widget.onOpenScheduleTap,
+      onEditMeetingTap: () => _handleEditMeeting(current),
+      onDeleteMeetingTap: () => _handleDeleteMeeting(current),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalTeams = widget.teams.length;
     final filtered = _filteredTeams;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 20, 32, 24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              key: const ValueKey('desktop_group_directory_left_scroll'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  DesktopTeamScheduleBanner(
-                    onJoinMeetingTap: _handleJoinDiscordVoice,
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        _scheduleRepo.schedulesNotifier,
+        _teamTaskRepo,
+      ]),
+      builder: (context, _) {
+        final meetings = _teamMeetings(_scheduleRepo.schedulesNotifier.value);
+        final deadlines = _buildLiveDeadlines();
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(32, 20, 32, 24),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  key: const ValueKey('desktop_group_directory_left_scroll'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildLiveScheduleBanner(meetings),
+                      const SizedBox(height: 22),
+                      _buildTeamsHeaderRow(context, totalTeams),
+                      const SizedBox(height: 14),
+                      _buildTeamsGrid(context, filtered),
+                    ],
                   ),
-                  const SizedBox(height: 22),
-                  _buildTeamsHeaderRow(context, totalTeams),
-                  const SizedBox(height: 14),
-                  _buildTeamsGrid(context, filtered),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(width: 24),
+              SingleChildScrollView(
+                key: const ValueKey('desktop_group_directory_right_scroll'),
+                child: DesktopTeamRightPanel(
+                  deadlines: deadlines,
+                  activities: DesktopTeamDirectoryFixtures.defaultActivities,
+                  onJoinByCode: widget.onJoinByCode,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 24),
-          SingleChildScrollView(
-            key: const ValueKey('desktop_group_directory_right_scroll'),
-            child: DesktopTeamRightPanel(
-              deadlines: DesktopTeamDirectoryFixtures.defaultDeadlines,
-              activities: DesktopTeamDirectoryFixtures.defaultActivities,
-              onJoinByCode: widget.onJoinByCode,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

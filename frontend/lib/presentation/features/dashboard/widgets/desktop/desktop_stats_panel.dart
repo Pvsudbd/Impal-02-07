@@ -3,14 +3,16 @@ import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/responsive_context.dart';
 import '../../../../common_widgets/impal_schedule_card.dart';
+import '../../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../../schedule/models/schedule_model.dart';
 import '../../../schedule/models/schedule_repository.dart';
+import '../../../smart_system/models/smart_priority_repository.dart';
 import '../../models/dashboard_models.dart';
 
-/// Right-hand desktop panel (`350 dp`) displaying `Today's Schedule`,
-/// KPI summary cards (`Avg. Progress` & `Task Pending`), `Task Load Distribution`
-/// donut chart, and `Weekly Productivity` bar chart.
-class DesktopStatsPanel extends StatelessWidget {
+/// Right-hand desktop panel (`350 dp`) displaying `Today's Schedule` carousel,
+/// live `AI Smart Priority` status banner, KPI summary cards (`Avg. Progress` &
+/// `Task Pending`), `Task Load Distribution` donut chart, and `Weekly Productivity`.
+class DesktopStatsPanel extends StatefulWidget {
   final ScheduleItem fallbackSchedule;
   final int avgProgressPercent;
   final int pendingCount;
@@ -41,56 +43,47 @@ class DesktopStatsPanel extends StatelessWidget {
   });
 
   @override
+  State<DesktopStatsPanel> createState() => _DesktopStatsPanelState();
+}
+
+class _DesktopStatsPanelState extends State<DesktopStatsPanel> {
+  int _scheduleIndex = 0;
+
+  static int _statusRank(String status) {
+    switch (status.trim().toLowerCase()) {
+      case 'overdue':
+        return 0;
+      case 'ongoing':
+        return 1;
+      default:
+        return 2;
+    }
+  }
+
+  static DateTime _parseStartDateTime(ScheduleModel s) {
+    final parts = s.timeStart.trim().split(':');
+    final h = parts.isNotEmpty ? (int.tryParse(parts[0]) ?? 0) : 0;
+    final m = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+    return DateTime(s.date.year, s.date.month, s.date.day, h, m);
+  }
+
+  List<ScheduleModel> _sortSchedules(List<ScheduleModel> raw) {
+    final copy = List<ScheduleModel>.of(raw);
+    copy.sort((a, b) {
+      final rankCmp = _statusRank(a.status).compareTo(_statusRank(b.status));
+      if (rankCmp != 0) return rankCmp;
+      return _parseStartDateTime(a).compareTo(_parseStartDateTime(b));
+    });
+    return copy;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. Today's Schedule header + live card
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                "Today's Schedule",
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: context.rFont(18, min: 16, max: 20),
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            InkWell(
-              onTap: onScheduleSeeAllTap,
-              borderRadius: BorderRadius.circular(8),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.circle, size: 7, color: AppColors.primary),
-                    SizedBox(width: 5),
-                    Text(
-                      'Live Ongoing',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 12,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _buildLiveScheduleCard(),
+        // 1. Today's Schedule header + multi-schedule switcher + live card
+        _buildTodayScheduleSection(context),
         const SizedBox(height: 20),
 
         // 2. Dashboard Statistics Header + AI Smart Priority shortcut
@@ -130,7 +123,7 @@ class DesktopStatsPanel extends StatelessWidget {
               message: 'Open AI Smart Priority',
               child: InkWell(
                 key: const ValueKey('desktop_smart_priority_btn'),
-                onTap: onSmartPriorityTap,
+                onTap: widget.onSmartPriorityTap,
                 borderRadius: BorderRadius.circular(10),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
@@ -159,6 +152,10 @@ class DesktopStatsPanel extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 12),
+
+        // Live AI Smart Priority Banner (Mobile Parity)
+        _buildLiveAiSmartPriorityBanner(),
         const SizedBox(height: 16),
 
         // 3. KPI Row
@@ -166,14 +163,14 @@ class DesktopStatsPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: _KpiAvgProgressCard(percent: avgProgressPercent),
+              child: _KpiAvgProgressCard(percent: widget.avgProgressPercent),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _KpiTaskPendingCard(
-                pendingCount: pendingCount,
-                completedCount: completedCount,
-                urgentDeadlineCount: urgentDeadlineCount,
+                pendingCount: widget.pendingCount,
+                completedCount: widget.completedCount,
+                urgentDeadlineCount: widget.urgentDeadlineCount,
               ),
             ),
           ],
@@ -182,8 +179,8 @@ class DesktopStatsPanel extends StatelessWidget {
 
         // 4. Task Load Distribution Donut Card
         _TaskLoadDistributionCard(
-          collegeCount: collegeTaskCount,
-          personalCount: personalTaskCount,
+          collegeCount: widget.collegeTaskCount,
+          personalCount: widget.personalTaskCount,
         ),
         const SizedBox(height: 18),
 
@@ -193,25 +190,30 @@ class DesktopStatsPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildLiveScheduleCard() {
+  Widget _buildTodayScheduleSection(BuildContext context) {
     return ValueListenableBuilder<List<ScheduleModel>>(
       valueListenable: ScheduleRepository().schedulesNotifier,
       builder: (context, repoSchedules, _) {
-        ScheduleModel item;
-        if (repoSchedules.isNotEmpty) {
-          final ongoing = repoSchedules.where(
-            (s) => s.status.toLowerCase() == 'ongoing',
-          );
-          item = ongoing.isNotEmpty ? ongoing.first : repoSchedules.first;
+        final sorted = repoSchedules.isNotEmpty
+            ? _sortSchedules(repoSchedules)
+            : <ScheduleModel>[];
+
+        final int safeIndex = sorted.isEmpty
+            ? 0
+            : _scheduleIndex.clamp(0, sorted.length - 1);
+
+        final ScheduleModel item;
+        if (sorted.isNotEmpty) {
+          item = sorted[safeIndex];
         } else {
-          final timeTokens = fallbackSchedule.time
+          final timeTokens = widget.fallbackSchedule.time
               .replaceAll('WIB', '')
               .split('-')
               .map((s) => s.trim())
               .toList();
           item = ScheduleModel(
             id: 'desktop_fallback_schedule',
-            title: fallbackSchedule.courseCode,
+            title: widget.fallbackSchedule.courseCode,
             date: DateTime.now(),
             timeStart: timeTokens.isNotEmpty && timeTokens.first.isNotEmpty
                 ? timeTokens.first
@@ -220,18 +222,263 @@ class DesktopStatsPanel extends StatelessWidget {
                 ? timeTokens[1]
                 : '11:30',
             type: 'Lecture',
-            location: fallbackSchedule.location,
+            location: widget.fallbackSchedule.location,
             isAlertEnabled: true,
           );
         }
 
-        return ImpalScheduleCard(
-          schedule: item,
-          isLast: true,
-          onTap: () => onEditSchedule(item),
-          onEdit: () => onEditSchedule(item),
-          onDelete: () => onDeleteSchedule(item),
-          onToggleAlert: () => onToggleScheduleAlert(item),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    "Today's Schedule",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: context.rFont(18, min: 15.5, max: 20),
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+                if (sorted.length > 1) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgCard,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.borderSubtle,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InkWell(
+                          key: const ValueKey('desktop_stats_schedule_prev'),
+                          onTap: () {
+                            setState(() {
+                              _scheduleIndex =
+                                  (safeIndex - 1 + sorted.length) %
+                                  sorted.length;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: const Padding(
+                            padding: EdgeInsets.all(2),
+                            child: Icon(
+                              Icons.chevron_left_rounded,
+                              size: 14,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 3),
+                          child: Text(
+                            '${safeIndex + 1}/${sorted.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10.5,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ),
+                        InkWell(
+                          key: const ValueKey('desktop_stats_schedule_next'),
+                          onTap: () {
+                            setState(() {
+                              _scheduleIndex =
+                                  (safeIndex + 1) % sorted.length;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: const Padding(
+                            padding: EdgeInsets.all(2),
+                            child: Icon(
+                              Icons.chevron_right_rounded,
+                              size: 14,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: widget.onScheduleSeeAllTap,
+                  borderRadius: BorderRadius.circular(8),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.circle, size: 7, color: AppColors.primary),
+                        SizedBox(width: 4),
+                        Text(
+                          'See all',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ImpalScheduleCard(
+              schedule: item,
+              isLast: true,
+              onTap: () => widget.onEditSchedule(item),
+              onEdit: () => widget.onEditSchedule(item),
+              onDelete: () => widget.onDeleteSchedule(item),
+              onToggleAlert: () => widget.onToggleScheduleAlert(item),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLiveAiSmartPriorityBanner() {
+    return ListenableBuilder(
+      listenable: SmartPriorityRepository.instance,
+      builder: (context, _) {
+        final repo = SmartPriorityRepository.instance;
+        final isActive = repo.isEngineActive;
+        final top = repo.topPriority;
+
+        return Material(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            key: const ValueKey('desktop_ai_smart_priority_banner'),
+            onTap: widget.onSmartPriorityTap,
+            borderRadius: BorderRadius.circular(14),
+            hoverColor: Colors.white.withValues(alpha: 0.03),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isActive
+                      ? PopUpPemberitahuan.positiveColor.withValues(alpha: 0.35)
+                      : AppColors.borderSubtle,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? AppColors.primaryAccent
+                          : const Color(0xFF475569),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.auto_awesome_rounded,
+                      color: Colors.white,
+                      size: 17,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            const Flexible(
+                              child: Text(
+                                'AI Smart Priority',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (isActive
+                                        ? PopUpPemberitahuan.positiveColor
+                                        : AppColors.textMuted)
+                                    .withValues(alpha: 0.16),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                isActive ? 'Mamdani Active' : 'Paused',
+                                style: TextStyle(
+                                  color: isActive
+                                      ? PopUpPemberitahuan.positiveColor
+                                      : AppColors.textMuted,
+                                  fontSize: 9.5,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isActive && top != null
+                              ? '#1 ${top.title} • Score ${top.score.toStringAsFixed(1)}'
+                              : 'Click to configure Mamdani Fuzzy rules',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 10.5,
+                            fontFamily: 'Inter',
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: AppColors.primaryAccent,
+                  ),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );

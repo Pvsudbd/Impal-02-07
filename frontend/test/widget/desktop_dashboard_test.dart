@@ -142,6 +142,49 @@ void main() {
       expect(find.byType(DesktopSidebar), findsNothing);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      'supports expandable task card details, AI Smart Priority banner, and custom category button',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1440, 980);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(buildHarness(const Size(1440, 980)));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('desktop_ai_smart_priority_banner')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('desktop_add_category_btn')),
+          findsOneWidget,
+        );
+
+        final firstExpandBtn = find.byWidgetPredicate(
+          (w) =>
+              w.key is ValueKey<String> &&
+              (w.key as ValueKey<String>).value.startsWith(
+                    'desktop_task_expand_',
+                  ),
+        );
+        expect(firstExpandBtn, findsWidgets);
+        await tester.ensureVisible(firstExpandBtn.first);
+        await tester.tap(firstExpandBtn.first);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('Centeroid Defuzzyfication'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Date Created'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }
 

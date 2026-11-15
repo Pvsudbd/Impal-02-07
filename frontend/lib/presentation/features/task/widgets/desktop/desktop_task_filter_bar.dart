@@ -95,7 +95,7 @@ class DesktopTaskFilterBar extends StatelessWidget {
         _DropdownPill(
           menuKey: const ValueKey('desktop_type_dropdown'),
           label: 'Type: $taskTypeFilter',
-          options: const ['All', 'College', 'Personal', 'Team'],
+          options: const ['All', 'College', 'Personal', 'Team', 'Completed'],
           selected: taskTypeFilter,
           onSelected: onTaskTypeChanged,
         ),

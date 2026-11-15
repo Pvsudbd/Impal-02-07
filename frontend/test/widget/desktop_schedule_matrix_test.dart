@@ -208,6 +208,57 @@ void main() {
       expect(find.byType(DesktopScheduleMatrixView), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      'supports inline schedule alert toggle, delete confirmation with UNDO, and All directory',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1440, 980);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(buildHarness(const Size(1440, 980)));
+        await tester.pumpAndSettle();
+
+        final alertBtn = find.byKey(
+          const ValueKey('desktop_schedule_alert_mtx_alpro_data'),
+        );
+        expect(alertBtn, findsOneWidget);
+        await tester.tap(alertBtn);
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+
+        final deleteBtn = find.byKey(
+          const ValueKey('desktop_schedule_delete_mtx_alpro_data'),
+        );
+        expect(deleteBtn, findsOneWidget);
+        await tester.tap(deleteBtn);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Delete Schedule?'), findsOneWidget);
+        await tester.tap(find.text('Delete'));
+        await tester.pump();
+        // Wait for PopUpPemberitahuan (2800ms + 280ms transition) to dismiss
+        // while the 4s UNDO SnackBar remains active above the barrier.
+        await tester.pump(const Duration(milliseconds: 3200));
+        await tester.pump();
+        expect(find.text('UNDO'), findsOneWidget);
+
+        await tester.tap(find.text('UNDO'));
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
+        expect(find.text('ALPRO & DATA'), findsOneWidget);
+
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_schedule_view_All')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Schedule Directory (All)'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }
 

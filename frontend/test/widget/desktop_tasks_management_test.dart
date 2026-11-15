@@ -291,6 +291,50 @@ void main() {
       expect((sortRect.center.dy - typeRect.center.dy).abs(), lessThan(4.0));
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      'supports quick task completion, Completed Tasks section, and Type: Completed filter',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1440, 980);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(buildHarness(const Size(1440, 980)));
+        await tester.pumpAndSettle();
+
+        final quickCompleteBtn = find.byKey(
+          const ValueKey('desktop_task_quick_complete_task_2'),
+        );
+        expect(quickCompleteBtn, findsOneWidget);
+        await tester.ensureVisible(quickCompleteBtn);
+        await tester.tap(quickCompleteBtn);
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Completed Tasks'), findsOneWidget);
+
+        await tester.tap(find.byKey(const ValueKey('desktop_type_dropdown')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Completed').last);
+        await tester.pumpAndSettle();
+        expect(find.textContaining('Type: Completed'), findsOneWidget);
+
+        // Restore task_2 back to active so repository state remains clean
+        final reopenBtn = find.byKey(
+          const ValueKey('desktop_task_quick_complete_task_2'),
+        );
+        expect(reopenBtn, findsOneWidget);
+        await tester.ensureVisible(reopenBtn);
+        await tester.tap(reopenBtn);
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }
 

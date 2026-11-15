@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/responsive_context.dart';
+import 'widgets/desktop/desktop_team_workspace_panel.dart';
 import 'package:flutter/services.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
@@ -294,10 +296,39 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       ],
     );
 
+    final Widget workspaceBody = context.isDesktop
+        ? Padding(
+            padding: EdgeInsets.fromLTRB(
+              context.rSpacing(24),
+              context.rSpacing(16),
+              context.rSpacing(24),
+              context.rSpacing(24),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: dashboardScrollContent),
+                SizedBox(width: context.rSpacing(24)),
+                SizedBox(
+                  width: 340,
+                  child: SingleChildScrollView(
+                    key: const ValueKey('desktop_workspace_right_scroll'),
+                    child: DesktopTeamWorkspacePanel(
+                      teamCode: widget.teamCode,
+                      teamName: widget.teamName,
+                      onManageMembersTap: _showTeamMembersModal,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        : dashboardScrollContent;
+
     // If embedded inside HomePage shell, return scroll content directly
     // to prevent duplicate Scaffolds, SafeAreas, and BottomNavBars
     if (!widget.isStandalone) {
-      return dashboardScrollContent;
+      return workspaceBody;
     }
 
     final scaffoldContent = Stack(

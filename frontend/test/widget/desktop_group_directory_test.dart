@@ -301,5 +301,51 @@ void main() {
         expect(find.text('My Teams (4 Aktif)'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'supports live Team Schedule controls and 2-column Desktop Group Workspace on DashboardTeamPage',
+      (WidgetTester tester) async {
+        await pumpAtSize(
+          tester,
+          const HomePage(userName: 'Rafiq', initialTab: 2),
+          const Size(1440, 980),
+        );
+
+        expect(
+          find.byKey(const ValueKey('desktop_team_create_meeting_btn')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('desktop_team_edit_meeting_btn')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('desktop_team_delete_meeting_btn')),
+          findsOneWidget,
+        );
+
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_team_open_dir_impal')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DashboardTeamPage), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('desktop_workspace_members_card')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('desktop_workspace_sprint_card')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('desktop_workspace_resources_card')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }

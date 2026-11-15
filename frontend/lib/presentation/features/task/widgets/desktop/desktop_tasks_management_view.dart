@@ -10,6 +10,7 @@ import '../../../team/dashboard_team_page.dart';
 import '../../../team/models/team_model.dart';
 import '../../../team/models/team_repository.dart';
 import '../../../team/models/team_task_repository.dart';
+import '../../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../edit_task.dart';
 import '../../models/task_repository.dart';
 import 'desktop_task_filter_bar.dart';
@@ -141,6 +142,8 @@ class _DesktopTasksManagementViewState
       list = list.where((t) => !t.isCollegeTask && !t.isTeamTask).toList();
     } else if (_taskTypeFilter == 'Team') {
       list = list.where((t) => t.isTeamTask).toList();
+    } else if (_taskTypeFilter == 'Completed') {
+      list = list.where((t) => t.isCompleted).toList();
     }
 
     if (_selectedDate != null) {
@@ -266,6 +269,22 @@ class _DesktopTasksManagementViewState
     }
   }
 
+  void _handleToggleTaskCompletion(TaskItemModel task) {
+    final bool willBeCompleted = !task.isCompleted;
+    if (task.id.startsWith('team_task_')) {
+      final realId = task.id.replaceFirst('team_task_', '');
+      _teamTaskRepo.toggleTaskDone('7X29', realId);
+    } else {
+      _taskRepo.toggleTaskCompletion(task.id);
+    }
+
+    if (willBeCompleted) {
+      PopUpPemberitahuan.taskCompleted(context, taskName: task.title);
+    } else {
+      PopUpPemberitahuan.taskReopened(context, taskName: task.title);
+    }
+  }
+
   List<DesktopCollaboratorSummary> _buildCollaborators() {
     final teamTasks = _teamTaskRepo.getTasks('7X29');
     if (teamTasks.isEmpty) return const [];
@@ -339,10 +358,13 @@ class _DesktopTasksManagementViewState
         .length;
 
     final filtered = _applyFiltersAndSort(allTasks);
-    final todayTasks = filtered
+    final activeFiltered = filtered.where((t) => !t.isCompleted).toList();
+    final completedFiltered = filtered.where((t) => t.isCompleted).toList();
+
+    final todayTasks = activeFiltered
         .where((t) => _classifyBucket(t) == _TaskScheduleBucket.today)
         .toList();
-    final upcomingTasks = filtered
+    final upcomingTasks = activeFiltered
         .where((t) => _classifyBucket(t) != _TaskScheduleBucket.today)
         .toList();
 
@@ -410,48 +432,67 @@ class _DesktopTasksManagementViewState
                 if (filtered.isEmpty)
                   _EmptyDesktopTasksState(onReset: _clearExtraFilters)
                 else ...[
-                  if (showTodaySection) ...[
-                    _TaskSectionHeader(
-                      title: 'Today Tasks',
-                      countLabel:
-                          '${todayTasks.length} ${todayTasks.length == 1 ? 'Task' : 'Tasks'}',
-                      rightLabel: 'Due Saturday, 11 Oct 2026',
-                    ),
-                    SizedBox(height: context.rSpacing(14)),
-                    if (todayTasks.isEmpty)
-                      const _SectionEmptyPlaceholder(
-                        message:
-                            'No tasks scheduled for today under current filters.',
-                      )
-                    else
-                      _DesktopTaskGrid(
-                        tasks: todayTasks,
-                        onTaskTap: _handleTaskTap,
+                  if (_taskTypeFilter != 'Completed') ...[
+                    if (showTodaySection) ...[
+                      _TaskSectionHeader(
+                        title: 'Today Tasks',
+                        countLabel:
+                            '${todayTasks.length} ${todayTasks.length == 1 ? 'Task' : 'Tasks'}',
+                        rightLabel: 'Due Saturday, 11 Oct 2026',
                       ),
-                    if (showUpcomingSection)
-                      SizedBox(height: context.rSpacing(22)),
+                      SizedBox(height: context.rSpacing(14)),
+                      if (todayTasks.isEmpty)
+                        const _SectionEmptyPlaceholder(
+                          message:
+                              'No tasks scheduled for today under current filters.',
+                        )
+                      else
+                        _DesktopTaskGrid(
+                          tasks: todayTasks,
+                          onTaskTap: _handleTaskTap,
+                          onToggleComplete: _handleToggleTaskCompletion,
+                        ),
+                      if (showUpcomingSection)
+                        SizedBox(height: context.rSpacing(22)),
+                    ],
+                    if (showUpcomingSection) ...[
+                      _TaskSectionHeader(
+                        title: _selectedTimeFilter == 'Overdue'
+                            ? 'Overdue Tasks'
+                            : 'Upcoming & Overdue Tasks',
+                        countLabel:
+                            '${upcomingTasks.length} ${upcomingTasks.length == 1 ? 'Task' : 'Tasks'}',
+                        actionLabel: 'View Timeline Calendar →',
+                        onActionTap: widget.onOpenScheduleTimeline,
+                      ),
+                      SizedBox(height: context.rSpacing(14)),
+                      if (upcomingTasks.isEmpty)
+                        const _SectionEmptyPlaceholder(
+                          message:
+                              'No upcoming or overdue tasks match your current filters.',
+                        )
+                      else
+                        _DesktopTaskGrid(
+                          tasks: upcomingTasks,
+                          onTaskTap: _handleTaskTap,
+                          onToggleComplete: _handleToggleTaskCompletion,
+                        ),
+                    ],
                   ],
-                  if (showUpcomingSection) ...[
+                  if (completedFiltered.isNotEmpty) ...[
+                    if (_taskTypeFilter != 'Completed')
+                      SizedBox(height: context.rSpacing(22)),
                     _TaskSectionHeader(
-                      title: _selectedTimeFilter == 'Overdue'
-                          ? 'Overdue Tasks'
-                          : 'Upcoming & Overdue Tasks',
+                      title: 'Completed Tasks',
                       countLabel:
-                          '${upcomingTasks.length} ${upcomingTasks.length == 1 ? 'Task' : 'Tasks'}',
-                      actionLabel: 'View Timeline Calendar →',
-                      onActionTap: widget.onOpenScheduleTimeline,
+                          '${completedFiltered.length} ${completedFiltered.length == 1 ? 'Task' : 'Tasks'}',
                     ),
                     SizedBox(height: context.rSpacing(14)),
-                    if (upcomingTasks.isEmpty)
-                      const _SectionEmptyPlaceholder(
-                        message:
-                            'No upcoming or overdue tasks match your current filters.',
-                      )
-                    else
-                      _DesktopTaskGrid(
-                        tasks: upcomingTasks,
-                        onTaskTap: _handleTaskTap,
-                      ),
+                    _DesktopTaskGrid(
+                      tasks: completedFiltered,
+                      onTaskTap: _handleTaskTap,
+                      onToggleComplete: _handleToggleTaskCompletion,
+                    ),
                   ],
                 ],
               ],
@@ -650,10 +691,12 @@ class _TaskSectionHeader extends StatelessWidget {
 class _DesktopTaskGrid extends StatelessWidget {
   final List<TaskItemModel> tasks;
   final ValueChanged<TaskItemModel> onTaskTap;
+  final ValueChanged<TaskItemModel>? onToggleComplete;
 
   const _DesktopTaskGrid({
     required this.tasks,
     required this.onTaskTap,
+    this.onToggleComplete,
   });
 
   @override
@@ -673,6 +716,9 @@ class _DesktopTaskGrid extends StatelessWidget {
                   priorityBgColor: tasks[i].priorityBadgeColor,
                   priorityTextColor: tasks[i].priorityTextColor,
                   onTap: () => onTaskTap(tasks[i]),
+                  onToggleComplete: onToggleComplete != null
+                      ? () => onToggleComplete!(tasks[i])
+                      : null,
                 ),
                 if (i < tasks.length - 1) SizedBox(height: gap),
               ],
@@ -694,6 +740,9 @@ class _DesktopTaskGrid extends StatelessWidget {
                   priorityBgColor: task.priorityBadgeColor,
                   priorityTextColor: task.priorityTextColor,
                   onTap: () => onTaskTap(task),
+                  onToggleComplete: onToggleComplete != null
+                      ? () => onToggleComplete!(task)
+                      : null,
                 ),
               ),
           ],
