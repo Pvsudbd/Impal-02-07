@@ -10,6 +10,12 @@ abstract class AppColors {
   /// Desktop outer container / backdrop (#1E222B)
   static const Color bgSecondary = Color(0xFF1E222B);
 
+  /// Desktop left sidebar surface (#1F232B)
+  static const Color bgSidebar = Color(0xFF1F232B);
+
+  /// Weekly chart bar track background (#222730)
+  static const Color chartTrack = Color(0xFF222730);
+
   /// Card, elevated containers, and bottom nav background (#323846)
   static const Color bgCard = Color(0xFF323846);
 
@@ -76,6 +82,18 @@ abstract class AppColors {
 
   /// External / Other activity accent (#38EF7D)
   static const Color categoryExternal = Color(0xFF38EF7D);
+
+  /// Desktop progress & positive metric mint (#61D2B4)
+  static const Color mintAccent = Color(0xFF61D2B4);
+
+  /// Sky blue due / nav badge background (#8FC7FF)
+  static const Color skyBadge = Color(0xFF8FC7FF);
+
+  /// Sky blue badge foreground text (#1E3A8A)
+  static const Color skyBadgeText = Color(0xFF1E3A8A);
+
+  /// Muted slate bar fill (#5A738E)
+  static const Color chartSlate = Color(0xFF5A738E);
 
   // --- Layered Shadow Tokens ---
   /// Floating active nav button glow shadow
