@@ -250,6 +250,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 prefixIcon: Icons.lock_outline_rounded,
                 controller: _newPasswordController,
                 isPassword: true,
+                textInputAction: TextInputAction.next,
                 errorText: _newPasswordError,
               ),
 
@@ -262,6 +263,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 prefixIcon: Icons.lock_outline_rounded,
                 controller: _confirmPasswordController,
                 isPassword: true,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _handleSavePassword(),
                 errorText: _confirmPasswordError,
               ),
 

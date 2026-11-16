@@ -305,6 +305,8 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                     hintText: 'Enter registered email or Student ID',
                     prefixIcon: Icons.mail_outline_rounded,
                     keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _handleSendRecovery(),
                     errorText: _emailError,
                     onTap: TopToast.dismiss,
                   )

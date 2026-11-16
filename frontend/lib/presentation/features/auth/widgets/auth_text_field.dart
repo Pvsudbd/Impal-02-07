@@ -15,6 +15,8 @@ class AuthTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onTap;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   const AuthTextField({
     super.key,
@@ -28,6 +30,8 @@ class AuthTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.onChanged,
     this.onTap,
+    this.textInputAction,
+    this.onSubmitted,
   });
 
   @override
@@ -93,6 +97,8 @@ class _AuthTextFieldState extends State<AuthTextField> {
                   onTap: widget.onTap,
                   onChanged: widget.onChanged,
                   keyboardType: widget.keyboardType,
+                  textInputAction: widget.textInputAction,
+                  onSubmitted: widget.onSubmitted,
                   inputFormatters: widget.inputFormatters,
                   style: const TextStyle(
                     color: Colors.white,

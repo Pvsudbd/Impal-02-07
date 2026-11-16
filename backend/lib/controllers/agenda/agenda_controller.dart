@@ -116,6 +116,16 @@ class AgendaController {
         );
       }
 
+      if (!_isValidTimeRange(startTime, endTime)) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Jam selesai ($endTime) harus lebih besar dari jam mulai ($startTime).',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
       final idAgenda = _uuid.v4();
 
       await CourseSchedule.create(
@@ -175,6 +185,18 @@ class AgendaController {
       final courseCode = (body['courseCode'] ?? body['course']) as String?;
       final day = body['day'] as String?;
       final room = (body['room'] ?? body['location']) as String?;
+
+      final effectiveStart = startTime ?? existing.startTime;
+      final effectiveEnd = endTime ?? existing.endTime;
+      if (!_isValidTimeRange(effectiveStart, effectiveEnd)) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Jam selesai ($effectiveEnd) harus lebih besar dari jam mulai ($effectiveStart).',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
 
       await CourseSchedule.update(
         idAgenda: idAgenda,
@@ -312,6 +334,16 @@ class AgendaController {
         );
       }
 
+      if (!_isValidTimeRange(startTime, endTime)) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Jam selesai ($endTime) harus lebih besar dari jam mulai ($startTime).',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
       final idAgenda = _uuid.v4();
 
       await PersonalSchedule.create(
@@ -373,6 +405,18 @@ class AgendaController {
       final category = body['category'] as String?;
       final location = (body['location'] ?? body['room']) as String?;
       final notes = body['notes'] as String?;
+
+      final effectiveStart = startTime ?? existing.startTime;
+      final effectiveEnd = endTime ?? existing.endTime;
+      if (!_isValidTimeRange(effectiveStart, effectiveEnd)) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Jam selesai ($effectiveEnd) harus lebih besar dari jam mulai ($effectiveStart).',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
 
       await PersonalSchedule.update(
         idAgenda: idAgenda,
@@ -528,6 +572,28 @@ class AgendaController {
   }
 
   // ─── UTILITY HELPERS ─────────────────────────────────────────────────────────
+
+  // Validasi apakah waktu selesai strictly lebih besar dari waktu mulai
+  static bool _isValidTimeRange(dynamic startTime, dynamic endTime) {
+    if (startTime == null || endTime == null) return true;
+    int? toMinutes(dynamic t) {
+      final clean = t.toString().trim();
+      final match = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(clean);
+      if (match != null) {
+        final h = int.parse(match.group(1)!);
+        final m = int.parse(match.group(2)!);
+        return h * 60 + m;
+      }
+      return null;
+    }
+
+    final start = toMinutes(startTime);
+    final end = toMinutes(endTime);
+    if (start != null && end != null) {
+      return end > start;
+    }
+    return true;
+  }
 
   // Pastikan format TIME MySQL adalah "HH:MM:SS"
   static String _normalizeTime(String timeStr) {

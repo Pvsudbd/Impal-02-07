@@ -212,6 +212,21 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
   Future<void> _submitForm() async {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
+
+    // Validasi: Jam selesai harus setelah jam mulai
+    final startMinutes = _startTime.hour * 60 + _startTime.minute;
+    final endMinutes = _endTime.hour * 60 + _endTime.minute;
+    if (endMinutes <= startMinutes) {
+      PopUpPemberitahuan.show(
+        context,
+        title: 'Invalid Schedule Time',
+        message: 'End time must be after start time (${_formatTime(_startTime)}).',
+        icon: Icons.access_time_filled_rounded,
+        iconBgColor: PopUpPemberitahuan.negativeColor,
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     final isEdit = widget.isEdit;
