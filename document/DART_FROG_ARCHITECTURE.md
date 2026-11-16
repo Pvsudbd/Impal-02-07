@@ -69,7 +69,7 @@ Sistem Backend Impal-02-07 mengadopsi framework **Dart Frog**. Dart Frog adalah 
                             v
             +-------------------------------+
             |     Remote PostgreSQL DB      |
-            |       (172.22.245.175)        |
+            |       (10.147.115.231)        |
             +-------------------------------+
 ```
 

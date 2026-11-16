@@ -48,7 +48,7 @@ flowchart TD
     subgraph DataAccess ["Database Layer"]
         AgendaH --> Models["CourseSchedule / PersonalSchedule"]
         Models --> PgConn["PostgreSQL Connection (db.dart)"]
-        PgConn --> RemoteDB[("PostgreSQL Remote 172.22.245.175")]
+        PgConn --> RemoteDB[("PostgreSQL Yoga 10.147.115.231")]
     end
     
     RootH -->|"Response.json"| Client
@@ -138,7 +138,7 @@ Koneksi database dikelola melalui kelas `Database` di `lib/config/db.dart`:
 
 1. **Inisialisasi Lingkungan**:
    - Membaca file `.env` untuk mengambil konfigurasi kredensial:
-     - `DB_HOST`: Alamat IP database server (default: `172.22.245.175`).
+     - `DB_HOST`: Alamat IP database server Yoga (default: `10.147.115.231` via ZeroTier).
      - `DB_PORT`: Port database (default: `5432`).
      - `DB_NAME`: Nama database (`db_manajemen_tugas`).
      - `DB_USER`: Username (`Todolist_Dev`).

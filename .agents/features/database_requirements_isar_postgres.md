@@ -43,7 +43,7 @@ Dokumentasi spesifikasi kebutuhan basis data dan arsitektur penyimpanan hybrid (
 
 ## 🐸 Mandat Framework Backend: Dart Frog
 1. **Framework REST API**: Seluruh arsitektur backend dikembangkan menggunakan atau mengikuti standar **Dart Frog** (`dart_frog`).
-2. **Konektor PostgreSQL**: Dart Frog berkomunikasi dengan PostgreSQL remote (`172.22.245.175:5432`) menggunakan driver resmi `package:postgres`.
+2. **Konektor PostgreSQL**: Dart Frog berkomunikasi dengan PostgreSQL remote (`10.147.115.231:5432`) menggunakan driver resmi `package:postgres`.
 3. **Format Standar Response**: Seluruh response API wajib dibungkus dalam format standar JSON Envelope Dart Frog:
    ```json
    {

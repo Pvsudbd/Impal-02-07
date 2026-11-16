@@ -38,7 +38,7 @@ class Database {
   static Future<Connection> getConnection() async {
     init();
     if (_connection == null || !_connection!.isOpen) {
-      final host = _env['DB_HOST'] ?? '172.22.245.175';
+      final host = _env['DB_HOST'] ?? '10.147.115.231';
       final port = int.tryParse(_env['DB_PORT'] ?? '5432') ?? 5432;
       final user = _env['DB_USER'] ?? 'Todolist_Dev';
       final password = _env['DB_PASSWORD'] ?? 'ProjectImpal227';

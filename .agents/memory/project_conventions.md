@@ -48,7 +48,7 @@
 
 ### 9. Standar Teknologi Backend (Dart Frog & PostgreSQL)
 - **Framework REST API**: **Dart Frog** (`dart_frog`) sebagai framework resmi server backend.
-- **Koneksi Database**: **PostgreSQL 15+** remote server (`172.22.245.175:5432`) menggunakan driver resmi `package:postgres`.
+- **Koneksi Database**: **PostgreSQL 15+** remote server Yoga (`10.147.115.231:5432`) menggunakan driver resmi `package:postgres`.
 - **Format Envelope JSON**: `{ "status": "success" | "error", "message": "...", "data": ... }`.
 - **Arsitektur Sinkronisasi**: Isar DB (Frontend) $\leftrightarrow$ Dart Frog (Backend Gateway) $\leftrightarrow$ PostgreSQL (Remote Database).
 - **Dokumentasi Arsitektur Lengkap**: [backend_dart_frog_architecture.md](file:///D:/Telkom%20University/Semester%205/TodoList/Impal-02-07/.agents/features/backend_dart_frog_architecture.md) & [DART_FROG_ARCHITECTURE.md](file:///D:/Telkom%20University/Semester%205/TodoList/Impal-02-07/document/DART_FROG_ARCHITECTURE.md).
