@@ -17,6 +17,7 @@ dependencies:
   dotenv: ^4.2.0
   mysql_client: ^0.0.27
   postgres: ^3.6.0
+  dart_frog: ^1.2.6
 
 dev_dependencies:
   lints: ^3.0.0

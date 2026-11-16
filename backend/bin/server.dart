@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'dart:io';
-import 'package:shelf/shelf.dart';
-import 'package:shelf/shelf_io.dart' as io;
-import 'package:shelf_router/shelf_router.dart';
+import 'package:dart_frog/dart_frog.dart';
 import '../lib/config/db.dart';
+import '../lib/middleware/cors_middleware.dart';
+import '../lib/middleware/database_provider.dart';
 import '../lib/routes/auth/auth_routes.dart';
 import '../lib/routes/agenda/agenda_routes.dart';
 import '../lib/routes/profile/profile_routes.dart';
@@ -13,108 +12,108 @@ void main(List<String> args) async {
 
   final app = Router();
 
-  // Root route - cek server hidup
-  app.get('/', (Request request) {
-    return Response.ok(
-      jsonEncode({'message': 'Backend Impal-02-07 (Dart Shelf) berjalan!'}),
-      headers: {'Content-Type': 'application/json'},
+  // ─── ROOT ENDPOINT ────────────────────────────────────────────────────────
+  app.get('/', (RequestContext context) {
+    return Response.json(
+      body: {
+        'status': 'success',
+        'framework': 'Dart Frog',
+        'version': '1.2.6',
+        'message': 'Backend Impal-02-07 (Dart Frog REST API) berjalan dengan sukses!',
+        'endpoints': {
+          'root': '/',
+          'testDb': '/test-db',
+          'tables': '/tables',
+          'auth': '/api/auth',
+          'agenda': '/api/agenda',
+          'course': '/api/agenda/course',
+          'personal': '/api/agenda/personal',
+          'profile': '/api/profile',
+        },
+      },
     );
   });
 
-  // Test DB connection
-  app.get('/test-db', (Request request) async {
+  // ─── TEST DB CONNECTION ───────────────────────────────────────────────────
+  app.get('/test-db', (RequestContext context) async {
     try {
       final results = await Database.query('SELECT COUNT(*) AS total FROM users');
       final total = results.rows.isNotEmpty ? results.rows.first.colAt(0) : 0;
-      return Response.ok(
-        jsonEncode({
+      return Response.json(
+        body: {
           'status': 'success',
-          'message': 'Koneksi ke database berhasil!',
+          'framework': 'Dart Frog',
+          'message': 'Koneksi ke database PostgreSQL berhasil!',
           'database': Database.dbName,
           'totalUsers': total,
           'totalStudents': total,
-        }),
-        headers: {'Content-Type': 'application/json'},
+        },
       );
     } catch (e) {
       print('[SERVER] DB connection error: $e');
-      return Response.internalServerError(
-        body: jsonEncode({
+      return Response.json(
+        statusCode: HttpStatus.internalServerError,
+        body: {
           'status': 'error',
+          'framework': 'Dart Frog',
           'message': 'Gagal terhubung ke database server: $e',
-        }),
-        headers: {'Content-Type': 'application/json'},
+        },
       );
     }
   });
 
-  // Test get tables
-  app.get('/tables', (Request request) async {
+  // ─── TEST GET TABLES ──────────────────────────────────────────────────────
+  app.get('/tables', (RequestContext context) async {
     try {
       final results = await Database.query(
         "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename",
       );
       final tables = results.rows.map((r) => r.colAt(0)?.toString() ?? '').toList();
-      return Response.ok(
-        jsonEncode({
+      return Response.json(
+        body: {
           'status': 'success',
+          'framework': 'Dart Frog',
           'database': Database.dbName,
           'tables': tables,
-        }),
-        headers: {'Content-Type': 'application/json'},
+        },
       );
     } catch (e) {
-      return Response.internalServerError(
-        body: jsonEncode({
+      return Response.json(
+        statusCode: HttpStatus.internalServerError,
+        body: {
           'status': 'error',
+          'framework': 'Dart Frog',
           'message': e.toString(),
-        }),
-        headers: {'Content-Type': 'application/json'},
+        },
       );
     }
   });
 
-  // Mount Auth routes under /api/auth
-  app.mount('/api/auth', AuthRoutes().router);
+  // ─── MOUNT SUB-ROUTERS ────────────────────────────────────────────────────
+  // 1. Mount Auth routes under /api/auth
+  app.mount('/api/auth', fromShelfHandler(AuthRoutes().router));
 
-  // Mount Agenda routes under /api/agenda
-  app.mount('/api/agenda', AgendaRoutes().router);
+  // 2. Mount Agenda routes under /api/agenda
+  app.mount('/api/agenda', fromShelfHandler(AgendaRoutes().router));
 
-  // Mount Profile routes under /api/profile, /api/user, and /api/student (for backwards compatibility)
-  final profileRoutes = ProfileRoutes().router;
+  // 3. Mount Profile routes under /api/profile, /api/user, and /api/student
+  final profileRoutes = fromShelfHandler(ProfileRoutes().router);
   app.mount('/api/profile', profileRoutes);
   app.mount('/api/user', profileRoutes);
   app.mount('/api/student', profileRoutes);
 
-  // Robust CORS Middleware for Chrome / Flutter Web
-  Handler corsMiddleware(Handler innerHandler) {
-    return (Request request) async {
-      final corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Origin, Content-Type, Authorization, Accept',
-      };
-
-      if (request.method == 'OPTIONS') {
-        return Response.ok('', headers: corsHeaders);
-      }
-
-      final response = await innerHandler(request);
-      return response.change(headers: corsHeaders);
-    };
-  }
-
-  // Global Pipeline with CORS & Logger
+  // ─── GLOBAL DART FROG PIPELINE ────────────────────────────────────────────
   final handler = const Pipeline()
-      .addMiddleware(corsMiddleware)
-      .addMiddleware(logRequests())
-      .addHandler(app);
+      .addMiddleware(corsMiddleware())
+      .addMiddleware(requestLogger())
+      .addMiddleware(databaseProvider())
+      .addHandler(app.call);
 
   final port = int.tryParse(Database.envPort) ?? 3000;
-  final server = await io.serve(handler, InternetAddress.anyIPv4, port);
+  final server = await serve(handler, InternetAddress.anyIPv4, port);
 
   print('========================================================');
-  print('🚀 Backend Dart (Shelf) berjalan di http://localhost:${server.port}');
+  print('🚀 Backend Dart Frog berjalan di http://localhost:${server.port}');
   print('📊 Test DB : http://localhost:${server.port}/test-db');
   print('📋 Tabel   : http://localhost:${server.port}/tables');
   print('🔐 Auth    : http://localhost:${server.port}/api/auth/login');

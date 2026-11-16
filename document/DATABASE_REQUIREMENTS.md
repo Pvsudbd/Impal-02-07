@@ -434,3 +434,6 @@ CREATE INDEX idx_sub_task_assigned ON group_sub_task(id_assigned_to);
    - `/api/profile` / `/api/user` $\rightarrow$ Manajemen Akun & Profil Pengguna.
    - `/api/tasks` $\rightarrow$ Manajemen Tugas & Prioritas Fuzzy.
    - `/api/groups` $\rightarrow$ Manajemen Kelompok, Rapat Tim, & Sub-Tugas.
+
+> [!NOTE]
+> Untuk penjelasan mendalam mengenai cara kerja framework Dart Frog, *request-response lifecycle*, *dependency injection* via `provider<T>`, dan pengujian server, silakan merujuk ke dokumen: [DART_FROG_ARCHITECTURE.md](file:///D:/Telkom%20University/Semester%205/TodoList/Impal-02-07/document/DART_FROG_ARCHITECTURE.md) dan [.agents/features/backend_dart_frog_architecture.md](file:///D:/Telkom%20University/Semester%205/TodoList/Impal-02-07/.agents/features/backend_dart_frog_architecture.md).
