@@ -1,0 +1,7 @@
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/build/**"
+    - "build/**"
+  errors:
+    experimental_member_use: ignore
