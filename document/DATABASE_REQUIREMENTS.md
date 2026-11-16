@@ -405,7 +405,32 @@ CREATE INDEX idx_sub_task_assigned ON group_sub_task(id_assigned_to);
 | Parameter | Sisi Frontend (Local Storage) | Sisi Backend (Primary Storage) |
 |:---|:---|:---|
 | **Teknologi** | **Isar DB** (Flutter Embedded NoSQL) | **PostgreSQL 15+** (Relational Database) |
-| **Konektor** | Isar Native Binary Driver (Dart C-FFI / MDBX) | `postgres: ^3.1.2` Pool via Dart Frog |
+| **Konektor** | Isar Native Binary Driver (Dart C-FFI / MDBX) | `postgres: ^3.6.0` Pool via Dart Frog |
 | **Peran Utama** | Cache lokal, offline-first, latency 0ms, reaktif | Single source of truth, audit trail, relasi 3NF, multi-user sync |
 | **Data yang Disimpan** | Task, Agenda, To-Do, Cache Profil, Cache Tim | Seluruh 13 entitas, hash password, relational constraint |
 | **Strategi Sinkronisasi** | Push-Pull Delta Sync dengan flag `isSynced` | REST API via Dart Frog Controllers |
+
+---
+
+## 8. Spesifikasi Arsitektur Backend API (Dart Frog & PostgreSQL)
+
+1. **Framework Resmi**: **Dart Frog** (`dart_frog`) digunakan sebagai standar framework backend RESTful API.
+2. **Koneksi Database Remote**: Menggunakan driver resmi `postgres: ^3.6.0` yang terhubung ke instance PostgreSQL server (`172.22.245.175:5432`) dengan database `db_manajemen_tugas`.
+3. **Standar Format Response (JSON Envelope)**:
+   Seluruh endpoint mengembalikan format response standar yang konsisten:
+   ```json
+   {
+     "status": "success" | "error",
+     "message": "Pesan deskripsi operasional",
+     "data": {} // Objek tunggal atau array data
+   }
+   ```
+4. **Middleware & Otentikasi**:
+   - JWT Bearer Token Middleware untuk validasi sesi dan ekstraksi identitas (`idUser`, `email`).
+   - Proteksi BOLA (Broken Object Level Authorization) pada seluruh operasi mutasi (Create, Update, Delete) untuk memastikan user hanya dapat mengakses atau memodifikasi data miliknya sendiri.
+5. **Konvensi Modularitas Endpoint**:
+   - `/api/auth` $\rightarrow$ Registrasi, Login, Forgot Password, Reset Password.
+   - `/api/agenda` $\rightarrow$ Manajemen Jadwal (Lecture, Meeting, External).
+   - `/api/profile` / `/api/user` $\rightarrow$ Manajemen Akun & Profil Pengguna.
+   - `/api/tasks` $\rightarrow$ Manajemen Tugas & Prioritas Fuzzy.
+   - `/api/groups` $\rightarrow$ Manajemen Kelompok, Rapat Tim, & Sub-Tugas.

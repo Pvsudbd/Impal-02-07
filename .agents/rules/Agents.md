@@ -53,8 +53,22 @@ Demi menjaga keamanan dan riwayat version control proyek:
 
 ---
 
-## 5. 🏗️ Konvensi Struktur Folder Backend (Feature-Based Folder Grouping)
+## 5. 🏗️ Standar Framework Backend & Konvensi Struktur Folder (Dart Frog & Feature-Based Grouping)
 
+### A. Mandat Framework Backend: Dart Frog
+1. **Framework Standar Resmi**: Seluruh pengembangan endpoint REST API di backend **WAJIB** menggunakan atau mengikuti arsitektur **Dart Frog** (`dart_frog`).
+2. **Koneksi Database**: Menggunakan driver resmi `package:postgres` (PostgreSQL 15+ remote server) dengan parameterized queries aman tanpa SQL Injection.
+3. **Standar Response Envelope**: Semua response JSON wajib mengikuti format baku Dart Frog:
+   ```json
+   {
+     "status": "success" | "error",
+     "message": "Pesan informasi yang jelas",
+     "data": {} // Objek hasil atau list data
+   }
+   ```
+4. **Middleware & Context**: Menggunakan JWT Authentication Middleware untuk menginjeksi context user (`idUser`, `email`) ke setiap request handler, serta menerapkan proteksi BOLA/IDOR pada level middleware/controller.
+
+### B. Konvensi Struktur Folder Berbasis Fitur (Feature-Based Grouping)
 Ketika mengimplementasikan atau menambahkan fitur baru di backend (`backend/lib/`), Agent **WAJIB** mengorganisasi file ke dalam subfolder bernama fitur tersebut di setiap layernya agar terstruktur, rapi, dan mudah dirawat:
 - `lib/controllers/<nama_fitur>/`
 - `lib/models/<nama_fitur>/`

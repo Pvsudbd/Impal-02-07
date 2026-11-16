@@ -1,4 +1,4 @@
-ka# 🗄️ Fitur: Database Requirements & Hybrid Storage (Isar DB & PostgreSQL)
+# 🗄️ Fitur: Database Requirements & Hybrid Storage (Isar DB & PostgreSQL)
 <!-- Lokasi File: .agents/features/database_requirements_isar_postgres.md -->
 
 Dokumentasi spesifikasi kebutuhan basis data dan arsitektur penyimpanan hybrid (*Offline-First*) yang memetakan tabel lokal (**Isar DB**) dan database online (**PostgreSQL**) melalui middleware **Dart Frog**.
@@ -38,3 +38,20 @@ Dokumentasi spesifikasi kebutuhan basis data dan arsitektur penyimpanan hybrid (
 1. `password_hash` **HANYA** disimpan pada tabel `users` di database server. Local Isar DB tidak pernah menyimpan hash kata sandi.
 2. Frontend hanya menyimpan JWT token pada secure storage.
 3. Seluruh koleksi Isar DB dilengkapi metadata pelacakan sinkronisasi: `remoteId`, `updatedAt`, `isSynced`, dan `syncAction`.
+
+---
+
+## 🐸 Mandat Framework Backend: Dart Frog
+1. **Framework REST API**: Seluruh arsitektur backend dikembangkan menggunakan atau mengikuti standar **Dart Frog** (`dart_frog`).
+2. **Konektor PostgreSQL**: Dart Frog berkomunikasi dengan PostgreSQL remote (`172.22.245.175:5432`) menggunakan driver resmi `package:postgres`.
+3. **Format Standar Response**: Seluruh response API wajib dibungkus dalam format standar JSON Envelope Dart Frog:
+   ```json
+   {
+     "status": "success" | "error",
+     "message": "Deskripsi hasil operasi",
+     "data": {} // atau []
+   }
+   ```
+4. **Middleware Injection**:
+   - `RequestContext` menyuntikkan sesi autentikasi pengguna (`idUser`, `email`, `role`).
+   - Proteksi keamanan BOLA/IDOR dan validasi kepemilikan data sebelum melakukan mutasi data relasional.

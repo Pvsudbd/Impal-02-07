@@ -45,3 +45,9 @@
 
 ### 8. Dokumentasi & Roadmap Wajib
 - Selesai mengerjakan fitur, bugfix, atau refactoring, **WAJIB** memperbarui [ROADMAP_AUDIT_DAN_PENINGKATAN.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/ROADMAP_AUDIT_DAN_PENINGKATAN.md).
+
+### 9. Standar Teknologi Backend (Dart Frog & PostgreSQL)
+- **Framework REST API**: **Dart Frog** (`dart_frog`) sebagai framework resmi server backend.
+- **Koneksi Database**: **PostgreSQL 15+** remote server (`172.22.245.175:5432`) menggunakan driver resmi `package:postgres`.
+- **Format Envelope JSON**: `{ "status": "success" | "error", "message": "...", "data": ... }`.
+- **Arsitektur Sinkronisasi**: Isar DB (Frontend) $\leftrightarrow$ Dart Frog (Backend Gateway) $\leftrightarrow$ PostgreSQL (Remote Database).
