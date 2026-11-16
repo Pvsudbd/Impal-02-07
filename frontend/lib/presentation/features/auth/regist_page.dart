@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/top_toast.dart';
+import '../../../data/datasources/auth_remote_datasource.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import 'login_page.dart';
 import 'terms_privacy_page.dart';
@@ -69,7 +70,7 @@ class _RegisterState extends State<Register> {
   bool get _isMatch =>
       _confirmCtrl.text.isNotEmpty && _pwdCtrl.text == _confirmCtrl.text;
 
-  void _handleRegister() {
+  Future<void> _handleRegister() async {
     final name = _nameCtrl.text.trim();
     final email = _emailCtrl.text.trim();
 
@@ -125,16 +126,38 @@ class _RegisterState extends State<Register> {
     }
 
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 600), () async {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
 
+    try {
+      await AuthRemoteDatasource.register(
+        name: name,
+        email: email,
+        password: _pwdCtrl.text,
+      );
+
+      if (!mounted) return;
       PopUpPemberitahuan.accountCreated(context, name: name);
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (!mounted) return;
       Navigator.pushReplacement(context, AuthFadeRoute(page: const Login()));
-    });
+    } on Exception catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      PopUpPemberitahuan.error(
+        context,
+        title: 'Registrasi Gagal',
+        message: msg,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      PopUpPemberitahuan.error(
+        context,
+        title: 'Registrasi Gagal',
+        message: e.toString(),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _navigateBack() {
