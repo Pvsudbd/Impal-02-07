@@ -503,8 +503,24 @@ class UserProfileRepository with ChangeNotifier {
     if (userName != null && userName.trim().isNotEmpty && userName != 'Jarvis') {
       _profile = _profile.copyWith(fullName: userName);
     }
+    _loadLocalProfile();
     fetchProfileFromApi();
     _initialized = true;
+  }
+
+  Future<void> _loadLocalProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final phone = prefs.getString('user_phone');
+      final bio = prefs.getString('user_bio');
+      if ((phone != null && phone.isNotEmpty) || (bio != null && bio.isNotEmpty)) {
+        _profile = _profile.copyWith(
+          phoneNumber: (phone != null && phone.isNotEmpty) ? phone : _profile.phoneNumber,
+          bio: (bio != null && bio.isNotEmpty) ? bio : _profile.bio,
+        );
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   /// Sinkronisasi profil mahasiswa dari backend API
@@ -512,6 +528,8 @@ class UserProfileRepository with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
+      final savedPhone = prefs.getString('user_phone');
+      final savedBio = prefs.getString('user_bio');
       if (token == null || token.isEmpty) return;
 
       final res = await ApiClient.get('/api/profile', token: token);
@@ -529,6 +547,8 @@ class UserProfileRepository with ChangeNotifier {
           fullName: name,
           studentId: studentId.isNotEmpty ? studentId : _profile.studentId,
           email: email.isNotEmpty ? email : _profile.email,
+          phoneNumber: (savedPhone != null && savedPhone.isNotEmpty) ? savedPhone : _profile.phoneNumber,
+          bio: (savedBio != null && savedBio.isNotEmpty) ? savedBio : _profile.bio,
           avatarInitials: initials.isNotEmpty ? initials : _profile.avatarInitials,
           tasksDoneCount: stats != null ? (stats['tasksDoneCount'] as int? ?? _profile.tasksDoneCount) : _profile.tasksDoneCount,
           tasksPendingCount: stats != null ? (stats['tasksPendingCount'] as int? ?? _profile.tasksPendingCount) : _profile.tasksPendingCount,
@@ -544,7 +564,16 @@ class UserProfileRepository with ChangeNotifier {
   void updateProfile(UserProfileModel newProfile) {
     _profile = newProfile;
     notifyListeners();
+    _saveLocalProfile(newProfile);
     _syncToBackend(newProfile);
+  }
+
+  Future<void> _saveLocalProfile(UserProfileModel p) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_phone', p.phoneNumber);
+      await prefs.setString('user_bio', p.bio);
+    } catch (_) {}
   }
 
   Future<void> _syncToBackend(UserProfileModel newProfile) async {

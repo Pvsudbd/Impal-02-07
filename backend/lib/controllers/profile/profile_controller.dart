@@ -81,6 +81,23 @@ class ProfileController {
         );
       }
 
+      if (name.trim().length < 2) {
+        return Response.badRequest(
+          body: jsonEncode({'status': 'error', 'message': 'Nama lengkap minimal 2 karakter.'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      if (email != null && email.trim().isNotEmpty) {
+        final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+        if (!emailRegex.hasMatch(email.trim())) {
+          return Response.badRequest(
+            body: jsonEncode({'status': 'error', 'message': 'Format email tidak valid.'}),
+            headers: {'Content-Type': 'application/json'},
+          );
+        }
+      }
+
       await ProfileModel.updateProfile(
         idUser,
         name: name.trim(),
