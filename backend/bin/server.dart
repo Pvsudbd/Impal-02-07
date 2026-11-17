@@ -6,6 +6,8 @@ import '../lib/middleware/database_provider.dart';
 import '../lib/routes/auth/auth_routes.dart';
 import '../lib/routes/agenda/agenda_routes.dart';
 import '../lib/routes/profile/profile_routes.dart';
+import '../lib/routes/kelompok/group_routes.dart';
+import '../lib/routes/todo/todo_routes.dart';
 
 void main(List<String> args) async {
   Database.init();
@@ -29,6 +31,9 @@ void main(List<String> args) async {
           'course': '/api/agenda/course',
           'personal': '/api/agenda/personal',
           'profile': '/api/profile',
+          'groups': '/api/groups',
+          'joinGroup': '/api/groups/join',
+          'todo': '/api/todo',
         },
       },
     );
@@ -102,6 +107,14 @@ void main(List<String> args) async {
   app.mount('/api/user', profileRoutes);
   app.mount('/api/student', profileRoutes);
 
+  // 4. Mount Group/Team routes under /api/groups and /api/team
+  final groupRoutes = fromShelfHandler(GroupRoutes().router);
+  app.mount('/api/groups', groupRoutes);
+  app.mount('/api/team', groupRoutes);
+
+  // 5. Mount Todo routes under /api/todo
+  app.mount('/api/todo', fromShelfHandler(TodoRoutes().router));
+
   // ─── GLOBAL DART FROG PIPELINE ────────────────────────────────────────────
   final handler = const Pipeline()
       .addMiddleware(corsMiddleware())
@@ -122,5 +135,8 @@ void main(List<String> args) async {
   print('📅 Personal: http://localhost:${server.port}/api/agenda/personal');
   print('👤 Profil  : http://localhost:${server.port}/api/profile');
   print('👤 User    : http://localhost:${server.port}/api/user');
+  print('👥 Kelompok: http://localhost:${server.port}/api/groups');
+  print('👥 Join Tim: http://localhost:${server.port}/api/groups/join');
+  print('📝 To-Do   : http://localhost:${server.port}/api/todo');
   print('========================================================');
 }
