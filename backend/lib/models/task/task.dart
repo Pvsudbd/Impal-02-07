@@ -1,5 +1,7 @@
 class Task {
   String _taskId;
+  String _userId;
+  String _courseCode;
   String _taskTitle;
   String _description;
   DateTime _deadline;
@@ -11,6 +13,8 @@ class Task {
 
   Task({
     required String taskId,
+    String userId = '',
+    String courseCode = '',
     required String taskTitle,
     required String description,
     required DateTime deadline,
@@ -20,6 +24,8 @@ class Task {
     required bool isFuzzyAuto,
     bool isCompleted = false,
   })  : _taskId = taskId,
+        _userId = userId,
+        _courseCode = courseCode,
         _taskTitle = taskTitle,
         _description = description,
         _deadline = deadline,
@@ -29,7 +35,7 @@ class Task {
         _isFuzzyAuto = isFuzzyAuto,
         _isCompleted = isCompleted;
 
-  // Conversion for API JSON (Node.js <-> Dart)
+  // Conversion for API JSON
   factory Task.fromJson(Map<String, dynamic> json) {
     DateTime parseDate(dynamic val) {
       if (val == null) return DateTime.now();
@@ -38,13 +44,15 @@ class Task {
     }
 
     return Task(
-      taskId: json['id_task'] ?? '',
-      taskTitle: json['task_title'] ?? json['title'] ?? '',
-      description: json['description'] ?? '',
+      taskId: json['id_task']?.toString() ?? '',
+      userId: json['id_user']?.toString() ?? json['userId']?.toString() ?? '',
+      courseCode: json['course_code']?.toString() ?? json['courseCode']?.toString() ?? '',
+      taskTitle: json['task_title']?.toString() ?? json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
       deadline: parseDate(json['deadline']),
       gradeWeight: (json['grade_weight'] as num?)?.toDouble() ?? 0.0,
       priorityScore: (json['priority_score'] as num?)?.toDouble() ?? 0.0,
-      priority: json['priority'] ?? 'MEDIUM',
+      priority: json['priority']?.toString() ?? 'MEDIUM',
       isFuzzyAuto: json['is_fuzzy_auto'] == 1 || json['is_fuzzy_auto'] == true,
       isCompleted: json['is_completed'] == 1 || json['is_completed'] == true,
     );
@@ -53,6 +61,8 @@ class Task {
   Map<String, dynamic> toJson() {
     return {
       'id_task': _taskId,
+      'id_user': _userId,
+      'course_code': _courseCode,
       'task_title': _taskTitle,
       'description': _description,
       'deadline': _deadline.toIso8601String(),
@@ -66,6 +76,8 @@ class Task {
 
   // Getters
   String get taskId => _taskId;
+  String get userId => _userId;
+  String get courseCode => _courseCode;
   String get taskTitle => _taskTitle;
   String get description => _description;
   DateTime get deadline => _deadline;
@@ -75,6 +87,9 @@ class Task {
   bool get isFuzzyAuto => _isFuzzyAuto;
   bool get isCompleted => _isCompleted;
   bool get isOverdue => _deadline.isBefore(DateTime.now());
+
+  set userId(String val) => _userId = val;
+  set courseCode(String val) => _courseCode = val;
 
   // Methods
   int calculateRemainingTime() {
