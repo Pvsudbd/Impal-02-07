@@ -48,6 +48,9 @@ class _TeamListPageState extends State<TeamListPage> {
   void initState() {
     super.initState();
     ScheduleRepository().init();
+    TeamRepository().fetchTeamsFromApi().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -181,6 +184,9 @@ class _TeamListContentViewState extends State<TeamListContentView> {
   void initState() {
     super.initState();
     ScheduleRepository().init();
+    TeamRepository().fetchTeamsFromApi().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _openSchedulePage() {
@@ -242,28 +248,57 @@ class _TeamListContentViewState extends State<TeamListContentView> {
   void _showJoinTeamDialog() async {
     final code = await PopUpJoinTeam.show(context);
     if (!mounted || code == null || code.trim().isEmpty) return;
-    PopUpPemberitahuan.teamJoined(context, inviteCode: code);
+
+    final trimmedCode = code.trim().toUpperCase();
+    final res = await TeamRepository().joinTeamApi(trimmedCode);
+
+    if (!mounted) return;
+
+    if (res['status'] == 'success') {
+      setState(() {});
+      final teamName = res['data']?['group_name']?.toString();
+      PopUpPemberitahuan.teamJoined(
+        context,
+        teamName: teamName,
+        inviteCode: trimmedCode,
+      );
+    } else {
+      final errorMsg = res['message']?.toString() ?? 'Failed to join team.';
+      PopUpPemberitahuan.teamWarning(
+        context,
+        title: 'Join Team Failed',
+        message: errorMsg,
+      );
+    }
   }
 
   void _showCreateTeamDialog() async {
     final result = await PopUpCreateTeam.show(context);
     if (!mounted || result == null || result.name.trim().isEmpty) return;
-    final newTeam = TeamModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+
+    final res = await TeamRepository().createTeamApi(
       name: result.name,
-      memberColors: const [
-        Color(0xFFF3A683),
-        Color(0xFF786FA6),
-        Color(0xFF63CDDA),
-      ],
-    );
-    TeamRepository().addTeam(newTeam);
-    setState(() {});
-    PopUpPemberitahuan.teamCreated(
-      context,
-      teamName: result.name,
+      description: result.description,
       inviteCode: result.inviteCode,
     );
+
+    if (!mounted) return;
+
+    if (res['status'] == 'success') {
+      setState(() {});
+      PopUpPemberitahuan.teamCreated(
+        context,
+        teamName: result.name,
+        inviteCode: res['data']?['invite_code']?.toString() ?? result.inviteCode,
+      );
+    } else {
+      final errorMsg = res['message']?.toString() ?? 'Failed to create team.';
+      PopUpPemberitahuan.teamWarning(
+        context,
+        title: 'Create Team Failed',
+        message: errorMsg,
+      );
+    }
   }
 
   @override
