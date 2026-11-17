@@ -17,10 +17,12 @@ import '../schedule/pop_up_konfirmasi_delete.dart';
 import '../schedule/schedule_form_page.dart';
 import '../schedule/schedule_page.dart';
 import '../schedule/widgets/desktop/desktop_schedule_matrix_view.dart';
+import '../schedule/widgets/desktop/desktop_schedule_modal.dart';
 import '../smart_system/models/smart_priority_repository.dart';
 import '../smart_system/smart_priority_page.dart';
 import '../task/models/task_repository.dart';
 import '../task/task_page.dart';
+import '../task/widgets/desktop/desktop_personal_task_modal.dart';
 import '../task/widgets/desktop/desktop_tasks_management_view.dart';
 import '../team/dashboard_team_page.dart';
 import '../team/models/desktop_team_directory_models.dart';
@@ -224,6 +226,8 @@ class _HomePageState extends State<HomePage> {
   void _openEditSchedule(ScheduleModel item) async {
     if (item.type.trim().toLowerCase() == 'meeting') {
       await PopUpCreateMeeting.showEdit(context, existingSchedule: item);
+    } else if (context.isDesktop) {
+      await DesktopScheduleModal.show(context, schedule: item);
     } else {
       await Navigator.of(context).push<bool>(
         MaterialPageRoute(builder: (_) => ScheduleFormPage(schedule: item)),
@@ -323,16 +327,30 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    final updatedModel = await Navigator.of(context).push<TaskItemModel>(
-      MaterialPageRoute(
-        builder: (_) => EditTaskPage(
-          task: item.toTaskItemModel(),
-          userInitials: widget.userName.length >= 2
-              ? widget.userName.substring(0, 2).toUpperCase()
-              : 'JS',
-        ),
-      ),
-    );
+    final updatedModel = context.isDesktop
+        ? await DesktopPersonalTaskModal.show(
+            context,
+            task: item.toTaskItemModel(),
+            userInitials: _userInitials,
+            onTaskDeleted: () {
+              if (!mounted) return;
+              setState(() {
+                _tasks.removeWhere(
+                  (t) =>
+                      (t.id.isNotEmpty && t.id == item.id) ||
+                      t.title == item.title,
+                );
+              });
+            },
+          )
+        : await Navigator.of(context).push<TaskItemModel>(
+            MaterialPageRoute(
+              builder: (_) => EditTaskPage(
+                task: item.toTaskItemModel(),
+                userInitials: _userInitials,
+              ),
+            ),
+          );
 
     if (updatedModel != null && mounted) {
       setState(() {
@@ -748,16 +766,24 @@ class _HomePageState extends State<HomePage> {
       : 'JS';
 
   Future<void> _openCreateTask() async {
-    final newTask = await Navigator.of(context).push<TaskItemModel>(
-      MaterialPageRoute(
-        builder: (_) => CreateTaskPage(
-          userInitials: _userInitials,
-          onTaskCreated: (task) {
-            TaskRepository().addTask(task);
-          },
-        ),
-      ),
-    );
+    final newTask = context.isDesktop
+        ? await DesktopPersonalTaskModal.show(
+            context,
+            userInitials: _userInitials,
+            onTaskCreated: (task) {
+              TaskRepository().addTask(task);
+            },
+          )
+        : await Navigator.of(context).push<TaskItemModel>(
+            MaterialPageRoute(
+              builder: (_) => CreateTaskPage(
+                userInitials: _userInitials,
+                onTaskCreated: (task) {
+                  TaskRepository().addTask(task);
+                },
+              ),
+            ),
+          );
 
     if (newTask != null && mounted) {
       if (!TaskRepository().tasks.any((t) => t.id == newTask.id)) {
@@ -770,6 +796,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openCreateSchedule() async {
+    if (context.isDesktop) {
+      await DesktopScheduleModal.show(context);
+      return;
+    }
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => const ScheduleFormPage(),

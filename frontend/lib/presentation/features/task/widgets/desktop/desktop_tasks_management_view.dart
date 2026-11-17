@@ -13,6 +13,7 @@ import '../../../team/models/team_task_repository.dart';
 import '../../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../edit_task.dart';
 import '../../models/task_repository.dart';
+import 'desktop_personal_task_modal.dart';
 import 'desktop_task_filter_bar.dart';
 import 'desktop_task_kpi_row.dart';
 import 'desktop_tasks_right_panel.dart';
@@ -254,14 +255,11 @@ class _DesktopTasksManagementViewState
       return;
     }
 
-    final updated = await Navigator.of(context).push<TaskItemModel>(
-      MaterialPageRoute(
-        builder: (_) => EditTaskPage(
-          task: task,
-          userInitials: widget.userInitials,
-          onTaskUpdated: _taskRepo.updateTask,
-        ),
-      ),
+    final updated = await DesktopPersonalTaskModal.show(
+      context,
+      task: task,
+      userInitials: widget.userInitials,
+      onTaskUpdated: _taskRepo.updateTask,
     );
 
     if (updated != null && mounted) {

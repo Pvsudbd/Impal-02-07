@@ -9,6 +9,7 @@ import '../team/widgets/submission_deadline_picker.dart';
 import 'models/task_item_model.dart';
 import 'models/task_repository.dart';
 import 'widgets/course_grade_weight_chips.dart';
+import 'widgets/desktop/desktop_personal_task_modal.dart';
 import 'widgets/task_category_selector.dart';
 
 // Backward compatibility aliases matching Figma exports
@@ -204,6 +205,19 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (context.isDesktop) {
+      return Scaffold(
+        backgroundColor: AppColors.bgSecondary,
+        body: DesktopPersonalTaskModal(
+          task: widget.targetTask,
+          userInitials: widget.userInitials,
+          onTaskCreated: widget.onTaskCreated,
+          onTaskUpdated: widget.onTaskUpdated,
+          onClose: widget.onBack,
+        ),
+      );
+    }
+
     final disableMotion = MediaQuery.disableAnimationsOf(context);
 
     return UnfocusOnTap(

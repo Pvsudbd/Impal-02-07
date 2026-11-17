@@ -7,6 +7,7 @@ import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/des
 import 'package:impal_smart_todolist/presentation/features/smart_system/smart_priority_page.dart';
 import 'package:impal_smart_todolist/presentation/features/task/models/task_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/task/task_page.dart';
+import 'package:impal_smart_todolist/presentation/features/task/widgets/desktop/desktop_personal_task_modal.dart';
 import 'package:impal_smart_todolist/presentation/features/task/widgets/desktop/desktop_task_filter_bar.dart';
 import 'package:impal_smart_todolist/presentation/features/task/widgets/desktop/desktop_task_kpi_row.dart';
 import 'package:impal_smart_todolist/presentation/features/task/widgets/desktop/desktop_tasks_management_view.dart';
@@ -338,6 +339,150 @@ void main() {
         await tester.pump(const Duration(seconds: 3));
         await tester.pumpAndSettle();
 
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'opens DesktopPersonalTaskModal from + Add New Task with mobile wording, Title Case, top bell alert, and collapsible Automatic priority options',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1440, 980);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(buildHarness(const Size(1440, 980)));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('+ Add New Task'));
+        await tester.pumpAndSettle();
+
+        final modalFinder = find.byType(DesktopPersonalTaskModal);
+        expect(modalFinder, findsOneWidget);
+
+        // Mobile Title Case wording (no ALL-CAPS FigCraft labels)
+        Finder inModal(String text) =>
+            find.descendant(of: modalFinder, matching: find.text(text));
+
+        expect(inModal('Create Task'), findsNWidgets(2));
+        expect(inModal('Task Details'), findsOneWidget);
+        expect(inModal('Task Category'), findsOneWidget);
+        expect(inModal('College Task'), findsOneWidget);
+        expect(inModal('Personal'), findsOneWidget);
+        expect(inModal('Task Title'), findsOneWidget);
+        expect(inModal('Course'), findsOneWidget);
+        expect(inModal('Submission Deadline'), findsOneWidget);
+        expect(inModal('Task Grade Weight'), findsOneWidget);
+        expect(inModal('Automatic'), findsOneWidget);
+        expect(inModal('Notes & Instructions'), findsOneWidget);
+        expect(inModal('Alert On'), findsOneWidget);
+
+        // No FigCraft ALL-CAPS or bottom switch row
+        expect(find.text('TASK NAME'), findsNothing);
+        expect(find.text('SUBMISSION DEADLINE'), findsNothing);
+        expect(
+          find.textContaining('AUTOMATIC AI PRIORITY'),
+          findsNothing,
+        );
+        expect(
+          find.textContaining('Enable Deadline Reminder Alerts'),
+          findsNothing,
+        );
+
+        // Automatic ON by default -> High/Medium/Low options are hidden (collapsed)
+        expect(
+          find
+              .byKey(const ValueKey('desktop_task_priority_high'))
+              .hitTestable(),
+          findsNothing,
+        );
+
+        // Turn Automatic OFF -> High, Medium, Low appear and are selectable
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_task_automatic_toggle')),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find
+              .byKey(const ValueKey('desktop_task_priority_high'))
+              .hitTestable(),
+          findsOneWidget,
+        );
+        expect(
+          find
+              .byKey(const ValueKey('desktop_task_priority_medium'))
+              .hitTestable(),
+          findsOneWidget,
+        );
+        expect(
+          find
+              .byKey(const ValueKey('desktop_task_priority_low'))
+              .hitTestable(),
+          findsOneWidget,
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_task_priority_medium')),
+        );
+        await tester.pumpAndSettle();
+
+        // Top bell Alert On -> Alert Off toggle
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_task_modal_alert_toggle')),
+        );
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+        expect(find.text('Alert Off'), findsOneWidget);
+
+        // Category switch to Personal hides Course field
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_task_category_personal')),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find
+              .byKey(const ValueKey('desktop_task_course_input'))
+              .hitTestable(),
+          findsNothing,
+        );
+
+        // Compact 1024x768 check with zero overflow
+        tester.view.physicalSize = const Size(1024, 768);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+
+        // Enter title and submit new task
+        await tester.enterText(
+          find.byKey(const ValueKey('desktop_task_title_input')),
+          'Desktop Modal Personal Task',
+        );
+        await tester.pump();
+        await tester.tap(find.byKey(const ValueKey('submit_task_button')));
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+
+        expect(modalFinder, findsNothing);
+        expect(find.text('Desktop Modal Personal Task'), findsOneWidget);
+
+        // Open existing personal task in Edit mode modal
+        await tester.ensureVisible(find.text('Desktop Modal Personal Task'));
+        await tester.tap(find.text('Desktop Modal Personal Task'));
+        await tester.pumpAndSettle();
+        expect(modalFinder, findsOneWidget);
+        expect(inModal('Edit Task'), findsOneWidget);
+        expect(inModal('Edit Task Details'), findsOneWidget);
+        expect(inModal('Save Changes'), findsOneWidget);
+        expect(inModal('Delete Task'), findsOneWidget);
+        expect(find.byKey(const ValueKey('desktop_task_cancel_btn')), findsNothing);
+
+        // Tap top-right close button to dismiss modal
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_task_modal_close_btn')),
+        );
+        await tester.pumpAndSettle();
+        expect(modalFinder, findsNothing);
         expect(tester.takeException(), isNull);
       },
     );

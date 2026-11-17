@@ -6,11 +6,11 @@ import '../../../team/pop_up_create_meeting.dart';
 import '../../models/schedule_model.dart';
 import '../../models/schedule_repository.dart';
 import '../../pop_up_konfirmasi_delete.dart';
-import '../../schedule_form_page.dart';
 import 'desktop_schedule_control_bar.dart';
 import 'desktop_schedule_kpi_row.dart';
 import 'desktop_schedule_matrix_card.dart';
 import 'desktop_schedule_matrix_table.dart';
+import 'desktop_schedule_modal.dart';
 
 /// Desktop Weekly Schedule Matrix workspace matching FigCraft
 /// `Desktop - Schedule Matrix (Weekly)` (node 2537, 1440x980) with full mobile parity:
@@ -405,11 +405,7 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
     if (model.type.trim().toLowerCase() == 'meeting') {
       await PopUpCreateMeeting.showEdit(context, existingSchedule: model);
     } else {
-      await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
-          builder: (_) => ScheduleFormPage(schedule: model),
-        ),
-      );
+      await DesktopScheduleModal.show(context, schedule: model);
     }
   }
 

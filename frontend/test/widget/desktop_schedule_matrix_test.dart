@@ -4,6 +4,7 @@ import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.d
 import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_sidebar.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_top_header.dart';
 import 'package:impal_smart_todolist/presentation/features/notifikasi/widgets/notification_bell_button.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/models/schedule_model.dart';
 import 'package:impal_smart_todolist/presentation/features/schedule/models/schedule_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/schedule/schedule_page.dart';
 import 'package:impal_smart_todolist/presentation/features/schedule/widgets/desktop/desktop_schedule_control_bar.dart';
@@ -11,6 +12,7 @@ import 'package:impal_smart_todolist/presentation/features/schedule/widgets/desk
 import 'package:impal_smart_todolist/presentation/features/schedule/widgets/desktop/desktop_schedule_matrix_card.dart';
 import 'package:impal_smart_todolist/presentation/features/schedule/widgets/desktop/desktop_schedule_matrix_table.dart';
 import 'package:impal_smart_todolist/presentation/features/schedule/widgets/desktop/desktop_schedule_matrix_view.dart';
+import 'package:impal_smart_todolist/presentation/features/schedule/widgets/desktop/desktop_schedule_modal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -260,6 +262,81 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text('Schedule Directory (All)'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'DesktopScheduleModal renders mobile-parity wording, top bell alert, and edit mode',
+      (tester) async {
+        tester.view.physicalSize = const Size(1440, 980);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(
+          buildHarness(
+            const Size(1440, 980),
+            child: Builder(
+              builder: (context) => Center(
+                child: ElevatedButton(
+                  key: const ValueKey('open_desktop_schedule_modal_btn'),
+                  onPressed: () => DesktopScheduleModal.show(context),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.byKey(const ValueKey('open_desktop_schedule_modal_btn')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Add Schedule'), findsOneWidget);
+        expect(find.text('Alert On'), findsOneWidget);
+        expect(find.text('Cancel'), findsNothing);
+        expect(find.text('Create Schedule'), findsOneWidget);
+        expect(find.text('2h Duration (Valid)'), findsOneWidget);
+
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_schedule_type_Meeting')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Create Meeting'), findsWidgets);
+
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_schedule_modal_close_btn')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Create Meeting'), findsNothing);
+
+        final sample = ScheduleModel(
+          id: 'sch_edit_1',
+          title: 'UBXCCB2 - Bahasa Indonesia',
+          type: 'Lecture',
+          course: 'UBXCCB2 - Bahasa Indonesia',
+          location: 'Gedung KTT Ruang B-106',
+          date: DateTime(2026, 10, 12),
+          timeStart: '09:30',
+          timeEnd: '11:30',
+          repeat: true,
+        );
+        await tester.pumpWidget(
+          buildHarness(
+            const Size(1440, 980),
+            child: DesktopScheduleModal(schedule: sample),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Edit Schedule'), findsOneWidget);
+        expect(find.text('Delete Schedule'), findsOneWidget);
+        expect(find.text('Save Changes'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

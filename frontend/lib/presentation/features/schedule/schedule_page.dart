@@ -11,6 +11,7 @@ import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
 import 'pop_up_konfirmasi_delete.dart';
 import 'schedule_form_page.dart';
+import 'widgets/desktop/desktop_schedule_modal.dart';
 import 'widgets/schedule_empty_state.dart';
 import 'widgets/schedule_filter_bar.dart';
 import 'widgets/schedule_header.dart';
@@ -219,12 +220,20 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
   }
 
   void _openAddSchedule() {
+    if (context.isDesktop) {
+      DesktopScheduleModal.show(context);
+      return;
+    }
     Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const ScheduleFormPage()),
     );
   }
 
   void _openEditSchedule(ScheduleModel item) async {
+    if (context.isDesktop) {
+      await DesktopScheduleModal.show(context, schedule: item);
+      return;
+    }
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => ScheduleFormPage(schedule: item)),
     );
