@@ -929,21 +929,47 @@ void main() {
     await tester.tap(find.text('Open Join Team'));
     await tester.pumpAndSettle();
 
-    // Check elements
-    expect(find.text('Join Team'), findsWidgets);
-    expect(find.text('Enter Code'), findsOneWidget);
-    expect(find.text('Become Member'), findsOneWidget);
+    // Check elements (compact before 4 chars, then dynamic Team Not Found / Team Found)
+    expect(find.text('Join Study Team'), findsOneWidget);
+    expect(find.text('Join Workspace Now'), findsOneWidget);
+    expect(find.text('TEAM FOUND'), findsNothing);
+    expect(find.text('TEAM NOT FOUND'), findsNothing);
+    expect(find.text('Cancel'), findsNothing);
 
-    // Enter invite code
-    await tester.enterText(find.byType(TextField), 'IMPAL-99');
+    // Invalid 4-char code shows TEAM NOT FOUND and disables submit
+    await tester.enterText(find.byType(TextField), '0000');
     await tester.pumpAndSettle();
+    expect(find.text('TEAM NOT FOUND'), findsOneWidget);
+    expect(find.text('TEAM FOUND'), findsNothing);
 
-    // Tap 'Become Member'
+    // Valid 4-char code shows TEAM FOUND and enables submit
+    await tester.enterText(find.byType(TextField), '7x29');
+    await tester.pumpAndSettle();
+    expect(find.text('TEAM FOUND'), findsOneWidget);
+    expect(
+      find.text('Kelompok - IMPAL (SIF-45 • 5 Members)'),
+      findsOneWidget,
+    );
+
+    // Tap 'Join Workspace Now'
     await tester.tap(find.byKey(const ValueKey('join_team_submit_button')));
     await tester.pumpAndSettle();
 
-    // Popup closed and code returned
-    expect(joinedCode, 'IMPAL-99');
+    // Popup closed and uppercase code returned
+    expect(joinedCode, '7X29');
+
+    // Narrow mobile (320x640) renders without overflow
+    tester.view.physicalSize = const Size(320, 640);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: PopUpJoinTeam(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Join Study Team'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('TeamListPage action buttons open PopUpJoinTeam and PopUpCreateTeam', (WidgetTester tester) async {
@@ -969,12 +995,12 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap 'Join Team'
-    await tester.tap(find.text('Join Team'));
+    await tester.tap(find.text('Join Team').first);
     await tester.pumpAndSettle();
 
     // PopUpJoinTeam is shown
-    expect(find.text('Join Team'), findsWidgets);
-    expect(find.text('Become Member'), findsOneWidget);
+    expect(find.text('Join Study Team'), findsOneWidget);
+    expect(find.text('Join Workspace Now'), findsOneWidget);
 
     // Close via (x) close icon
     await tester.tap(find.byKey(const ValueKey('close_join_team_button')));
@@ -1584,12 +1610,12 @@ void main() {
     // Tap Join Team membuka PopUpJoinTeam
     await tester.tap(find.byKey(const ValueKey('team_list_join_team_button')));
     await tester.pumpAndSettle();
-    expect(find.text('Become Member'), findsOneWidget);
+    expect(find.text('Join Workspace Now'), findsOneWidget);
 
     // Tutup popup
     await tester.tap(find.byKey(const ValueKey('close_join_team_button')));
     await tester.pumpAndSettle();
-    expect(find.text('Become Member'), findsNothing);
+    expect(find.text('Join Workspace Now'), findsNothing);
   });
 
   testWidgets('Schedule & meeting cards across all pages provide uniform edit and delete action symbols', (WidgetTester tester) async {

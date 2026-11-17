@@ -294,7 +294,6 @@ class _DesktopGroupDirectoryViewState extends State<DesktopGroupDirectoryView> {
                 child: DesktopTeamRightPanel(
                   deadlines: deadlines,
                   activities: DesktopTeamDirectoryFixtures.defaultActivities,
-                  onJoinByCode: widget.onJoinByCode,
                 ),
               ),
             ],

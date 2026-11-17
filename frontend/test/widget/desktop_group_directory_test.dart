@@ -64,7 +64,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Search study teams or courses...'), findsOneWidget);
-        expect(find.text('Join Team'), findsNWidgets(2));
+        expect(find.text('Join Team'), findsOneWidget);
         expect(find.text('+ Create Team'), findsOneWidget);
         expect(find.byType(NotificationBellButton), findsOneWidget);
         expect(find.text('⌘K'), findsNothing);
@@ -157,8 +157,8 @@ void main() {
         expect(find.text('Open Workspace'), findsOneWidget);
         expect(find.text('View Details'), findsNWidgets(3));
 
-        // Right panel widgets
-        expect(find.text('Have a Team Invite Code?'), findsOneWidget);
+        // Right panel widgets (inline invite code card removed)
+        expect(find.text('Have a Team Invite Code?'), findsNothing);
         expect(find.text('Upcoming Team Deadlines'), findsOneWidget);
         expect(find.text('Sprint 1 Review IMPAL'), findsOneWidget);
         expect(find.text('Laporan IUM Bab 2'), findsOneWidget);
@@ -249,25 +249,26 @@ void main() {
           const Size(1440, 980),
         );
 
-        // 1. Inline Join Team by invite code
-        final inlineCodeField = find.byKey(
-          const ValueKey('desktop_team_inline_code_input'),
-        );
-        await tester.enterText(inlineCodeField, '9B4K');
-        await tester.tap(
-          find.byKey(const ValueKey('desktop_team_inline_join_btn')),
-        );
-        await tester.pump(const Duration(milliseconds: 300));
-        expect(find.text('Kelompok 9B4K'), findsOneWidget);
-        await tester.pump(const Duration(seconds: 3));
-        await tester.pumpAndSettle();
-
-        // 2. Top header Join Team dialog
+        // 1. Join Team dialog via top header button + dynamic Team Not Found / Team Found
         await tester.tap(find.text('Join Team').first);
         await tester.pumpAndSettle();
-        expect(find.text('Become Member'), findsOneWidget);
-        expect(find.widgetWithText(TextField, 'Enter Code'), findsOneWidget);
-        await tester.tap(find.byKey(const ValueKey('close_join_team_button')));
+        expect(find.text('Join Study Team'), findsOneWidget);
+        expect(find.text('Join Workspace Now'), findsOneWidget);
+        expect(find.text('TEAM FOUND'), findsNothing);
+        expect(find.text('TEAM NOT FOUND'), findsNothing);
+        expect(find.text('Cancel'), findsNothing);
+        final codeField = find.byKey(const ValueKey('join_team_code_input'));
+        expect(codeField, findsOneWidget);
+        await tester.enterText(codeField, '0000');
+        await tester.pumpAndSettle();
+        expect(find.text('TEAM NOT FOUND'), findsOneWidget);
+        await tester.enterText(codeField, '7X29');
+        await tester.pumpAndSettle();
+        expect(find.text('TEAM FOUND'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('join_team_submit_button')));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('Team Joined'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 3));
         await tester.pumpAndSettle();
 
         // 3. Top header + Create Team dialog
