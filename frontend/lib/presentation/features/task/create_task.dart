@@ -9,6 +9,7 @@ import '../team/widgets/submission_deadline_picker.dart';
 import 'models/task_item_model.dart';
 import 'models/task_repository.dart';
 import 'widgets/course_grade_weight_chips.dart';
+import 'widgets/pop_up_overdue_task_dialog.dart';
 import 'widgets/task_category_selector.dart';
 
 // Backward compatibility aliases matching Figma exports
@@ -130,6 +131,26 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       return;
     }
 
+    final fullDeadline = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+    final isPastDeadline = fullDeadline.isBefore(DateTime.now());
+    final formattedDeadline = _formatDeadline(_selectedDate, _selectedTime);
+
+    if (isPastDeadline) {
+      final confirmed = await PopUpOverdueTaskDialog.show(
+        context,
+        formattedDeadline: formattedDeadline,
+      );
+      if (confirmed != true) {
+        return;
+      }
+    }
+
     setState(() => _isSubmitting = true);
 
     // Simulate async network latency
@@ -138,7 +159,6 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
     final title = _titleController.text.trim();
     final course = _isCollegeTask ? _courseController.text.trim() : '';
     final notes = _notesController.text.trim();
-    final formattedDeadline = _formatDeadline(_selectedDate, _selectedTime);
 
     if (_isEditing) {
       final updated = widget.targetTask!.copyWith(
@@ -150,7 +170,10 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
         deadlineDate: _selectedDate,
         formattedDeadline: formattedDeadline,
         priority: _selectedPriority,
-        isAutomaticWeight: _isAutomaticWeight,
+        durationBadge: isPastDeadline ? 'Overdue' : widget.targetTask!.durationBadge,
+        durationBadgeColor: isPastDeadline ? const Color(0xFFFF7D65) : widget.targetTask!.durationBadgeColor,
+        isAutomaticWeight: isPastDeadline ? false : _isAutomaticWeight,
+        centroidDefuzzification: isPastDeadline ? 'N/A (Overdue)' : widget.targetTask!.centroidDefuzzification,
         isCollegeTask: _isCollegeTask,
         isAlertEnabled: _isAlertEnabled,
       );
@@ -172,21 +195,27 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
         deadlineDate: _selectedDate,
         formattedDeadline: formattedDeadline,
         priority: _selectedPriority,
-        durationBadge: _selectedPriority == TaskPriorityLevel.high ? '12h' : '24h',
-        isAutomaticWeight: _isAutomaticWeight,
+        durationBadge: isPastDeadline
+            ? 'Overdue'
+            : (_selectedPriority == TaskPriorityLevel.high ? '12h' : '24h'),
+        durationBadgeColor: isPastDeadline
+            ? const Color(0xFFFF7D65)
+            : const Color(0xFF5B93FF),
+        durationTextColor: Colors.white,
+        isAutomaticWeight: isPastDeadline ? false : _isAutomaticWeight,
         isCollegeTask: _isCollegeTask,
         isAlertEnabled: _isAlertEnabled,
         subtitle: 'Personal & Team task',
         tags: [
           TaskTagModel(
-            label: 'Task',
-            backgroundColor: _selectedPriority.badgeBg,
+            label: isPastDeadline ? 'Overdue' : 'Task',
+            backgroundColor: isPastDeadline ? const Color(0xFFFF7D65) : _selectedPriority.badgeBg,
             textColor: Colors.white,
           ),
         ],
         groupMembers: const ['Personal Task • Jarvis'],
         dateCreated: 'Today',
-        centroidDefuzzification: 'z* = 32.4',
+        centroidDefuzzification: isPastDeadline ? 'N/A (Overdue)' : 'z* = 32.4',
         centroidScale: 'scale(0-100)',
       );
 

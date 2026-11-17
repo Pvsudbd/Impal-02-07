@@ -10,6 +10,7 @@ import 'models/team_task_repository.dart';
 import 'pop_up_pemberitahuan_team.dart';
 import 'widgets/assignee_dropdown.dart';
 import 'widgets/submission_deadline_picker.dart';
+import '../task/widgets/pop_up_overdue_task_dialog.dart';
 
 // Re-exports & Aliases for backward compatibility
 export 'models/team_member_model.dart';
@@ -142,20 +143,39 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
       return;
     }
 
+    final fullDeadline = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+    final isPastDeadline = fullDeadline.isBefore(DateTime.now());
+    final timeStr =
+        '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')} WIB';
+
+    if (isPastDeadline) {
+      final formattedDeadline = '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}, $timeStr';
+      final confirmed = await PopUpOverdueTaskDialog.show(
+        context,
+        formattedDeadline: formattedDeadline,
+      );
+      if (confirmed != true) {
+        return;
+      }
+    }
+
     setState(() => _isSubmitting = true);
 
     // Simulate short network / processing delay
     await Future.delayed(const Duration(milliseconds: 300));
-
-    final timeStr =
-        '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')} WIB';
 
     final assignedNames = _selectedMembers.map((m) => m.name).join(', ');
     final primaryAvatarColor = _selectedMembers.first.avatarColor;
     final assignedColors = _selectedMembers.map((m) => m.avatarColor).toList();
 
     final daysDiff = _selectedDate.difference(DateTime.now()).inDays;
-    final dueBadgeStr = daysDiff > 0 ? '${daysDiff}d' : '12h';
+    final dueBadgeStr = isPastDeadline ? 'Overdue' : (daysDiff > 0 ? '${daysDiff}d' : '12h');
 
     if (_isEditing) {
       final updatedTask = widget.existingTask!.copyWith(

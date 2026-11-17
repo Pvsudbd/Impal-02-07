@@ -232,7 +232,7 @@ class _TaskContentViewState extends State<TaskContentView> {
     if (_selectedFilter == 'Next 7 Days') {
       list = list.where((t) => t.priority != TaskPriorityLevel.low).toList();
     } else if (_selectedFilter == 'Overdue') {
-      list = list.where((t) => t.priority == TaskPriorityLevel.high).toList();
+      list = list.where((t) => t.isOverdue || t.durationBadge.toLowerCase() == 'overdue').toList();
     }
 
     if (_selectedPriority != null) {

@@ -74,6 +74,7 @@ class Task {
   String get priority => _priority;
   bool get isFuzzyAuto => _isFuzzyAuto;
   bool get isCompleted => _isCompleted;
+  bool get isOverdue => _deadline.isBefore(DateTime.now());
 
   // Methods
   int calculateRemainingTime() {
@@ -85,6 +86,12 @@ class Task {
   }
 
   void updateFuzzyPriority(double score, String level) {
+    if (isOverdue) {
+      _priorityScore = 0.0;
+      _priority = 'LOW';
+      _isFuzzyAuto = false;
+      return;
+    }
     _priorityScore = score;
     _priority = level;
   }

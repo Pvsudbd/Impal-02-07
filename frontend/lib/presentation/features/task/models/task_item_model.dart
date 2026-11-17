@@ -152,6 +152,13 @@ class TaskItemModel {
       }) ||
       groupMembers.length > 1;
 
+  /// Whether this task has passed its submission deadline.
+  bool get isOverdue {
+    if (durationBadge.toLowerCase() == 'overdue') return true;
+    final now = DateTime.now();
+    return deadlineDate.isBefore(DateTime(now.year, now.month, now.day));
+  }
+
   /// Effective team or group name displayed under the title on Task Page.
   String get effectiveTeamName {
     if (teamName != null && teamName!.trim().isNotEmpty) {
