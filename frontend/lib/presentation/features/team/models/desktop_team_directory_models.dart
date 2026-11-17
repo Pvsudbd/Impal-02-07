@@ -195,21 +195,21 @@ class DesktopTeamDirectoryFixtures {
   static const List<DesktopTeamDeadlineItem> defaultDeadlines = [
     DesktopTeamDeadlineItem(
       title: 'Sprint 1 Review IMPAL',
-      timeText: 'Besok, 19:00 WIB',
+      timeText: 'Tomorrow, 19:00 WIB',
       priorityLabel: 'High',
       pillBgColor: Color(0xFFFF7D65),
       pillTextColor: Colors.white,
     ),
     DesktopTeamDeadlineItem(
       title: 'Laporan IUM Bab 2',
-      timeText: 'Kamis, 23:59 WIB',
+      timeText: 'Thursday, 23:59 WIB',
       priorityLabel: 'Medium',
       pillBgColor: Color(0xFF786FA6),
       pillTextColor: Color(0xFF4A3C8C),
     ),
     DesktopTeamDeadlineItem(
       title: 'Dataset KA Testing',
-      timeText: 'Jumat, 17:00 WIB',
+      timeText: 'Friday, 17:00 WIB',
       priorityLabel: 'Medium',
       pillBgColor: Color(0xFF786FA6),
       pillTextColor: Color(0xFF4A3C8C),
@@ -220,20 +220,20 @@ class DesktopTeamDirectoryFixtures {
     DesktopTeamActivityItem(
       initials: 'YP',
       avatarColor: Color(0xFFF3A683),
-      description: "Yoga Perkasa menyelesaikan task 'Wireframe UI'",
-      timeAgo: '10m lalu',
+      description: "Yoga Perkasa completed 'Wireframe UI'",
+      timeAgo: '10m ago',
     ),
     DesktopTeamActivityItem(
       initials: 'AS',
       avatarColor: Color(0xFF63CDDA),
-      description: "Ahmad Sahroni menjadwalkan 'Meeting IMPAL'",
-      timeAgo: '1j lalu',
+      description: "Ahmad Sahroni scheduled 'Meeting IMPAL'",
+      timeAgo: '1h ago',
     ),
     DesktopTeamActivityItem(
       initials: 'MK',
       avatarColor: Color(0xFF786FA6),
-      description: 'M. Kafi mengupload link PR GitHub',
-      timeAgo: '3j lalu',
+      description: 'M. Kafi uploaded GitHub PR link',
+      timeAgo: '3h ago',
     ),
   ];
 }

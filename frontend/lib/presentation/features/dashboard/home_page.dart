@@ -980,8 +980,8 @@ class _HomePageState extends State<HomePage> {
           );
         }
         return (
-          'Kelompok & Tim Belajar',
-          'Kelola kelompok mata kuliah, jadwal meeting tim, dan progress kolaborasi',
+          'Study Teams & Groups',
+          'Manage course study teams, team meetings, and collaboration progress',
         );
       case 3:
         return (
@@ -1088,7 +1088,7 @@ class _HomePageState extends State<HomePage> {
                           searchHint: isProfileSettings
                               ? 'Search settings...'
                               : (isGroupDirectoryRoot
-                                  ? 'Cari kelompok, mata kuliah...'
+                                  ? 'Search study teams or courses...'
                                   : (isGroupWorkspace
                                       ? 'Search tasks in workspace...'
                                       : (_currentTab == 3
@@ -1126,7 +1126,6 @@ class _HomePageState extends State<HomePage> {
                               ? _openJoinTeamDialog
                               : null,
                           showNotificationBell: _currentTab != 3 &&
-                              !isGroupDirectoryRoot &&
                               !isProfileSettings,
                           titleFontSize: isGroupDirectoryRoot ? 18 : 22,
                           horizontalPadding: (isGroupDirectoryRoot ||

@@ -118,7 +118,7 @@ class DesktopTeamDirectoryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    '${team.completedTasks}/${team.totalTasks} Tasks Selesai',
+                    '${team.completedTasks}/${team.totalTasks} Tasks Completed',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: context.rFont(11, min: 10, max: 12),
@@ -267,7 +267,7 @@ class DesktopTeamDirectoryCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Buka Workspace',
+                  'Open Workspace',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 11,
@@ -304,7 +304,7 @@ class DesktopTeamDirectoryCard extends StatelessWidget {
           ),
           alignment: Alignment.center,
           child: const Text(
-            'Lihat Detail',
+            'View Details',
             style: TextStyle(
               color: Colors.white,
               fontSize: 11,

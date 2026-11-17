@@ -409,6 +409,14 @@ class _DesktopTasksManagementViewState
                   onPriorityTap: (priority) {
                     setState(() => _selectedPriority = priority);
                   },
+                  onSmartPriorityTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            SmartPriorityPage(userName: widget.userName),
+                      ),
+                    );
+                  },
                 ),
                 SizedBox(height: context.rSpacing(18)),
                 DesktopTaskFilterBar(
@@ -625,19 +633,15 @@ class _TaskSectionHeader extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.45),
-                    width: 0.8,
-                  ),
+                  color: AppColors.primaryAccent,
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   countLabel,
                   style: const TextStyle(
-                    color: AppColors.primaryAccent,
+                    color: Colors.white,
                     fontSize: 11,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,

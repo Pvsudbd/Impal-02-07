@@ -125,7 +125,7 @@ class DesktopScheduleControlBar extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  'Hari Ini',
+                  'Today',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: context.rFont(12, min: 11, max: 12),
@@ -147,7 +147,7 @@ class DesktopScheduleControlBar extends StatelessWidget {
         children: [
           _LegendPill(
             pillKey: const ValueKey('desktop_legend_kuliah'),
-            label: 'Kuliah',
+            label: 'Lecture',
             bgColor: const Color(0xFF63CDDA),
             textColor: const Color(0xFF2A8F9C),
             isSelected: selectedCategory == ScheduleMatrixCategory.kuliah,
@@ -162,9 +162,9 @@ class DesktopScheduleControlBar extends StatelessWidget {
           const SizedBox(width: 6),
           _LegendPill(
             pillKey: const ValueKey('desktop_legend_kelompok'),
-            label: 'Kelompok',
-            bgColor: AppColors.purpleAccent,
-            textColor: AppColors.purpleDeep,
+            label: 'Team',
+            bgColor: const Color(0xFF786FA6),
+            textColor: const Color(0xFF4A3C8C),
             isSelected: selectedCategory == ScheduleMatrixCategory.kelompok,
             isDimmed: selectedCategory != null &&
                 selectedCategory != ScheduleMatrixCategory.kelompok,

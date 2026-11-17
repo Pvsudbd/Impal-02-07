@@ -94,10 +94,12 @@ class DesktopScheduleMatrixCard extends StatelessWidget {
     switch (item.badgeLabel.toLowerCase()) {
       case 'code':
       case 'kuliah':
+      case 'lecture':
       case 'testing':
         return (bg: const Color(0xFF63CDDA), text: const Color(0xFF2A8F9C));
       case 'kelompok':
-        return (bg: AppColors.purpleAccent, text: AppColors.purpleDeep);
+      case 'team':
+        return (bg: const Color(0xFF786FA6), text: const Color(0xFF4A3C8C));
       case 'personal':
       case 'study':
       case 'figma':

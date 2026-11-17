@@ -51,29 +51,29 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
 
   static final DateTime _baseWeekStart = DateTime(2026, 10, 12);
 
-  static const List<String> _dayNamesId = [
-    'Senin',
-    'Selasa',
-    'Rabu',
-    'Kamis',
-    'Jumat',
-    'Sabtu',
-    'Minggu',
+  static const List<String> _dayShortEn = [
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
   ];
 
-  static const List<String> _monthNamesId = [
+  static const List<String> _monthNamesEn = [
     'Jan',
     'Feb',
     'Mar',
     'Apr',
-    'Mei',
+    'May',
     'Jun',
     'Jul',
-    'Agu',
+    'Aug',
     'Sep',
-    'Okt',
+    'Oct',
     'Nov',
-    'Des',
+    'Dec',
   ];
 
   static const List<ScheduleMatrixTimeSlot> _timeSlots = [
@@ -85,7 +85,7 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
     ScheduleMatrixTimeSlot(startLabel: '19:00', endLabel: '20:30 WIB'),
   ];
 
-  /// Exact 13 weekly matrix items matching FigCraft `Desktop - Schedule Matrix (Weekly)` (node 2537).
+  /// Exact 14 weekly matrix items matching FigCraft `Desktop - Schedule Matrix (Weekly)` (node 2739).
   static const List<ScheduleMatrixItem> _figcraftBaseItems = [
     // Row 0: 08:00 - 09:30
     ScheduleMatrixItem(
@@ -127,7 +127,7 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
       timeRange: '09:30 - 11:30 WIB',
       dayIndex: 2,
       slotIndex: 1,
-      badgeLabel: 'Kuliah',
+      badgeLabel: 'Lecture',
       category: ScheduleMatrixCategory.kuliah,
     ),
     ScheduleMatrixItem(
@@ -137,7 +137,7 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
       timeRange: '09:30 - 11:30 WIB',
       dayIndex: 3,
       slotIndex: 1,
-      badgeLabel: 'Kuliah',
+      badgeLabel: 'Lecture',
       category: ScheduleMatrixCategory.kuliah,
     ),
     ScheduleMatrixItem(
@@ -147,7 +147,7 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
       timeRange: '10:00 - 11:30 WIB',
       dayIndex: 5,
       slotIndex: 1,
-      badgeLabel: 'Kelompok',
+      badgeLabel: 'Team',
       category: ScheduleMatrixCategory.kelompok,
     ),
     // Row 2: 11:30 - 13:30
@@ -169,7 +169,7 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
       timeRange: '13:30 - 15:30 WIB',
       dayIndex: 0,
       slotIndex: 3,
-      badgeLabel: 'Kuliah',
+      badgeLabel: 'Lecture',
       category: ScheduleMatrixCategory.kuliah,
     ),
     ScheduleMatrixItem(
@@ -211,7 +211,7 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
       timeRange: '19:00 - 20:30 WIB',
       dayIndex: 1,
       slotIndex: 5,
-      badgeLabel: 'Kelompok',
+      badgeLabel: 'Team',
       category: ScheduleMatrixCategory.kelompok,
     ),
     ScheduleMatrixItem(
@@ -221,7 +221,17 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
       timeRange: '19:30 - 21:00 WIB',
       dayIndex: 3,
       slotIndex: 5,
-      badgeLabel: 'Kelompok',
+      badgeLabel: 'Team',
+      category: ScheduleMatrixCategory.kelompok,
+    ),
+    ScheduleMatrixItem(
+      id: 'mtx_sprint_prep',
+      title: 'SPRINT 1 PREP',
+      subtitle: 'Discord • Team IMPAL',
+      timeRange: '19:00 - 20:30 WIB',
+      dayIndex: 6,
+      slotIndex: 5,
+      badgeLabel: 'Team',
       category: ScheduleMatrixCategory.kelompok,
     ),
   ];
@@ -238,28 +248,27 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
   String get _weekRangeLabel {
     final start = _activeWeekStart;
     final end = start.add(const Duration(days: 6));
-    final startMonth = _monthNamesId[start.month - 1];
-    final endMonth = _monthNamesId[end.month - 1];
+    final startMonth = _monthNamesEn[start.month - 1];
+    final endMonth = _monthNamesEn[end.month - 1];
     if (start.year == end.year) {
-      return '${start.day} $startMonth – ${end.day} $endMonth ${end.year}';
+      return '$startMonth ${start.day} – $endMonth ${end.day}, ${end.year}';
     }
-    return '${start.day} $startMonth ${start.year} – ${end.day} $endMonth ${end.year}';
+    return '$startMonth ${start.day}, ${start.year} – $endMonth ${end.day}, ${end.year}';
   }
 
   String get _academicWeekLabel {
-    final weekNumber = 8 + _weekOffset;
-    final semester = weekNumber <= 16 ? 'Ganjil' : 'Genap';
-    return 'Minggu $weekNumber • $semester';
+    final weekNumber = (8 + _weekOffset).clamp(1, 32);
+    final semester = weekNumber <= 16 ? 'Odd Sem' : 'Even Sem';
+    return 'Week $weekNumber • $semester';
   }
 
   List<ScheduleMatrixDayHeader> _dayHeadersFor(List<ScheduleMatrixItem> items) {
-    final hasSunday = items.any((item) => item.dayIndex == 6);
     final start = _activeWeekStart;
-    return List.generate(hasSunday ? 7 : 6, (i) {
+    return List.generate(7, (i) {
       final date = start.add(Duration(days: i));
-      final month = _monthNamesId[date.month - 1];
+      final month = _monthNamesEn[date.month - 1];
       return ScheduleMatrixDayHeader(
-        label: '${_dayNamesId[i]}, ${date.day} $month',
+        label: '${_dayShortEn[i]}, $month ${date.day}',
         isToday: _weekOffset == 0 && i == 0,
       );
     });
@@ -283,16 +292,17 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
     final weekEnd = weekStart.add(const Duration(days: 6));
 
     for (final s in repoSchedules) {
+      if (_defaultRepoIds.contains(s.id) ||
+          s.id == 'mock_ongoing_impal' ||
+          s.id == 'mock_upcoming_Basdat') {
+        continue;
+      }
       final d = DateTime(s.date.year, s.date.month, s.date.day);
       if (_selectedView == 'Week' || _selectedView == 'Today') {
         if (d.isBefore(weekStart) || d.isAfter(weekEnd)) continue;
       }
       final dayIdx = d.weekday - 1; // Monday = 0 .. Sunday = 6
       if (dayIdx < 0 || dayIdx > 6) continue;
-
-      if (s.id == 'mock_ongoing_impal' || s.id == 'mock_upcoming_Basdat') {
-        continue;
-      }
 
       final slotIdx = _mapTimeToSlotIndex(s.timeStart);
       final isOngoing = s.status.toLowerCase() == 'ongoing';
@@ -309,7 +319,7 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
           slotIndex: slotIdx,
           badgeLabel: isOngoing
               ? 'Ongoing'
-              : (isMeeting ? 'Kelompok' : (isExternal ? 'Study' : 'Kuliah')),
+              : (isMeeting ? 'Team' : (isExternal ? 'Study' : 'Lecture')),
           category: isOngoing
               ? ScheduleMatrixCategory.ongoing
               : (isMeeting
@@ -574,7 +584,7 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
             .where((s) => s.status.toLowerCase() == 'ongoing')
             .length;
 
-        final totalSessions = (14 -
+        final totalSessions = (15 -
                 _deletedBaseIds.length -
                 deletedDefaultRepoCount +
                 addedRepo.length)
@@ -583,10 +593,8 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
         final ongoingCount =
             (1 - deletedOngoingCount + addedOngoingCount).clamp(0, 99);
         final teamMeetings =
-            (4 - deletedTeamCount + addedTeamCount).clamp(0, 99);
-        final studyHours =
-            (28 - (_deletedBaseIds.length * 2) + (addedRepo.length * 2))
-                .clamp(0, 999);
+            (5 - deletedTeamCount + addedTeamCount).clamp(0, 99);
+        final studyHours = (totalSessions * 2).clamp(0, 999);
 
         final showDirectory =
             _selectedView == 'All' || _selectedView == 'Month';

@@ -60,35 +60,38 @@ void main() {
 
       // Control & Filter Bar
       expect(find.text('All'), findsOneWidget);
-      expect(find.text('Today'), findsOneWidget);
+      // 'Today' appears in View Switcher pill, ControlBar Today button, and Monday table header pill
+      expect(find.text('Today'), findsNWidgets(3));
       expect(find.text('Week'), findsOneWidget);
       expect(find.text('Month'), findsOneWidget);
-      expect(find.text('12 Okt – 18 Okt 2026'), findsOneWidget);
-      expect(find.text('Minggu 8 • Ganjil'), findsOneWidget);
-      expect(find.text('Hari Ini'), findsNWidgets(2));
+      expect(find.text('Oct 12 – Oct 18, 2026'), findsOneWidget);
+      expect(find.text('Week 8 • Odd Sem'), findsOneWidget);
+      expect(find.text('Lecture'), findsWidgets);
+      expect(find.text('Team'), findsWidgets);
       expect(find.text('Study / Lab'), findsOneWidget);
 
       // KPI Summary Row
-      expect(find.text('14 Sesi Kuliah'), findsOneWidget);
-      expect(find.text('Total Jadwal Minggu Ini'), findsOneWidget);
-      expect(find.text('2 Kelas Hari Ini'), findsOneWidget);
-      expect(find.text('1 Sedang Berlangsung (Ongoing)'), findsOneWidget);
-      expect(find.text('4 Pertemuan Tim'), findsOneWidget);
-      expect(find.text('Meeting IMPAL & Study Hub'), findsOneWidget);
-      expect(find.text('28 Jam Belajar'), findsOneWidget);
-      expect(find.text('Beban 18 SKS Aktif'), findsOneWidget);
+      expect(find.text('15 Weekly Sessions'), findsOneWidget);
+      expect(find.text('Total Scheduled This Week'), findsOneWidget);
+      expect(find.text('2 Classes Today'), findsOneWidget);
+      expect(find.text('1 Currently Ongoing'), findsOneWidget);
+      expect(find.text('5 Team Meetings'), findsOneWidget);
+      expect(find.text('IMPAL & Study Hub Sync'), findsOneWidget);
+      expect(find.text('30 Study Hours'), findsOneWidget);
+      expect(find.text('18 Active Credits (SKS)'), findsOneWidget);
 
-      // Matrix Table Headers
-      expect(find.text('WAKTU'), findsOneWidget);
-      expect(find.text('Senin, 12 Okt'), findsOneWidget);
-      expect(find.text('Selasa, 13 Okt'), findsOneWidget);
-      expect(find.text('Rabu, 14 Okt'), findsOneWidget);
-      expect(find.text('Kamis, 15 Okt'), findsOneWidget);
-      expect(find.text('Jumat, 16 Okt'), findsOneWidget);
-      expect(find.text('Sabtu, 17 Okt'), findsOneWidget);
+      // Matrix Table Headers (7 columns Mon..Sun)
+      expect(find.text('TIME'), findsOneWidget);
+      expect(find.text('Mon, Oct 12'), findsOneWidget);
+      expect(find.text('Tue, Oct 13'), findsOneWidget);
+      expect(find.text('Wed, Oct 14'), findsOneWidget);
+      expect(find.text('Thu, Oct 15'), findsOneWidget);
+      expect(find.text('Fri, Oct 16'), findsOneWidget);
+      expect(find.text('Sat, Oct 17'), findsOneWidget);
+      expect(find.text('Sun, Oct 18'), findsOneWidget);
 
-      // All 13 FigCraft Schedule Matrix Cards
-      expect(find.byType(DesktopScheduleMatrixCard), findsNWidgets(13));
+      // All 14 FigCraft Schedule Matrix Cards
+      expect(find.byType(DesktopScheduleMatrixCard), findsNWidgets(14));
       expect(find.text('ALPRO & DATA'), findsOneWidget);
       expect(find.text('UBXCCB2 - B. INDONESIA'), findsOneWidget);
       expect(find.text('PENGUJIAN PL'), findsOneWidget);
@@ -102,6 +105,7 @@ void main() {
       expect(find.text('UI/UX DESIGN'), findsOneWidget);
       expect(find.text('MEETING IMPAL'), findsOneWidget);
       expect(find.text('SYNC LAPORAN'), findsOneWidget);
+      expect(find.text('SPRINT 1 PREP'), findsOneWidget);
 
       // Verify single-row horizontal alignment in Control Bar
       final allRect =
@@ -155,26 +159,26 @@ void main() {
       await tester
           .tap(find.byKey(const ValueKey('desktop_schedule_next_week')));
       await tester.pump();
-      expect(find.text('19 Okt – 25 Okt 2026'), findsOneWidget);
-      expect(find.text('Minggu 9 • Ganjil'), findsOneWidget);
+      expect(find.text('Oct 19 – Oct 25, 2026'), findsOneWidget);
+      expect(find.text('Week 9 • Odd Sem'), findsOneWidget);
 
       await tester
           .tap(find.byKey(const ValueKey('desktop_schedule_today_btn')));
       await tester.pump();
-      expect(find.text('12 Okt – 18 Okt 2026'), findsOneWidget);
-      expect(find.text('Minggu 8 • Ganjil'), findsOneWidget);
+      expect(find.text('Oct 12 – Oct 18, 2026'), findsOneWidget);
+      expect(find.text('Week 8 • Odd Sem'), findsOneWidget);
 
-      // View switcher: Today focuses Senin column only
+      // View switcher: Today focuses Monday column only
       await tester
           .tap(find.byKey(const ValueKey('desktop_schedule_view_Today')));
       await tester.pump();
-      expect(find.text('Senin, 12 Okt'), findsOneWidget);
-      expect(find.text('Selasa, 13 Okt'), findsNothing);
+      expect(find.text('Mon, Oct 12'), findsOneWidget);
+      expect(find.text('Tue, Oct 13'), findsNothing);
 
       await tester
           .tap(find.byKey(const ValueKey('desktop_schedule_view_Week')));
       await tester.pump();
-      expect(find.text('Selasa, 13 Okt'), findsOneWidget);
+      expect(find.text('Tue, Oct 13'), findsOneWidget);
 
       // Legend category toggle
       await tester.tap(find.byKey(const ValueKey('desktop_legend_kelompok')));

@@ -43,7 +43,26 @@ class _DesktopGroupDirectoryViewState extends State<DesktopGroupDirectoryView> {
   TeamDirectoryCategory _selectedCategory = TeamDirectoryCategory.all;
   final ScheduleRepository _scheduleRepo = ScheduleRepository();
   final TeamTaskRepository _teamTaskRepo = TeamTaskRepository();
-  int _scheduleIndex = 0;
+
+  void _toggleMeetingAlert(ScheduleModel meeting) {
+    final updated = meeting.copyWith(isAlertEnabled: !meeting.isAlertEnabled);
+    _scheduleRepo.updateSchedule(updated);
+    PopUpPemberitahuan.show(
+      context,
+      title: updated.isAlertEnabled
+          ? 'Schedule Alert Active'
+          : 'Schedule Alert Muted',
+      message: updated.isAlertEnabled
+          ? 'Reminders enabled for "${updated.title}".'
+          : 'Reminders muted for "${updated.title}".',
+      icon: updated.isAlertEnabled
+          ? Icons.notifications_active_rounded
+          : Icons.notifications_off_outlined,
+      iconBgColor: updated.isAlertEnabled
+          ? PopUpPemberitahuan.positiveColor
+          : PopUpPemberitahuan.neutralColor,
+    );
+  }
 
   List<DesktopTeamCardData> get _filteredTeams {
     var list = widget.teams;
@@ -133,19 +152,10 @@ class _DesktopGroupDirectoryViewState extends State<DesktopGroupDirectoryView> {
   }
 
   Future<void> _handleCreateMeeting() async {
-    final created = await PopUpCreateMeeting.show(
+    await PopUpCreateMeeting.show(
       context,
       teamName: 'Group IMPAL',
     );
-    if (mounted) {
-      final meetings = _teamMeetings(_scheduleRepo.schedulesNotifier.value);
-      final idx = created == null
-          ? -1
-          : meetings.indexWhere((m) => m.id == created.id);
-      setState(() {
-        _scheduleIndex = idx >= 0 ? idx : 0;
-      });
-    }
   }
 
   Future<void> _handleEditMeeting(ScheduleModel meeting) async {
@@ -166,9 +176,6 @@ class _DesktopGroupDirectoryViewState extends State<DesktopGroupDirectoryView> {
     );
     if (confirmed == true && mounted) {
       _scheduleRepo.deleteSchedule(meeting.id);
-      setState(() {
-        if (_scheduleIndex > 0) _scheduleIndex -= 1;
-      });
       PopUpPemberitahuan.meetingDeleted(context);
     }
   }
@@ -235,76 +242,15 @@ class _DesktopGroupDirectoryViewState extends State<DesktopGroupDirectoryView> {
   }
 
   Widget _buildLiveScheduleBanner(List<ScheduleModel> meetings) {
-    if (meetings.isEmpty) {
-      return DesktopTeamScheduleBanner(
-        title: 'No Team Meeting Scheduled',
-        platformLabel: 'Team Schedule',
-        agendaText: 'Tap Create Meeting to schedule your next team sync.',
-        ctaLabel: 'Create Meeting',
-        onJoinMeetingTap: _handleCreateMeeting,
-        onCreateMeetingTap: _handleCreateMeeting,
-        onSeeAllTap: widget.onOpenScheduleTap,
-      );
-    }
-
-    final safeIndex = _scheduleIndex.clamp(0, meetings.length - 1);
-    final current = meetings[safeIndex];
-    final defaultSch = ScheduleRepository.defaultTeamSchedule;
-    final isUnmodifiedDefault =
-        current.id == defaultSch.id &&
-        current.title == defaultSch.title &&
-        current.location == defaultSch.location &&
-        current.teamName == defaultSch.teamName &&
-        current.notes == defaultSch.notes &&
-        current.date.year == defaultSch.date.year &&
-        current.date.month == defaultSch.date.month &&
-        current.date.day == defaultSch.date.day &&
-        current.timeStart == defaultSch.timeStart;
-
-    final loc = current.location?.trim() ?? '';
-    final team = current.teamName?.trim() ?? '';
-    final notes = current.notes?.trim() ?? '';
-
-    final platformLabel = isUnmodifiedDefault
-        ? 'Discord • Group IMPAL'
-        : '${loc.isNotEmpty ? loc : 'Online'} • ${team.isNotEmpty ? team : 'Team'}';
-    final agendaText = isUnmodifiedDefault
-        ? 'Tomorrow 19:00 WIB • Agenda: Sprint 1 Review & UI Demo Prototype'
-        : (notes.isNotEmpty
-              ? '${current.formattedTime} • Agenda: $notes'
-              : current.formattedTime);
-    final ctaLabel =
-        isUnmodifiedDefault || loc.toLowerCase().contains('discord')
-        ? 'Join Discord Voice'
-        : 'Join Meeting';
-
     return DesktopTeamScheduleBanner(
-      title: current.title,
-      platformLabel: platformLabel,
-      agendaText: agendaText,
-      ctaLabel: ctaLabel,
-      currentIndex: safeIndex,
-      totalCount: meetings.length,
-      onPrevTap: meetings.length > 1
-          ? () {
-              setState(() {
-                _scheduleIndex =
-                    (safeIndex - 1 + meetings.length) % meetings.length;
-              });
-            }
-          : null,
-      onNextTap: meetings.length > 1
-          ? () {
-              setState(() {
-                _scheduleIndex = (safeIndex + 1) % meetings.length;
-              });
-            }
-          : null,
-      onJoinMeetingTap: () => _handleJoinMeeting(current),
+      meetings: meetings,
+      showCreateMeetingButton: false,
       onCreateMeetingTap: _handleCreateMeeting,
       onSeeAllTap: widget.onOpenScheduleTap,
-      onEditMeetingTap: () => _handleEditMeeting(current),
-      onDeleteMeetingTap: () => _handleDeleteMeeting(current),
+      onJoinMeetingTap: (meeting) => _handleJoinMeeting(meeting),
+      onEditMeetingTap: _handleEditMeeting,
+      onDeleteMeetingTap: _handleDeleteMeeting,
+      onToggleAlertTap: _toggleMeetingAlert,
     );
   }
 
@@ -368,7 +314,7 @@ class _DesktopGroupDirectoryViewState extends State<DesktopGroupDirectoryView> {
         runSpacing: 10,
         children: [
           Text(
-            'My Teams ($totalTeams Aktif)',
+            'My Teams ($totalTeams Active)',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -384,19 +330,19 @@ class _DesktopGroupDirectoryViewState extends State<DesktopGroupDirectoryView> {
             runSpacing: 6,
             children: [
               _buildFilterPill(
-                label: 'Semua Tim ($totalTeams)',
+                label: 'All Teams ($totalTeams)',
                 category: TeamDirectoryCategory.all,
               ),
               _buildFilterPill(
-                label: 'Mata Kuliah',
+                label: 'Courses',
                 category: TeamDirectoryCategory.mataKuliah,
               ),
               _buildFilterPill(
-                label: 'Projek Mandiri',
+                label: 'Personal Projects',
                 category: TeamDirectoryCategory.projekMandiri,
               ),
               _buildFilterPill(
-                label: 'Kompetisi',
+                label: 'Competitions',
                 category: TeamDirectoryCategory.kompetisi,
               ),
             ],

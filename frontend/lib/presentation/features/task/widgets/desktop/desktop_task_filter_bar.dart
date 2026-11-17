@@ -161,23 +161,15 @@ class _FilterPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color bgColor;
     final Color textColor;
-    final Border? border;
     final FontWeight fontWeight;
 
     if (isActive) {
       bgColor = AppColors.primary;
       textColor = Colors.white;
-      border = null;
-      fontWeight = FontWeight.w700;
-    } else if (isOverdueTone) {
-      bgColor = AppColors.overduePillBg;
-      textColor = AppColors.primary;
-      border = Border.all(color: AppColors.primary, width: 1.0);
       fontWeight = FontWeight.w700;
     } else {
-      bgColor = AppColors.bgPrimary;
+      bgColor = AppColors.borderSubtle;
       textColor = AppColors.textMuted;
-      border = null;
       fontWeight = FontWeight.w500;
     }
 
@@ -196,7 +188,6 @@ class _FilterPill extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: border,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -207,7 +198,7 @@ class _FilterPill extends StatelessWidget {
                 softWrap: false,
                 style: TextStyle(
                   color: textColor,
-                  fontSize: context.rFont(12, min: 11, max: 13),
+                  fontSize: context.rFont(11.5, min: 10.5, max: 12.5),
                   fontFamily: 'Inter',
                   fontWeight: fontWeight,
                   fontFeatures: const [FontFeature.tabularFigures()],

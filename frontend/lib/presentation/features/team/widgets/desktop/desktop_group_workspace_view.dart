@@ -9,6 +9,7 @@ import '../../../schedule/models/schedule_model.dart';
 import '../../../schedule/models/schedule_repository.dart';
 import '../../models/team_milestone_model.dart';
 import '../../models/team_task_model.dart';
+import 'desktop_team_schedule_banner.dart';
 import 'desktop_team_workspace_panel.dart';
 
 enum _WorkspacePriorityFilter { all, high, medium, low }
@@ -155,7 +156,6 @@ class DesktopGroupWorkspaceView extends StatefulWidget {
 
 class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
   _WorkspacePriorityFilter _priorityFilter = _WorkspacePriorityFilter.all;
-  int _meetingIndex = 0;
 
   static const List<({String initials, Color color})> _heroAvatars = [
     (initials: 'JS', color: Color(0xFFFF7D65)),
@@ -177,7 +177,7 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
     return allSchedules.where((s) {
       final type = s.type.trim().toLowerCase();
       if (type == 'lecture') return false;
-      if (s.id == 'sch_3') return true;
+      if (s.id == 'sch_3' || s.id == 'sch_4') return true;
       if (type == 'team' ||
           type == 'team meeting' ||
           type == 'meeting' ||
@@ -185,11 +185,36 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
           type == 'group') {
         return true;
       }
+      final t = s.title.toLowerCase();
       final loc = (s.location ?? '').toLowerCase();
-      return loc.contains('discord') ||
+      return t.contains('meet') ||
+          t.contains('mentoring') ||
+          t.contains('sprint') ||
+          t.contains('sync') ||
+          loc.contains('discord') ||
           loc.contains('group') ||
           (s.teamName?.trim().isNotEmpty ?? false);
     }).toList();
+  }
+
+  void _handleToggleMeetingAlert(ScheduleModel meeting) {
+    final updated = meeting.copyWith(isAlertEnabled: !meeting.isAlertEnabled);
+    ScheduleRepository().updateSchedule(updated);
+    PopUpPemberitahuan.show(
+      context,
+      title: updated.isAlertEnabled
+          ? 'Schedule Alert Active'
+          : 'Schedule Alert Muted',
+      message: updated.isAlertEnabled
+          ? 'Reminders enabled for "${updated.title}".'
+          : 'Reminders muted for "${updated.title}".',
+      icon: updated.isAlertEnabled
+          ? Icons.notifications_active_rounded
+          : Icons.notifications_off_outlined,
+      iconBgColor: updated.isAlertEnabled
+          ? PopUpPemberitahuan.positiveColor
+          : PopUpPemberitahuan.neutralColor,
+    );
   }
 
   Future<void> _handleJoinMeeting(ScheduleModel? meeting) async {
@@ -244,9 +269,20 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
                   ValueListenableBuilder<List<ScheduleModel>>(
                     valueListenable: ScheduleRepository().schedulesNotifier,
                     builder: (context, allSchedules, _) {
-                      return _buildMeetingCard(
-                        context,
-                        _teamMeetings(allSchedules),
+                      return DesktopTeamScheduleBanner(
+                        containerKey: const ValueKey(
+                          'desktop_workspace_meeting_card',
+                        ),
+                        joinButtonKey: const ValueKey(
+                          'desktop_workspace_join_meeting_btn',
+                        ),
+                        meetings: _teamMeetings(allSchedules),
+                        showCreateMeetingButton: true,
+                        onCreateMeetingTap: widget.onCreateMeeting,
+                        onJoinMeetingTap: _handleJoinMeeting,
+                        onEditMeetingTap: widget.onEditSchedule,
+                        onDeleteMeetingTap: widget.onDeleteSchedule,
+                        onToggleAlertTap: _handleToggleMeetingAlert,
                       );
                     },
                   ),
@@ -511,7 +547,7 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
                   ),
                   const SizedBox(width: 8),
                   const Text(
-                    '5 Anggota Tim',
+                    '5 Team Members',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 11,
@@ -572,343 +608,6 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
     );
   }
 
-  Widget _buildMeetingCard(
-    BuildContext context,
-    List<ScheduleModel> meetings,
-  ) {
-    final defaultSch = ScheduleRepository.defaultTeamSchedule;
-    final hasCustomList = meetings.isNotEmpty;
-    final safeIndex = hasCustomList
-        ? _meetingIndex.clamp(0, meetings.length - 1)
-        : 0;
-    final current = hasCustomList ? meetings[safeIndex] : defaultSch;
-
-    final isUnmodifiedDefault =
-        current.id == defaultSch.id &&
-        current.title == defaultSch.title &&
-        current.location == defaultSch.location &&
-        current.teamName == defaultSch.teamName &&
-        current.notes == defaultSch.notes &&
-        current.date.year == defaultSch.date.year &&
-        current.date.month == defaultSch.date.month &&
-        current.date.day == defaultSch.date.day &&
-        current.timeStart == defaultSch.timeStart;
-
-    final loc = current.location?.trim() ?? '';
-    final team = current.teamName?.trim() ?? '';
-    final notes = current.notes?.trim() ?? '';
-
-    final displayTitle = isUnmodifiedDefault ? 'MEETING IMPAL' : current.title;
-    final platformLabel = isUnmodifiedDefault
-        ? 'Discord • Group IMPAL'
-        : '${loc.isNotEmpty ? loc : 'Online'} • ${team.isNotEmpty ? team : widget.teamName}';
-    final agendaText = isUnmodifiedDefault
-        ? 'Besok 19:00 WIB • Agenda: Sprint 1 Review & Demo Prototype'
-        : (notes.isNotEmpty
-              ? '${current.formattedTime} • Agenda: $notes'
-              : current.formattedTime);
-    final ctaLabel =
-        isUnmodifiedDefault || loc.toLowerCase().contains('discord')
-            ? 'Join Discord Voice'
-            : 'Join Meeting';
-
-    return Container(
-      key: const ValueKey('desktop_workspace_meeting_card'),
-      constraints: const BoxConstraints(minHeight: 82),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        decoration: const BoxDecoration(
-          border: Border(
-            left: BorderSide(
-              color: AppColors.primaryAccent,
-              width: 5,
-            ),
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(16, 12, 18, 12),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-                    final compact = constraints.maxWidth < 460;
-
-                    final infoBlock = Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                displayTitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: context.rFont(14, min: 13, max: 15),
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Container(
-                              height: 18,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF63CDDA),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Center(
-                                widthFactor: 1.0,
-                                heightFactor: 1.0,
-                                child: Text(
-                                  platformLabel,
-                                  maxLines: 1,
-                                  style: const TextStyle(
-                                    color: Color(0xFF2A8F9C),
-                                    fontSize: 9,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 14,
-                              height: 14,
-                              decoration: const BoxDecoration(
-                                color: AppColors.primaryAccent,
-                                shape: BoxShape.circle,
-                              ),
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                Icons.access_time_rounded,
-                                size: 9,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                agendaText,
-                                maxLines: compact ? 2 : 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: context.rFont(11, min: 10, max: 12),
-                                  fontFamily: 'Inter',
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-
-                    final rightActions = Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        if (hasCustomList && meetings.length > 1) ...[
-                          Container(
-                            height: 34,
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.bgPrimary,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.borderSubtle),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                InkWell(
-                                  onTap: () => setState(() {
-                                    _meetingIndex =
-                                        (safeIndex - 1 + meetings.length) %
-                                        meetings.length;
-                                  }),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(4),
-                                    child: Icon(
-                                      Icons.chevron_left_rounded,
-                                      size: 16,
-                                      color: Colors.white70,
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  '${safeIndex + 1}/${meetings.length}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10.5,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                    fontFeatures: [
-                                      FontFeature.tabularFigures(),
-                                    ],
-                                  ),
-                                ),
-                                InkWell(
-                                  onTap: () => setState(() {
-                                    _meetingIndex =
-                                        (safeIndex + 1) % meetings.length;
-                                  }),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(4),
-                                    child: Icon(
-                                      Icons.chevron_right_rounded,
-                                      size: 16,
-                                      color: Colors.white70,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        if (hasCustomList && !isUnmodifiedDefault) ...[
-                          Tooltip(
-                            message: 'Edit Meeting',
-                            child: Material(
-                              color: AppColors.bgPrimary,
-                              borderRadius: BorderRadius.circular(8),
-                              child: InkWell(
-                                key: const ValueKey(
-                                  'desktop_workspace_edit_meeting_btn',
-                                ),
-                                onTap: () => widget.onEditSchedule(current),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  width: 34,
-                                  height: 34,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: AppColors.borderSubtle,
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const Icon(
-                                    Icons.edit_rounded,
-                                    size: 15,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Tooltip(
-                            message: 'Delete Meeting',
-                            child: Material(
-                              color: AppColors.bgPrimary,
-                              borderRadius: BorderRadius.circular(8),
-                              child: InkWell(
-                                key: const ValueKey(
-                                  'desktop_workspace_delete_meeting_btn',
-                                ),
-                                onTap: () => widget.onDeleteSchedule(current),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  width: 34,
-                                  height: 34,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: AppColors.error.withValues(
-                                        alpha: 0.45,
-                                      ),
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const Icon(
-                                    Icons.delete_outline_rounded,
-                                    size: 15,
-                                    color: AppColors.error,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        Material(
-                          color: AppColors.primaryAccent,
-                          borderRadius: BorderRadius.circular(8),
-                          child: InkWell(
-                            key: const ValueKey(
-                              'desktop_workspace_join_meeting_btn',
-                            ),
-                            onTap: () => _handleJoinMeeting(current),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              height: 34,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                              ),
-                              child: Center(
-                                widthFactor: 1.0,
-                                heightFactor: 1.0,
-                                child: Text(
-                                  ctaLabel,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-
-                    if (compact) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          infoBlock,
-                          const SizedBox(height: 10),
-                          rightActions,
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(child: infoBlock),
-                        const SizedBox(width: 14),
-                        rightActions,
-                      ],
-                    );
-          },
-        ),
-      ),
-    );
-  }
-
   Widget _buildTasksSection(BuildContext context) {
     final selectedMilestone = widget.selectedMilestoneId != null
         ? widget.milestones
@@ -965,7 +664,7 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
       children: [
         _FilterPill(
           pillKey: const ValueKey('desktop_workspace_filter_all'),
-          label: 'Semua (${searchedTasks.length})',
+          label: 'All (${searchedTasks.length})',
           isActive: _priorityFilter == _WorkspacePriorityFilter.all,
           onTap: () => setState(
             () => _priorityFilter = _WorkspacePriorityFilter.all,
@@ -1232,11 +931,11 @@ class _DesktopWorkspaceTaskCard extends StatelessWidget {
     }
     switch (task.priority) {
       case TaskPriority.high:
-        return (AppColors.priorityHighBg, AppColors.priorityHighText);
+        return (const Color(0xFFFF7D65), Colors.white);
       case TaskPriority.medium:
-        return (AppColors.priorityMediumBg, AppColors.priorityMediumText);
+        return (const Color(0xFF786FA6), const Color(0xFF4A3C8C));
       case TaskPriority.low:
-        return (AppColors.priorityLowBg, AppColors.priorityLowText);
+        return (const Color(0xFF4EB089), const Color(0xFF1D5A41));
     }
   }
 
@@ -1294,8 +993,9 @@ class _DesktopWorkspaceTaskCard extends StatelessWidget {
 
     final dueBg = task.isDone
         ? const Color(0xFF363C48)
-        : (task.isUrgent ? const Color(0xFFFF7D65) : const Color(0xFF5B93FF));
-    final dueFg = task.isDone ? AppColors.textMuted : Colors.white;
+        : const Color(0xFF8FC7FF);
+    final dueFg =
+        task.isDone ? AppColors.textMuted : const Color(0xFF1E398A);
 
     final categoryTag = task.title.toLowerCase().contains('report') ||
             task.title.toLowerCase().contains('laporan')

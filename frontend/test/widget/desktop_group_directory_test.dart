@@ -56,53 +56,62 @@ void main() {
         );
 
         // Top header exact FigCraft copy and controls
-        expect(find.text('Kelompok & Tim Belajar'), findsOneWidget);
+        expect(find.text('Study Teams & Groups'), findsOneWidget);
         expect(
           find.text(
-            'Kelola kelompok mata kuliah, jadwal meeting tim, dan progress kolaborasi',
+            'Manage course study teams, team meetings, and collaboration progress',
           ),
           findsOneWidget,
         );
-        expect(find.text('Cari kelompok, mata kuliah...'), findsOneWidget);
-        expect(find.text('Join Team'), findsOneWidget);
+        expect(find.text('Search study teams or courses...'), findsOneWidget);
+        expect(find.text('Join Team'), findsNWidgets(2));
         expect(find.text('+ Create Team'), findsOneWidget);
-        expect(find.byType(NotificationBellButton), findsNothing);
+        expect(find.byType(NotificationBellButton), findsOneWidget);
         expect(find.text('⌘K'), findsNothing);
 
         // Sidebar Team Members badge
         expect(find.text('Team Members'), findsOneWidget);
         expect(find.text('4'), findsOneWidget);
 
-        // Left column: Team's Schedule banner
+        // Left column: 2-card Team's Schedule row + See all
         expect(find.text("Team's Schedule"), findsOneWidget);
-        expect(find.text('MEETING IMPAL'), findsOneWidget);
-        expect(find.text('Discord • Group IMPAL'), findsOneWidget);
+        expect(find.text('See all'), findsOneWidget);
+        expect(find.text('IMPAL Project Mentoring'), findsOneWidget);
+        expect(find.text('Upcoming'), findsOneWidget);
         expect(
-          find.text(
-            'Tomorrow 19:00 WIB • Agenda: Sprint 1 Review & UI Demo Prototype',
-          ),
+          find.text('Building B Conference Room, 2nd Floor'),
           findsOneWidget,
         );
-        expect(find.text('Join Discord Voice'), findsOneWidget);
+        expect(find.text('Tomorrow • 10:00 - 11:30 WIB'), findsOneWidget);
+        expect(find.text('MEETING IMPAL'), findsOneWidget);
+        expect(find.text('Ongoing'), findsOneWidget);
+        expect(find.text('Discord - Group IMPAL'), findsOneWidget);
+        expect(find.text('Today • 19:00 - 20:30 WIB'), findsOneWidget);
+        expect(find.text('Join Call'), findsOneWidget);
 
         // Left column: My Teams header + filter pills
-        expect(find.text('My Teams (4 Aktif)'), findsOneWidget);
-        expect(find.text('Semua Tim (4)'), findsOneWidget);
-        expect(find.text('Mata Kuliah'), findsWidgets);
-        expect(find.text('Projek Mandiri'), findsWidgets);
-        expect(find.text('Kompetisi'), findsWidgets);
+        expect(find.text('My Teams (4 Active)'), findsOneWidget);
+        expect(find.text('All Teams (4)'), findsOneWidget);
+        expect(find.text('Courses'), findsOneWidget);
+        expect(find.text('Personal Projects'), findsOneWidget);
+        expect(find.text('Competitions'), findsOneWidget);
 
-        // Verify compact horizontal Team's Schedule pill beside MEETING IMPAL
-        final meetingRect = tester.getRect(find.text('MEETING IMPAL'));
-        final discordTextRect = tester.getRect(
-          find.text('Discord • Group IMPAL'),
+        // Verify side-by-side 2-card Team's Schedule row & compact Join Call pill
+        final schCard1Rect = tester.getRect(
+          find.byKey(const ValueKey('desktop_team_schedule_card_sch_4')),
+        );
+        final schCard2Rect = tester.getRect(
+          find.byKey(const ValueKey('desktop_team_schedule_card_sch_3')),
+        );
+        final joinCallRect = tester.getRect(
+          find.byKey(const ValueKey('desktop_team_join_discord_btn')),
         );
         expect(
-          (discordTextRect.center.dy - meetingRect.center.dy).abs(),
+          (schCard1Rect.center.dy - schCard2Rect.center.dy).abs(),
           lessThan(4),
         );
-        expect(discordTextRect.left, greaterThan(meetingRect.right));
-        expect(discordTextRect.width, lessThan(240));
+        expect(schCard2Rect.left, greaterThan(schCard1Rect.right));
+        expect(joinCallRect.width, lessThan(180));
 
         // Verify compact horizontal My Teams filter pills (intrinsic widths side-by-side)
         final allFilterRect = tester.getRect(
@@ -145,17 +154,16 @@ void main() {
         expect(find.text('3M81'), findsOneWidget);
         expect(find.text('9K20'), findsOneWidget);
         expect(find.text('4A12'), findsOneWidget);
-        expect(find.text('Buka Workspace'), findsOneWidget);
-        expect(find.text('Lihat Detail'), findsNWidgets(3));
+        expect(find.text('Open Workspace'), findsOneWidget);
+        expect(find.text('View Details'), findsNWidgets(3));
 
         // Right panel widgets
-        expect(find.text('Punya Kode Undangan Tim?'), findsOneWidget);
-        expect(find.text('Gabung Kelompok'), findsOneWidget);
-        expect(find.text('Tenggat Waktu Kelompok'), findsOneWidget);
+        expect(find.text('Have a Team Invite Code?'), findsOneWidget);
+        expect(find.text('Upcoming Team Deadlines'), findsOneWidget);
         expect(find.text('Sprint 1 Review IMPAL'), findsOneWidget);
         expect(find.text('Laporan IUM Bab 2'), findsOneWidget);
         expect(find.text('Dataset KA Testing'), findsOneWidget);
-        expect(find.text('Aktivitas Tim Terkini'), findsOneWidget);
+        expect(find.text('Recent Team Activity'), findsOneWidget);
       },
     );
 
@@ -179,12 +187,12 @@ void main() {
         // Collapse sidebar to 80 dp
         await tester.tap(find.byTooltip('Collapse sidebar'));
         await tester.pumpAndSettle();
-        expect(find.text('Kelompok & Tim Belajar'), findsOneWidget);
+        expect(find.text('Study Teams & Groups'), findsOneWidget);
 
         // Resize to narrow desktop 1024x768
         tester.view.physicalSize = const Size(1024, 768);
         await tester.pumpAndSettle();
-        expect(find.text('Kelompok & Tim Belajar'), findsOneWidget);
+        expect(find.text('Study Teams & Groups'), findsOneWidget);
         expect(
           errors,
           isEmpty,
@@ -202,21 +210,21 @@ void main() {
           const Size(1440, 980),
         );
 
-        // Filter to Projek Mandiri
-        await tester.tap(find.text('Projek Mandiri').first);
+        // Filter to Personal Projects
+        await tester.tap(find.text('Personal Projects').first);
         await tester.pumpAndSettle();
         expect(find.text('Kelompok - Projek TIK'), findsOneWidget);
         expect(find.text('Kelompok - IMPAL'), findsNothing);
         expect(find.text('Kelompok - KA'), findsNothing);
 
-        // Filter to Kompetisi (empty state + Show All Teams)
-        await tester.tap(find.text('Kompetisi').first);
+        // Filter to Competitions (empty state + Show All Teams)
+        await tester.tap(find.text('Competitions').first);
         await tester.pumpAndSettle();
         expect(find.text('No teams match your current filter'), findsOneWidget);
         expect(find.text('Kelompok - Projek TIK'), findsNothing);
 
-        // Back to Semua Tim (4)
-        await tester.tap(find.text('Semua Tim (4)'));
+        // Back to All Teams (4)
+        await tester.tap(find.text('All Teams (4)'));
         await tester.pumpAndSettle();
         expect(find.text('Kelompok - IMPAL'), findsOneWidget);
         expect(find.text('Kelompok - Projek TIK'), findsOneWidget);
@@ -241,7 +249,7 @@ void main() {
           const Size(1440, 980),
         );
 
-        // 1. Inline Gabung Kelompok by invite code
+        // 1. Inline Join Team by invite code
         final inlineCodeField = find.byKey(
           const ValueKey('desktop_team_inline_code_input'),
         );
@@ -255,7 +263,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // 2. Top header Join Team dialog
-        await tester.tap(find.text('Join Team'));
+        await tester.tap(find.text('Join Team').first);
         await tester.pumpAndSettle();
         expect(find.text('Become Member'), findsOneWidget);
         expect(find.widgetWithText(TextField, 'Enter Code'), findsOneWidget);
@@ -297,8 +305,8 @@ void main() {
           const Size(1440, 980),
         );
 
-        expect(find.text('Kelompok & Tim Belajar'), findsOneWidget);
-        expect(find.text('My Teams (4 Aktif)'), findsOneWidget);
+        expect(find.text('Study Teams & Groups'), findsOneWidget);
+        expect(find.text('My Teams (4 Active)'), findsOneWidget);
       },
     );
 
@@ -312,7 +320,7 @@ void main() {
         );
 
         expect(
-          find.byKey(const ValueKey('desktop_team_create_meeting_btn')),
+          find.byKey(const ValueKey('desktop_team_schedule_see_all_btn')),
           findsOneWidget,
         );
         expect(
@@ -321,6 +329,10 @@ void main() {
         );
         expect(
           find.byKey(const ValueKey('desktop_team_delete_meeting_btn')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('desktop_team_join_discord_btn')),
           findsOneWidget,
         );
 
@@ -404,9 +416,9 @@ void main() {
         expect(find.text('SIF-45'), findsOneWidget);
         expect(find.text('Code:'), findsOneWidget);
         expect(find.text('7X29'), findsOneWidget);
-        expect(find.text('+ Create Meeting'), findsOneWidget);
+        expect(find.text('+ Create Meeting'), findsNWidgets(2));
         expect(find.text('+ Create Task'), findsOneWidget);
-        expect(find.text('5 Anggota Tim'), findsOneWidget);
+        expect(find.text('5 Team Members'), findsOneWidget);
 
         // Hero top-row pills & buttons must hug their content width and stay on one row
         final sifRect = tester.getRect(
@@ -436,32 +448,37 @@ void main() {
           find.byKey(const ValueKey('desktop_workspace_meeting_card')),
           findsOneWidget,
         );
+        expect(
+          find.byKey(
+            const ValueKey('desktop_workspace_section_create_meeting_btn'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text("Team's Schedule"), findsOneWidget);
+        expect(find.text('IMPAL Project Mentoring'), findsOneWidget);
         expect(find.text('MEETING IMPAL'), findsOneWidget);
-        expect(find.text('Discord • Group IMPAL'), findsOneWidget);
-        expect(find.text('Join Discord Voice'), findsOneWidget);
+        expect(find.text('Discord - Group IMPAL'), findsOneWidget);
+        expect(find.text('Join Call'), findsOneWidget);
 
-        final meetingTitleRect = tester.getRect(find.text('MEETING IMPAL'));
-        final discordPillRect = tester.getRect(
-          find
-              .ancestor(
-                of: find.text('Discord • Group IMPAL'),
-                matching: find.byType(Container),
-              )
-              .first,
+        final wsSchCard1Rect = tester.getRect(
+          find.byKey(const ValueKey('desktop_team_schedule_card_sch_4')),
         );
-        expect(discordPillRect.width, lessThan(250));
-        expect(
-          discordPillRect.left,
-          greaterThanOrEqualTo(meetingTitleRect.right),
+        final wsSchCard2Rect = tester.getRect(
+          find.byKey(const ValueKey('desktop_team_schedule_card_sch_3')),
+        );
+        final joinMeetingBtnRect = tester.getRect(
+          find.byKey(const ValueKey('desktop_workspace_join_meeting_btn')),
         );
         expect(
-          (meetingTitleRect.center.dy - discordPillRect.center.dy).abs(),
-          lessThan(8),
+          (wsSchCard1Rect.center.dy - wsSchCard2Rect.center.dy).abs(),
+          lessThan(4),
         );
+        expect(wsSchCard2Rect.left, greaterThan(wsSchCard1Rect.right));
+        expect(joinMeetingBtnRect.width, lessThan(180));
 
         expect(find.text('Milestones'), findsNothing);
         expect(find.textContaining('Team Tasks ('), findsOneWidget);
-        expect(find.textContaining('Semua ('), findsOneWidget);
+        expect(find.textContaining('All ('), findsOneWidget);
         expect(find.textContaining('High ('), findsOneWidget);
         expect(find.textContaining('Medium ('), findsOneWidget);
         expect(find.textContaining('Low ('), findsOneWidget);
@@ -489,12 +506,25 @@ void main() {
         expect(card1Rect.right, lessThan(card2Rect.left));
 
         // Right Column: Members + Sprint 1 Progress + Resources
-        expect(find.text('Anggota Tim (5)'), findsOneWidget);
+        expect(find.text('Team Members (5)'), findsOneWidget);
         expect(find.text('Jarvis S.'), findsOneWidget);
         expect(find.text('Ahmad Sahroni'), findsOneWidget);
+        expect(find.text('QA & Software Tester'), findsOneWidget);
         expect(find.text('Sprint 1 Progress'), findsOneWidget);
-        expect(find.text('Target Milestone Berikutnya:'), findsOneWidget);
-        expect(find.text('Resource & Dokumen Tim'), findsOneWidget);
+        expect(find.text('6 of 8 Tasks Completed'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('desktop_workspace_sprint_card')),
+            matching: find.text('75%'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Next Milestone Target:'), findsOneWidget);
+        expect(
+          find.text('Testing & Code Freeze (Tomorrow, 18:00 WIB)'),
+          findsOneWidget,
+        );
+        expect(find.text('Team Resources & Documents'), findsOneWidget);
         expect(find.text('GitHub Repository'), findsOneWidget);
         expect(find.text('Figma Spec Design'), findsOneWidget);
         expect(find.text('Discord Voice & Chat'), findsOneWidget);
@@ -532,7 +562,7 @@ void main() {
           find.byKey(const ValueKey('desktop_team_members_dialog')),
           findsOneWidget,
         );
-        expect(find.text('Team Members (5)'), findsOneWidget);
+        expect(find.text('Team Members (5)'), findsNWidgets(2));
         await tester.tap(
           find.byKey(const ValueKey('desktop_team_members_close_btn')),
         );
@@ -543,7 +573,7 @@ void main() {
           find.byKey(const ValueKey('desktop_header_breadcrumb_parent')),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Kelompok & Tim Belajar'), findsOneWidget);
+        expect(find.text('Study Teams & Groups'), findsOneWidget);
       },
     );
 

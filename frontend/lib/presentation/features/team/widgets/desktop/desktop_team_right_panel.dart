@@ -69,7 +69,7 @@ class _DesktopTeamRightPanelState extends State<DesktopTeamRightPanel> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Punya Kode Undangan Tim?',
+            'Have a Team Invite Code?',
             style: TextStyle(
               color: Colors.white,
               fontSize: context.rFont(14, min: 13, max: 15.5),
@@ -79,7 +79,7 @@ class _DesktopTeamRightPanelState extends State<DesktopTeamRightPanel> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Masukkan 4-karakter kode kelompok dari temanmu untuk langsung bergabung ke workspace.',
+            'Enter the 4-character invite code from your teammate to join a workspace.',
             style: TextStyle(
               color: AppColors.textMuted,
               fontSize: context.rFont(11, min: 10.5, max: 12),
@@ -120,7 +120,7 @@ class _DesktopTeamRightPanelState extends State<DesktopTeamRightPanel> {
                 isDense: true,
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(vertical: 8),
-                hintText: 'Contoh: 7X29',
+                hintText: 'Example: 7X29',
                 hintStyle: TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 12,
@@ -144,7 +144,7 @@ class _DesktopTeamRightPanelState extends State<DesktopTeamRightPanel> {
                 width: double.infinity,
                 alignment: Alignment.center,
                 child: const Text(
-                  'Gabung Kelompok',
+                  'Join Team',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -173,7 +173,7 @@ class _DesktopTeamRightPanelState extends State<DesktopTeamRightPanel> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Tenggat Waktu Kelompok',
+            'Upcoming Team Deadlines',
             style: TextStyle(
               color: Colors.white,
               fontSize: context.rFont(14, min: 13, max: 15.5),
@@ -267,7 +267,7 @@ class _DesktopTeamRightPanelState extends State<DesktopTeamRightPanel> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Aktivitas Tim Terkini',
+            'Recent Team Activity',
             style: TextStyle(
               color: Colors.white,
               fontSize: context.rFont(14, min: 13, max: 15.5),

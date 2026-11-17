@@ -3,7 +3,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/responsive_context.dart';
 import 'desktop_schedule_matrix_card.dart';
 
-/// Column descriptor for each of the 6 weekday headers (`Senin` .. `Sabtu`).
+/// Column descriptor for each weekday header (`Mon` .. `Sun`).
 class ScheduleMatrixDayHeader {
   final String label;
   final bool isToday;
@@ -116,7 +116,7 @@ class DesktopScheduleMatrixTable extends StatelessWidget {
             width: _timeColWidth,
             child: Center(
               child: Text(
-                'WAKTU',
+                'TIME',
                 style: TextStyle(
                   color: AppColors.textMuted,
                   fontSize: context.rFont(11, min: 10.5, max: 11),
@@ -173,7 +173,7 @@ class DesktopScheduleMatrixTable extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: Text(
-                'Hari Ini',
+                'Today',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: context.rFont(9, min: 8.5, max: 9),

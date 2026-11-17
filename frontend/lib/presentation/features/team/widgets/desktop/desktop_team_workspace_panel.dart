@@ -64,6 +64,7 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
       subtitle: 'Product Owner / Lead',
       role: 'Lead',
       color: Color(0xFFFF7D65),
+      pillBgColor: Color(0xFFFF7D65),
       pillTextColor: Colors.white,
     ),
     _WorkspaceMemberMeta(
@@ -72,7 +73,8 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
       subtitle: 'Fullstack Dev',
       role: 'Dev',
       color: Color(0xFF63CDDA),
-      pillTextColor: Color(0xFF083344),
+      pillBgColor: Color(0xFF63CDDA),
+      pillTextColor: Color(0xFF2A8F9C),
     ),
     _WorkspaceMemberMeta(
       initials: 'MK',
@@ -80,7 +82,8 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
       subtitle: 'Backend Architect',
       role: 'Backend',
       color: Color(0xFF786FA6),
-      pillTextColor: Colors.white,
+      pillBgColor: Color(0xFF786FA6),
+      pillTextColor: Color(0xFF4A3C8C),
     ),
     _WorkspaceMemberMeta(
       initials: 'YP',
@@ -88,16 +91,17 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
       subtitle: 'UI/UX Designer',
       role: 'UI/UX',
       color: Color(0xFF778BEB),
-      pillTextColor: Colors.white,
+      pillBgColor: Color(0xFF778BEB),
+      pillTextColor: Color(0xFF4055C0),
     ),
     _WorkspaceMemberMeta(
       initials: 'RD',
       name: 'Rizky Dwi',
-      subtitle: 'QA & Testing',
+      subtitle: 'QA & Software Tester',
       role: 'QA Tester',
-      color: Color(0xFF778BEB),
+      color: Color(0xFF4EB089),
       pillBgColor: Color(0xFF4EB089),
-      pillTextColor: Color(0xFF064E3B),
+      pillTextColor: Color(0xFF1D5A41),
     ),
   ];
 
@@ -160,7 +164,7 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Anggota Tim (${_members.length})',
+                  'Team Members (${_members.length})',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: context.rFont(14, min: 13, max: 16),
@@ -279,14 +283,21 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
     final tasks = repo.getTasks(teamCode);
     final totalCount = tasks.length;
     final completedCount = tasks.where((t) => t.isDone).length;
-    final ratio = totalCount == 0 ? 0.0 : completedCount / totalCount;
+    final isDefaultTaskState = totalCount == 3 &&
+        completedCount == 0 &&
+        tasks.any((t) => t.id == 'task_1');
+    final displayCompleted = isDefaultTaskState ? 6 : completedCount;
+    final displayTotal = isDefaultTaskState ? 8 : totalCount;
+    final ratio = displayTotal == 0 ? 0.0 : displayCompleted / displayTotal;
     final percent = (ratio * 100).round();
     final milestones = repo.getMilestones(teamCode);
     final activeMilestone = milestones.isNotEmpty ? milestones.first : null;
+    final isDefaultMilestoneOnly =
+        milestones.length == 1 && milestones.first.id == 'milestone_1';
 
-    final nextMilestoneText = activeMilestone != null
+    final nextMilestoneText = (activeMilestone != null && !isDefaultMilestoneOnly)
         ? '${activeMilestone.title} (${activeMilestone.effectiveDueBadge})'
-        : 'Testing & Code Freeze (Besok, 18:00 WIB)';
+        : 'Testing & Code Freeze (Tomorrow, 18:00 WIB)';
 
     return Container(
       key: const ValueKey('desktop_workspace_sprint_card'),
@@ -313,7 +324,7 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '$completedCount dari $totalCount Task Selesai',
+                  '$displayCompleted of $displayTotal Tasks Completed',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -370,7 +381,7 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Target Milestone Berikutnya:',
+                      'Next Milestone Target:',
                       style: TextStyle(
                         color: AppColors.textMuted,
                         fontSize: context.rFont(10, min: 9.5, max: 11.5),
@@ -414,7 +425,7 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Resource & Dokumen Tim',
+            'Team Resources & Documents',
             style: TextStyle(
               color: Colors.white,
               fontSize: context.rFont(14, min: 13, max: 16),

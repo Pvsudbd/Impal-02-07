@@ -3,8 +3,8 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/responsive_context.dart';
 import '../../models/task_item_model.dart';
 
-/// Priority KPI summary row matching FigCraft `Row KPI Priority` (node 2126).
-/// Displays 4 metric cards: High Priority, Medium Priority, Low Priority, and Total Tasks.
+/// Timeline priority summary section matching FigCraft `Section Timeline Summary` (node 2341)
+/// inside `Desktop - Tasks Management`.
 class DesktopTaskKpiRow extends StatelessWidget {
   final int highCount;
   final int mediumCount;
@@ -13,30 +13,28 @@ class DesktopTaskKpiRow extends StatelessWidget {
   final int todayDueCount;
   final TaskPriorityLevel? selectedPriority;
   final ValueChanged<TaskPriorityLevel?>? onPriorityTap;
+  final VoidCallback? onSmartPriorityTap;
 
   const DesktopTaskKpiRow({
     super.key,
     required this.highCount,
     required this.mediumCount,
     required this.lowCount,
-    required this.totalCount,
-    required this.todayDueCount,
+    this.totalCount = 0,
+    this.todayDueCount = 0,
     this.selectedPriority,
     this.onPriorityTap,
+    this.onSmartPriorityTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final cards = [
-      _KpiCardData(
+      _TimelinePriorityCardData(
         cardKey: const ValueKey('desktop_kpi_high'),
-        badgeLabel: 'HIGH PRIORITY',
-        badgeBg: AppColors.priorityHighBg,
-        badgeTextColor: AppColors.priorityHighText,
-        dotColor: AppColors.primary,
-        valueText: '$highCount',
-        subtitle: highCount == 1 ? 'Task pending' : 'Tasks pending',
-        subtitleColor: AppColors.textMuted,
+        countText: '$highCount',
+        label: 'High',
+        accentBorderColor: AppColors.priorityHighBg,
         isSelected: selectedPriority == TaskPriorityLevel.high,
         onTap: onPriorityTap == null
             ? null
@@ -46,15 +44,11 @@ class DesktopTaskKpiRow extends StatelessWidget {
                       : TaskPriorityLevel.high,
                 ),
       ),
-      _KpiCardData(
+      _TimelinePriorityCardData(
         cardKey: const ValueKey('desktop_kpi_medium'),
-        badgeLabel: 'MEDIUM PRIORITY',
-        badgeBg: AppColors.priorityMediumBg,
-        badgeTextColor: AppColors.priorityMediumText,
-        dotColor: AppColors.priorityMediumBg,
-        valueText: '$mediumCount',
-        subtitle: mediumCount == 1 ? 'Task this week' : 'Tasks this week',
-        subtitleColor: AppColors.textMuted,
+        countText: '$mediumCount',
+        label: 'Medium',
+        accentBorderColor: AppColors.priorityMediumBg,
         isSelected: selectedPriority == TaskPriorityLevel.medium,
         onTap: onPriorityTap == null
             ? null
@@ -64,15 +58,11 @@ class DesktopTaskKpiRow extends StatelessWidget {
                       : TaskPriorityLevel.medium,
                 ),
       ),
-      _KpiCardData(
+      _TimelinePriorityCardData(
         cardKey: const ValueKey('desktop_kpi_low'),
-        badgeLabel: 'LOW PRIORITY',
-        badgeBg: AppColors.priorityLowBg,
-        badgeTextColor: AppColors.priorityLowText,
-        dotColor: AppColors.mintAccent,
-        valueText: '$lowCount',
-        subtitle: lowCount == 1 ? 'Task on track' : 'Tasks on track',
-        subtitleColor: AppColors.textMuted,
+        countText: '$lowCount',
+        label: 'Low',
+        accentBorderColor: AppColors.priorityLowBg,
         isSelected: selectedPriority == TaskPriorityLevel.low,
         onTap: onPriorityTap == null
             ? null
@@ -82,185 +72,199 @@ class DesktopTaskKpiRow extends StatelessWidget {
                       : TaskPriorityLevel.low,
                 ),
       ),
-      _KpiCardData(
-        cardKey: const ValueKey('desktop_kpi_total'),
-        badgeLabel: 'TOTAL TASKS',
-        badgeBg: AppColors.skyBadge,
-        badgeTextColor: AppColors.skyBadgeText,
-        dotColor: const Color(0xFF60A5FA),
-        valueText: '$totalCount',
-        subtitle: '$todayDueCount due today',
-        subtitleColor: AppColors.primary,
-        isSelected: selectedPriority == null && false,
-        onTap: onPriorityTap == null ? null : () => onPriorityTap!(null),
-      ),
     ];
 
-    final gap = context.rSpacing(12);
+    const gap = 12.0;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 600) {
-          final cardWidth = (constraints.maxWidth - gap) / 2;
-          return Wrap(
-            spacing: gap,
-            runSpacing: gap,
-            children: [
-              for (final card in cards)
-                SizedBox(
-                  width: cardWidth,
-                  child: _DesktopKpiCard(data: card),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Timeline',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: context.rFont(18, min: 16, max: 19),
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 10),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 380) {
+              return Column(
+                children: [
+                  for (int i = 0; i < cards.length; i++) ...[
+                    _TimelinePriorityCard(data: cards[i]),
+                    if (i < cards.length - 1) const SizedBox(height: 10),
+                  ],
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                for (int i = 0; i < cards.length; i++) ...[
+                  Expanded(child: _TimelinePriorityCard(data: cards[i])),
+                  if (i < cards.length - 1) const SizedBox(width: gap),
+                ],
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        RepaintBoundary(
+          child: Material(
+            color: AppColors.bgCard,
+            borderRadius: BorderRadius.circular(10),
+            child: InkWell(
+              key: const ValueKey('desktop_ai_smart_priority_bar'),
+              onTap: onSmartPriorityTap,
+              borderRadius: BorderRadius.circular(10),
+              hoverColor: Colors.white.withValues(alpha: 0.03),
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 39),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
                 ),
-            ],
-          );
-        }
-
-        return Row(
-          children: [
-            for (int i = 0; i < cards.length; i++) ...[
-              Expanded(child: _DesktopKpiCard(data: cards[i])),
-              if (i < cards.length - 1) SizedBox(width: gap),
-            ],
-          ],
-        );
-      },
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.borderSubtle, width: 1),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.psychology_rounded,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'AI Smart Priority Ranking',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: context.rFont(12.5, min: 11.5, max: 13),
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1F3534),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'Mamdani CoG',
+                        style: TextStyle(
+                          color: Color(0xFF10B981),
+                          fontSize: 10.5,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: AppColors.textMuted,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _KpiCardData {
+class _TimelinePriorityCardData {
   final Key cardKey;
-  final String badgeLabel;
-  final Color badgeBg;
-  final Color badgeTextColor;
-  final Color dotColor;
-  final String valueText;
-  final String subtitle;
-  final Color subtitleColor;
+  final String countText;
+  final String label;
+  final Color accentBorderColor;
   final bool isSelected;
   final VoidCallback? onTap;
 
-  const _KpiCardData({
+  const _TimelinePriorityCardData({
     required this.cardKey,
-    required this.badgeLabel,
-    required this.badgeBg,
-    required this.badgeTextColor,
-    required this.dotColor,
-    required this.valueText,
-    required this.subtitle,
-    required this.subtitleColor,
+    required this.countText,
+    required this.label,
+    required this.accentBorderColor,
     required this.isSelected,
     this.onTap,
   });
 }
 
-class _DesktopKpiCard extends StatelessWidget {
-  final _KpiCardData data;
+class _TimelinePriorityCard extends StatelessWidget {
+  final _TimelinePriorityCardData data;
 
-  const _DesktopKpiCard({required this.data});
+  const _TimelinePriorityCard({required this.data});
 
   @override
   Widget build(BuildContext context) {
-    final radius = context.rSpacing(16);
-
     return RepaintBoundary(
       child: Material(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
           key: data.cardKey,
           onTap: data.onTap,
-          borderRadius: BorderRadius.circular(radius),
+          borderRadius: BorderRadius.circular(12),
           hoverColor: Colors.white.withValues(alpha: 0.03),
           child: Container(
-            constraints: const BoxConstraints(minHeight: 86),
-            padding: EdgeInsets.symmetric(
-              horizontal: context.rSpacing(14),
-              vertical: context.rSpacing(12),
-            ),
+            height: 69,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(radius),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: data.isSelected
-                    ? data.badgeBg
+                    ? data.accentBorderColor
                     : AppColors.borderSubtle,
-                width: data.isSelected ? 1.4 : 0.9,
+                width: data.isSelected ? 1.5 : 1.0,
               ),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: context.rSpacing(7),
-                          vertical: context.rSpacing(3),
-                        ),
-                        decoration: BoxDecoration(
-                          color: data.badgeBg,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          data.badgeLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: data.badgeTextColor,
-                            fontSize: context.rFont(9, min: 8.5, max: 10),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      width: context.rIcon(8),
-                      height: context.rIcon(8),
-                      decoration: BoxDecoration(
-                        color: data.dotColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ],
+                Text(
+                  data.countText,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: context.rFont(20, min: 18, max: 22),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    height: 1.1,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
-                SizedBox(height: context.rSpacing(10)),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      data.valueText,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: context.rFont(24, min: 20, max: 26),
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                        height: 1.0,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                    SizedBox(width: context.rSpacing(8)),
-                    Expanded(
-                      child: Text(
-                        data.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: data.subtitleColor,
-                          fontSize: context.rFont(11.5, min: 10, max: 12.5),
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w500,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  data.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: context.rFont(12, min: 11, max: 12.5),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                    height: 1.1,
+                  ),
                 ),
               ],
             ),

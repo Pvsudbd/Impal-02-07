@@ -50,10 +50,16 @@ void main() {
 
       expect(find.text('Tasks Management'), findsOneWidget);
       expect(find.text('+ Add New Task'), findsOneWidget);
-      expect(find.text('HIGH PRIORITY'), findsOneWidget);
-      expect(find.text('MEDIUM PRIORITY'), findsOneWidget);
-      expect(find.text('LOW PRIORITY'), findsOneWidget);
-      expect(find.text('TOTAL TASKS'), findsOneWidget);
+      expect(find.text('Timeline'), findsOneWidget);
+      expect(find.text('High'), findsWidgets);
+      expect(find.text('Medium'), findsWidgets);
+      expect(find.text('Low'), findsWidgets);
+      expect(
+        find.byKey(const ValueKey('desktop_ai_smart_priority_bar')),
+        findsOneWidget,
+      );
+      expect(find.text('AI Smart Priority Ranking'), findsOneWidget);
+      expect(find.text('Mamdani CoG'), findsOneWidget);
       expect(find.text('Today Tasks'), findsOneWidget);
       expect(find.text('Upcoming & Overdue Tasks'), findsOneWidget);
       expect(find.text('October 2026'), findsOneWidget);

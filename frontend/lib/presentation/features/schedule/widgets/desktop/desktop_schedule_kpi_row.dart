@@ -13,11 +13,11 @@ class DesktopScheduleKpiRow extends StatelessWidget {
 
   const DesktopScheduleKpiRow({
     super.key,
-    this.totalSessionsCount = 14,
+    this.totalSessionsCount = 15,
     this.todayClassesCount = 2,
     this.ongoingCount = 1,
-    this.teamMeetingsCount = 4,
-    this.studyHoursCount = 28,
+    this.teamMeetingsCount = 5,
+    this.studyHoursCount = 30,
     this.activeSksCount = 18,
   });
 
@@ -26,29 +26,29 @@ class DesktopScheduleKpiRow extends StatelessWidget {
     final cards = [
       _ScheduleKpiCardData(
         cardKey: const ValueKey('desktop_schedule_kpi_total'),
-        title: '$totalSessionsCount Sesi Kuliah',
-        subtitle: 'Total Jadwal Minggu Ini',
+        title: '$totalSessionsCount Weekly Sessions',
+        subtitle: 'Total Scheduled This Week',
         dotColor: const Color(0xFF63CDDA),
         isHighlighted: false,
       ),
       _ScheduleKpiCardData(
         cardKey: const ValueKey('desktop_schedule_kpi_today'),
-        title: '$todayClassesCount Kelas Hari Ini',
-        subtitle: '$ongoingCount Sedang Berlangsung (Ongoing)',
+        title: '$todayClassesCount Classes Today',
+        subtitle: '$ongoingCount Currently Ongoing',
         dotColor: AppColors.primaryAccent,
         isHighlighted: true,
       ),
       _ScheduleKpiCardData(
         cardKey: const ValueKey('desktop_schedule_kpi_team'),
-        title: '$teamMeetingsCount Pertemuan Tim',
-        subtitle: 'Meeting IMPAL & Study Hub',
+        title: '$teamMeetingsCount Team Meetings',
+        subtitle: 'IMPAL & Study Hub Sync',
         dotColor: AppColors.purpleAccent,
         isHighlighted: false,
       ),
       _ScheduleKpiCardData(
         cardKey: const ValueKey('desktop_schedule_kpi_hours'),
-        title: '$studyHoursCount Jam Belajar',
-        subtitle: 'Beban $activeSksCount SKS Aktif',
+        title: '$studyHoursCount Study Hours',
+        subtitle: '$activeSksCount Active Credits (SKS)',
         dotColor: AppColors.skyBadge,
         isHighlighted: false,
       ),
