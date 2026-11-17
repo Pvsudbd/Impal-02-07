@@ -3,7 +3,6 @@ import 'package:shelf/shelf.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../config/db.dart';
-import '../../models/todo/todo_item.dart';
 
 /// Controller untuk mengelola Checklist To-Do Harian (Tabel todo_item).
 class TodoController {
