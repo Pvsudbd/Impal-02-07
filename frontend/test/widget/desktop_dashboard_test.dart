@@ -33,6 +33,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(DesktopSidebar), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(DesktopSidebar),
+          matching: find.text('Categories'),
+        ),
+        findsNothing,
+      );
       expect(find.byType(DesktopTopHeader), findsOneWidget);
       expect(find.byType(DesktopHeroFocusCard), findsOneWidget);
       expect(find.byType(DesktopOngoingTasksSection), findsOneWidget);

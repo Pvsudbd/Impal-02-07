@@ -348,4 +348,229 @@ void main() {
       },
     );
   });
+
+  group('Desktop Group Workspace (Kelompok IMPAL) Tests', () {
+    testWidgets(
+      'renders exact FigCraft Desktop - Group Workspace (Kelompok IMPAL) at 1440x980 & 1024x768 without overflow',
+      (WidgetTester tester) async {
+        final errors = <FlutterErrorDetails>[];
+        final prevOnError = FlutterError.onError;
+        FlutterError.onError = (details) {
+          errors.add(details);
+          prevOnError?.call(details);
+        };
+        addTearDown(() => FlutterError.onError = prevOnError);
+
+        await pumpAtSize(
+          tester,
+          const HomePage(userName: 'Rafiq', initialTab: 2),
+          const Size(1440, 980),
+        );
+
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_team_open_dir_impal')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
+
+        expect(
+          errors,
+          isEmpty,
+          reason: 'Expected 0 overflow/layout errors at 1440x980',
+        );
+        expect(find.byType(DashboardTeamPage), findsOneWidget);
+
+        // Top Header: Breadcrumb + Subtitle + Search + Notification Bell + Voice Active Badge
+        expect(
+          find.byKey(const ValueKey('desktop_header_breadcrumb_parent')),
+          findsOneWidget,
+        );
+        expect(find.text('Kelompok - IMPAL'), findsAtLeastNWidgets(1));
+        expect(
+          find.text('Implementasi & Pengujian Perangkat Lunak • SIF-45-02'),
+          findsOneWidget,
+        );
+        expect(find.text('Search tasks in workspace...'), findsOneWidget);
+        expect(find.byType(NotificationBellButton), findsOneWidget);
+        expect(find.text('Voice Active (3 Online)'), findsOneWidget);
+
+        // Left Column: Group Hero Workspace + Meeting Card + Team Tasks
+        expect(
+          find.byKey(const ValueKey('desktop_workspace_hero_card')),
+          findsOneWidget,
+        );
+        expect(find.text('Kelompok IMPAL'), findsOneWidget);
+        expect(find.text('SIF-45'), findsOneWidget);
+        expect(find.text('Code:'), findsOneWidget);
+        expect(find.text('7X29'), findsOneWidget);
+        expect(find.text('+ Create Meeting'), findsOneWidget);
+        expect(find.text('+ Create Task'), findsOneWidget);
+        expect(find.text('5 Anggota Tim'), findsOneWidget);
+
+        // Hero top-row pills & buttons must hug their content width and stay on one row
+        final sifRect = tester.getRect(
+          find
+              .ancestor(
+                of: find.text('SIF-45'),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        final createMeetingRect = tester.getRect(
+          find.byKey(const ValueKey('dashboard_create_meeting_button')),
+        );
+        final createTaskRect = tester.getRect(
+          find.byKey(const ValueKey('dashboard_create_task_button')),
+        );
+        expect(sifRect.width, lessThan(80));
+        expect(createMeetingRect.width, lessThan(260));
+        expect(createTaskRect.width, lessThan(240));
+        expect(createMeetingRect.right, lessThan(createTaskRect.left));
+        expect(
+          (sifRect.center.dy - createTaskRect.center.dy).abs(),
+          lessThan(10),
+        );
+
+        expect(
+          find.byKey(const ValueKey('desktop_workspace_meeting_card')),
+          findsOneWidget,
+        );
+        expect(find.text('MEETING IMPAL'), findsOneWidget);
+        expect(find.text('Discord • Group IMPAL'), findsOneWidget);
+        expect(find.text('Join Discord Voice'), findsOneWidget);
+
+        final meetingTitleRect = tester.getRect(find.text('MEETING IMPAL'));
+        final discordPillRect = tester.getRect(
+          find
+              .ancestor(
+                of: find.text('Discord • Group IMPAL'),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        expect(discordPillRect.width, lessThan(250));
+        expect(
+          discordPillRect.left,
+          greaterThanOrEqualTo(meetingTitleRect.right),
+        );
+        expect(
+          (meetingTitleRect.center.dy - discordPillRect.center.dy).abs(),
+          lessThan(8),
+        );
+
+        expect(find.text('Milestones'), findsNothing);
+        expect(find.textContaining('Team Tasks ('), findsOneWidget);
+        expect(find.textContaining('Semua ('), findsOneWidget);
+        expect(find.textContaining('High ('), findsOneWidget);
+        expect(find.textContaining('Medium ('), findsOneWidget);
+        expect(find.textContaining('Low ('), findsOneWidget);
+        expect(find.text('Assigned to Me'), findsNothing);
+
+        final tasksHeaderRect = tester.getRect(
+          find.textContaining('Team Tasks ('),
+        );
+        final filterAllRect = tester.getRect(
+          find.byKey(const ValueKey('desktop_workspace_filter_all')),
+        );
+        expect(
+          (tasksHeaderRect.center.dy - filterAllRect.center.dy).abs(),
+          lessThan(8),
+        );
+
+        // 2-column grid at 1440x980: first two task cards align on same horizontal row
+        final card1Rect = tester.getRect(
+          find.byKey(const ValueKey('desktop_team_task_task_1')),
+        );
+        final card2Rect = tester.getRect(
+          find.byKey(const ValueKey('desktop_team_task_task_2')),
+        );
+        expect((card1Rect.top - card2Rect.top).abs(), lessThan(4));
+        expect(card1Rect.right, lessThan(card2Rect.left));
+
+        // Right Column: Members + Sprint 1 Progress + Resources
+        expect(find.text('Anggota Tim (5)'), findsOneWidget);
+        expect(find.text('Jarvis S.'), findsOneWidget);
+        expect(find.text('Ahmad Sahroni'), findsOneWidget);
+        expect(find.text('Sprint 1 Progress'), findsOneWidget);
+        expect(find.text('Target Milestone Berikutnya:'), findsOneWidget);
+        expect(find.text('Resource & Dokumen Tim'), findsOneWidget);
+        expect(find.text('GitHub Repository'), findsOneWidget);
+        expect(find.text('Figma Spec Design'), findsOneWidget);
+        expect(find.text('Discord Voice & Chat'), findsOneWidget);
+
+        // Priority filter works cleanly
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_workspace_filter_high')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Create team UI page'), findsOneWidget);
+        expect(find.text('Create home UI page'), findsNothing);
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_workspace_filter_all')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Create home UI page'), findsOneWidget);
+
+        // Narrow desktop 1024x768 check with 0 overflow
+        tester.view.physicalSize = const Size(1024, 768);
+        await tester.pumpAndSettle();
+        expect(
+          errors,
+          isEmpty,
+          reason: 'Expected 0 overflow errors at 1024x768',
+        );
+
+        // Reset to 1440x980 & test centered desktop Team Members modal
+        tester.view.physicalSize = const Size(1440, 980);
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_workspace_manage_members_btn')),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('desktop_team_members_dialog')),
+          findsOneWidget,
+        );
+        expect(find.text('Team Members (5)'), findsOneWidget);
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_team_members_close_btn')),
+        );
+        await tester.pumpAndSettle();
+
+        // Click 'Team Members' breadcrumb to return to Group Directory
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_header_breadcrumb_parent')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Kelompok & Tim Belajar'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'renders full desktop workspace shell when DashboardTeamPage isStandalone is true',
+      (WidgetTester tester) async {
+        await pumpAtSize(
+          tester,
+          const DashboardTeamPage(
+            userName: 'Jarvis',
+            teamName: 'Kelompok IMPAL',
+            teamCode: '7X29',
+            isStandalone: true,
+          ),
+          const Size(1440, 980),
+        );
+
+        expect(find.text('Dashboard'), findsOneWidget);
+        expect(find.text('Categories'), findsNothing);
+        expect(
+          find.byKey(const ValueKey('desktop_workspace_hero_card')),
+          findsOneWidget,
+        );
+        expect(find.text('Voice Active (3 Online)'), findsOneWidget);
+        expect(find.text('Sprint 1 Progress'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  });
 }

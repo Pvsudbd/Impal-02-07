@@ -1,15 +1,24 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../core/utils/responsive_context.dart';
-import 'widgets/desktop/desktop_team_workspace_panel.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/page_transitions.dart';
+import '../../../core/utils/responsive_context.dart';
+import '../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
+import '../auth/login_page.dart';
 import '../dashboard/home_page.dart';
+import '../dashboard/widgets/desktop/desktop_sidebar.dart';
+import '../dashboard/widgets/desktop/desktop_top_header.dart';
 import '../schedule/models/schedule_model.dart';
 import '../schedule/models/schedule_repository.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../task/models/task_repository.dart';
 import 'create_task_team.dart';
 import 'pop_up_create_meeting.dart';
+import 'widgets/desktop/desktop_group_workspace_view.dart';
 import 'widgets/pop_up_create_milestone.dart';
 import 'widgets/team_dashboard_header.dart';
 import 'widgets/team_milestones_section.dart';
@@ -28,6 +37,7 @@ class DashboardTeamPage extends StatefulWidget {
   final String userName;
   final String teamName;
   final String teamCode;
+  final String searchQuery;
   final List<Color> memberColors;
   final bool isStandalone;
   final VoidCallback? onBack;
@@ -37,6 +47,7 @@ class DashboardTeamPage extends StatefulWidget {
     this.userName = 'Jarvis',
     this.teamName = 'Kelompok IMPAL',
     this.teamCode = '7X29',
+    this.searchQuery = '',
     this.memberColors = const [
       Color(0xFFF3A683),
       Color(0xFF786FA6),
@@ -58,10 +69,13 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   final ScrollController _scrollController = ScrollController();
   final ScrollController _milestonesScrollController = ScrollController();
   bool _assignedToMeOnly = false;
+  bool _isSidebarCollapsed = false;
+  String _standaloneSearchQuery = '';
   String? _selectedMilestoneId;
   final GlobalKey _firstActiveTeamTaskKey = GlobalKey();
   final GlobalKey _firstActiveMilestoneKey = GlobalKey();
   bool _hasAutoScrolled = false;
+  Timer? _autoScrollTimer;
 
   void _toggleMilestoneSelection(String milestoneId) {
     HapticFeedback.selectionClick();
@@ -89,6 +103,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
 
   @override
   void dispose() {
+    _autoScrollTimer?.cancel();
     _teamTaskRepository.removeListener(_onRepositoryChanged);
     _scrollController.dispose();
     _milestonesScrollController.dispose();
@@ -97,8 +112,9 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
 
   void _triggerAutoScroll() {
     if (_hasAutoScrolled) return;
-    Future.delayed(const Duration(milliseconds: 240), () {
-      if (!mounted || _hasAutoScrolled) return;
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = Timer(const Duration(milliseconds: 240), () {
+      if (!mounted || _hasAutoScrolled || context.isDesktop) return;
       if (_firstActiveTeamTaskKey.currentContext != null) {
         Scrollable.ensureVisible(
           _firstActiveTeamTaskKey.currentContext!,
@@ -251,6 +267,45 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
+    if (context.isDesktop) {
+      final desktopWorkspaceBody = DesktopGroupWorkspaceView(
+        userName: widget.userName,
+        teamName: widget.teamName,
+        teamCode: widget.teamCode,
+        searchQuery: widget.isStandalone
+            ? _standaloneSearchQuery
+            : widget.searchQuery,
+        memberColors: widget.memberColors,
+        milestones: _teamTaskRepository.getMilestones(widget.teamCode),
+        allTasks: _teamTaskRepository.getTasks(widget.teamCode),
+        selectedMilestoneId: _selectedMilestoneId,
+        assignedToMeOnly: _assignedToMeOnly,
+        scrollController: _scrollController,
+        milestonesScrollController: _milestonesScrollController,
+        firstActiveMilestoneKey: _firstActiveMilestoneKey,
+        onMilestoneSelected: _toggleMilestoneSelection,
+        onAddMilestone: _openCreateMilestone,
+        onEditMilestone: _openEditMilestone,
+        onDeleteMilestone: _deleteMilestone,
+        onAssignedToMeChanged: (val) =>
+            setState(() => _assignedToMeOnly = val),
+        onCreateMeeting: _openCreateMeeting,
+        onCreateTask: _openCreateTaskPage,
+        onEditTask: _openEditTaskPage,
+        onToggleTaskCompletion: _handleTaskToggleCompletion,
+        onEditSchedule: _openEditSchedule,
+        onDeleteSchedule: _deleteSchedule,
+        onMembersTap: _showTeamMembersModal,
+        isAssignedToCurrentUser: _isAssignedToCurrentUser,
+      );
+
+      if (!widget.isStandalone) {
+        return desktopWorkspaceBody;
+      }
+
+      return _buildStandaloneDesktopShell(context, desktopWorkspaceBody);
+    }
+
     final dashboardScrollContent = CustomScrollView(
       key: const ValueKey('team_dashboard_scroll_view'),
       controller: _scrollController,
@@ -296,39 +351,10 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       ],
     );
 
-    final Widget workspaceBody = context.isDesktop
-        ? Padding(
-            padding: EdgeInsets.fromLTRB(
-              context.rSpacing(24),
-              context.rSpacing(16),
-              context.rSpacing(24),
-              context.rSpacing(24),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: dashboardScrollContent),
-                SizedBox(width: context.rSpacing(24)),
-                SizedBox(
-                  width: 340,
-                  child: SingleChildScrollView(
-                    key: const ValueKey('desktop_workspace_right_scroll'),
-                    child: DesktopTeamWorkspacePanel(
-                      teamCode: widget.teamCode,
-                      teamName: widget.teamName,
-                      onManageMembersTap: _showTeamMembersModal,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )
-        : dashboardScrollContent;
-
     // If embedded inside HomePage shell, return scroll content directly
     // to prevent duplicate Scaffolds, SafeAreas, and BottomNavBars
     if (!widget.isStandalone) {
-      return workspaceBody;
+      return dashboardScrollContent;
     }
 
     final scaffoldContent = Stack(
@@ -384,6 +410,164 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     );
   }
 
+  void _navigateStandaloneToTab(int tabIndex) {
+    if (tabIndex == 2 && widget.onBack != null) {
+      widget.onBack!();
+      return;
+    }
+    if (tabIndex == 2 && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return;
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => HomePage(
+          userName: widget.userName,
+          initialTab: tabIndex,
+        ),
+      ),
+      (route) => false,
+    );
+  }
+
+  void _showStandaloneLogoutDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.bgPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Sign Out',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'Inter',
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to log out of your account?',
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 14,
+            fontFamily: 'Inter',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('is_logged_in', false);
+              await prefs.remove('auth_user');
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  AuthFadeRoute(page: const Login()),
+                );
+              }
+            },
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStandaloneDesktopShell(
+    BuildContext context,
+    Widget workspaceBody,
+  ) {
+    final pendingTaskCount =
+        TaskRepository().tasks.where((t) => !t.isCompleted).length;
+    final scheduleCount = ScheduleRepository().schedulesNotifier.value.length;
+
+    return UnfocusOnTap(
+      child: Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        body: Row(
+          children: [
+            DesktopSidebar(
+              activeDestination: DesktopNavDestination.teamMembers,
+              isCollapsed: _isSidebarCollapsed,
+              onToggleCollapse: () {
+                setState(() => _isSidebarCollapsed = !_isSidebarCollapsed);
+              },
+              onDestinationSelected: (destination) {
+                switch (destination) {
+                  case DesktopNavDestination.dashboard:
+                    _navigateStandaloneToTab(0);
+                  case DesktopNavDestination.tasks:
+                    _navigateStandaloneToTab(1);
+                  case DesktopNavDestination.teamMembers:
+                    _navigateStandaloneToTab(2);
+                  case DesktopNavDestination.schedule:
+                    _navigateStandaloneToTab(3);
+                  case DesktopNavDestination.settings:
+                    _navigateStandaloneToTab(4);
+                }
+              },
+              userName: widget.userName,
+              scheduleCount: scheduleCount,
+              pendingTaskCount: pendingTaskCount,
+              onProfileTap: () => _navigateStandaloneToTab(4),
+              onLogoutTap: _showStandaloneLogoutDialog,
+            ),
+            Expanded(
+              child: Column(
+                children: [
+                  DesktopTopHeader(
+                    breadcrumbParent: 'Team Members',
+                    onBreadcrumbParentTap: () => _navigateStandaloneToTab(2),
+                    title: widget.teamName,
+                    subtitle:
+                        'Implementasi & Pengujian Perangkat Lunak • SIF-45-02',
+                    searchQuery: _standaloneSearchQuery,
+                    searchHint: 'Search tasks in workspace...',
+                    searchBgColor: AppColors.bgSidebar,
+                    showLeadingSearchIcon: true,
+                    showShortcutHint: false,
+                    showNotificationBell: true,
+                    horizontalPadding:
+                        context.screenWidth < 1200 ? 24 : 32,
+                    customRightAction: const DesktopVoiceActiveBadge(),
+                    onSearchChanged: (value) {
+                      setState(() => _standaloneSearchQuery = value);
+                    },
+                    onAddTaskTap: _openCreateTaskPage,
+                  ),
+                  Expanded(child: workspaceBody),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showTeamMembersModal() {
     final members = [
       {
@@ -417,6 +601,143 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         'email': 'jarvis@student.telkomuniversity.ac.id',
       },
     ];
+
+    Widget buildMemberList() {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final m in members) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF323846),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF3B4150), width: 0.5),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: m['color'] as Color,
+                    child: Text(
+                      (m['name'] as String).substring(0, 1).toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          m['name'] as String,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          m['email'] as String,
+                          style: const TextStyle(
+                            color: Color(0xFF8E95A5),
+                            fontSize: 11,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: (m['role'] as String).contains('Leader')
+                          ? const Color(0xFFFF7D65).withValues(alpha: 0.15)
+                          : const Color(0xFF5B93FF).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      m['role'] as String,
+                      style: TextStyle(
+                        color: (m['role'] as String).contains('Leader')
+                            ? const Color(0xFFFF7D65)
+                            : const Color(0xFF5B93FF),
+                        fontSize: 10,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      );
+    }
+
+    if (context.isDesktop) {
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => Dialog(
+          key: const ValueKey('desktop_team_members_dialog'),
+          backgroundColor: AppColors.bgDialog,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: AppColors.borderSubtle, width: 1),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460, maxHeight: 580),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Team Members (${members.length})',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      IconButton(
+                        key: const ValueKey('desktop_team_members_close_btn'),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white70,
+                          size: 20,
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Flexible(
+                    child: SingleChildScrollView(child: buildMemberList()),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -462,80 +783,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
               ],
             ),
             const SizedBox(height: 12),
-            for (final m in members) ...[
-              Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF323846),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF3B4150), width: 0.5),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: m['color'] as Color,
-                      child: Text(
-                        (m['name'] as String).substring(0, 1).toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            m['name'] as String,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            m['email'] as String,
-                            style: const TextStyle(
-                              color: Color(0xFF8E95A5),
-                              fontSize: 11,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: (m['role'] as String).contains('Leader')
-                            ? const Color(0xFFFF7D65).withValues(alpha: 0.15)
-                            : const Color(0xFF5B93FF).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        m['role'] as String,
-                        style: TextStyle(
-                          color: (m['role'] as String).contains('Leader')
-                              ? const Color(0xFFFF7D65)
-                              : const Color(0xFF5B93FF),
-                          fontSize: 10,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            buildMemberList(),
           ],
         ),
       ),

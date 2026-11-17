@@ -7,7 +7,6 @@ enum DesktopNavDestination {
   dashboard,
   schedule,
   tasks,
-  categories,
   teamMembers,
   settings,
 }
@@ -128,17 +127,6 @@ class DesktopSidebar extends StatelessWidget {
                               isCompact: showCompact,
                               onTap: () => onDestinationSelected(
                                 DesktopNavDestination.tasks,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            _NavItem(
-                              icon: Icons.folder_outlined,
-                              label: 'Categories',
-                              isActive: activeDestination ==
-                                  DesktopNavDestination.categories,
-                              isCompact: showCompact,
-                              onTap: () => onDestinationSelected(
-                                DesktopNavDestination.categories,
                               ),
                             ),
                             const SizedBox(height: 6),

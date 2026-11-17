@@ -29,6 +29,7 @@ import '../team/pop_up_create_team.dart';
 import '../team/pop_up_join_team.dart';
 import '../team/team_list_page.dart';
 import '../team/widgets/desktop/desktop_group_directory_view.dart';
+import '../team/widgets/desktop/desktop_group_workspace_view.dart';
 import 'models/dashboard_models.dart';
 import 'widgets/desktop/desktop_hero_focus_card.dart';
 import 'widgets/desktop/desktop_ongoing_tasks_section.dart';
@@ -975,7 +976,7 @@ class _HomePageState extends State<HomePage> {
         if (_selectedTeam != null) {
           return (
             _selectedTeam!.name,
-            'Collaborate with teammates, milestones, and shared deadlines',
+            'Implementasi & Pengujian Perangkat Lunak • SIF-45-02',
           );
         }
         return (
@@ -1008,18 +1009,15 @@ class _HomePageState extends State<HomePage> {
         _onTabSelected(3);
       case DesktopNavDestination.tasks:
         _onTabSelected(1);
-      case DesktopNavDestination.categories:
-        _onTabSelected(0);
-        setState(() {
-          _selectedCategory = _selectedCategory == 'All'
-              ? 'College'
-              : (_selectedCategory == 'College' ? 'Personal' : 'All');
-        });
       case DesktopNavDestination.teamMembers:
         _onTabSelected(2);
       case DesktopNavDestination.settings:
         _onTabSelected(4);
     }
+  }
+
+  Widget _buildVoiceActiveBadge(BuildContext context) {
+    return const DesktopVoiceActiveBadge();
   }
 
   Widget _buildDesktopShell(BuildContext context, bool canPop) {
@@ -1072,25 +1070,40 @@ class _HomePageState extends State<HomePage> {
                       builder: (_) {
                         final isGroupDirectoryRoot =
                             _currentTab == 2 && _selectedTeam == null;
+                        final isGroupWorkspace =
+                            _currentTab == 2 && _selectedTeam != null;
                         final isProfileSettings = _currentTab == 4;
                         return DesktopTopHeader(
                           title: headerTitle,
                           subtitle: headerSubtitle,
+                          breadcrumbParent:
+                              isGroupWorkspace ? 'Team Members' : null,
+                          onBreadcrumbParentTap: isGroupWorkspace
+                              ? () => setState(() {
+                                    _selectedTeam = null;
+                                    _desktopSearchQuery = '';
+                                  })
+                              : null,
                           searchQuery: _desktopSearchQuery,
                           searchHint: isProfileSettings
                               ? 'Search settings...'
                               : (isGroupDirectoryRoot
                                   ? 'Cari kelompok, mata kuliah...'
-                                  : (_currentTab == 3
-                                      ? 'Search schedule or class...'
-                                      : 'Search tasks or courses...')),
-                          searchBgColor:
-                              (isGroupDirectoryRoot || isProfileSettings)
-                                  ? AppColors.bgSidebar
-                                  : AppColors.bgCard,
-                          showLeadingSearchIcon:
-                              isGroupDirectoryRoot || isProfileSettings,
-                          showShortcutHint: !isGroupDirectoryRoot,
+                                  : (isGroupWorkspace
+                                      ? 'Search tasks in workspace...'
+                                      : (_currentTab == 3
+                                          ? 'Search schedule or class...'
+                                          : 'Search tasks or courses...'))),
+                          searchBgColor: (isGroupDirectoryRoot ||
+                                  isGroupWorkspace ||
+                                  isProfileSettings)
+                              ? AppColors.bgSidebar
+                              : AppColors.bgCard,
+                          showLeadingSearchIcon: isGroupDirectoryRoot ||
+                              isGroupWorkspace ||
+                              isProfileSettings,
+                          showShortcutHint:
+                              !isGroupDirectoryRoot && !isGroupWorkspace,
                           addButtonLabel: isProfileSettings
                               ? 'Edit Profile'
                               : (isGroupDirectoryRoot
@@ -1100,10 +1113,10 @@ class _HomePageState extends State<HomePage> {
                                       : (_currentTab == 1
                                           ? '+ Add New Task'
                                           : '+ Add Task'))),
-                          addButtonColor:
-                              (isGroupDirectoryRoot || isProfileSettings)
-                                  ? AppColors.primaryAccent
-                                  : AppColors.primary,
+                          addButtonColor: (isGroupDirectoryRoot ||
+                                  isProfileSettings)
+                              ? AppColors.primaryAccent
+                              : AppColors.primary,
                           secondaryButtonLabel:
                               isGroupDirectoryRoot ? 'Join Team' : null,
                           secondaryButtonIcon: isGroupDirectoryRoot
@@ -1116,10 +1129,14 @@ class _HomePageState extends State<HomePage> {
                               !isGroupDirectoryRoot &&
                               !isProfileSettings,
                           titleFontSize: isGroupDirectoryRoot ? 18 : 22,
-                          horizontalPadding:
-                              (isGroupDirectoryRoot || isProfileSettings)
-                                  ? 32
-                                  : 28,
+                          horizontalPadding: (isGroupDirectoryRoot ||
+                                  isGroupWorkspace ||
+                                  isProfileSettings)
+                              ? (context.screenWidth < 1200 ? 24 : 32)
+                              : 28,
+                          customRightAction: isGroupWorkspace
+                              ? _buildVoiceActiveBadge(context)
+                              : null,
                           onSearchChanged: (value) {
                             setState(() => _desktopSearchQuery = value);
                           },
@@ -1169,6 +1186,7 @@ class _HomePageState extends State<HomePage> {
         onOpenTeamDashboard: (team) {
           setState(() {
             _selectedTeam = team;
+            _desktopSearchQuery = '';
             _currentTab = 2;
           });
         },
@@ -1206,6 +1224,7 @@ class _HomePageState extends State<HomePage> {
                 .toList();
             setState(() {
               _selectedTeam = team;
+              _desktopSearchQuery = '';
               _selectedTeamCode =
                   match.isNotEmpty ? match.first.inviteCode : '7X29';
             });
@@ -1218,9 +1237,13 @@ class _HomePageState extends State<HomePage> {
         userName: widget.userName,
         teamName: _selectedTeam!.name,
         teamCode: _selectedTeamCode,
+        searchQuery: _desktopSearchQuery,
         memberColors: _selectedTeam!.memberColors,
         isStandalone: false,
-        onBack: () => setState(() => _selectedTeam = null),
+        onBack: () => setState(() {
+          _selectedTeam = null;
+          _desktopSearchQuery = '';
+        }),
       );
     }
 

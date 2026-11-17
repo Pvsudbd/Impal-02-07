@@ -22,6 +22,9 @@ class DesktopTopHeader extends StatefulWidget {
   final bool showNotificationBell;
   final double? titleFontSize;
   final double? horizontalPadding;
+  final String? breadcrumbParent;
+  final VoidCallback? onBreadcrumbParentTap;
+  final Widget? customRightAction;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onAddTaskTap;
 
@@ -43,6 +46,9 @@ class DesktopTopHeader extends StatefulWidget {
     this.showNotificationBell = true,
     this.titleFontSize,
     this.horizontalPadding,
+    this.breadcrumbParent,
+    this.onBreadcrumbParentTap,
+    this.customRightAction,
     required this.onSearchChanged,
     required this.onAddTaskTap,
   });
@@ -111,31 +117,101 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    widget.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: widget.titleFontSize ??
-                          context.rFont(20, min: 18, max: 22),
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
+                  if (widget.breadcrumbParent != null) ...[
+                    Row(
+                      children: [
+                        Flexible(
+                          child: InkWell(
+                            key: const ValueKey(
+                              'desktop_header_breadcrumb_parent',
+                            ),
+                            onTap: widget.onBreadcrumbParentTap,
+                            borderRadius: BorderRadius.circular(6),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                                vertical: 2,
+                              ),
+                              child: Text(
+                                widget.breadcrumbParent!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: context.rFont(13, min: 12, max: 14),
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '/',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: context.rFont(13, min: 12, max: 14),
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          flex: 2,
+                          child: Text(
+                            widget.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: context.rFont(14, min: 13, max: 16),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: context.rFont(12, min: 11, max: 13),
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: context.rFont(11, min: 10, max: 12),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
-                  ),
+                  ] else ...[
+                    Text(
+                      widget.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: widget.titleFontSize ??
+                            context.rFont(20, min: 18, max: 22),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: context.rFont(12, min: 11, max: 13),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -151,7 +227,10 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
               const NotificationBellButton(size: 40, iconSize: 19),
             ],
             const SizedBox(width: 12),
-            _buildAddTaskButton(context),
+            if (widget.customRightAction != null)
+              widget.customRightAction!
+            else
+              _buildAddTaskButton(context),
           ],
         ),
       ),
@@ -162,7 +241,7 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
     final hasText = widget.searchQuery.isNotEmpty;
 
     return Container(
-      width: 260,
+      width: context.screenWidth < 1200 ? 190 : 260,
       height: 40,
       padding: EdgeInsets.symmetric(
         horizontal: widget.showLeadingSearchIcon ? 14 : 12,
