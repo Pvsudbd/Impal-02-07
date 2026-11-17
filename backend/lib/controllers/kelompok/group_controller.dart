@@ -32,7 +32,7 @@ class GroupController {
         SELECT DISTINCT g.id_group, g.id_leader, g.group_name, g.description, g.invite_code, g.created_at
         FROM "groups" g
         LEFT JOIN group_member gm ON g.id_group = gm.id_group
-        WHERE g.id_leader = @idUser OR gm.id_user = @idUser
+        WHERE g.id_leader = @idUser OR gm.id_student = @idUser
         ORDER BY g.created_at DESC
       ''';
 
@@ -119,10 +119,10 @@ class GroupController {
 
       final idGroup = 'grp_${_uuid.v4()}';
 
-      // 1. Insert ke tabel groups
+      // 1. Insert ke tabel groups (groups memiliki kolom id_group, id_leader, group_name, description, invite_code, created_at)
       final insertGroupSql = '''
-        INSERT INTO "groups" (id_group, id_leader, group_name, description, invite_code, created_at, updated_at)
-        VALUES (@idGroup, @idLeader, @groupName, @description, @inviteCode, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO "groups" (id_group, id_leader, group_name, description, invite_code, created_at)
+        VALUES (@idGroup, @idLeader, @groupName, @description, @inviteCode, CURRENT_TIMESTAMP)
       ''';
 
       await Database.query(insertGroupSql, {
@@ -133,10 +133,10 @@ class GroupController {
         'inviteCode': inviteCode,
       });
 
-      // 2. Otomatis tambahkan pencipta sebagai LEADER di tabel group_member
+      // 2. Otomatis tambahkan pencipta sebagai LEADER di tabel group_member (menggunakan kolom id_student)
       final idMember = 'mem_${_uuid.v4()}';
       final insertMemberSql = '''
-        INSERT INTO group_member (id_member, id_group, id_user, role, joined_at)
+        INSERT INTO group_member (id_member, id_group, id_student, role, joined_at)
         VALUES (@idMember, @idGroup, @idUser, 'LEADER', CURRENT_TIMESTAMP)
       ''';
 
@@ -212,7 +212,7 @@ class GroupController {
 
       // 2. Cek apakah user sudah terdaftar di kelompok ini
       final memberCheck = await Database.query(
-        'SELECT id_member FROM group_member WHERE id_group = @idGroup AND id_user = @idUser',
+        'SELECT id_member FROM group_member WHERE id_group = @idGroup AND id_student = @idUser',
         {'idGroup': idGroup, 'idUser': idUser},
       );
 
@@ -229,10 +229,10 @@ class GroupController {
             headers: {'Content-Type': 'application/json'});
       }
 
-      // 3. Tambahkan ke group_member
+      // 3. Tambahkan ke group_member (menggunakan id_student)
       final idMember = 'mem_${_uuid.v4()}';
       final insertMemberSql = '''
-        INSERT INTO group_member (id_member, id_group, id_user, role, joined_at)
+        INSERT INTO group_member (id_member, id_group, id_student, role, joined_at)
         VALUES (@idMember, @idGroup, @idUser, 'MEMBER', CURRENT_TIMESTAMP)
       ''';
 
@@ -295,7 +295,7 @@ class GroupController {
       final membersQuery = await Database.query('''
         SELECT gm.id_member, gm.role, gm.joined_at, u.id_user, u.name, u.email
         FROM group_member gm
-        JOIN users u ON gm.id_user = u.id_user
+        JOIN users u ON gm.id_student = u.id_user
         WHERE gm.id_group = @idGroup
         ORDER BY gm.role DESC, gm.joined_at ASC
       ''', {'idGroup': idGroup});

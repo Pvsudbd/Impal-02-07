@@ -46,6 +46,15 @@ Sebelum integrasi ini, fungsi **Join Team** dan **Create Team** di halaman `team
 
 ---
 
-## Verifikasi Kualitas
+## Riwayat Perbaikan Bug (PostgreSQL Schema Alignment)
+- **Error yang Ditemukan**:  
+  `Severity.error 42703: column "updated_at" of relation "groups" does not exist`
+- **Akar Masalah**:  
+  Tabel PostgreSQL `groups` di server hanya memiliki kolom `(id_group, id_leader, group_name, description, invite_code, created_at)` dan tidak memiliki `updated_at`. Selain itu, foreign key tabel `group_member` ke pengguna menggunakan nama kolom `id_student`.
+- **Solusi Bedah (Surgical Fix)**:  
+  1. Menghapus referensi `updated_at` pada query `INSERT INTO "groups"` di `backend/lib/controllers/kelompok/group_controller.dart`.
+  2. Menyesuaikan foreign key `id_user` $\rightarrow$ `id_student` pada seluruh query tabel `group_member`.
+  3. Hasil `dart analyze`: **0 Error, 0 Warning**.
+
 - **Kompilasi & Analisis Statis**: `dart analyze` $\rightarrow$ **0 Error, 0 Warning (No issues found!)**.
 - **Kepatuhan UI & Desain**: Menggunakan komponen baku `PopUpPemberitahuan.teamWarning` (Coral `#FA6144`) dan `PopUpPemberitahuan.teamJoined` (Green `#10B981`) sesuai pedoman studio `AGENTS.md`.
