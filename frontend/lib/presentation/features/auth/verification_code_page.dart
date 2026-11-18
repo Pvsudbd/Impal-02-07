@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/page_transitions.dart';
+import '../../../core/utils/responsive_context.dart';
 import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import 'login_page.dart';
 import 'reset_password_page.dart';
@@ -139,270 +139,272 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      body: UnfocusOnTap(
-        child: AuthCardWrapper(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top Back Navigation Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final isDesktop = context.isDesktop;
+
+    final topNavBar = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: _navigateBack,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.bgCard,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        const Text(
+          'Verify Code',
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 14,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(width: 36),
+      ],
+    );
+
+    return AuthCardWrapper(
+      topNavBar: topNavBar,
+      onDesktopBack: _navigateBack,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isDesktop) const SizedBox(height: 8),
+
+          // Hero Shield Icon & Title
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x59EF4444),
+                        blurRadius: 18,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.verified_user_rounded,
+                    size: 30,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Enter Verification Code',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isDesktop ? 26 : 21,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: isDesktop ? 360 : 320,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(
+                          text:
+                              "We've dispatched a 6-digit confirmation code to: \n",
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
+                            height: 1.45,
+                          ),
+                        ),
+                        TextSpan(
+                          text: widget.destination,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                            height: 1.45,
+                          ),
+                        ),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          const Center(
+            child: Text(
+              '6-Digit OTP Verification Code',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFFD1D5DB),
+                fontSize: 12.5,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // OTP Digit Boxes
+          OtpBoxes(
+            controllers: _otpControllers,
+            focusNodes: _otpFocusNodes,
+            errorMessage: _otpError,
+            onCompleted: _handleVerifyCode,
+          ),
+
+          if (_otpError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8, left: 4),
+              child: Row(
                 children: [
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: _navigateBack,
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.bgCard,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.arrow_back_rounded,
-                          size: 18,
-                          color: Colors.white,
-                        ),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 13,
+                    color: Color(0xFFEF4444),
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      _otpError!,
+                      style: const TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontSize: 11.5,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                  const Text(
-                    'Verify Code',
-                    style: TextStyle(
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 16),
+
+          // Timer & Resend Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.timer_outlined,
+                    size: 14,
+                    color: AppColors.textMuted,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Expires in $_formattedTimer',
+                    style: const TextStyle(
                       color: AppColors.textMuted,
-                      fontSize: 14,
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(4),
+                onTap: _secondsRemaining == 0 ? _resendCode : null,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Text(
+                    'Resend Code',
+                    style: TextStyle(
+                      color: _secondsRemaining == 0
+                          ? AppColors.primaryAccent
+                          : const Color(0xFF555D6E),
+                      fontSize: 12,
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(width: 36),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Hero Shield Icon & Title
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x59EF4444),
-                            blurRadius: 18,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.verified_user_rounded,
-                        size: 30,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      'Enter Verification Code',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 21,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: 320,
-                      child: Text.rich(
-                        TextSpan(
-                          children: [
-                            const TextSpan(
-                              text: "We've dispatched a 6-digit confirmation code to: \n",
-                              style: TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 12,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w400,
-                                height: 1.45,
-                              ),
-                            ),
-                            TextSpan(
-                              text: widget.destination,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w600,
-                                height: 1.45,
-                              ),
-                            ),
-                          ],
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              const Center(
-                child: Text(
-                  '6-Digit OTP Verification Code',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFFD1D5DB),
-                    fontSize: 12.5,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // OTP Digit Boxes
-              OtpBoxes(
-                controllers: _otpControllers,
-                focusNodes: _otpFocusNodes,
-                errorMessage: _otpError,
-                onCompleted: _handleVerifyCode,
-              ),
-
-              if (_otpError != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, left: 4),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.error_outline_rounded,
-                        size: 13,
-                        color: Color(0xFFEF4444),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        _otpError!,
-                        style: const TextStyle(
-                          color: Color(0xFFEF4444),
-                          fontSize: 11.5,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              const SizedBox(height: 16),
-
-              // Timer & Resend Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.timer_outlined,
-                        size: 14,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Expires in $_formattedTimer',
-                        style: const TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w600,
-                          fontFeatures: [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
-                  ),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(4),
-                    onTap: _secondsRemaining == 0 ? _resendCode : null,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                      child: Text(
-                        'Resend Code',
-                        style: TextStyle(
-                          color: _secondsRemaining == 0
-                              ? AppColors.primaryAccent
-                              : const Color(0xFF555D6E),
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Verify Code Button
-              AppButton(
-                text: 'Verify Code',
-                isLoading: _isLoading,
-                suffixIcon: const Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 18,
-                  color: Colors.white,
-                ),
-                onPressed: _handleVerifyCode,
-              ),
-
-              const SizedBox(height: 18),
-
-              // Back to Sign In Link
-              Center(
-                child: Wrap(
-                  alignment: WrapAlignment.center,
-                  children: [
-                    const Text(
-                      'Remember your previous password? ',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12,
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    InkWell(
-                      onTap: _navigateToSignIn,
-                      child: const Text(
-                        'Back to Sign In',
-                        style: TextStyle(
-                          color: AppColors.primaryAccent,
-                          fontSize: 12,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ],
           ),
-        ),
+
+          const SizedBox(height: 24),
+
+          // Verify Code Button
+          AppButton(
+            text: 'Verify Code',
+            isLoading: _isLoading,
+            suffixIcon: const Icon(
+              Icons.arrow_forward_rounded,
+              size: 18,
+              color: Colors.white,
+            ),
+            onPressed: _handleVerifyCode,
+          ),
+
+          const SizedBox(height: 18),
+
+          // Back to Sign In Link
+          Center(
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              children: [
+                const Text(
+                  'Remember your previous password? ',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                InkWell(
+                  onTap: _navigateToSignIn,
+                  child: const Text(
+                    'Back to Sign In',
+                    style: TextStyle(
+                      color: AppColors.primaryAccent,
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

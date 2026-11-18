@@ -9,112 +9,6 @@ import '../../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../../auth/forgot_password_page.dart';
 import '../../models/user_profile_model.dart';
 
-/// Shared label builder for desktop profile modals.
-class _ModalFieldLabel extends StatelessWidget {
-  final String label;
-  final Widget? trailing;
-
-  const _ModalFieldLabel({
-    required this.label,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: context.rFont(12.5, min: 11.5, max: 13.5),
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0,
-            ),
-          ),
-        ),
-        if (trailing != null) trailing!,
-      ],
-    );
-  }
-}
-
-/// Shared status pill inside desktop modal headers & field labels.
-class _ModalPillBadge extends StatelessWidget {
-  final String text;
-  final Color bgColor;
-  final Color textColor;
-
-  const _ModalPillBadge({
-    required this.text,
-    required this.bgColor,
-    required this.textColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: context.rSpacing(8),
-        vertical: context.rSpacing(3),
-      ),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: textColor,
-          fontSize: context.rFont(10.5, min: 9.5, max: 11.5),
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-InputDecoration _desktopModalInputDecoration(
-  BuildContext context, {
-  required String hint,
-  Widget? suffixIcon,
-  bool isLocked = false,
-}) {
-  return InputDecoration(
-    hintText: hint,
-    hintStyle: TextStyle(
-      color: AppColors.textMuted.withValues(alpha: 0.65),
-      fontSize: context.rFont(13, min: 12, max: 14),
-    ),
-    filled: true,
-    fillColor: isLocked
-        ? AppColors.bgPrimary.withValues(alpha: 0.55)
-        : AppColors.bgPrimary,
-    contentPadding: EdgeInsets.symmetric(
-      horizontal: context.rSpacing(14),
-      vertical: context.rSpacing(12),
-    ),
-    counterText: '',
-    suffixIcon: suffixIcon,
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: AppColors.borderSubtle),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: AppColors.borderSubtle),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(
-        color: isLocked ? AppColors.borderSubtle : AppColors.primaryAccent,
-        width: isLocked ? 1 : 1.4,
-      ),
-    ),
-  );
-}
-
 /// Desktop Pop-Up Dialog mirroring Mobile [EditProfilePage] layout & fields
 /// (`FULL NAME`, `EMAIL` + Verified pill, `WHATSAPP / MOBILE NUMBER`, `STATUS / BIO`),
 /// centered 94dp coral-ring avatar + `Change Profile Picture` chooser, info notice
@@ -918,23 +812,21 @@ class _DesktopEditProfileModalState extends State<DesktopEditProfileModal> {
   }
 }
 
-/// Modal - Change Password (`FigCraft node 6246`, 480dp) + Mobile Forgot? Flow.
-class DesktopChangePasswordModal extends StatefulWidget {
+/// Desktop confirmation Pop-Up mirroring Mobile `ProfilePage._showChangePasswordModal`.
+/// Redirects the user to [ForgotPassword] (recovery method selection → OTP → reset password).
+class DesktopChangePasswordModal extends StatelessWidget {
   final String email;
   final BuildContext parentContext;
-  final VoidCallback? onUpdated;
 
   const DesktopChangePasswordModal({
     super.key,
     required this.email,
     required this.parentContext,
-    this.onUpdated,
   });
 
   static Future<void> show(
     BuildContext context, {
     required String email,
-    VoidCallback? onUpdated,
   }) {
     return showDialog<void>(
       context: context,
@@ -942,534 +834,174 @@ class DesktopChangePasswordModal extends StatefulWidget {
       builder: (_) => DesktopChangePasswordModal(
         email: email,
         parentContext: context,
-        onUpdated: onUpdated,
       ),
     );
   }
 
-  @override
-  State<DesktopChangePasswordModal> createState() =>
-      _DesktopChangePasswordModalState();
-}
-
-class _DesktopChangePasswordModalState
-    extends State<DesktopChangePasswordModal> {
-  final TextEditingController _currentController = TextEditingController();
-  final TextEditingController _newController = TextEditingController();
-  final TextEditingController _confirmController = TextEditingController();
-
-  bool _obscureCurrent = true;
-  bool _obscureNew = true;
-  bool _obscureConfirm = true;
-  bool _isSaving = false;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    void listener() {
-      if (mounted) {
-        setState(() {
-          if (_errorMessage != null) _errorMessage = null;
-        });
-      }
-    }
-
-    _currentController.addListener(listener);
-    _newController.addListener(listener);
-    _confirmController.addListener(listener);
-  }
-
-  @override
-  void dispose() {
-    _currentController.dispose();
-    _newController.dispose();
-    _confirmController.dispose();
-    super.dispose();
-  }
-
-  bool get _hasMinLength => _newController.text.length >= 8;
-  bool get _hasUpperLowerNumber =>
-      RegExp(r'[A-Z]').hasMatch(_newController.text) &&
-      RegExp(r'[a-z]').hasMatch(_newController.text) &&
-      RegExp(r'[0-9]').hasMatch(_newController.text);
-  bool get _hasSpecialChar =>
-      RegExp(r'[!@#\$%^&*(),.?":{}|<>_\-\[\]\\/+=~`]').hasMatch(_newController.text);
-
-  int get _strengthScore {
-    if (_newController.text.isEmpty) return 0;
-    int score = 0;
-    if (_hasMinLength) score++;
-    if (RegExp(r'[A-Z]').hasMatch(_newController.text) &&
-        RegExp(r'[a-z]').hasMatch(_newController.text)) {
-      score++;
-    }
-    if (RegExp(r'[0-9]').hasMatch(_newController.text)) score++;
-    if (_hasSpecialChar) score++;
-    return score;
-  }
-
-  bool get _passwordsMatch =>
-      _confirmController.text.isNotEmpty &&
-      _newController.text == _confirmController.text;
-
-  (String, Color) get _strengthDescriptor {
-    switch (_strengthScore) {
-      case 4:
-        return ('Strong', const Color(0xFF4EB089));
-      case 3:
-        return ('Good', AppColors.skyBadge);
-      case 2:
-        return ('Fair', const Color(0xFFFBBF24));
-      case 1:
-        return ('Weak', AppColors.primaryAccent);
-      default:
-        return ('Empty', AppColors.textMuted);
-    }
-  }
-
-  void _openForgotFlow() {
+  void _close(BuildContext context) {
+    FocusManager.instance.primaryFocus?.unfocus();
     Navigator.of(context).pop();
-    if (!widget.parentContext.mounted) return;
-    Navigator.of(widget.parentContext).push(
+  }
+
+  void _continueToReset(BuildContext context) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    Navigator.of(context).pop();
+    if (!parentContext.mounted) return;
+    Navigator.of(parentContext).push(
       AuthFadeRoute(
-        page: ForgotPassword(initialEmail: widget.email),
+        page: ForgotPassword(initialEmail: email),
       ),
     );
-  }
-
-  void _handleUpdatePassword() {
-    if (_isSaving) return;
-    if (_currentController.text.trim().isEmpty) {
-      setState(() => _errorMessage = 'Please enter your current password.');
-      return;
-    }
-    if (!_hasMinLength || !_hasUpperLowerNumber) {
-      setState(
-        () => _errorMessage =
-            'New password must be at least 8 characters with uppercase, lowercase, and numbers.',
-      );
-      return;
-    }
-    if (_newController.text != _confirmController.text) {
-      setState(
-        () => _errorMessage = 'Password confirmation does not match.',
-      );
-      return;
-    }
-
-    setState(() {
-      _isSaving = true;
-      _errorMessage = null;
-    });
-
-    widget.onUpdated?.call();
-    Navigator.of(context).pop();
-
-    if (widget.parentContext.mounted) {
-      PopUpPemberitahuan.show(
-        widget.parentContext,
-        title: 'Password Updated',
-        message: 'Your account credentials have been secured successfully.',
-        icon: Icons.verified_user_rounded,
-        iconBgColor: PopUpPemberitahuan.positiveColor,
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
-    final (strengthLabel, strengthColor) = _strengthDescriptor;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final modalWidth = (screenWidth * 0.9).clamp(320.0, 440.0);
+    final disableAnimations = context.animationsDisabled;
 
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.all(context.rSpacing(20)),
       child: UnfocusOnTap(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: 480,
-            maxHeight: maxHeight,
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.bgSidebar,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderSubtle),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  blurRadius: 32,
-                  offset: const Offset(0, 14),
-                ),
-              ],
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: disableAnimations ? 1.0 : 0.96, end: 1.0),
+          duration:
+              disableAnimations ? Duration.zero : const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          builder: (context, scale, child) => Transform.scale(
+            scale: scale,
+            child: Opacity(
+              opacity: disableAnimations ? 1.0 : scale,
+              child: child,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildHeader(context),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.all(context.rSpacing(24)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _ModalFieldLabel(
-                          label: 'Current Password',
-                          trailing: InkWell(
-                            key: const Key('desktop_forgot_password_link'),
-                            onTap: _openForgotFlow,
-                            borderRadius: BorderRadius.circular(6),
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: context.rSpacing(6),
-                                vertical: context.rSpacing(2),
-                              ),
-                              child: Text(
-                                'Forgot?',
-                                style: TextStyle(
-                                  color: AppColors.primaryAccent,
-                                  fontSize:
-                                      context.rFont(11.5, min: 10.5, max: 12.5),
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
+          ),
+          child: SizedBox(
+            width: modalWidth,
+            child: Container(
+              padding: EdgeInsets.fromLTRB(
+                context.rSpacing(22),
+                context.rSpacing(18),
+                context.rSpacing(22),
+                context.rSpacing(22),
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.bgCard,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.borderSubtle),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.48),
+                    blurRadius: 32,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF38BDF8).withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        SizedBox(height: context.rSpacing(6)),
-                        TextField(
-                          key: const Key('desktop_current_password_field'),
-                          controller: _currentController,
-                          obscureText: _obscureCurrent,
-                          maxLength: 128,
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.lock_outline_rounded,
+                          color: Color(0xFF38BDF8),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Change Password',
                           style: TextStyle(
-                            color: AppColors.textWhite,
-                            fontSize: context.rFont(13, min: 12, max: 14),
-                          ),
-                          decoration: _desktopModalInputDecoration(
-                            context,
-                            hint: 'Enter current password',
-                            suffixIcon: IconButton(
-                              onPressed: () => setState(
-                                () => _obscureCurrent = !_obscureCurrent,
-                              ),
-                              icon: Icon(
-                                _obscureCurrent
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: AppColors.textMuted,
-                                size: context.rIcon(18),
-                              ),
-                            ),
+                            color: Colors.white,
+                            fontSize: context.rFont(18, min: 16, max: 20),
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        SizedBox(height: context.rSpacing(16)),
-                        _ModalFieldLabel(
-                          label: 'New Password',
-                          trailing: Text(
-                            strengthLabel,
-                            style: TextStyle(
-                              color: strengthColor,
-                              fontSize: context.rFont(11, min: 10, max: 12),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                      ),
+                      IconButton(
+                        key: const Key('desktop_change_password_close_button'),
+                        onPressed: () => _close(context),
+                        tooltip: 'Close',
+                        constraints: const BoxConstraints(
+                          minWidth: 48,
+                          minHeight: 48,
                         ),
-                        SizedBox(height: context.rSpacing(6)),
-                        TextField(
-                          key: const Key('desktop_new_password_field'),
-                          controller: _newController,
-                          obscureText: _obscureNew,
-                          maxLength: 128,
-                          style: TextStyle(
-                            color: AppColors.textWhite,
-                            fontSize: context.rFont(13, min: 12, max: 14),
-                          ),
-                          decoration: _desktopModalInputDecoration(
-                            context,
-                            hint: 'Create a strong new password',
-                            suffixIcon: IconButton(
-                              onPressed: () =>
-                                  setState(() => _obscureNew = !_obscureNew),
-                              icon: Icon(
-                                _obscureNew
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: AppColors.textMuted,
-                                size: context.rIcon(18),
-                              ),
-                            ),
-                          ),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: AppColors.textMuted,
+                          size: context.rIcon(20),
                         ),
-                        SizedBox(height: context.rSpacing(10)),
-                        Row(
-                          key: const Key('desktop_password_strength_meter'),
-                          children: List.generate(4, (index) {
-                            final active = index < _strengthScore;
-                            return Expanded(
-                              child: Container(
-                                height: 5,
-                                margin: EdgeInsets.only(
-                                  right: index < 3 ? context.rSpacing(6) : 0,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: active
-                                      ? strengthColor
-                                      : AppColors.borderSubtle,
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                              ),
-                            );
-                          }),
-                        ),
-                        SizedBox(height: context.rSpacing(12)),
-                        Container(
-                          padding: EdgeInsets.all(context.rSpacing(12)),
-                          decoration: BoxDecoration(
-                            color: AppColors.bgPrimary,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.borderSubtle),
-                          ),
-                          child: Column(
-                            children: [
-                              _RequirementRow(
-                                label: 'Minimum 8 characters',
-                                met: _hasMinLength,
-                              ),
-                              SizedBox(height: context.rSpacing(6)),
-                              _RequirementRow(
-                                label: 'Mix of upper & lowercase + numbers',
-                                met: _hasUpperLowerNumber,
-                              ),
-                              SizedBox(height: context.rSpacing(6)),
-                              _RequirementRow(
-                                label:
-                                    'At least 1 special character (@#\$!%*?& etc.)',
-                                met: _hasSpecialChar,
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: context.rSpacing(16)),
-                        _ModalFieldLabel(
-                          label: 'Confirm New Password',
-                          trailing: _confirmController.text.isEmpty
-                              ? null
-                              : _ModalPillBadge(
-                                  text: _passwordsMatch ? '✓ Match' : 'Mismatch',
-                                  bgColor: _passwordsMatch
-                                      ? const Color(0xFF1F3D35)
-                                      : AppColors.primaryAccent
-                                          .withValues(alpha: 0.18),
-                                  textColor: _passwordsMatch
-                                      ? const Color(0xFF4EB089)
-                                      : AppColors.primaryAccent,
-                                ),
-                        ),
-                        SizedBox(height: context.rSpacing(6)),
-                        TextField(
-                          key: const Key('desktop_confirm_password_field'),
-                          controller: _confirmController,
-                          obscureText: _obscureConfirm,
-                          maxLength: 128,
-                          style: TextStyle(
-                            color: AppColors.textWhite,
-                            fontSize: context.rFont(13, min: 12, max: 14),
-                          ),
-                          decoration: _desktopModalInputDecoration(
-                            context,
-                            hint: 'Re-enter new password',
-                            suffixIcon: IconButton(
-                              onPressed: () => setState(
-                                () => _obscureConfirm = !_obscureConfirm,
-                              ),
-                              icon: Icon(
-                                _obscureConfirm
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: AppColors.textMuted,
-                                size: context.rIcon(18),
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (_errorMessage != null) ...[
-                          SizedBox(height: context.rSpacing(10)),
-                          Text(
-                            _errorMessage!,
-                            style: TextStyle(
-                              color: AppColors.primaryAccent,
-                              fontSize: context.rFont(12, min: 11, max: 13),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: context.rSpacing(12)),
+                  Text(
+                    'To change your password, you will be redirected to the secure verification and password reset flow for your registered account ($email).',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: context.rFont(13, min: 12, max: 14.5),
+                      fontFamily: 'Inter',
+                      height: 1.45,
                     ),
                   ),
-                ),
-                _buildFooter(context),
-              ],
+                  SizedBox(height: context.rSpacing(22)),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      key: const Key('desktop_continue_reset_password_button'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => _continueToReset(context),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Continue to Reset Password',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        context.rSpacing(24),
-        context.rSpacing(18),
-        context.rSpacing(16),
-        context.rSpacing(16),
-      ),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.borderSubtle),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: context.rIcon(38),
-            height: context.rIcon(38),
-            decoration: BoxDecoration(
-              color: AppColors.primaryAccent.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: AppColors.primaryAccent.withValues(alpha: 0.35),
-              ),
-            ),
-            child: Icon(
-              Icons.lock_reset_rounded,
-              color: AppColors.primaryAccent,
-              size: context.rIcon(20),
-            ),
-          ),
-          SizedBox(width: context.rSpacing(12)),
-          Expanded(
-            child: Text(
-              'Change Password',
-              style: TextStyle(
-                color: AppColors.textWhite,
-                fontSize: context.rFont(16, min: 14, max: 18),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            tooltip: 'Close',
-            icon: Icon(
-              Icons.close_rounded,
-              color: AppColors.textMuted,
-              size: context.rIcon(20),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFooter(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        context.rSpacing(24),
-        context.rSpacing(14),
-        context.rSpacing(24),
-        context.rSpacing(18),
-      ),
-      decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: AppColors.borderSubtle),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          OutlinedButton(
-            onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textMuted,
-              side: const BorderSide(color: AppColors.borderSubtle),
-              padding: EdgeInsets.symmetric(
-                horizontal: context.rSpacing(18),
-                vertical: context.rSpacing(12),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                fontSize: context.rFont(13, min: 12, max: 14),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          SizedBox(width: context.rSpacing(12)),
-          ElevatedButton(
-            key: const Key('desktop_update_password_button'),
-            onPressed: _isSaving ? null : _handleUpdatePassword,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryAccent,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(
-                horizontal: context.rSpacing(20),
-                vertical: context.rSpacing(12),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Text(
-              'Update Password',
-              style: TextStyle(
-                fontSize: context.rFont(13, min: 12, max: 14),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RequirementRow extends StatelessWidget {
-  final String label;
-  final bool met;
-
-  const _RequirementRow({
-    required this.label,
-    required this.met,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          met ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
-          size: context.rIcon(15),
-          color: met ? const Color(0xFF4EB089) : AppColors.textMuted,
-        ),
-        SizedBox(width: context.rSpacing(8)),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: met ? AppColors.textWhite : AppColors.textMuted,
-              fontSize: context.rFont(12, min: 11, max: 13),
-              fontWeight: met ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

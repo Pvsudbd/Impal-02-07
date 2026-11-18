@@ -191,6 +191,7 @@ class _RegisterState extends State<Register> {
 
     return AuthCardWrapper(
       topNavBar: topNavBar,
+      onDesktopBack: _navigateBack,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

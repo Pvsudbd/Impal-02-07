@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
+import 'widgets/desktop_auth_shell.dart';
 
 /// Unified Terms of Service & Privacy Policy screen.
 ///
@@ -78,6 +79,10 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isFromRegister && context.isDesktop) {
+      return _buildDesktopRegisterTerms(context);
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF282D37),
       body: SafeArea(
@@ -144,30 +149,7 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                       ),
 
                       // Version Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF064E3B).withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.4),
-                            width: 0.8,
-                          ),
-                        ),
-                        child: Text(
-                          'v1.2 Active',
-                          style: TextStyle(
-                            color: const Color(0xFF34D399),
-                            fontSize: context.rFont(10.5, min: 9.5, max: 12),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ),
+                      _buildVersionBadge(context),
                     ],
                   ),
                 ),
@@ -218,291 +200,12 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Terms Unified Card Container
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(context.rSpacing(16)),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1E232E),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFF3B4150).withValues(alpha: 0.45),
-                              width: 1,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSection(
-                                context,
-                                title: '1. Acceptance of Terms',
-                                content:
-                                    'By creating an account, registering your student credentials, or connecting through Telkom University Single Sign-On (SSO), you agree to comply with and be bound by these Terms of Service and all applicable university academic policies.',
-                              ),
-                              SizedBox(height: context.rSpacing(16)),
-
-                              _buildSection(
-                                context,
-                                title: '2. AI-Driven Recommendation Core',
-                                content:
-                                    'IMPAL integrates a Mamdani Fuzzy Inference System that analyzes deadline proximity, syllabus grade weight, and complexity to compute a crisp recommendation score (0–100).',
-                              ),
-                              SizedBox(height: context.rSpacing(10)),
-
-                              // Academic Advisory Note Box
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  color: const Color(0xFF252A36),
-                                  child: IntrinsicHeight(
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        Container(
-                                          width: 3.5,
-                                          color: const Color(0xFFFA6144),
-                                        ),
-                                        Expanded(
-                                          child: Padding(
-                                            padding: EdgeInsets.all(context.rSpacing(12)),
-                                            child: Text.rich(
-                                              TextSpan(
-                                                children: [
-                                                  const TextSpan(
-                                                    text: 'Academic Advisory Note: ',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 11,
-                                                      fontFamily: 'Inter',
-                                                      fontWeight: FontWeight.w700,
-                                                    ),
-                                                  ),
-                                                  TextSpan(
-                                                    text:
-                                                        'Priority scores generated by the system serve solely as planning guidance. Students retain complete individual responsibility for meeting all submission deadlines set by course lecturers.',
-                                                    style: TextStyle(
-                                                      color: const Color(0xFF8E95A5),
-                                                      fontSize: context.rFont(11, min: 10, max: 12),
-                                                      fontFamily: 'Inter',
-                                                      height: 1.4,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: context.rSpacing(16)),
-
-                              _buildSection(
-                                context,
-                                title: '3. Student Privacy & SSO Data Security',
-                                content:
-                                    'We collect and process your Student ID (NIM), registered university email, academic program, and course schedules synchronized via the Central Authentication Service (CAS).',
-                              ),
-                              SizedBox(height: context.rSpacing(6)),
-                              _buildBullet(
-                                context,
-                                'All student credential exchanges use TLS 1.3 protocol encryption.',
-                              ),
-                              _buildBullet(
-                                context,
-                                'Data is restricted exclusively to task calculation and timetable syncing.',
-                              ),
-                              _buildBullet(
-                                context,
-                                'Student records are never sold, rented, or distributed to commercial parties.',
-                              ),
-                              SizedBox(height: context.rSpacing(16)),
-
-                              _buildSection(
-                                context,
-                                title: '4. Team Collaboration Code of Conduct',
-                                content:
-                                    'When participating in team workspaces (Group Projects):',
-                              ),
-                              SizedBox(height: context.rSpacing(6)),
-                              _buildBullet(
-                                context,
-                                'Do not delete or alter task items assigned to other team members without mutual agreement.',
-                              ),
-                              _buildBullet(
-                                context,
-                                'Keep 4-character team join codes confidential within your designated project group',
-                              ),
-                              _buildBullet(
-                                context,
-                                'Observe the Telkom University Academic Honor Code in all shared group deliverables',
-                              ),
-                              SizedBox(height: context.rSpacing(16)),
-
-                              _buildSection(
-                                context,
-                                title: '5. Algorithm Explainability (XAI) Rights',
-                                content:
-                                    'Users possess the explicit right to inspect how priorities were deduced through the Explainability Modal, detailing membership degrees, fired fuzzy rules, and centroid calculation formulas.',
-                              ),
-                              SizedBox(height: context.rSpacing(16)),
-
-                              _buildSection(
-                                context,
-                                title: '6. Termination & Account Unlinking',
-                                content:
-                                    'Students may unlink their Telkom SSO account, clear local cached schedules, or request full task catalog deletion upon semester completion.',
-                              ),
-                            ],
-                          ),
-                        ),
+                        _buildTermsDocumentContainer(context),
 
                         // Bottom Actions (Only for Register flow)
                         if (widget.isFromRegister) ...[
                           SizedBox(height: context.rSpacing(16)),
-
-                          // Checkbox Agreement
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(6),
-                              onTap: () {
-                                setState(() => _hasAgreed = !_hasAgreed);
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      width: 19,
-                                      height: 19,
-                                      decoration: BoxDecoration(
-                                        color: _hasAgreed
-                                            ? const Color(0xFFFA6144)
-                                            : const Color(0xFF2E3440),
-                                        borderRadius: BorderRadius.circular(5),
-                                        border: Border.all(
-                                          color: _hasAgreed
-                                              ? const Color(0xFFFA6144)
-                                              : const Color(0xFF4B5563),
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: _hasAgreed
-                                          ? const Icon(
-                                              Icons.check,
-                                              size: 13,
-                                              color: Colors.white,
-                                            )
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        'I have read and agree to the Terms of Service & Privacy Policy.',
-                                        style: TextStyle(
-                                          color: const Color(0xFFCBD5E1),
-                                          fontSize: context.rFont(12, min: 11, max: 13.5),
-                                          fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: context.rSpacing(14)),
-
-                          // Action Buttons
-                          Row(
-                            children: [
-                              // Decline Button
-                              Expanded(
-                                flex: 1,
-                                child: SizedBox(
-                                  height: 44,
-                                  child: OutlinedButton(
-                                    onPressed: _handleDecline,
-                                    style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(
-                                        color: Color(0xFF3B4150),
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      backgroundColor: const Color(0xFF2A2F3D),
-                                    ),
-                                    child: const Text(
-                                      'Decline',
-                                      style: TextStyle(
-                                        color: Color(0xFFCBD5E1),
-                                        fontSize: 13.5,
-                                        fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-
-                              // Accept & Continue Button
-                              Expanded(
-                                flex: 2,
-                                child: SizedBox(
-                                  height: 44,
-                                  child: ElevatedButton(
-                                    onPressed: _handleAccept,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: _hasAgreed
-                                          ? AppColors.primary
-                                          : const Color(0xFF333846),
-                                      foregroundColor: _hasAgreed
-                                          ? Colors.white
-                                          : const Color(0xFF94A3B8),
-                                      elevation: _hasAgreed ? 2 : 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            'Accept & Continue',
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              color: _hasAgreed
-                                                  ? Colors.white
-                                                  : const Color(0xFF94A3B8),
-                                              fontSize: 13.5,
-                                              fontFamily: 'Inter',
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Icon(
-                                          Icons.arrow_forward_rounded,
-                                          size: 15,
-                                          color: _hasAgreed
-                                              ? Colors.white
-                                              : const Color(0xFF94A3B8),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          _buildAgreementControls(context),
                         ],
 
                         // Footer Note
@@ -529,6 +232,405 @@ class _TermsPrivacyPageState extends State<TermsPrivacyPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDesktopRegisterTerms(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final scrollAreaHeight = (screenHeight * 0.44).clamp(240.0, 480.0);
+
+    return DesktopAuthSplitShell(
+      formMaxWidth: 486,
+      onBack: _handleCloseOrBack,
+      backIcon: Icons.close_rounded,
+      backTooltip: 'Close',
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: ShapeDecoration(
+          color: const Color(0xFF111827),
+          shape: RoundedRectangleBorder(
+            side: BorderSide(
+              width: 1,
+              color: Colors.white.withValues(alpha: 0.06),
+            ),
+            borderRadius: BorderRadius.circular(25),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Terms of Service & Privacy',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildVersionBadge(context),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'IMPAL Smart Task & Schedule Prioritization System • Telkom University',
+                    style: TextStyle(
+                      color: Color(0xFF8E95A5),
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: scrollAreaHeight,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF111827),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF3B4150)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Scrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(17),
+                    child: _buildTermsClauses(context),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildAgreementControls(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVersionBadge(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF064E3B).withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: const Color(0xFF10B981).withValues(alpha: 0.4),
+          width: 0.8,
+        ),
+      ),
+      child: Text(
+        'v1.2 Active',
+        style: TextStyle(
+          color: const Color(0xFF34D399),
+          fontSize: context.rFont(10.5, min: 9.5, max: 12),
+          fontFamily: 'Inter',
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTermsDocumentContainer(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(context.rSpacing(16)),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E232E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF3B4150).withValues(alpha: 0.45),
+          width: 1,
+        ),
+      ),
+      child: _buildTermsClauses(context),
+    );
+  }
+
+  Widget _buildTermsClauses(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSection(
+          context,
+          title: '1. Acceptance of Terms',
+          content:
+              'By creating an account, registering your student credentials, or connecting through Telkom University Single Sign-On (SSO), you agree to comply with and be bound by these Terms of Service and all applicable university academic policies.',
+        ),
+        const SizedBox(height: 16),
+        _buildSection(
+          context,
+          title: '2. AI-Driven Recommendation Core',
+          content:
+              'IMPAL integrates a Mamdani Fuzzy Inference System that analyzes deadline proximity, syllabus grade weight, and complexity to compute a crisp recommendation score (0–100).',
+        ),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            color: const Color(0xFF252A36),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: 3.5,
+                    color: const Color(0xFFFA6144),
+                  ),
+                  const Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Academic Advisory Note: ',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            TextSpan(
+                              text:
+                                  'Priority scores generated by the system serve solely as planning guidance. Students retain complete individual responsibility for meeting all submission deadlines set by course lecturers.',
+                              style: TextStyle(
+                                color: Color(0xFF8E95A5),
+                                fontSize: 11,
+                                fontFamily: 'Inter',
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildSection(
+          context,
+          title: '3. Student Privacy & SSO Data Security',
+          content:
+              'We collect and process your Student ID (NIM), registered university email, academic program, and course schedules synchronized via the Central Authentication Service (CAS).',
+        ),
+        const SizedBox(height: 6),
+        _buildBullet(
+          context,
+          'All student credential exchanges use TLS 1.3 protocol encryption.',
+        ),
+        _buildBullet(
+          context,
+          'Data is restricted exclusively to task calculation and timetable syncing.',
+        ),
+        _buildBullet(
+          context,
+          'Student records are never sold, rented, or distributed to commercial parties.',
+        ),
+        const SizedBox(height: 16),
+        _buildSection(
+          context,
+          title: '4. Team Collaboration Code of Conduct',
+          content: 'When participating in team workspaces (Group Projects):',
+        ),
+        const SizedBox(height: 6),
+        _buildBullet(
+          context,
+          'Do not delete or alter task items assigned to other team members without mutual agreement.',
+        ),
+        _buildBullet(
+          context,
+          'Keep 4-character team join codes confidential within your designated project group',
+        ),
+        _buildBullet(
+          context,
+          'Observe the Telkom University Academic Honor Code in all shared group deliverables',
+        ),
+        const SizedBox(height: 16),
+        _buildSection(
+          context,
+          title: '5. Algorithm Explainability (XAI) Rights',
+          content:
+              'Users possess the explicit right to inspect how priorities were deduced through the Explainability Modal, detailing membership degrees, fired fuzzy rules, and centroid calculation formulas.',
+        ),
+        const SizedBox(height: 16),
+        _buildSection(
+          context,
+          title: '6. Termination & Account Unlinking',
+          content:
+              'Students may unlink their Telkom SSO account, clear local cached schedules, or request full task catalog deletion upon semester completion.',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAgreementControls(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () {
+              setState(() => _hasAgreed = !_hasAgreed);
+            },
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 19,
+                      height: 19,
+                      decoration: BoxDecoration(
+                        color: _hasAgreed
+                            ? const Color(0xFFFA6144)
+                            : const Color(0xFF2E3440),
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: _hasAgreed
+                              ? const Color(0xFFFA6144)
+                              : const Color(0xFF4B5563),
+                          width: 1.5,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: _hasAgreed
+                          ? const Icon(
+                              Icons.check,
+                              size: 13,
+                              color: Colors.white,
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'I have read and agree to the Terms of Service & Privacy Policy.',
+                        style: TextStyle(
+                          color: Color(0xFFCBD5E1),
+                          fontSize: 12,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              flex: 1,
+              child: SizedBox(
+                height: 44,
+                child: OutlinedButton(
+                  onPressed: _handleDecline,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF3B4150)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    backgroundColor: const Color(0xFF2A2F3D),
+                  ),
+                  child: const Text(
+                    'Decline',
+                    style: TextStyle(
+                      color: Color(0xFFCBD5E1),
+                      fontSize: 13.5,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: SizedBox(
+                height: 44,
+                child: ElevatedButton(
+                  onPressed: _handleAccept,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _hasAgreed
+                        ? AppColors.primary
+                        : const Color(0xFF333846),
+                    foregroundColor: _hasAgreed
+                        ? Colors.white
+                        : const Color(0xFF94A3B8),
+                    elevation: _hasAgreed ? 2 : 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Accept & Continue',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: _hasAgreed
+                                ? Colors.white
+                                : const Color(0xFF94A3B8),
+                            fontSize: 13.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 15,
+                        color: _hasAgreed
+                            ? Colors.white
+                            : const Color(0xFF94A3B8),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

@@ -409,7 +409,7 @@ void main() {
     );
 
     testWidgets(
-      'DesktopChangePasswordModal shows strength meter, match pill, Forgot? flow, & Terms & Sign Out work',
+      'Terms & Privacy modal mirrors Mobile, & Change Password opens Mobile-style confirmation dialog redirecting to ForgotPassword',
       (tester) async {
         await pumpDesktopHomeProfile(tester);
 
@@ -433,7 +433,7 @@ void main() {
         await tester.tap(find.byKey(const Key('desktop_terms_close_button')));
         await tester.pumpAndSettle();
 
-        // Open Change Password Modal & test strength + match
+        // Open Change Password confirmation dialog mirroring Mobile & verify redirect to ForgotPassword
         final passBtn =
             find.byKey(const Key('desktop_open_change_password_button'));
         await tester.ensureVisible(passBtn);
@@ -441,42 +441,20 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.byKey(const Key('desktop_password_strength_meter')),
+          find.textContaining('redirected to the secure verification'),
           findsOneWidget,
         );
-
-        await tester.enterText(
-          find.byKey(const Key('desktop_current_password_field')),
-          'OldPass123!',
-        );
-        await tester.enterText(
-          find.byKey(const Key('desktop_new_password_field')),
-          'NewPass123!',
-        );
-        await tester.enterText(
-          find.byKey(const Key('desktop_confirm_password_field')),
-          'NewPass123!',
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.text('Strong'), findsOneWidget);
-        expect(find.text('✓ Match'), findsOneWidget);
+        expect(find.text('Continue to Reset Password'), findsOneWidget);
 
         await tester.tap(
-          find.byKey(const Key('desktop_update_password_button')),
+          find.byKey(const Key('desktop_continue_reset_password_button')),
         );
-        await tester.pump();
-        expect(find.text('Password Updated'), findsOneWidget);
-        await tester.pump(const Duration(seconds: 4));
-
-        // Re-open Change Password modal and click Forgot?
-        await tester.ensureVisible(passBtn);
-        await tester.tap(passBtn);
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.byKey(const Key('desktop_forgot_password_link')));
         await tester.pumpAndSettle();
         expect(find.byType(ForgotPassword), findsOneWidget);
+        expect(
+          find.text('yogaperkasa@student.telkomuniversity.ac.id'),
+          findsOneWidget,
+        );
       },
     );
 
