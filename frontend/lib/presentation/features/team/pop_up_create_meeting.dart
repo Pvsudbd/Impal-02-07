@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/responsive_context.dart';
 import '../../common_widgets/impal_date_picker_dialog.dart';
 import '../../common_widgets/impal_time_picker_dialog.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
@@ -9,6 +10,7 @@ import '../profile/models/user_profile_model.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
 import '../schedule/pop_up_schedule_conflict_dialog.dart';
 import '../schedule/widgets/team_meeting_autocomplete.dart';
+import 'widgets/desktop/desktop_team_meeting_modal.dart';
 
 /// Aliases for backwards compatibility with routes & components
 typedef FormCreateMeeting = PopUpCreateMeeting;
@@ -28,6 +30,7 @@ class PopUpCreateMeeting extends StatefulWidget {
   final TimeOfDay? initialEndTime;
   final bool initialRepeatWeekly;
   final String? teamName;
+  final bool showTeamMeetingOption;
   final ScheduleModel? existingSchedule;
   final ValueChanged<ScheduleModel>? onCreated;
   final ValueChanged<ScheduleModel>? onUpdated;
@@ -42,12 +45,13 @@ class PopUpCreateMeeting extends StatefulWidget {
     this.initialEndTime,
     this.initialRepeatWeekly = false,
     this.teamName,
+    this.showTeamMeetingOption = true,
     this.existingSchedule,
     this.onCreated,
     this.onUpdated,
   });
 
-  /// Helper to open the Create Meeting screen as a full Page
+  /// Helper to open the Create Meeting form (desktop centered dialog or mobile page)
   static Future<ScheduleModel?> show(
     BuildContext context, {
     String initialName = '',
@@ -58,8 +62,24 @@ class PopUpCreateMeeting extends StatefulWidget {
     TimeOfDay? initialEndTime,
     bool initialRepeatWeekly = false,
     String? teamName,
+    bool showTeamMeetingOption = true,
     ValueChanged<ScheduleModel>? onCreated,
   }) {
+    if (context.isDesktop) {
+      return DesktopTeamMeetingModal.show(
+        context,
+        initialName: initialName,
+        initialLocation: initialLocation,
+        initialDescription: initialDescription,
+        initialDate: initialDate,
+        initialTime: initialTime,
+        initialEndTime: initialEndTime,
+        initialRepeatWeekly: initialRepeatWeekly,
+        teamName: teamName,
+        showTeamMeetingOption: showTeamMeetingOption,
+        onCreated: onCreated,
+      );
+    }
     return Navigator.of(context).push<ScheduleModel>(
       MaterialPageRoute(
         builder: (ctx) => PopUpCreateMeeting(
@@ -71,27 +91,39 @@ class PopUpCreateMeeting extends StatefulWidget {
           initialEndTime: initialEndTime,
           initialRepeatWeekly: initialRepeatWeekly,
           teamName: teamName,
+          showTeamMeetingOption: showTeamMeetingOption,
           onCreated: onCreated,
         ),
       ),
     );
   }
 
-  /// Helper to open the Edit Meeting screen for an existing schedule
+  /// Helper to open the Edit Meeting form for an existing schedule
   static Future<ScheduleModel?> showEdit(
     BuildContext context, {
     ScheduleModel? schedule,
     ScheduleModel? existingSchedule,
     String? teamName,
+    bool showTeamMeetingOption = true,
     ValueChanged<ScheduleModel>? onUpdated,
   }) {
     final target = schedule ?? existingSchedule;
     assert(target != null, 'Either schedule or existingSchedule must be provided');
+    if (context.isDesktop) {
+      return DesktopTeamMeetingModal.showEdit(
+        context,
+        existingSchedule: target,
+        teamName: teamName,
+        showTeamMeetingOption: showTeamMeetingOption,
+        onUpdated: onUpdated,
+      );
+    }
     return Navigator.of(context).push<ScheduleModel>(
       MaterialPageRoute(
         builder: (ctx) => PopUpCreateMeeting(
           existingSchedule: target,
           teamName: teamName,
+          showTeamMeetingOption: showTeamMeetingOption,
           onUpdated: onUpdated,
         ),
       ),
@@ -428,15 +460,20 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        isEdit ? 'Edit Meeting Details' : 'Meeting Details',
-                        style: const TextStyle(
-                          color: AppColors.textWhite,
-                          fontSize: 18,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
+                      Flexible(
+                        child: Text(
+                          isEdit ? 'Edit Meeting Details' : 'Meeting Details',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textWhite,
+                            fontSize: 18,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       _buildAlertToggle(),
                     ],
                   ),
@@ -459,20 +496,21 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                     prefixIcon: Icons.groups_rounded,
                   ),
 
-                  // 2. Team Meeting Checkbox & Autocomplete
-                  TeamMeetingAutocomplete(
-                    isTeamMeeting: _isTeamMeeting,
-                    teamController: _teamController,
-                    onToggleTeamMeeting: (val) {
-                      setState(() {
-                        _isTeamMeeting = val;
-                        if (!_isTeamMeeting) {
-                          _teamController.clear();
-                        }
-                      });
-                    },
-                    onTeamChanged: () => setState(() {}),
-                  ),
+                  // 2. Team Meeting Checkbox & Autocomplete (hidden from Dashboard Team)
+                  if (widget.showTeamMeetingOption)
+                    TeamMeetingAutocomplete(
+                      isTeamMeeting: _isTeamMeeting,
+                      teamController: _teamController,
+                      onToggleTeamMeeting: (val) {
+                        setState(() {
+                          _isTeamMeeting = val;
+                          if (!_isTeamMeeting) {
+                            _teamController.clear();
+                          }
+                        });
+                      },
+                      onTeamChanged: () => setState(() {}),
+                    ),
 
                   const SizedBox(height: 16),
 
@@ -573,9 +611,13 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                                   children: [
                                     const Icon(Icons.access_time_rounded, color: AppColors.textMuted, size: 18),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      _formatTime(_startTime),
-                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    Expanded(
+                                      child: Text(
+                                        _formatTime(_startTime),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -615,9 +657,13 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
                                   children: [
                                     const Icon(Icons.timer_outlined, color: AppColors.textMuted, size: 18),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      _formatTime(_endTime),
-                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    Expanded(
+                                      child: Text(
+                                        _formatTime(_endTime),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -872,15 +918,19 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
     IconData? prefixIcon,
     int maxLines = 1,
   }) {
-    return TextField(
+    final isMultilineWithIcon = maxLines > 1 && prefixIcon != null;
+
+    final field = TextField(
       key: key,
       controller: controller,
       maxLines: maxLines,
+      textAlignVertical:
+          maxLines > 1 ? TextAlignVertical.top : TextAlignVertical.center,
       style: const TextStyle(color: Colors.white, fontSize: 14),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-        prefixIcon: prefixIcon != null
+        prefixIcon: (!isMultilineWithIcon && prefixIcon != null)
             ? Icon(prefixIcon, color: AppColors.textMuted, size: 20)
             : null,
         filled: true,
@@ -897,8 +947,29 @@ class _PopUpCreateMeetingState extends State<PopUpCreateMeeting> {
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: isMultilineWithIcon
+            ? const EdgeInsets.fromLTRB(44, 12, 14, 12)
+            : const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
+    );
+
+    if (!isMultilineWithIcon) return field;
+
+    return Stack(
+      children: [
+        field,
+        Positioned(
+          top: 12,
+          left: 12,
+          child: IgnorePointer(
+            child: Icon(
+              prefixIcon,
+              color: AppColors.textMuted,
+              size: 20,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

@@ -28,9 +28,9 @@ class _ModalFieldLabel extends StatelessWidget {
             label,
             style: TextStyle(
               color: AppColors.textMuted,
-              fontSize: context.rFont(11, min: 10, max: 12),
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
+              fontSize: context.rFont(12.5, min: 11.5, max: 13.5),
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0,
             ),
           ),
         ),
@@ -334,7 +334,7 @@ class _DesktopEditProfileModalState extends State<DesktopEditProfileModal> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const _ModalFieldLabel(label: 'NAMA LENGKAP'),
+                                  const _ModalFieldLabel(label: 'Full Name'),
                                   SizedBox(height: context.rSpacing(6)),
                                   TextField(
                                     key: const Key('desktop_edit_fullname_field'),
@@ -360,7 +360,7 @@ class _DesktopEditProfileModalState extends State<DesktopEditProfileModal> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const _ModalFieldLabel(
-                                    label: 'NIM (LOCKED)',
+                                    label: 'Student ID (Locked)',
                                     trailing: _ModalPillBadge(
                                       text: 'SSO Locked',
                                       bgColor: Color(0xFF282D37),
@@ -402,7 +402,7 @@ class _DesktopEditProfileModalState extends State<DesktopEditProfileModal> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const _ModalFieldLabel(
-                                    label: 'EMAIL SSO (OFFICIAL)',
+                                    label: 'Campus Email (Official)',
                                     trailing: _ModalPillBadge(
                                       text: '✓ Verified',
                                       bgColor: Color(0xFF1F3D35),
@@ -436,7 +436,7 @@ class _DesktopEditProfileModalState extends State<DesktopEditProfileModal> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const _ModalFieldLabel(
-                                      label: 'WHATSAPP / MOBILE NUMBER'),
+                                      label: 'WhatsApp / Mobile Number'),
                                   SizedBox(height: context.rSpacing(6)),
                                   TextField(
                                     key: const Key('desktop_edit_phone_field'),
@@ -475,7 +475,7 @@ class _DesktopEditProfileModalState extends State<DesktopEditProfileModal> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const _ModalFieldLabel(
-                                      label: 'PROGRAM STUDI & FAKULTAS'),
+                                      label: 'Study Program & Faculty'),
                                   SizedBox(height: context.rSpacing(6)),
                                   TextField(
                                     key: const Key('desktop_edit_major_field'),
@@ -501,7 +501,7 @@ class _DesktopEditProfileModalState extends State<DesktopEditProfileModal> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const _ModalFieldLabel(
-                                      label: 'KELOMPOK & ROLE PROYEK'),
+                                      label: 'Team & Project Role'),
                                   SizedBox(height: context.rSpacing(6)),
                                   TextField(
                                     key: const Key('desktop_edit_role_field'),
@@ -523,7 +523,7 @@ class _DesktopEditProfileModalState extends State<DesktopEditProfileModal> {
                           ],
                         ),
                         SizedBox(height: context.rSpacing(14)),
-                        const _ModalFieldLabel(label: 'STATUS / BIO'),
+                        const _ModalFieldLabel(label: 'Status / Bio'),
                         SizedBox(height: context.rSpacing(6)),
                         TextField(
                           key: const Key('desktop_edit_bio_field'),
@@ -631,26 +631,13 @@ class _DesktopEditProfileModalState extends State<DesktopEditProfileModal> {
           ),
           SizedBox(width: context.rSpacing(12)),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Edit Profile',
-                  style: TextStyle(
-                    color: AppColors.textWhite,
-                    fontSize: context.rFont(16, min: 14, max: 18),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                SizedBox(height: context.rSpacing(2)),
-                Text(
-                  'Perbarui identitas akademik, kontak mahasiswa, & bio publik',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: context.rFont(12, min: 11, max: 13),
-                  ),
-                ),
-              ],
+            child: Text(
+              'Edit Profile',
+              style: TextStyle(
+                color: AppColors.textWhite,
+                fontSize: context.rFont(16, min: 14, max: 18),
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           IconButton(
@@ -1158,7 +1145,7 @@ class _DesktopChangePasswordModalState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _ModalFieldLabel(
-                          label: 'CURRENT PASSWORD',
+                          label: 'Current Password',
                           trailing: InkWell(
                             key: const Key('desktop_forgot_password_link'),
                             onTap: _openForgotFlow,
@@ -1209,7 +1196,7 @@ class _DesktopChangePasswordModalState
                         ),
                         SizedBox(height: context.rSpacing(16)),
                         _ModalFieldLabel(
-                          label: 'NEW PASSWORD',
+                          label: 'New Password',
                           trailing: Text(
                             strengthLabel,
                             style: TextStyle(
@@ -1277,18 +1264,18 @@ class _DesktopChangePasswordModalState
                           child: Column(
                             children: [
                               _RequirementRow(
-                                label: 'Minimal 8 karakter',
+                                label: 'Minimum 8 characters',
                                 met: _hasMinLength,
                               ),
                               SizedBox(height: context.rSpacing(6)),
                               _RequirementRow(
-                                label: 'Kombinasi huruf besar & kecil + angka',
+                                label: 'Mix of upper & lowercase + numbers',
                                 met: _hasUpperLowerNumber,
                               ),
                               SizedBox(height: context.rSpacing(6)),
                               _RequirementRow(
                                 label:
-                                    'Minimal 1 karakter spesial (@#\$!%*?& dll)',
+                                    'At least 1 special character (@#\$!%*?& etc.)',
                                 met: _hasSpecialChar,
                               ),
                             ],
@@ -1296,7 +1283,7 @@ class _DesktopChangePasswordModalState
                         ),
                         SizedBox(height: context.rSpacing(16)),
                         _ModalFieldLabel(
-                          label: 'CONFIRM NEW PASSWORD',
+                          label: 'Confirm New Password',
                           trailing: _confirmController.text.isEmpty
                               ? null
                               : _ModalPillBadge(
@@ -1394,26 +1381,13 @@ class _DesktopChangePasswordModalState
           ),
           SizedBox(width: context.rSpacing(12)),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Change Password',
-                  style: TextStyle(
-                    color: AppColors.textWhite,
-                    fontSize: context.rFont(16, min: 14, max: 18),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                SizedBox(height: context.rSpacing(2)),
-                Text(
-                  'Lindungi akun Tel-U SSO dengan kata sandi terenkripsi',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: context.rFont(12, min: 11, max: 13),
-                  ),
-                ),
-              ],
+            child: Text(
+              'Change Password',
+              style: TextStyle(
+                color: AppColors.textWhite,
+                fontSize: context.rFont(16, min: 14, max: 18),
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           IconButton(

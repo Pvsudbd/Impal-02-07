@@ -327,7 +327,7 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isCompact = constraints.maxWidth < 570;
+          final isCompact = constraints.maxWidth < 660;
 
           final leftInfo = Row(
             mainAxisSize: MainAxisSize.min,

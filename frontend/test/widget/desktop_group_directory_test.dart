@@ -624,8 +624,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Create Task'), findsWidgets);
-        expect(find.text('Team Task Details'), findsOneWidget);
+        expect(find.text('Create Team Task'), findsOneWidget);
+        expect(find.text('Team Task Details'), findsNothing);
         expect(find.text('Task Name'), findsOneWidget);
         expect(find.text('Description'), findsOneWidget);
         expect(find.text('Submission Deadline'), findsOneWidget);
@@ -669,6 +669,80 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text('Edit Team Task'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'opens DesktopTeamMeetingModal from + Create Meeting on desktop without Cancel',
+      (WidgetTester tester) async {
+        await pumpAtSize(
+          tester,
+          const DashboardTeamPage(
+            userName: 'Jarvis',
+            teamName: 'Kelompok IMPAL',
+            teamCode: '7X29',
+            isStandalone: true,
+          ),
+          const Size(1440, 980),
+        );
+
+        await tester.tap(
+          find.byKey(const ValueKey('dashboard_create_meeting_button')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(Dialog), findsOneWidget);
+        expect(find.text('Create Meeting'), findsWidgets);
+        expect(find.text('Meeting Details'), findsNothing);
+        expect(find.text('Meeting Name'), findsOneWidget);
+        expect(find.text('Team Meeting'), findsNothing);
+        expect(find.text('Location'), findsOneWidget);
+        expect(find.text('Date & Time'), findsOneWidget);
+        expect(find.text('Start Time'), findsOneWidget);
+        expect(find.text('End Time (Estimated)'), findsOneWidget);
+        expect(find.text('Repeat Weekly'), findsOneWidget);
+        expect(find.text('Meeting Link / URL (Optional)'), findsOneWidget);
+        expect(find.text('Description (Optional)'), findsOneWidget);
+        final desktopDescFieldTop = tester
+            .getTopLeft(find.byKey(const ValueKey('create_meeting_desc_input')))
+            .dy;
+        final desktopDescIconTop =
+            tester.getTopLeft(find.byIcon(Icons.notes_rounded)).dy;
+        expect((desktopDescIconTop - desktopDescFieldTop).abs(), lessThan(18));
+        expect(find.text('Alert On'), findsOneWidget);
+        expect(find.text('Cancel'), findsNothing);
+
+        await tester.tap(
+          find.byKey(const ValueKey('close_create_meeting_button')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(Dialog), findsNothing);
+        expect(tester.takeException(), isNull);
+
+        // Mobile DashboardTeamPage also hides Team Meeting checkbox
+        await pumpAtSize(
+          tester,
+          const DashboardTeamPage(
+            userName: 'Jarvis',
+            teamName: 'Kelompok IMPAL',
+            teamCode: '7X29',
+            isStandalone: true,
+          ),
+          const Size(390, 844),
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('dashboard_create_meeting_button')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Meeting Name'), findsOneWidget);
+        expect(find.text('Team Meeting'), findsNothing);
+        final mobileDescFieldTop = tester
+            .getTopLeft(find.byKey(const ValueKey('create_meeting_desc_input')))
+            .dy;
+        final mobileDescIconTop =
+            tester.getTopLeft(find.byIcon(Icons.notes_rounded)).dy;
+        expect((mobileDescIconTop - mobileDescFieldTop).abs(), lessThan(18));
         expect(tester.takeException(), isNull);
       },
     );

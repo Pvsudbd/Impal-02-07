@@ -1411,6 +1411,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(() => ScheduleRepository().resetToDefault());
+    ScheduleRepository().schedulesNotifier.value = const [];
 
     ScheduleModel? createdResult;
 

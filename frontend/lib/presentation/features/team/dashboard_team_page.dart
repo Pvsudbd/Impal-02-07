@@ -163,6 +163,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     final result = await PopUpCreateMeeting.show(
       context,
       teamName: widget.teamName,
+      showTeamMeetingOption: false,
     );
     if (result != null && mounted) {
       PopUpPemberitahuan.meetingCreated(context);
@@ -174,6 +175,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       context,
       schedule: schedule,
       teamName: widget.teamName,
+      showTeamMeetingOption: false,
     );
     if (result != null && mounted) {
       PopUpPemberitahuan.meetingUpdated(context);

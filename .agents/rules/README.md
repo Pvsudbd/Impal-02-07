@@ -18,6 +18,7 @@ Direktori ini adalah **pusat standarisasi modular (*single source of truth*)** u
 | [motion_spec.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/.agents/rules/motion_spec.md) | Protokol Animasi 60 FPS, Durasi 150–350 ms, Shimmer Skeleton Loader, dan Kepatuhan *Reduced Motion*. |
 | [security_hardening_rules.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/.agents/rules/security_hardening_rules.md) | Standar Keamanan OWASP Mobile Top 10, Zero Insecure Storage (`flutter_secure_storage`), Anti-SQL Injection, & Proteksi Token. |
 | [figcraft_canvas_rules.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/.agents/rules/figcraft_canvas_rules.md) | Inisiasi Day-0 Design System (9 Pilar), Gerbang Persetujuan Skill Desain, & Sinkronisasi Tiga Arah (Figma $\leftrightarrow$ Flutter). |
+| [desktop_form_modal_rules.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/.agents/rules/desktop_form_modal_rules.md) | Paritas Wording & Header Mobile pada Modal Formulir Desktop (`Title Case` non-ALL-CAPS, tanpa subjudul ekstra di bawah judul, `Time Duration`/`Repeat Weekly`, `[✕]` tanpa `Cancel` redundan, & border fokus oranye). |
 
 ---
 

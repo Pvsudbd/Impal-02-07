@@ -367,7 +367,7 @@ void main() {
             find.descendant(of: modalFinder, matching: find.text(text));
 
         expect(inModal('Create Task'), findsNWidgets(2));
-        expect(inModal('Task Details'), findsOneWidget);
+        expect(inModal('Task Details'), findsNothing);
         expect(inModal('Task Category'), findsOneWidget);
         expect(inModal('College Task'), findsOneWidget);
         expect(inModal('Personal'), findsOneWidget);
@@ -472,7 +472,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(modalFinder, findsOneWidget);
         expect(inModal('Edit Task'), findsOneWidget);
-        expect(inModal('Edit Task Details'), findsOneWidget);
+        expect(inModal('Edit Task Details'), findsNothing);
         expect(inModal('Save Changes'), findsOneWidget);
         expect(inModal('Delete Task'), findsOneWidget);
         expect(find.byKey(const ValueKey('desktop_task_cancel_btn')), findsNothing);

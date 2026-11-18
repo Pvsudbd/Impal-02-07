@@ -298,10 +298,14 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Add Schedule'), findsOneWidget);
+        expect(find.text('Date'), findsOneWidget);
+        expect(find.text('Date & Day'), findsNothing);
         expect(find.text('Alert On'), findsOneWidget);
         expect(find.text('Cancel'), findsNothing);
         expect(find.text('Create Schedule'), findsOneWidget);
-        expect(find.text('2h Duration (Valid)'), findsOneWidget);
+        expect(find.text('Time Duration'), findsOneWidget);
+        expect(find.text('Repeat Weekly'), findsOneWidget);
+        expect(find.text('2h Duration (Valid)'), findsNothing);
 
         await tester.tap(
           find.byKey(const ValueKey('desktop_schedule_type_Meeting')),

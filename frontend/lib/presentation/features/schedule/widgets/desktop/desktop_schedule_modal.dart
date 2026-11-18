@@ -156,16 +156,6 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
     return endMin - startMin;
   }
 
-  String get _durationLabel {
-    final mins = _durationMinutes;
-    if (mins <= 0) return 'Invalid Time Range';
-    final hours = mins ~/ 60;
-    final rem = mins % 60;
-    if (hours > 0 && rem > 0) return '${hours}h ${rem}m Duration (Valid)';
-    if (hours > 0) return '${hours}h Duration (Valid)';
-    return '${rem}m Duration (Valid)';
-  }
-
   List<ScheduleModel> get _currentConflicts {
     return ScheduleRepository().findConflicts(
       date: _selectedDate,
@@ -561,71 +551,50 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
     final title = isEdit
         ? (isMeeting ? 'Edit Meeting' : 'Edit Schedule')
         : (isMeeting ? 'Create Meeting' : 'Add Schedule');
-    final subtitle = isEdit
-        ? 'Modify session time, classroom location, or recurring rules.'
-        : 'Add a weekly lecture, lab session, or team meeting to your timetable.';
     final isOngoing = isEdit && widget.schedule?.status == 'Ongoing';
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: context.rFont(20, min: 18, max: 22),
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: context.rFont(20, min: 18, max: 22),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
                   ),
-                  if (isOngoing) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: const Text(
-                        'Ongoing',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10.5,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: context.rFont(12, min: 11, max: 13),
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w400,
                 ),
               ),
+              if (isOngoing) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Text(
+                    'Ongoing',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10.5,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -637,7 +606,10 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
           borderRadius: BorderRadius.circular(8),
           child: InkWell(
             key: const ValueKey('desktop_schedule_modal_close_btn'),
-            onTap: () => Navigator.of(context).pop(false),
+            onTap: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.of(context).pop(false);
+            },
             borderRadius: BorderRadius.circular(8),
             child: Container(
               width: 32,
@@ -859,162 +831,89 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
   }
 
   Widget _buildDateSection(BuildContext context) {
-    final formattedDate = DateFormat('EEE, MMM d, yyyy').format(_selectedDate);
-    final dayLabel = _repeatWeekly
-        ? '${DateFormat('EEEE').format(_selectedDate)} (Weekly)'
-        : DateFormat('EEEE').format(_selectedDate);
+    final formattedDate = DateFormat('d MMM yyyy').format(_selectedDate);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFieldLabel(context, 'Date & Day'),
+        _buildFieldLabel(context, 'Date'),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                decoration: BoxDecoration(
-                  color: AppColors.bgPrimary,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.borderSubtle),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.repeat_rounded,
-                      size: 16,
-                      color: AppColors.textMuted,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        dayLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w500,
-                        ),
+        Material(
+          color: AppColors.bgPrimary,
+          borderRadius: BorderRadius.circular(10),
+          child: InkWell(
+            key: const ValueKey('desktop_schedule_date_btn'),
+            onTap: _selectDate,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today_rounded,
+                    size: 17,
+                    color: AppColors.textMuted,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      formattedDate,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13.5,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w500,
+                        fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Material(
-                color: AppColors.bgPrimary,
-                borderRadius: BorderRadius.circular(10),
-                child: InkWell(
-                  key: const ValueKey('desktop_schedule_date_btn'),
-                  onTap: _selectDate,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 11,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.borderSubtle),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_today_rounded,
-                          size: 15,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            formattedDate,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w500,
-                              fontFeatures: [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-                ),
+                  const Icon(
+                    Icons.edit_calendar_rounded,
+                    size: 17,
+                    color: AppColors.primary,
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ],
     );
   }
 
   Widget _buildTimeSlotSection(BuildContext context) {
-    final isValid = _durationMinutes > 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildFieldLabel(context, 'Time Slot (24H WIB)'),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: isValid
-                    ? const Color(0xFF10B981)
-                    : AppColors.primary,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isValid ? Icons.check_rounded : Icons.warning_amber_rounded,
-                    size: 12,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _durationLabel,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10.5,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        _buildFieldLabel(context, 'Time Duration'),
         const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
               child: _buildTimeButton(
                 key: const ValueKey('desktop_schedule_start_time_btn'),
-                label: 'Start: ${_formatTime(_startTime)} WIB',
+                label: _formatTime(_startTime),
                 onTap: _selectStartTime,
               ),
             ),
-            const SizedBox(width: 10),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                '-',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 18),
+              ),
+            ),
             Expanded(
               child: _buildTimeButton(
                 key: const ValueKey('desktop_schedule_end_time_btn'),
-                label: 'End: ${_formatTime(_endTime)} WIB',
+                label: _formatTime(_endTime),
                 onTap: _selectEndTime,
               ),
             ),
@@ -1037,7 +936,8 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+          height: 46,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: AppColors.borderSubtle),
@@ -1046,8 +946,8 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
             children: [
               const Icon(
                 Icons.access_time_rounded,
-                size: 16,
-                color: AppColors.primary,
+                size: 17,
+                color: AppColors.textMuted,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1057,17 +957,12 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
-              ),
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 16,
-                color: AppColors.textMuted,
               ),
             ],
           ),
@@ -1078,7 +973,8 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
 
   Widget _buildRepeatToggleCard(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: AppColors.bgPrimary,
         borderRadius: BorderRadius.circular(10),
@@ -1087,43 +983,34 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
       child: Row(
         children: [
           const Icon(
-            Icons.event_repeat_rounded,
+            Icons.repeat_rounded,
             size: 18,
             color: AppColors.textMuted,
           ),
           const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Repeat Every Week',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  _selectedType == 'Meeting'
-                      ? 'Weekly recurring team meeting'
-                      : 'Weekly recurring schedule',
-                  style: const TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                    fontFamily: 'Inter',
-                  ),
-                ),
-              ],
+          const Expanded(
+            child: Text(
+              'Repeat Weekly',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 13.5,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-          Switch(
-            key: const ValueKey('desktop_schedule_repeat_switch'),
-            value: _repeatWeekly,
-            activeTrackColor: AppColors.primary,
-            activeThumbColor: Colors.white,
-            onChanged: (val) => setState(() => _repeatWeekly = val),
+          Transform.scale(
+            scale: 0.85,
+            child: Switch(
+              key: const ValueKey('desktop_schedule_repeat_switch'),
+              value: _repeatWeekly,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+              activeThumbColor: AppColors.primary,
+              onChanged: (val) => setState(() => _repeatWeekly = val),
+            ),
           ),
         ],
       ),
