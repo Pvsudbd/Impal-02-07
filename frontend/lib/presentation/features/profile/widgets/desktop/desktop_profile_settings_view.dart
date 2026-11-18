@@ -18,11 +18,13 @@ import 'desktop_profile_right_panel.dart';
 class DesktopProfileSettingsView extends StatefulWidget {
   final String searchQuery;
   final String? fallbackUserName;
+  final VoidCallback? onOpenSmartPriority;
 
   const DesktopProfileSettingsView({
     super.key,
     this.searchQuery = '',
     this.fallbackUserName,
+    this.onOpenSmartPriority,
   });
 
   @override
@@ -114,6 +116,10 @@ class _DesktopProfileSettingsViewState
   }
 
   void _openSmartPriority(UserProfileModel profile) {
+    if (widget.onOpenSmartPriority != null) {
+      widget.onOpenSmartPriority!();
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => SmartPriorityPage(userName: profile.fullName),

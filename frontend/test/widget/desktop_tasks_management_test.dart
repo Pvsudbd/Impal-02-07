@@ -4,7 +4,6 @@ import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.d
 import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_sidebar.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_task_grid_card.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_top_header.dart';
-import 'package:impal_smart_todolist/presentation/features/smart_system/smart_priority_page.dart';
 import 'package:impal_smart_todolist/presentation/features/task/models/task_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/task/task_page.dart';
 import 'package:impal_smart_todolist/presentation/features/task/widgets/desktop/desktop_personal_task_modal.dart';
@@ -203,15 +202,19 @@ void main() {
       await tester.pumpWidget(buildHarness(const Size(1440, 980)));
       await tester.pumpAndSettle();
 
-      // Open SmartPriorityPage from Fuzzy Mamdani widget
+      // Open DesktopSmartPriorityView from Fuzzy Mamdani widget
       await tester.ensureVisible(
         find.byKey(const ValueKey('desktop_fuzzy_mamdani_card')),
       );
       await tester.tap(find.byKey(const ValueKey('desktop_fuzzy_mamdani_card')));
       await tester.pumpAndSettle();
-      expect(find.byType(SmartPriorityPage), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('desktop_smart_priority_view')),
+        findsOneWidget,
+      );
 
-      Navigator.of(tester.element(find.byType(SmartPriorityPage))).pop();
+      // Switch back to Tasks via DesktopSidebar
+      await tester.tap(find.text('Tasks').first);
       await tester.pumpAndSettle();
 
       // View Timeline Calendar -> switches to Schedule tab

@@ -7,7 +7,6 @@ import 'package:impal_smart_todolist/presentation/features/profile/models/user_p
 import 'package:impal_smart_todolist/presentation/features/profile/profile_page.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/widgets/desktop/desktop_alert_settings_modal.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/widgets/desktop/desktop_daily_briefing_modal.dart';
-import 'package:impal_smart_todolist/presentation/features/smart_system/smart_priority_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -340,13 +339,16 @@ void main() {
         expect(find.text('XAI Disabled'), findsOneWidget);
         await tester.pump(const Duration(seconds: 4));
 
-        // Navigate to SmartPriorityPage via Fuzzy Inference Model row
+        // Navigate to DesktopSmartPriorityView via Fuzzy Inference Model row
         await tester.ensureVisible(
           find.byKey(const Key('desktop_fuzzy_model_row')),
         );
         await tester.tap(find.byKey(const Key('desktop_fuzzy_model_row')));
         await tester.pumpAndSettle();
-        expect(find.byType(SmartPriorityPage), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('desktop_smart_priority_view')),
+          findsOneWidget,
+        );
       },
     );
 

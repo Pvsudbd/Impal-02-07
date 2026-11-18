@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
+import 'package:impal_smart_todolist/presentation/features/smart_system/detail_card_smart_priority.dart';
 import 'package:impal_smart_todolist/presentation/features/smart_system/models/course_rubric_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/smart_system/smart_priority_page.dart';
 import 'package:impal_smart_todolist/presentation/features/smart_system/widgets/course_rubric_modals.dart';
+import 'package:impal_smart_todolist/presentation/features/smart_system/widgets/smart_priority_task_card.dart';
 import 'package:impal_smart_todolist/presentation/features/task/create_task.dart';
 import 'package:impal_smart_todolist/presentation/features/task/widgets/desktop/desktop_personal_task_modal.dart';
 import 'package:impal_smart_todolist/presentation/features/team/dashboard_team_page.dart';
@@ -187,6 +189,79 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(AssignRubricToTeamDialog), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Mobile SmartPriorityPage opens DetailCardSmartPriority bottom sheet on card tap',
+      (tester) async {
+        setViewport(tester, const Size(390, 844));
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: SmartPriorityPage(userName: 'Jarvis'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final firstCard = find.byType(SmartPriorityTaskCard).first;
+        expect(find.byType(DetailCardSmartPriority), findsNothing);
+
+        await tester.ensureVisible(firstCard);
+        await tester.tap(firstCard);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DetailCardSmartPriority), findsOneWidget);
+        expect(find.text('1. INPUT PARAMETER FUZZIFICATION'), findsOneWidget);
+        expect(find.text('2. CENTROID DEFUZZIFICATION'), findsOneWidget);
+
+        await tester.tap(find.text('Close'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DetailCardSmartPriority), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Desktop Home Smart Priority banner navigates to DesktopSmartPriorityView & drops down card XAI details inline',
+      (tester) async {
+        setViewport(tester, const Size(1440, 980));
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: HomePage(userName: 'Jarvis'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final banner =
+            find.byKey(const ValueKey('desktop_ai_smart_priority_banner'));
+        expect(banner, findsOneWidget);
+        await tester.ensureVisible(banner);
+        await tester.tap(banner);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('desktop_smart_priority_view')),
+          findsOneWidget,
+        );
+        expect(find.byType(SmartPriorityPage), findsNothing);
+
+        final firstDesktopCard = find.byType(SmartPriorityTaskCard).first;
+        expect(find.text('1. INPUT PARAMETER FUZZIFICATION'), findsNothing);
+
+        await tester.ensureVisible(firstDesktopCard);
+        await tester.tap(firstDesktopCard);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DetailCardSmartPriority), findsNothing);
+        expect(find.text('1. INPUT PARAMETER FUZZIFICATION'), findsOneWidget);
+        expect(find.text('2. CENTROID DEFUZZIFICATION'), findsOneWidget);
+
+        await tester.tap(firstDesktopCard);
+        await tester.pumpAndSettle();
+
+        expect(find.text('1. INPUT PARAMETER FUZZIFICATION'), findsNothing);
       },
     );
   });

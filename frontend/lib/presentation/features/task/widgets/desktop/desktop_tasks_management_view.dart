@@ -29,6 +29,7 @@ class DesktopTasksManagementView extends StatefulWidget {
   final String userInitials;
   final String searchQuery;
   final VoidCallback? onOpenScheduleTimeline;
+  final VoidCallback? onOpenSmartPriority;
   final ValueChanged<TeamModel>? onOpenTeamDashboard;
   final VoidCallback? onResetSearch;
 
@@ -38,6 +39,7 @@ class DesktopTasksManagementView extends StatefulWidget {
     this.userInitials = 'JS',
     this.searchQuery = '',
     this.onOpenScheduleTimeline,
+    this.onOpenSmartPriority,
     this.onOpenTeamDashboard,
     this.onResetSearch,
   });
@@ -425,6 +427,10 @@ class _DesktopTasksManagementViewState
                     setState(() => _selectedPriority = priority);
                   },
                   onSmartPriorityTap: () {
+                    if (widget.onOpenSmartPriority != null) {
+                      widget.onOpenSmartPriority!();
+                      return;
+                    }
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) =>
@@ -572,6 +578,10 @@ class _DesktopTasksManagementViewState
               topPriority: _smartRepo.topPriority,
               isFuzzyEngineActive: _smartRepo.isEngineActive,
               onFuzzyCardTap: () {
+                if (widget.onOpenSmartPriority != null) {
+                  widget.onOpenSmartPriority!();
+                  return;
+                }
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => SmartPriorityPage(userName: widget.userName),

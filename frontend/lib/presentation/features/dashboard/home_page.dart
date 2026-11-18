@@ -1264,6 +1264,7 @@ class _HomePageState extends State<HomePage> {
         userName: widget.userName,
         searchQuery: _desktopSearchQuery,
         onOpenScheduleTimeline: () => _onTabSelected(3),
+        onOpenSmartPriority: () => _onTabSelected(5),
         onOpenTeamDashboard: (team) {
           setState(() {
             _selectedTeam = team;
@@ -1280,6 +1281,7 @@ class _HomePageState extends State<HomePage> {
         key: const ValueKey('desktop_profile_settings_view'),
         searchQuery: _desktopSearchQuery,
         fallbackUserName: widget.userName,
+        onOpenSmartPriority: () => _onTabSelected(5),
       );
     }
 
@@ -1438,13 +1440,7 @@ class _HomePageState extends State<HomePage> {
               onEditSchedule: _openEditSchedule,
               onDeleteSchedule: _deleteSchedule,
               onToggleScheduleAlert: _toggleScheduleAlert,
-              onSmartPriorityTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SmartPriorityPage(userName: widget.userName),
-                  ),
-                );
-              },
+              onSmartPriorityTap: () => _onTabSelected(5),
             ),
           ),
         ],

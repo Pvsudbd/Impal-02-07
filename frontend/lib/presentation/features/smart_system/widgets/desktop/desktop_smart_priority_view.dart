@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/responsive_context.dart';
 import '../../../../common_widgets/pop_up_pemberitahuan.dart';
-import '../../detail_card_smart_priority.dart';
 import '../../models/smart_priority_model.dart';
 import '../../models/smart_priority_repository.dart';
 import '../course_rubric_manager_panel.dart';
@@ -26,6 +25,7 @@ class DesktopSmartPriorityView extends StatefulWidget {
 
 class _DesktopSmartPriorityViewState extends State<DesktopSmartPriorityView> {
   final SmartPriorityRepository _repo = SmartPriorityRepository.instance;
+  final Set<String> _expandedTaskIds = <String>{};
   SmartPriorityLevel? _selectedFilter;
 
   @override
@@ -75,7 +75,13 @@ class _DesktopSmartPriorityViewState extends State<DesktopSmartPriorityView> {
       );
       return;
     }
-    DetailCardSmartPriority.show(context, item: item);
+    setState(() {
+      if (_expandedTaskIds.contains(item.id)) {
+        _expandedTaskIds.remove(item.id);
+      } else {
+        _expandedTaskIds.add(item.id);
+      }
+    });
   }
 
   @override
@@ -172,6 +178,9 @@ class _DesktopSmartPriorityViewState extends State<DesktopSmartPriorityView> {
             (item) => SmartPriorityTaskCard(
               key: ValueKey('desktop_sp_${item.id}'),
               item: item,
+              isExpanded: _repo.isScoreExplainabilityActive &&
+                  _expandedTaskIds.contains(item.id),
+              showExpandChevron: _repo.isScoreExplainabilityActive,
               onTap: () => _onTaskTap(item),
             ),
           ),
