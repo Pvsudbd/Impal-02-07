@@ -359,6 +359,15 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('desktop_edit_camera_badge')), findsOneWidget);
+        expect(find.text('Change Profile Picture'), findsOneWidget);
+        expect(find.text('FULL NAME'), findsOneWidget);
+        expect(find.text('EMAIL'), findsOneWidget);
+        expect(find.text('Verified'), findsOneWidget);
+        expect(find.text('WHATSAPP / MOBILE NUMBER'), findsOneWidget);
+        expect(find.text('STATUS / BIO'), findsOneWidget);
+        expect(find.text('Save Changes'), findsOneWidget);
+        expect(find.text('Student ID (Locked)'), findsNothing);
+        expect(find.text('Batal'), findsNothing);
         expect(
           find.byKey(const Key('desktop_edit_notice_banner')),
           findsOneWidget,
@@ -383,8 +392,11 @@ void main() {
           'Updated desktop bio for Smart Task Manager.',
         );
 
+        await tester.ensureVisible(
+          find.byKey(const Key('desktop_edit_save_button')),
+        );
         await tester.tap(find.byKey(const Key('desktop_edit_save_button')));
-        await tester.pump();
+        await tester.pumpAndSettle();
         await tester.pump(const Duration(seconds: 4));
 
         expect(find.text('Bima Pratama'), findsWidgets);
