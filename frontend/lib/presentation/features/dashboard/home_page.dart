@@ -403,6 +403,9 @@ class _HomePageState extends State<HomePage> {
       ],
     );
 
+    final mobileTabIndex =
+        (_currentTab >= 0 && _currentTab <= 3) ? _currentTab : 0;
+
     final homeContent = Stack(
       children: [
         AnimatedSwitcher(
@@ -412,13 +415,13 @@ class _HomePageState extends State<HomePage> {
           transitionBuilder: (child, animation) {
             return FadeTransition(opacity: animation, child: child);
           },
-          child: _currentTab == 3
+          child: mobileTabIndex == 3
               ? ScheduleContentView(
                   key: const ValueKey('schedule_tab_content'),
                   userName: widget.userName,
                   showBackButton: false,
                 )
-              : (_currentTab == 2
+              : (mobileTabIndex == 2
                   ? (_selectedTeam != null
                       ? DashboardTeamPage(
                           key: ValueKey('team_dashboard_${_selectedTeam!.id}'),
@@ -436,7 +439,7 @@ class _HomePageState extends State<HomePage> {
                           onOpenSchedule: () => setState(() => _currentTab = 3),
                           onTeamSelected: (team) => setState(() => _selectedTeam = team),
                         ))
-                  : (_currentTab == 1
+                  : (mobileTabIndex == 1
                       ? TaskContentView(
                           key: const ValueKey('task_tab_content'),
                           userName: widget.userName,
@@ -449,7 +452,7 @@ class _HomePageState extends State<HomePage> {
           right: 0,
           bottom: 0,
           child: ImpalBottomNavBar(
-            currentTab: _currentTab,
+            currentTab: mobileTabIndex,
             onTabSelected: _onTabSelected,
           ),
         ),

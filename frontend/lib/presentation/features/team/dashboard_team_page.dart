@@ -19,6 +19,7 @@ import '../task/models/task_repository.dart';
 import 'create_task_team.dart';
 import 'pop_up_create_meeting.dart';
 import 'widgets/desktop/desktop_group_workspace_view.dart';
+import 'widgets/desktop/desktop_team_task_modal.dart';
 import 'widgets/pop_up_create_milestone.dart';
 import 'widgets/team_dashboard_header.dart';
 import 'widgets/team_milestones_section.dart';
@@ -74,6 +75,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   String? _selectedMilestoneId;
   final GlobalKey _firstActiveTeamTaskKey = GlobalKey();
   final GlobalKey _firstActiveMilestoneKey = GlobalKey();
+  final GlobalKey _desktopFirstActiveMilestoneKey = GlobalKey();
   bool _hasAutoScrolled = false;
   Timer? _autoScrollTimer;
 
@@ -200,6 +202,16 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   }
 
   Future<void> _openCreateTaskPage() async {
+    if (context.isDesktop) {
+      await DesktopTeamTaskModal.show(
+        context,
+        teamCode: widget.teamCode,
+        onTaskCreated: (task) {
+          _teamTaskRepository.addTask(widget.teamCode, task);
+        },
+      );
+      return;
+    }
     final result = await Navigator.of(context).push<TeamTaskModel>(
       MaterialPageRoute(
         builder: (_) => CreateTaskTeamPage(
@@ -219,6 +231,17 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   }
 
   Future<void> _openEditTaskPage(TeamTaskModel task) async {
+    if (context.isDesktop) {
+      await DesktopTeamTaskModal.show(
+        context,
+        existingTask: task,
+        teamCode: widget.teamCode,
+        onTaskUpdated: (updatedTask) {
+          _teamTaskRepository.updateTask(widget.teamCode, updatedTask);
+        },
+      );
+      return;
+    }
     final result = await Navigator.of(context).push<TeamTaskModel>(
       MaterialPageRoute(
         builder: (_) => CreateTaskTeamPage(
@@ -282,7 +305,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         assignedToMeOnly: _assignedToMeOnly,
         scrollController: _scrollController,
         milestonesScrollController: _milestonesScrollController,
-        firstActiveMilestoneKey: _firstActiveMilestoneKey,
+        firstActiveMilestoneKey: _desktopFirstActiveMilestoneKey,
         onMilestoneSelected: _toggleMilestoneSelection,
         onAddMilestone: _openCreateMilestone,
         onEditMilestone: _openEditMilestone,

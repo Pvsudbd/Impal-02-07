@@ -876,7 +876,10 @@ void main() {
     expect(find.text('Team Invite Code'), findsOneWidget);
     expect(find.text('7X29'), findsOneWidget);
     expect(find.text('Generate New'), findsOneWidget);
-    expect(find.text('Copy'), findsOneWidget);
+    expect(find.byIcon(Icons.copy_rounded), findsOneWidget);
+    expect(find.text('Copy Code'), findsNothing);
+    expect(find.text('MAXIMUM MEMBER QUOTA'), findsNothing);
+    expect(find.text('Cancel'), findsNothing);
 
     // Tap 'Generate New' to change code
     await tester.tap(find.text('Generate New'));
@@ -885,10 +888,10 @@ void main() {
     // Old code 7X29 should be replaced by a newly generated code
     expect(find.text('7X29'), findsNothing);
 
-    // Tap 'Copy' button
-    await tester.tap(find.text('Copy'));
+    // Tap icon-only copy button
+    await tester.tap(find.byKey(const ValueKey('copy_invite_code_button')));
     await tester.pumpAndSettle();
-    expect(find.text('Copied!'), findsOneWidget);
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
 
     // Enter team name
     await tester.enterText(find.byType(TextField).first, 'Kelompok Flutter');
@@ -930,7 +933,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Check elements (compact before 4 chars, then dynamic Team Not Found / Team Found)
-    expect(find.text('Join Study Team'), findsOneWidget);
+    expect(find.text('Join Team'), findsWidgets);
     expect(find.text('Join Workspace Now'), findsOneWidget);
     expect(find.text('TEAM FOUND'), findsNothing);
     expect(find.text('TEAM NOT FOUND'), findsNothing);
@@ -968,7 +971,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Join Study Team'), findsOneWidget);
+    expect(find.text('Join Team'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -999,7 +1002,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // PopUpJoinTeam is shown
-    expect(find.text('Join Study Team'), findsOneWidget);
+    expect(find.text('Join Team'), findsWidgets);
     expect(find.text('Join Workspace Now'), findsOneWidget);
 
     // Close via (x) close icon

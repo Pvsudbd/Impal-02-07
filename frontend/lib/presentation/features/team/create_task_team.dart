@@ -247,16 +247,21 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _isEditing ? 'Edit Team Task' : 'Team Task Details',
-                        style: TextStyle(
-                          color: AppColors.textWhite,
-                          fontSize: context.rFont(18, min: 16, max: 22),
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.1,
+                      Flexible(
+                        child: Text(
+                          _isEditing ? 'Edit Team Task' : 'Team Task Details',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.textWhite,
+                            fontSize: context.rFont(18, min: 16, max: 22),
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.1,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       _buildAlertToggle(context),
                     ],
                   ),

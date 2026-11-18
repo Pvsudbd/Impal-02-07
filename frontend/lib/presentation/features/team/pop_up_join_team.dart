@@ -206,36 +206,20 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
 
   Widget _buildHeaderRow(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Join Study Team',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: context.rFont(20, min: 18, max: 22),
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Enter the 4-character invite code shared by your team leader',
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: context.rFont(12.5, min: 11.5, max: 13),
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
+          child: Text(
+            'Join Team',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: context.rFont(20, min: 18, max: 22),
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -244,7 +228,10 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
           borderRadius: BorderRadius.circular(8),
           child: InkWell(
             key: const ValueKey('close_join_team_button'),
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.of(context).pop();
+            },
             borderRadius: BorderRadius.circular(8),
             child: Container(
               width: 32,

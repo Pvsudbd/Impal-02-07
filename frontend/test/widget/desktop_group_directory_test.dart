@@ -252,7 +252,7 @@ void main() {
         // 1. Join Team dialog via top header button + dynamic Team Not Found / Team Found
         await tester.tap(find.text('Join Team').first);
         await tester.pumpAndSettle();
-        expect(find.text('Join Study Team'), findsOneWidget);
+        expect(find.text('Join Team'), findsWidgets);
         expect(find.text('Join Workspace Now'), findsOneWidget);
         expect(find.text('TEAM FOUND'), findsNothing);
         expect(find.text('TEAM NOT FOUND'), findsNothing);
@@ -600,6 +600,75 @@ void main() {
         );
         expect(find.text('Voice Active (3 Online)'), findsOneWidget);
         expect(find.text('Sprint 1 Progress'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'opens DesktopTeamTaskModal from + Create Task and task card edit on desktop',
+      (WidgetTester tester) async {
+        await pumpAtSize(
+          tester,
+          const DashboardTeamPage(
+            userName: 'Jarvis',
+            teamName: 'Kelompok IMPAL',
+            teamCode: '7X29',
+            isStandalone: true,
+          ),
+          const Size(1440, 980),
+        );
+
+        // Open Create Team Task Modal
+        await tester.tap(
+          find.byKey(const ValueKey('dashboard_create_task_button')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Create Task'), findsWidgets);
+        expect(find.text('Team Task Details'), findsOneWidget);
+        expect(find.text('Task Name'), findsOneWidget);
+        expect(find.text('Description'), findsOneWidget);
+        expect(find.text('Submission Deadline'), findsOneWidget);
+        expect(find.text('Task Grade Weight'), findsNothing);
+        expect(find.text('Course Grade Weight'), findsNothing);
+        expect(find.text('Assign To'), findsOneWidget);
+        expect(find.text('Milestone (Optional)'), findsOneWidget);
+        expect(find.text('Alert On'), findsOneWidget);
+        expect(find.text('Cancel'), findsNothing);
+
+        // Select second team member & enter task name & submit
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_team_task_member_member_2')),
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('desktop_team_task_name_input')),
+          'FigCraft Team Modal QA',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_team_task_submit_btn')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+        expect(find.text('FigCraft Team Modal QA'), findsOneWidget);
+
+        // Open Edit Mode from existing task card edit button
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_team_task_edit_task_1')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Edit Team Task'), findsOneWidget);
+        expect(find.text('Delete Task'), findsOneWidget);
+        expect(find.text('Save Changes'), findsOneWidget);
+
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_team_task_modal_close_btn')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Edit Team Task'), findsNothing);
         expect(tester.takeException(), isNull);
       },
     );
