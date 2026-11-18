@@ -10,6 +10,8 @@ import '../../../schedule/pop_up_konfirmasi_delete.dart';
 import '../../../smart_system/models/course_rubric_model.dart';
 import '../../../smart_system/models/course_rubric_repository.dart';
 import '../../../smart_system/widgets/course_rubric_modals.dart';
+import '../../../task/models/tag_repository.dart';
+import '../../../task/widgets/task_tag_picker.dart';
 import '../../models/team_member_model.dart';
 import '../../models/team_task_model.dart';
 import '../../models/team_task_repository.dart';
@@ -78,6 +80,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
   late bool _isAlertEnabled;
   String? _selectedMilestoneId;
   RubricComponentModel? _overrideRubricComponent;
+  List<String> _selectedTagLabels = [];
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.existingTask != null;
@@ -92,6 +95,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
   void initState() {
     super.initState();
     CourseRubricRepository().init();
+    TaskTagRepository().init();
     final task = widget.existingTask;
     _isAlertEnabled = task?.isAlertEnabled ?? true;
     if (task != null) {
@@ -101,6 +105,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
       _selectedDate = task.deadline ?? DateTime(2026, 10, 18);
       _selectedTime = _parseTimeOfDay(task.timeRange);
       _selectedMembers = _matchMembers(task.assignedTo);
+      _selectedTagLabels = task.tags.map((t) => t.label).toList();
       final existingMilestone =
           TeamTaskRepository().getMilestoneForTask(widget.teamCode, task.id);
       _selectedMilestoneId = existingMilestone?.id;
@@ -245,6 +250,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
       teamName: widget.teamName,
     );
     final effectiveComp = _overrideRubricComponent ?? linkedRubric?.component;
+    final tagModels = TaskTagRepository().toTaskTagModels(_selectedTagLabels);
 
     if (_isEditing) {
       final updatedTask = widget.existingTask!.copyWith(
@@ -260,6 +266,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
         rubricComponentId: effectiveComp?.id,
         rubricComponentName: effectiveComp?.name,
         gradeWeightPercent: effectiveComp?.weightPercent,
+        tags: tagModels,
       );
 
       TeamTaskRepository().setTaskMilestone(
@@ -290,6 +297,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
         rubricComponentId: effectiveComp?.id,
         rubricComponentName: effectiveComp?.name,
         gradeWeightPercent: effectiveComp?.weightPercent,
+        tags: tagModels,
       );
 
       TeamTaskRepository().setTaskMilestone(
@@ -416,12 +424,21 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
                             _buildFieldLabel(context, 'Milestone (Optional)'),
                             const SizedBox(height: 8),
                             _buildMilestoneDropdown(context),
-                            const SizedBox(height: 20),
-                            _buildFooterActions(context),
+                            const SizedBox(height: 14),
+                            TaskTagSelectorSection(
+                              selectedTags: _selectedTagLabels,
+                              darkSurface: true,
+                              onTagsChanged: (next) =>
+                                  setState(() => _selectedTagLabels = next),
+                            ),
                           ],
                         ),
                       ),
                     ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(28, 8, 28, 22),
+                    child: _buildFooterActions(context),
                   ),
                 ],
               ),

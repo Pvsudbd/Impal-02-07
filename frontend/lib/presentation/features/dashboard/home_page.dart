@@ -23,6 +23,7 @@ import '../smart_system/models/smart_priority_repository.dart';
 import '../smart_system/smart_priority_page.dart';
 import '../smart_system/widgets/course_rubric_modals.dart';
 import '../smart_system/widgets/desktop/desktop_smart_priority_view.dart';
+import '../task/models/tag_repository.dart';
 import '../task/models/task_repository.dart';
 import '../task/task_page.dart';
 import '../task/widgets/desktop/desktop_personal_task_modal.dart';
@@ -83,6 +84,7 @@ class _HomePageState extends State<HomePage> {
     ScheduleRepository().init();
     TaskRepository().init();
     CourseRubricRepository().init();
+    TaskTagRepository().init();
     UserProfileRepository().init(userName: widget.userName);
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('is_logged_in', true);
@@ -396,6 +398,15 @@ class _HomePageState extends State<HomePage> {
                 categories: _categories,
                 selectedCategory: _selectedCategory,
                 onCategorySelected: _onCategorySelected,
+                totalCount: _tasks.where((t) => !t.isCompleted).length,
+                collegeCount: _tasks
+                    .where((t) => !t.isCompleted && t.isCollegeTask)
+                    .length,
+                personalCount: _tasks
+                    .where((t) => !t.isCompleted && !t.isCollegeTask)
+                    .length,
+                teamCount:
+                    _tasks.where((t) => !t.isCompleted && t.isTeamTask).length,
               ),
               const SizedBox(height: 16),
               _buildAiSmartPriorityBanner(),
@@ -680,13 +691,34 @@ class _HomePageState extends State<HomePage> {
     PopUpPemberitahuan.taskCompleted(context, taskName: task.title);
   }
 
+  List<TaskItem> _applyCategoryFilter(
+    List<TaskItem> activeTasks,
+    String category,
+  ) {
+    final lower = category.trim().toLowerCase();
+    if (category == 'All' || lower.isEmpty) {
+      return activeTasks;
+    }
+    if (lower == 'college') {
+      return activeTasks.where((t) => t.isCollegeTask).toList();
+    }
+    if (lower == 'personal') {
+      return activeTasks.where((t) => !t.isCollegeTask).toList();
+    }
+    if (lower == 'team') {
+      return activeTasks.where((t) => t.isTeamTask).toList();
+    }
+    return activeTasks.where((t) {
+      return t.tags.any((tag) => tag.label.trim().toLowerCase() == lower) ||
+          t.course.toLowerCase().contains(lower) ||
+          t.title.toLowerCase().contains(lower);
+    }).toList();
+  }
+
   Widget _buildOngoingTaskSection() {
     final activeTasks = _tasks.where((t) => !t.isCompleted).toList();
-    final displayedTasks = _selectedCategory == 'All'
-        ? activeTasks
-        : _selectedCategory.toLowerCase() == 'college'
-            ? activeTasks.where((t) => t.isCollegeTask).toList()
-            : activeTasks.where((t) => !t.isCollegeTask).toList();
+    final displayedTasks =
+        _applyCategoryFilter(activeTasks, _selectedCategory);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1303,12 +1335,8 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // Apply category + desktop search filters
-    var filteredTasks = _selectedCategory == 'All'
-        ? activeTasks
-        : _selectedCategory.toLowerCase() == 'college'
-            ? activeTasks.where((t) => t.isCollegeTask).toList()
-            : activeTasks.where((t) => !t.isCollegeTask).toList();
+    // Apply category / custom tag + desktop search filters
+    var filteredTasks = _applyCategoryFilter(activeTasks, _selectedCategory);
 
     final query = _desktopSearchQuery.trim().toLowerCase();
     if (query.isNotEmpty) {
@@ -1350,6 +1378,7 @@ class _HomePageState extends State<HomePage> {
     }).length;
     final collegeCount = activeTasks.where((t) => t.isCollegeTask).length;
     final personalCount = activeTasks.where((t) => !t.isCollegeTask).length;
+    final teamCount = activeTasks.where((t) => t.isTeamTask).length;
 
     return SingleChildScrollView(
       key: const ValueKey('desktop_homepage_scroll'),
@@ -1376,6 +1405,7 @@ class _HomePageState extends State<HomePage> {
                   totalPendingCount: totalPendingCount,
                   collegeCount: collegeCount,
                   personalCount: personalCount,
+                  teamCount: teamCount,
                   selectedCategory: _selectedCategory,
                   onCategorySelected: (cat) {
                     setState(() => _selectedCategory = cat);

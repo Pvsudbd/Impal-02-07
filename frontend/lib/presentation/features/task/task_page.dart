@@ -14,9 +14,11 @@ import '../team/models/team_model.dart';
 import '../team/models/team_repository.dart';
 import '../team/models/team_task_repository.dart';
 import 'create_task.dart';
+import 'models/tag_repository.dart';
 import 'models/task_repository.dart';
 import 'widgets/task_expandable_card.dart';
 import 'widgets/task_filter_bar.dart';
+import 'widgets/task_tag_picker.dart';
 import 'widgets/task_timeline_summary.dart';
 
 // Re-exports & Aliases for backward compatibility
@@ -118,6 +120,7 @@ class _TaskContentViewState extends State<TaskContentView> {
   final GlobalKey _firstActiveTaskKey = GlobalKey();
   String _selectedFilter = 'Today';
   String? _selectedPriority;
+  String? _selectedTagFilter;
   String _searchQuery = '';
   bool _hasAutoScrolled = false;
 
@@ -125,6 +128,7 @@ class _TaskContentViewState extends State<TaskContentView> {
   void initState() {
     super.initState();
     _repository.init();
+    TaskTagRepository().init();
     _repository.addListener(_onRepositoryChanged);
     _teamTaskRepository.init();
     _teamTaskRepository.addListener(_onRepositoryChanged);
@@ -184,6 +188,15 @@ class _TaskContentViewState extends State<TaskContentView> {
           .where((t) =>
               t.priorityLabel.toLowerCase() ==
               _selectedPriority!.toLowerCase())
+          .toList();
+    }
+
+    if (_selectedTagFilter != null) {
+      final tq = _selectedTagFilter!.trim().toLowerCase();
+      list = list
+          .where(
+            (t) => t.tags.any((tag) => tag.label.trim().toLowerCase() == tq),
+          )
           .toList();
     }
 
@@ -442,6 +455,15 @@ class _TaskContentViewState extends State<TaskContentView> {
               TaskFilterBar(
                 selectedFilter: _selectedFilter,
                 onFilterSelected: (f) => setState(() => _selectedFilter = f),
+              ),
+              SizedBox(height: context.rSpacing(10)),
+              TagFilterStrip(
+                selectedTag: _selectedTagFilter,
+                includeAllOption: true,
+                showAddButton: true,
+                scrollable: true,
+                onTagSelected: (tag) =>
+                    setState(() => _selectedTagFilter = tag),
               ),
               SizedBox(height: context.rSpacing(14)),
 

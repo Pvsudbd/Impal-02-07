@@ -7,6 +7,8 @@ import '../schedule/pop_up_konfirmasi_delete.dart';
 import '../smart_system/models/course_rubric_model.dart';
 import '../smart_system/models/course_rubric_repository.dart';
 import '../smart_system/widgets/course_rubric_modals.dart';
+import '../task/models/tag_repository.dart';
+import '../task/widgets/task_tag_picker.dart';
 import 'models/team_member_model.dart';
 import 'models/team_task_model.dart';
 import 'models/team_task_repository.dart';
@@ -67,6 +69,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
   late bool _isAlertEnabled;
   String? _selectedMilestoneId;
   RubricComponentModel? _overrideRubricComponent;
+  List<String> _selectedTagLabels = [];
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.existingTask != null;
@@ -75,6 +78,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
   void initState() {
     super.initState();
     CourseRubricRepository().init();
+    TaskTagRepository().init();
     final task = widget.existingTask;
     _isAlertEnabled = task?.isAlertEnabled ?? true;
     if (task != null) {
@@ -83,6 +87,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
       _selectedDate = task.deadline ?? DateTime(2026, 10, 18);
       _selectedTime = _parseTimeOfDay(task.timeRange);
       _selectedMembers = _matchMembers(task.assignedTo);
+      _selectedTagLabels = task.tags.map((t) => t.label).toList();
       final existingMilestone =
           TeamTaskRepository().getMilestoneForTask(widget.teamCode, task.id);
       _selectedMilestoneId = existingMilestone?.id;
@@ -180,6 +185,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
       teamName: widget.teamName,
     );
     final effectiveComp = _overrideRubricComponent ?? linkedRubric?.component;
+    final tagModels = TaskTagRepository().toTaskTagModels(_selectedTagLabels);
 
     if (_isEditing) {
       final updatedTask = widget.existingTask!.copyWith(
@@ -195,6 +201,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         rubricComponentId: effectiveComp?.id,
         rubricComponentName: effectiveComp?.name,
         gradeWeightPercent: effectiveComp?.weightPercent,
+        tags: tagModels,
       );
 
       TeamTaskRepository().setTaskMilestone(
@@ -229,6 +236,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         rubricComponentId: effectiveComp?.id,
         rubricComponentName: effectiveComp?.name,
         gradeWeightPercent: effectiveComp?.weightPercent,
+        tags: tagModels,
       );
 
       TeamTaskRepository().setTaskMilestone(
@@ -352,6 +360,13 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
                   _buildSectionLabel(context, 'Milestone (Optional)'),
                   SizedBox(height: context.rSpacing(8)),
                   _buildMilestoneSelector(context),
+                  SizedBox(height: context.rSpacing(16)),
+
+                  TaskTagSelectorSection(
+                    selectedTags: _selectedTagLabels,
+                    onTagsChanged: (next) =>
+                        setState(() => _selectedTagLabels = next),
+                  ),
                   SizedBox(height: context.rSpacing(24)),
 
                   // Submit Button (Dynamic: "Save Changes" or "Create Task")

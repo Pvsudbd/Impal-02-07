@@ -323,7 +323,10 @@ void main() {
 
         expect(find.text('Completed Tasks'), findsOneWidget);
 
-        await tester.tap(find.byKey(const ValueKey('desktop_type_dropdown')));
+        final typeDropdown = find.byKey(const ValueKey('desktop_type_dropdown'));
+        await tester.ensureVisible(typeDropdown);
+        await tester.pumpAndSettle();
+        await tester.tap(typeDropdown);
         await tester.pumpAndSettle();
         await tester.tap(find.text('Completed').last);
         await tester.pumpAndSettle();

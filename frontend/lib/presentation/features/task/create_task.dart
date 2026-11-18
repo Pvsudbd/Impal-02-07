@@ -8,11 +8,13 @@ import '../schedule/pop_up_konfirmasi_delete.dart';
 import '../smart_system/models/course_rubric_model.dart';
 import '../smart_system/models/course_rubric_repository.dart';
 import '../team/widgets/submission_deadline_picker.dart';
+import 'models/tag_repository.dart';
 import 'models/task_item_model.dart';
 import 'models/task_repository.dart';
 import 'widgets/course_grade_weight_chips.dart';
 import 'widgets/desktop/desktop_personal_task_modal.dart';
 import 'widgets/task_category_selector.dart';
+import 'widgets/task_tag_picker.dart';
 
 // Backward compatibility aliases matching Figma exports
 export 'models/task_item_model.dart';
@@ -65,6 +67,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   String? _selectedCourseId;
   String? _selectedComponentId;
   int? _customWeightPercent;
+  List<String> _selectedTagLabels = [];
   final CourseRubricRepository _rubricRepo = CourseRubricRepository();
   bool _isSubmitting = false;
 
@@ -74,6 +77,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   void initState() {
     super.initState();
     _rubricRepo.init();
+    TaskTagRepository().init();
     _rubricRepo.addListener(_onRubricsChanged);
     final task = widget.targetTask;
     if (task != null) {
@@ -86,6 +90,12 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       _selectedPriority = task.priority;
       _isAutomaticWeight = task.isAutomaticWeight;
       _isAlertEnabled = task.isAlertEnabled;
+      _selectedTagLabels = task.tags
+          .where((t) =>
+              t.label.trim().toLowerCase() != 'task' &&
+              !t.label.contains('%'))
+          .map((t) => t.label)
+          .toList();
       final matched = _rubricRepo.getCourseById(task.rubricCourseId) ??
           _rubricRepo.findCourseByTextOrId(task.course);
       _selectedCourseId = matched?.id;
@@ -185,6 +195,23 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
     final resolvedWeight = _isCollegeTask && _isAutomaticWeight
         ? (_customWeightPercent ?? selectedComp?.weightPercent)
         : null;
+    final customTags = TaskTagRepository().toTaskTagModels(_selectedTagLabels);
+    final mergedTags = <TaskTagModel>[
+      if (_isCollegeTask && selectedComp != null)
+        TaskTagModel(
+          label:
+              '${selectedComp.name} (${resolvedWeight ?? selectedComp.weightPercent}%)',
+          backgroundColor: _selectedPriority.badgeBg,
+          textColor: Colors.white,
+        ),
+      ...customTags,
+      if (!(_isCollegeTask && selectedComp != null) && customTags.isEmpty)
+        TaskTagModel(
+          label: 'Task',
+          backgroundColor: _selectedPriority.badgeBg,
+          textColor: Colors.white,
+        ),
+    ];
 
     if (_isEditing) {
       final updated = widget.targetTask!.copyWith(
@@ -206,6 +233,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
             ? selectedComp?.name
             : null,
         gradeWeightPercent: resolvedWeight,
+        tags: mergedTags,
       );
 
       TaskRepository().updateTask(updated);
@@ -237,15 +265,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
             : null,
         gradeWeightPercent: resolvedWeight,
         subtitle: 'Personal & Team task',
-        tags: [
-          TaskTagModel(
-            label: (_isCollegeTask && selectedComp != null)
-                ? '${selectedComp.name} (${resolvedWeight ?? selectedComp.weightPercent}%)'
-                : 'Task',
-            backgroundColor: _selectedPriority.badgeBg,
-            textColor: Colors.white,
-          ),
-        ],
+        tags: mergedTags,
         groupMembers: const ['Personal Task • Jarvis'],
         dateCreated: 'Today',
         centroidDefuzzification: 'z* = 32.4',
@@ -472,6 +492,13 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                         setState(() => _selectedPriority = p),
                     onAutomaticChanged: (a) =>
                         setState(() => _isAutomaticWeight = a),
+                  ),
+                  SizedBox(height: context.rSpacing(14)),
+
+                  TaskTagSelectorSection(
+                    selectedTags: _selectedTagLabels,
+                    onTagsChanged: (next) =>
+                        setState(() => _selectedTagLabels = next),
                   ),
                   SizedBox(height: context.rSpacing(14)),
 

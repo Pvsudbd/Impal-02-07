@@ -10,9 +10,11 @@ import '../../../profile/models/user_profile_model.dart';
 import '../../../schedule/pop_up_konfirmasi_delete.dart';
 import '../../../smart_system/models/course_rubric_model.dart';
 import '../../../smart_system/models/course_rubric_repository.dart';
+import '../../models/tag_repository.dart';
 import '../../models/task_item_model.dart';
 import '../../models/task_repository.dart';
 import '../course_grade_weight_chips.dart';
+import '../task_tag_picker.dart';
 
 /// Centered Desktop Pop-Up Modal for Creating and Editing Personal / College Tasks.
 ///
@@ -79,6 +81,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
   String? _selectedCourseId;
   String? _selectedComponentId;
   int? _customWeightPercent;
+  List<String> _selectedTagLabels = [];
   final CourseRubricRepository _rubricRepo = CourseRubricRepository();
   bool _isSubmitting = false;
 
@@ -88,6 +91,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
   void initState() {
     super.initState();
     _rubricRepo.init();
+    TaskTagRepository().init();
     _rubricRepo.addListener(_onRubricsChanged);
     final existing = widget.task;
     if (existing != null) {
@@ -100,6 +104,12 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
       _selectedPriority = existing.priority;
       _isAutomaticWeight = existing.isAutomaticWeight;
       _isAlertEnabled = existing.isAlertEnabled;
+      _selectedTagLabels = existing.tags
+          .where((t) =>
+              t.label.trim().toLowerCase() != 'task' &&
+              !t.label.contains('%'))
+          .map((t) => t.label)
+          .toList();
       final matched = _rubricRepo.getCourseById(existing.rubricCourseId) ??
           _rubricRepo.findCourseByTextOrId(existing.course);
       _selectedCourseId = matched?.id;
@@ -262,6 +272,23 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
     final resolvedWeight = _isCollegeTask && _isAutomaticWeight
         ? (_customWeightPercent ?? selectedComp?.weightPercent)
         : null;
+    final customTags = TaskTagRepository().toTaskTagModels(_selectedTagLabels);
+    final mergedTags = <TaskTagModel>[
+      if (_isCollegeTask && selectedComp != null)
+        TaskTagModel(
+          label:
+              '${selectedComp.name} (${resolvedWeight ?? selectedComp.weightPercent}%)',
+          backgroundColor: _selectedPriority.badgeBg,
+          textColor: Colors.white,
+        ),
+      ...customTags,
+      if (!(_isCollegeTask && selectedComp != null) && customTags.isEmpty)
+        TaskTagModel(
+          label: 'Task',
+          backgroundColor: _selectedPriority.badgeBg,
+          textColor: Colors.white,
+        ),
+    ];
 
     if (_isEditing) {
       final updated = widget.task!.copyWith(
@@ -283,6 +310,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
             ? selectedComp?.name
             : null,
         gradeWeightPercent: resolvedWeight,
+        tags: mergedTags,
       );
 
       TaskRepository().updateTask(updated);
@@ -314,15 +342,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
           : null,
       gradeWeightPercent: resolvedWeight,
       subtitle: 'Personal & Team task',
-      tags: [
-        TaskTagModel(
-          label: (_isCollegeTask && selectedComp != null)
-              ? '${selectedComp.name} (${resolvedWeight ?? selectedComp.weightPercent}%)'
-              : 'Task',
-          backgroundColor: _selectedPriority.badgeBg,
-          textColor: Colors.white,
-        ),
-      ],
+      tags: mergedTags,
       groupMembers: const ['Personal Task • Jarvis'],
       dateCreated: 'Today',
       centroidDefuzzification: 'z* = 32.4',
@@ -360,13 +380,18 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
         ? Duration.zero
         : const Duration(milliseconds: 220);
 
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: UnfocusOnTap(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
+          constraints: BoxConstraints(
+            maxWidth: 520,
+            maxHeight: maxHeight,
+          ),
           child: Container(
             decoration: BoxDecoration(
               color: AppColors.bgCard,
@@ -374,31 +399,49 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
               border: Border.all(color: AppColors.borderSubtle, width: 1),
             ),
             clipBehavior: Clip.antiAlias,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildHeaderRow(context),
-                    SizedBox(height: context.rSpacing(16)),
-                    _buildCategorySelector(context, duration),
-                    SizedBox(height: context.rSpacing(14)),
-                    _buildTaskTitleField(context),
-                    SizedBox(height: context.rSpacing(14)),
-                    _buildCourseSection(context, duration),
-                    _buildDeadlineSection(context),
-                    SizedBox(height: context.rSpacing(14)),
-                    _buildTaskGradeWeightSection(context, duration),
-                    SizedBox(height: context.rSpacing(14)),
-                    _buildNotesField(context),
-                    SizedBox(height: context.rSpacing(18)),
-                    _buildFooterActions(context),
-                  ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
+                  child: _buildHeaderRow(context),
                 ),
-              ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(28, 16, 28, 16),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildCategorySelector(context, duration),
+                          SizedBox(height: context.rSpacing(14)),
+                          _buildTaskTitleField(context),
+                          SizedBox(height: context.rSpacing(14)),
+                          _buildCourseSection(context, duration),
+                          _buildDeadlineSection(context),
+                          SizedBox(height: context.rSpacing(14)),
+                          _buildTaskGradeWeightSection(context, duration),
+                          SizedBox(height: context.rSpacing(14)),
+                          TaskTagSelectorSection(
+                            selectedTags: _selectedTagLabels,
+                            darkSurface: true,
+                            onTagsChanged: (next) =>
+                                setState(() => _selectedTagLabels = next),
+                          ),
+                          SizedBox(height: context.rSpacing(14)),
+                          _buildNotesField(context),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 8, 28, 22),
+                  child: _buildFooterActions(context),
+                ),
+              ],
             ),
           ),
         ),

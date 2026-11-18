@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../task/models/task_item_model.dart';
 
 /// Priority level for team tasks
 enum TaskPriority {
@@ -35,6 +36,7 @@ class TeamTaskModel {
   final String? rubricComponentId;
   final String? rubricComponentName;
   final int? gradeWeightPercent;
+  final List<TaskTagModel> tags;
 
   const TeamTaskModel({
     required this.id,
@@ -52,6 +54,7 @@ class TeamTaskModel {
     this.rubricComponentId,
     this.rubricComponentName,
     this.gradeWeightPercent,
+    this.tags = const [],
   });
 
   /// Remaining time until deadline badge (e.g. '12h', '18h', '2d').
@@ -126,6 +129,7 @@ class TeamTaskModel {
     String? rubricComponentId,
     String? rubricComponentName,
     int? gradeWeightPercent,
+    List<TaskTagModel>? tags,
   }) {
     return TeamTaskModel(
       id: id ?? this.id,
@@ -143,6 +147,7 @@ class TeamTaskModel {
       rubricComponentId: rubricComponentId ?? this.rubricComponentId,
       rubricComponentName: rubricComponentName ?? this.rubricComponentName,
       gradeWeightPercent: gradeWeightPercent ?? this.gradeWeightPercent,
+      tags: tags ?? this.tags,
     );
   }
 

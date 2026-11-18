@@ -12,7 +12,9 @@ import '../../../team/models/team_repository.dart';
 import '../../../team/models/team_task_repository.dart';
 import '../../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../edit_task.dart';
+import '../../models/tag_repository.dart';
 import '../../models/task_repository.dart';
+import '../task_tag_picker.dart';
 import 'desktop_personal_task_modal.dart';
 import 'desktop_task_filter_bar.dart';
 import 'desktop_task_kpi_row.dart';
@@ -53,6 +55,7 @@ class _DesktopTasksManagementViewState
 
   String _selectedTimeFilter = 'All Tasks';
   TaskPriorityLevel? _selectedPriority;
+  String? _selectedTagFilter;
   String _sortBy = 'Deadline';
   String _taskTypeFilter = 'All';
   late DateTime _focusedMonth;
@@ -63,6 +66,7 @@ class _DesktopTasksManagementViewState
     super.initState();
     _taskRepo.init();
     _teamTaskRepo.init();
+    TaskTagRepository().init();
     _taskRepo.addListener(_onDataChanged);
     _teamTaskRepo.addListener(_onDataChanged);
     _smartRepo.addListener(_onDataChanged);
@@ -156,6 +160,15 @@ class _DesktopTasksManagementViewState
       }).toList();
     }
 
+    if (_selectedTagFilter != null) {
+      final tq = _selectedTagFilter!.trim().toLowerCase();
+      list = list
+          .where(
+            (t) => t.tags.any((tag) => tag.label.trim().toLowerCase() == tq),
+          )
+          .toList();
+    }
+
     final query = widget.searchQuery.trim().toLowerCase();
     if (query.isNotEmpty) {
       list = list.where((t) {
@@ -200,6 +213,9 @@ class _DesktopTasksManagementViewState
     if (_selectedDate != null) {
       parts.add('Date: ${DateFormat('d MMM').format(_selectedDate!)}');
     }
+    if (_selectedTagFilter != null) {
+      parts.add('Tag: $_selectedTagFilter');
+    }
     if (parts.isEmpty) return null;
     return parts.join(' • ');
   }
@@ -208,6 +224,7 @@ class _DesktopTasksManagementViewState
     setState(() {
       _selectedPriority = null;
       _selectedDate = null;
+      _selectedTagFilter = null;
       _selectedTimeFilter = 'All Tasks';
       _taskTypeFilter = 'All';
     });
@@ -432,6 +449,14 @@ class _DesktopTasksManagementViewState
                   onSortChanged: (s) => setState(() => _sortBy = s),
                   onTaskTypeChanged: (t) => setState(() => _taskTypeFilter = t),
                   onClearExtraFilter: _clearExtraFilters,
+                ),
+                SizedBox(height: context.rSpacing(10)),
+                TagFilterStrip(
+                  selectedTag: _selectedTagFilter,
+                  includeAllOption: true,
+                  showAddButton: true,
+                  onTagSelected: (tag) =>
+                      setState(() => _selectedTagFilter = tag),
                 ),
                 SizedBox(height: context.rSpacing(20)),
 
