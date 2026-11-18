@@ -419,8 +419,17 @@ void main() {
         await tester.tap(termsBtn);
         await tester.pumpAndSettle();
 
-        expect(find.text('1. Scope of Academic Productivity'), findsOneWidget);
+        expect(find.text('Terms & Privacy'), findsOneWidget);
+        expect(find.text('Terms of Service & Privacy'), findsOneWidget);
+        expect(find.text('1. Acceptance of Terms'), findsOneWidget);
+        expect(find.text('2. AI-Driven Recommendation Core'), findsOneWidget);
+        expect(find.text('6. Termination & Account Unlinking'), findsOneWidget);
         expect(find.text('v1.2 Active'), findsOneWidget);
+        expect(
+          find.text('IMPAL Group 7 • Telkom University © 2026'),
+          findsOneWidget,
+        );
+        expect(find.text('Saya Mengerti & Tutup'), findsNothing);
         await tester.tap(find.byKey(const Key('desktop_terms_close_button')));
         await tester.pumpAndSettle();
 
