@@ -48,6 +48,7 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
   final String teamName;
   final VoidCallback onManageMembersTap;
   final VoidCallback? onMilestoneTap;
+  final VoidCallback? onAddMilestoneTap;
 
   const DesktopTeamWorkspacePanel({
     super.key,
@@ -55,6 +56,7 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
     required this.teamName,
     required this.onManageMembersTap,
     this.onMilestoneTap,
+    this.onAddMilestoneTap,
   });
 
   static const List<_WorkspaceMemberMeta> _members = [
@@ -310,14 +312,58 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Sprint 1 Progress',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: context.rFont(14, min: 13, max: 16),
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Sprint 1 Progress',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: context.rFont(14, min: 13, max: 16),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (onAddMilestoneTap != null)
+                Material(
+                  color: AppColors.primary.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    key: const ValueKey('desktop_add_milestone_button'),
+                    onTap: onAddMilestoneTap,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.rSpacing(10),
+                        vertical: context.rSpacing(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.add_rounded,
+                            size: context.rIcon(14),
+                            color: AppColors.primaryAccent,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Milestone',
+                            style: TextStyle(
+                              color: AppColors.primaryAccent,
+                              fontSize: context.rFont(11, min: 10, max: 12.5),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           SizedBox(height: context.rSpacing(14)),
           Row(

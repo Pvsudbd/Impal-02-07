@@ -7,6 +7,7 @@ Aturan ini mengikat seluruh modal/dialog formulir Desktop (`>= 1024 dp`) maupun 
 - `DesktopScheduleModal` (`features/schedule/widgets/desktop/desktop_schedule_modal.dart`)
 - `DesktopTeamTaskModal` (`features/team/widgets/desktop/desktop_team_task_modal.dart`)
 - `DesktopTeamMeetingModal` (`features/team/widgets/desktop/desktop_team_meeting_modal.dart`)
+- `DesktopMilestoneModal` (`features/team/widgets/desktop/desktop_milestone_modal.dart`)
 - `PopUpJoinTeam` & `PopUpCreateTeam` (`features/team/`)
 - `DesktopEditProfileModal` & `DesktopChangePasswordModal` (`features/profile/widgets/desktop/desktop_profile_modals.dart`)
 
@@ -16,7 +17,7 @@ Aturan ini mengikat seluruh modal/dialog formulir Desktop (`>= 1024 dp`) maupun 
 
 1. **Dilarang Menambah Subtitle Ekstra di Bawah Judul Modal:**
    - Jika halaman/modal versi **Mobile** tidak menampilkan teks deskriptif/subjudul di bawah judul utama, maka modal **Desktop** juga **DILARANG KERAS** menambahkan kalimat subjudul dari FigCraft (contoh: jangan tambahkan *"Add a weekly lecture..."*, *"Team Task Details"*, *"Meeting Details"*, atau kalimat penjelasan di bawah judul).
-   - Header modal cukup menampilkan judul utama (`Add Schedule`, `Create Task`, `Create Team Task`, `Create Meeting`, `Join Team`, `Create Team`, `Edit Profile`, `Change Password`) + kontrol kanan atas (`Alert On`/`Alert Off` bila relevan & tombol `[✕]`).
+   - Header modal cukup menampilkan judul utama (`Add Schedule`, `Create Task`, `Create Team Task`, `Create Meeting`, `Create Milestone`, `Join Team`, `Create Team`, `Edit Profile`, `Change Password`) + kontrol kanan atas (`Alert On`/`Alert Off` bila relevan & tombol `[✕]`). *(Pengecualian eksplisit: `Create Milestone` mempertahankan subjudul `Group team tasks under an overarching deadline` karena versi Mobile juga menampilkannya.)*
 
 2. **Kata-Kata & Subjudul Bagian Wajib Mengikuti Mobile Secara Persis:**
    - Dilarang mengganti istilah mobile dengan istilah baru dari FigCraft:

@@ -3,7 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
 import 'package:impal_smart_todolist/presentation/features/notifikasi/widgets/notification_bell_button.dart';
 import 'package:impal_smart_todolist/presentation/features/team/dashboard_team_page.dart';
+import 'package:impal_smart_todolist/presentation/features/team/models/team_task_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/team/team_list_page.dart';
+import 'package:impal_smart_todolist/presentation/features/team/widgets/desktop/desktop_milestone_modal.dart';
+import 'package:impal_smart_todolist/presentation/features/team/widgets/pop_up_create_milestone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -743,6 +746,118 @@ void main() {
         final mobileDescIconTop =
             tester.getTopLeft(find.byIcon(Icons.notes_rounded)).dy;
         expect((mobileDescIconTop - mobileDescFieldTop).abs(), lessThan(18));
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'opens DesktopMilestoneModal from + Milestone on desktop without Cancel and supports Edit & Delete',
+      (tester) async {
+        await pumpAtSize(
+          tester,
+          const DashboardTeamPage(
+            userName: 'Jarvis',
+            teamName: 'Kelompok IMPAL',
+            teamCode: '7X29',
+            isStandalone: true,
+          ),
+          const Size(1440, 980),
+        );
+
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_add_milestone_button')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DesktopMilestoneModal), findsOneWidget);
+        expect(find.text('Create Milestone'), findsOneWidget);
+        expect(
+          find.text('Group team tasks under an overarching deadline'),
+          findsOneWidget,
+        );
+        expect(find.text('Milestone Title *'), findsOneWidget);
+        expect(find.text('General Deadline *'), findsOneWidget);
+        expect(find.text('Objective / Notes (Optional)'), findsOneWidget);
+        expect(find.text('Select Tasks to Include'), findsOneWidget);
+        expect(find.text('0 Selected'), findsOneWidget);
+        expect(find.text('Cancel'), findsNothing);
+
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_milestone_task_task_1')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('1 Selected'), findsOneWidget);
+
+        await tester.enterText(
+          find.byKey(const ValueKey('desktop_milestone_title_input')),
+          'Sprint 2 Final',
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_milestone_submit_btn')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DesktopMilestoneModal), findsNothing);
+        final created = TeamTaskRepository()
+            .getMilestones('7X29')
+            .firstWhere((m) => m.title == 'Sprint 2 Final');
+        expect(created.taskIds, contains('task_1'));
+
+        // Open Edit Mode via PopUpCreateMilestone.show at desktop breakpoint
+        final hostContext = tester.element(find.byType(DashboardTeamPage));
+        PopUpCreateMilestone.show(
+          hostContext,
+          teamCode: '7X29',
+          existingMilestone: created,
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DesktopMilestoneModal), findsOneWidget);
+        expect(find.text('Edit Milestone'), findsOneWidget);
+        expect(find.text('Delete Milestone'), findsOneWidget);
+        expect(find.text('Save Changes'), findsOneWidget);
+        expect(find.text('Cancel'), findsNothing);
+
+        await tester.enterText(
+          find.byKey(const ValueKey('desktop_milestone_title_input')),
+          'Sprint 2 Revised',
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_milestone_submit_btn')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          TeamTaskRepository()
+              .getMilestones('7X29')
+              .any((m) => m.title == 'Sprint 2 Revised'),
+          isTrue,
+        );
+
+        // Open Delete flow on Edit Mode
+        final updated = TeamTaskRepository()
+            .getMilestones('7X29')
+            .firstWhere((m) => m.title == 'Sprint 2 Revised');
+        PopUpCreateMilestone.show(
+          hostContext,
+          teamCode: '7X29',
+          existingMilestone: updated,
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_milestone_delete_btn')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Delete'));
+        await tester.pumpAndSettle();
+
+        expect(
+          TeamTaskRepository()
+              .getMilestones('7X29')
+              .any((m) => m.id == updated.id),
+          isFalse,
+        );
         expect(tester.takeException(), isNull);
       },
     );

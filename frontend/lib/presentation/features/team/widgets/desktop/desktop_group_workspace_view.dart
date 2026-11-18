@@ -301,6 +301,7 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
                 teamCode: widget.teamCode,
                 teamName: widget.teamName,
                 onManageMembersTap: widget.onMembersTap,
+                onAddMilestoneTap: widget.onAddMilestone,
                 onMilestoneTap: widget.milestones.isNotEmpty
                     ? () => widget.onMilestoneSelected(
                           widget.milestones.first.id,
