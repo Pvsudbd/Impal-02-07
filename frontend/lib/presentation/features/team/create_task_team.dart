@@ -4,6 +4,9 @@ import '../../../../core/utils/responsive_context.dart';
 import '../../../../core/widgets/unfocus_on_tap.dart';
 import '../profile/models/user_profile_model.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../smart_system/models/course_rubric_model.dart';
+import '../smart_system/models/course_rubric_repository.dart';
+import '../smart_system/widgets/course_rubric_modals.dart';
 import 'models/team_member_model.dart';
 import 'models/team_task_model.dart';
 import 'models/team_task_repository.dart';
@@ -36,6 +39,7 @@ class CreateTaskTeamPage extends StatefulWidget {
   final VoidCallback? onBack;
   final String userInitials;
   final String teamCode;
+  final String teamName;
 
   const CreateTaskTeamPage({
     super.key,
@@ -45,6 +49,7 @@ class CreateTaskTeamPage extends StatefulWidget {
     this.onBack,
     this.userInitials = 'JS',
     this.teamCode = '7X29',
+    this.teamName = 'IMPAL Team',
   });
 
   @override
@@ -61,6 +66,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
   late List<TeamMemberModel> _selectedMembers;
   late bool _isAlertEnabled;
   String? _selectedMilestoneId;
+  RubricComponentModel? _overrideRubricComponent;
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.existingTask != null;
@@ -68,6 +74,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
   @override
   void initState() {
     super.initState();
+    CourseRubricRepository().init();
     final task = widget.existingTask;
     _isAlertEnabled = task?.isAlertEnabled ?? true;
     if (task != null) {
@@ -79,6 +86,18 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
       final existingMilestone =
           TeamTaskRepository().getMilestoneForTask(widget.teamCode, task.id);
       _selectedMilestoneId = existingMilestone?.id;
+      if (task.rubricComponentId != null) {
+        final linked = CourseRubricRepository().getLinkedRubricForTeam(
+          teamId: widget.teamCode,
+          teamName: widget.teamName,
+        );
+        final match = linked?.course.components
+            .where((c) => c.id == task.rubricComponentId)
+            .firstOrNull;
+        if (match != null && match.id != linked?.component.id) {
+          _overrideRubricComponent = match;
+        }
+      }
     } else {
       _taskNameController = TextEditingController();
       _descriptionController = TextEditingController();
@@ -156,6 +175,11 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
 
     final daysDiff = _selectedDate.difference(DateTime.now()).inDays;
     final dueBadgeStr = daysDiff > 0 ? '${daysDiff}d' : '12h';
+    final linkedRubric = CourseRubricRepository().getLinkedRubricForTeam(
+      teamId: widget.teamCode,
+      teamName: widget.teamName,
+    );
+    final effectiveComp = _overrideRubricComponent ?? linkedRubric?.component;
 
     if (_isEditing) {
       final updatedTask = widget.existingTask!.copyWith(
@@ -168,6 +192,9 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         deadline: _selectedDate,
         dueBadge: dueBadgeStr,
         isAlertEnabled: _isAlertEnabled,
+        rubricComponentId: effectiveComp?.id,
+        rubricComponentName: effectiveComp?.name,
+        gradeWeightPercent: effectiveComp?.weightPercent,
       );
 
       TeamTaskRepository().setTaskMilestone(
@@ -199,6 +226,9 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         deadline: _selectedDate,
         dueBadge: dueBadgeStr,
         isAlertEnabled: _isAlertEnabled,
+        rubricComponentId: effectiveComp?.id,
+        rubricComponentName: effectiveComp?.name,
+        gradeWeightPercent: effectiveComp?.weightPercent,
       );
 
       TeamTaskRepository().setTaskMilestone(
@@ -306,6 +336,15 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
                     selectedMembers: _selectedMembers,
                     onMembersChanged: (members) =>
                         setState(() => _selectedMembers = members),
+                  ),
+                  SizedBox(height: context.rSpacing(16)),
+
+                  TeamRubricLinkSection(
+                    teamCode: widget.teamCode,
+                    teamName: widget.teamName,
+                    overrideComponentId: _overrideRubricComponent?.id,
+                    onOverrideChanged: (comp) =>
+                        setState(() => _overrideRubricComponent = comp),
                   ),
                   SizedBox(height: context.rSpacing(16)),
 

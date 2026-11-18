@@ -32,6 +32,9 @@ class TeamTaskModel {
   final DateTime? deadline;
   final String? dueBadge;
   final bool isAlertEnabled;
+  final String? rubricComponentId;
+  final String? rubricComponentName;
+  final int? gradeWeightPercent;
 
   const TeamTaskModel({
     required this.id,
@@ -46,6 +49,9 @@ class TeamTaskModel {
     this.deadline,
     this.dueBadge,
     this.isAlertEnabled = true,
+    this.rubricComponentId,
+    this.rubricComponentName,
+    this.gradeWeightPercent,
   });
 
   /// Remaining time until deadline badge (e.g. '12h', '18h', '2d').
@@ -117,6 +123,9 @@ class TeamTaskModel {
     DateTime? deadline,
     String? dueBadge,
     bool? isAlertEnabled,
+    String? rubricComponentId,
+    String? rubricComponentName,
+    int? gradeWeightPercent,
   }) {
     return TeamTaskModel(
       id: id ?? this.id,
@@ -131,6 +140,9 @@ class TeamTaskModel {
       deadline: deadline ?? this.deadline,
       dueBadge: dueBadge ?? this.dueBadge,
       isAlertEnabled: isAlertEnabled ?? this.isAlertEnabled,
+      rubricComponentId: rubricComponentId ?? this.rubricComponentId,
+      rubricComponentName: rubricComponentName ?? this.rubricComponentName,
+      gradeWeightPercent: gradeWeightPercent ?? this.gradeWeightPercent,
     );
   }
 

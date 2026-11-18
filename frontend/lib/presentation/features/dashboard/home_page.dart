@@ -18,8 +18,11 @@ import '../schedule/schedule_form_page.dart';
 import '../schedule/schedule_page.dart';
 import '../schedule/widgets/desktop/desktop_schedule_matrix_view.dart';
 import '../schedule/widgets/desktop/desktop_schedule_modal.dart';
+import '../smart_system/models/course_rubric_repository.dart';
 import '../smart_system/models/smart_priority_repository.dart';
 import '../smart_system/smart_priority_page.dart';
+import '../smart_system/widgets/course_rubric_modals.dart';
+import '../smart_system/widgets/desktop/desktop_smart_priority_view.dart';
 import '../task/models/task_repository.dart';
 import '../task/task_page.dart';
 import '../task/widgets/desktop/desktop_personal_task_modal.dart';
@@ -79,6 +82,7 @@ class _HomePageState extends State<HomePage> {
     _currentTab = widget.initialTab;
     ScheduleRepository().init();
     TaskRepository().init();
+    CourseRubricRepository().init();
     UserProfileRepository().init(userName: widget.userName);
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('is_logged_in', true);
@@ -993,6 +997,8 @@ class _HomePageState extends State<HomePage> {
         return DesktopNavDestination.schedule;
       case 4:
         return null;
+      case 5:
+        return DesktopNavDestination.smartPriority;
       default:
         return DesktopNavDestination.dashboard;
     }
@@ -1026,6 +1032,11 @@ class _HomePageState extends State<HomePage> {
           'Profile & Settings',
           'Manage your student identity, reminders, AI preferences, and account security',
         );
+      case 5:
+        return (
+          'Smart Priority & Course Rubrics',
+          'Configure course grading weights and inspect Mamdani Fuzzy priority rankings',
+        );
       default:
         return (
           'Dashboard Overview',
@@ -1044,6 +1055,8 @@ class _HomePageState extends State<HomePage> {
         _onTabSelected(1);
       case DesktopNavDestination.teamMembers:
         _onTabSelected(2);
+      case DesktopNavDestination.smartPriority:
+        _onTabSelected(5);
     }
   }
 
@@ -1104,6 +1117,7 @@ class _HomePageState extends State<HomePage> {
                         final isGroupWorkspace =
                             _currentTab == 2 && _selectedTeam != null;
                         final isProfileSettings = _currentTab == 4;
+                        final isSmartPriority = _currentTab == 5;
                         return DesktopTopHeader(
                           title: headerTitle,
                           subtitle: headerSubtitle,
@@ -1118,13 +1132,15 @@ class _HomePageState extends State<HomePage> {
                           searchQuery: _desktopSearchQuery,
                           searchHint: isProfileSettings
                               ? 'Search settings...'
-                              : (isGroupDirectoryRoot
-                                  ? 'Search study teams or courses...'
-                                  : (isGroupWorkspace
-                                      ? 'Search tasks in workspace...'
-                                      : (_currentTab == 3
-                                          ? 'Search schedule or class...'
-                                          : 'Search tasks or courses...'))),
+                              : (isSmartPriority
+                                  ? 'Search ranked tasks or courses...'
+                                  : (isGroupDirectoryRoot
+                                      ? 'Search study teams or courses...'
+                                      : (isGroupWorkspace
+                                          ? 'Search tasks in workspace...'
+                                          : (_currentTab == 3
+                                              ? 'Search schedule or class...'
+                                              : 'Search tasks or courses...')))),
                           searchBgColor: (isGroupDirectoryRoot ||
                                   isGroupWorkspace ||
                                   isProfileSettings)
@@ -1137,13 +1153,15 @@ class _HomePageState extends State<HomePage> {
                               !isGroupDirectoryRoot && !isGroupWorkspace,
                           addButtonLabel: isProfileSettings
                               ? 'Edit Profile'
-                              : (isGroupDirectoryRoot
-                                  ? '+ Create Team'
-                                  : (_currentTab == 3
-                                      ? '+ Add Schedule'
-                                      : (_currentTab == 1
-                                          ? '+ Add New Task'
-                                          : '+ Add Task'))),
+                              : (isSmartPriority
+                                  ? '+ Add Course'
+                                  : (isGroupDirectoryRoot
+                                      ? '+ Create Team'
+                                      : (_currentTab == 3
+                                          ? '+ Add Schedule'
+                                          : (_currentTab == 1
+                                              ? '+ Add New Task'
+                                              : '+ Add Task')))),
                           addButtonColor: (isGroupDirectoryRoot ||
                                   isProfileSettings)
                               ? AppColors.primaryAccent
@@ -1174,11 +1192,13 @@ class _HomePageState extends State<HomePage> {
                                     context,
                                     profile: UserProfileRepository().profile,
                                   )
-                              : (isGroupDirectoryRoot
-                                  ? _openCreateTeamDialog
-                                  : (_currentTab == 3
-                                      ? _openCreateSchedule
-                                      : _openCreateTask)),
+                              : (isSmartPriority
+                                  ? () => CourseEditorDialog.show(context)
+                                  : (isGroupDirectoryRoot
+                                      ? _openCreateTeamDialog
+                                      : (_currentTab == 3
+                                          ? _openCreateSchedule
+                                          : _openCreateTask))),
                         );
                       },
                     ),
@@ -1228,6 +1248,13 @@ class _HomePageState extends State<HomePage> {
         key: const ValueKey('desktop_profile_settings_view'),
         searchQuery: _desktopSearchQuery,
         fallbackUserName: widget.userName,
+      );
+    }
+
+    if (_currentTab == 5) {
+      return DesktopSmartPriorityView(
+        key: const ValueKey('desktop_smart_priority_view'),
+        searchQuery: _desktopSearchQuery,
       );
     }
 

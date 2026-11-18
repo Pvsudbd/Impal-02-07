@@ -15,6 +15,8 @@ import '../dashboard/widgets/desktop/desktop_top_header.dart';
 import '../schedule/models/schedule_model.dart';
 import '../schedule/models/schedule_repository.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../smart_system/models/course_rubric_repository.dart';
+import '../smart_system/widgets/course_rubric_modals.dart';
 import '../task/models/task_repository.dart';
 import 'create_task_team.dart';
 import 'pop_up_create_meeting.dart';
@@ -208,6 +210,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       await DesktopTeamTaskModal.show(
         context,
         teamCode: widget.teamCode,
+        teamName: widget.teamName,
         onTaskCreated: (task) {
           _teamTaskRepository.addTask(widget.teamCode, task);
         },
@@ -217,6 +220,8 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     final result = await Navigator.of(context).push<TeamTaskModel>(
       MaterialPageRoute(
         builder: (_) => CreateTaskTeamPage(
+          teamCode: widget.teamCode,
+          teamName: widget.teamName,
           onTaskCreated: (task) {
             _teamTaskRepository.addTask(widget.teamCode, task);
           },
@@ -238,6 +243,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         context,
         existingTask: task,
         teamCode: widget.teamCode,
+        teamName: widget.teamName,
         onTaskUpdated: (updatedTask) {
           _teamTaskRepository.updateTask(widget.teamCode, updatedTask);
         },
@@ -248,6 +254,8 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       MaterialPageRoute(
         builder: (_) => CreateTaskTeamPage(
           existingTask: task,
+          teamCode: widget.teamCode,
+          teamName: widget.teamName,
           onTaskUpdated: (updatedTask) {
             _teamTaskRepository.updateTask(widget.teamCode, updatedTask);
           },
@@ -349,6 +357,8 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                 onBack: widget.onBack,
                 onMembersTap: _showTeamMembersModal,
               ),
+              const SizedBox(height: 12),
+              _buildMobileTeamRubricSyncBanner(context),
               const SizedBox(height: 16),
               TeamScheduleSection(
                 isDashboard: true,
@@ -550,6 +560,8 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                     _navigateStandaloneToTab(2);
                   case DesktopNavDestination.schedule:
                     _navigateStandaloneToTab(3);
+                  case DesktopNavDestination.smartPriority:
+                    _navigateStandaloneToTab(5);
                 }
               },
               userName: widget.userName,
@@ -810,6 +822,83 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMobileTeamRubricSyncBanner(BuildContext context) {
+    return ListenableBuilder(
+      listenable: CourseRubricRepository(),
+      builder: (context, _) {
+        final linked = CourseRubricRepository().getLinkedRubricForTeam(
+          teamId: widget.teamCode,
+          teamName: widget.teamName,
+        );
+        final isLinked = linked != null;
+
+        return Material(
+          color: isLinked
+              ? const Color(0xFF4A90E2).withValues(alpha: 0.12)
+              : const Color(0xFF323846),
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            key: const ValueKey('mobile_team_sync_rubric_btn'),
+            onTap: () => AssignRubricToTeamDialog.showForTeam(
+              context,
+              teamId: widget.teamCode,
+              teamName: widget.teamName,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isLinked
+                      ? const Color(0xFF4A90E2).withValues(alpha: 0.45)
+                      : const Color(0xFF3B4150),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.grading_rounded,
+                    size: 18,
+                    color: isLinked
+                        ? const Color(0xFF60A5FA)
+                        : AppColors.primaryAccent,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      isLinked
+                          ? 'Rubric: ${linked.course.courseCode.isNotEmpty ? linked.course.courseCode : linked.course.courseName} • ${linked.component.name} (${linked.component.weightPercent}%)'
+                          : 'Link Course Grading Rubric',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isLinked ? const Color(0xFF93C5FD) : Colors.white,
+                        fontSize: 12,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isLinked ? 'Sync' : 'Assign',
+                    style: const TextStyle(
+                      color: AppColors.primaryAccent,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

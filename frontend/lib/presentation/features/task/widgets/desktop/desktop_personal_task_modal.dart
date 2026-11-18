@@ -8,8 +8,11 @@ import '../../../../common_widgets/impal_time_picker_dialog.dart';
 import '../../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../../profile/models/user_profile_model.dart';
 import '../../../schedule/pop_up_konfirmasi_delete.dart';
+import '../../../smart_system/models/course_rubric_model.dart';
+import '../../../smart_system/models/course_rubric_repository.dart';
 import '../../models/task_item_model.dart';
 import '../../models/task_repository.dart';
+import '../course_grade_weight_chips.dart';
 
 /// Centered Desktop Pop-Up Modal for Creating and Editing Personal / College Tasks.
 ///
@@ -73,6 +76,10 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
   late TaskPriorityLevel _selectedPriority;
   late bool _isAutomaticWeight;
   late bool _isAlertEnabled;
+  String? _selectedCourseId;
+  String? _selectedComponentId;
+  int? _customWeightPercent;
+  final CourseRubricRepository _rubricRepo = CourseRubricRepository();
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.task != null;
@@ -80,6 +87,8 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
   @override
   void initState() {
     super.initState();
+    _rubricRepo.init();
+    _rubricRepo.addListener(_onRubricsChanged);
     final existing = widget.task;
     if (existing != null) {
       _isCollegeTask = existing.isCollegeTask;
@@ -91,12 +100,32 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
       _selectedPriority = existing.priority;
       _isAutomaticWeight = existing.isAutomaticWeight;
       _isAlertEnabled = existing.isAlertEnabled;
+      final matched = _rubricRepo.getCourseById(existing.rubricCourseId) ??
+          _rubricRepo.findCourseByTextOrId(existing.course);
+      _selectedCourseId = matched?.id;
+      _selectedComponentId = existing.rubricComponentId ??
+          (matched != null && matched.components.isNotEmpty
+              ? matched.components.first.id
+              : null);
+      if (existing.rubricComponentId == null &&
+          existing.gradeWeightPercent != null) {
+        _customWeightPercent = existing.gradeWeightPercent;
+      }
     } else {
       _isCollegeTask = true;
       _titleController = TextEditingController();
+      final defaultCourse = _rubricRepo.courses.isNotEmpty
+          ? _rubricRepo.courses.first
+          : null;
       _courseController = TextEditingController(
-        text: 'SSIF-04-REG • Software Testing & Implementation',
+        text: defaultCourse?.displayLabel ??
+            'SSIF-04-REG • Software Testing & Implementation',
       );
+      _selectedCourseId = defaultCourse?.id;
+      _selectedComponentId =
+          (defaultCourse != null && defaultCourse.components.isNotEmpty)
+              ? defaultCourse.components.first.id
+              : null;
       _notesController = TextEditingController();
       _selectedDate = DateTime(2026, 10, 18);
       _selectedTime = const TimeOfDay(hour: 23, minute: 59);
@@ -107,12 +136,21 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
     _titleController.addListener(_onTitleChanged);
   }
 
+  void _onRubricsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  CourseRubricModel? get _activeRubricCourse =>
+      _rubricRepo.getCourseById(_selectedCourseId) ??
+      _rubricRepo.findCourseByTextOrId(_courseController.text);
+
   void _onTitleChanged() {
     if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _rubricRepo.removeListener(_onRubricsChanged);
     _titleController.removeListener(_onTitleChanged);
     _titleController.dispose();
     _courseController.dispose();
@@ -216,6 +254,15 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
     final notes = _notesController.text.trim();
     final formattedDeadline = _formatDeadline(_selectedDate, _selectedTime);
 
+    final activeCourse = _activeRubricCourse;
+    final selectedComp = _rubricRepo.findComponent(
+      activeCourse?.id,
+      _selectedComponentId,
+    );
+    final resolvedWeight = _isCollegeTask && _isAutomaticWeight
+        ? (_customWeightPercent ?? selectedComp?.weightPercent)
+        : null;
+
     if (_isEditing) {
       final updated = widget.task!.copyWith(
         title: title,
@@ -229,6 +276,13 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
         isAutomaticWeight: _isAutomaticWeight,
         isCollegeTask: _isCollegeTask,
         isAlertEnabled: _isAlertEnabled,
+        rubricCourseId: _isCollegeTask ? activeCourse?.id : null,
+        rubricComponentId:
+            _isCollegeTask && _customWeightPercent == null ? selectedComp?.id : null,
+        rubricComponentName: _isCollegeTask && _customWeightPercent == null
+            ? selectedComp?.name
+            : null,
+        gradeWeightPercent: resolvedWeight,
       );
 
       TaskRepository().updateTask(updated);
@@ -252,10 +306,19 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
       isAutomaticWeight: _isAutomaticWeight,
       isCollegeTask: _isCollegeTask,
       isAlertEnabled: _isAlertEnabled,
+      rubricCourseId: _isCollegeTask ? activeCourse?.id : null,
+      rubricComponentId:
+          _isCollegeTask && _customWeightPercent == null ? selectedComp?.id : null,
+      rubricComponentName: _isCollegeTask && _customWeightPercent == null
+          ? selectedComp?.name
+          : null,
+      gradeWeightPercent: resolvedWeight,
       subtitle: 'Personal & Team task',
       tags: [
         TaskTagModel(
-          label: 'Task',
+          label: (_isCollegeTask && selectedComp != null)
+              ? '${selectedComp.name} (${resolvedWeight ?? selectedComp.weightPercent}%)'
+              : 'Task',
           backgroundColor: _selectedPriority.badgeBg,
           textColor: Colors.white,
         ),
@@ -597,6 +660,60 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
         children: [
           _buildLabel(context, 'Course'),
           const SizedBox(height: 6),
+          if (_rubricRepo.courses.isNotEmpty) ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: _rubricRepo.courses.map((courseItem) {
+                final isSelected = _activeRubricCourse?.id == courseItem.id;
+                return InkWell(
+                  key: ValueKey('desktop_task_course_${courseItem.id}'),
+                  onTap: () {
+                    setState(() {
+                      _selectedCourseId = courseItem.id;
+                      _courseController.text = courseItem.displayLabel;
+                      _customWeightPercent = null;
+                      _selectedComponentId = courseItem.components.isNotEmpty
+                          ? courseItem.components.first.id
+                          : null;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.primary.withValues(alpha: 0.2)
+                          : AppColors.bgPrimary,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.borderSubtle,
+                      ),
+                    ),
+                    child: Text(
+                      courseItem.courseCode.isNotEmpty
+                          ? '${courseItem.courseCode} • ${courseItem.courseName}'
+                          : courseItem.courseName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : AppColors.textMuted,
+                        fontSize: context.rFont(11, min: 10, max: 12.5),
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
+          ],
           _buildTextField(
             fieldKey: const ValueKey('desktop_task_course_input'),
             controller: _courseController,
@@ -780,7 +897,19 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
           crossFadeState: _isAutomaticWeight
               ? CrossFadeState.showFirst
               : CrossFadeState.showSecond,
-          firstChild: const SizedBox(width: double.infinity, height: 0),
+          firstChild: _isCollegeTask
+              ? RubricAssessmentSelector(
+                  components: _activeRubricCourse?.components ?? const [],
+                  selectedComponentId: _selectedComponentId,
+                  customWeightPercent: _customWeightPercent,
+                  onComponentSelected: (comp) => setState(() {
+                    _selectedComponentId = comp?.id;
+                  }),
+                  onCustomWeightChanged: (w) => setState(() {
+                    _customWeightPercent = w;
+                  }),
+                )
+              : const SizedBox(width: double.infinity, height: 0),
           secondChild: Padding(
             padding: const EdgeInsets.only(top: 10),
             child: Row(

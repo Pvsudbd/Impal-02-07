@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive_context.dart';
 import '../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
+import '../smart_system/models/course_rubric_repository.dart';
 
 /// Aliases for backwards compatibility with Figma export & routes
 typedef FormCreateTeam = PopUpCreateTeam;
@@ -15,11 +16,15 @@ class CreateTeamResult {
   final String name;
   final String description;
   final String inviteCode;
+  final String? rubricCourseId;
+  final String? rubricComponentId;
 
   const CreateTeamResult({
     required this.name,
     this.description = '',
     required this.inviteCode,
+    this.rubricCourseId,
+    this.rubricComponentId,
   });
 }
 
@@ -73,12 +78,15 @@ class _PopUpCreateTeamState extends State<PopUpCreateTeam> {
   late final TextEditingController _nameController;
   late final TextEditingController _descController;
   late String _inviteCode;
+  String? _selectedCourseId;
+  String? _selectedComponentId;
   bool _isCopied = false;
   Timer? _copyTimer;
 
   @override
   void initState() {
     super.initState();
+    CourseRubricRepository().init();
     _nameController = TextEditingController(text: widget.initialName);
     _descController = TextEditingController(text: widget.initialDescription);
     _inviteCode = widget.initialCode ?? _generateRandomCode();
@@ -129,10 +137,21 @@ class _PopUpCreateTeamState extends State<PopUpCreateTeam> {
       return;
     }
 
+    if (_selectedCourseId != null && _selectedComponentId != null) {
+      CourseRubricRepository().assignComponentToTeam(
+        courseId: _selectedCourseId!,
+        componentId: _selectedComponentId!,
+        teamId: _inviteCode,
+        teamName: name,
+      );
+    }
+
     final result = CreateTeamResult(
       name: name,
       description: _descController.text.trim(),
       inviteCode: _inviteCode,
+      rubricCourseId: _selectedCourseId,
+      rubricComponentId: _selectedComponentId,
     );
 
     widget.onCreated?.call(result);
@@ -200,6 +219,8 @@ class _PopUpCreateTeamState extends State<PopUpCreateTeam> {
                   _buildInviteCodeHeader(context),
                   const SizedBox(height: 6),
                   _buildInviteCodeBox(context),
+                  SizedBox(height: sectionGap),
+                  _buildRubricLinkSection(context),
                   SizedBox(height: isMobile ? 18 : 22),
                   SizedBox(
                     width: double.infinity,
@@ -446,8 +467,116 @@ class _PopUpCreateTeamState extends State<PopUpCreateTeam> {
               ),
             ),
           ),
-        ],
+                ],
       ),
+    );
+  }
+
+  Widget _buildRubricLinkSection(BuildContext context) {
+    final repo = CourseRubricRepository();
+    final courses = repo.courses;
+    final selectedCourse = repo.getCourseById(_selectedCourseId);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildFieldLabel(context, 'Course Grading Rubric (Optional)'),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String?>(
+          key: const ValueKey('create_team_rubric_course_dropdown'),
+          initialValue: _selectedCourseId,
+          isExpanded: true,
+          dropdownColor: AppColors.bgCard,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: context.rFont(13, min: 11.5, max: 14),
+            fontFamily: 'Inter',
+          ),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.bgPrimary,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.borderSubtle),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+            ),
+          ),
+          hint: const Text(
+            'Select Course (None)',
+            style: TextStyle(color: AppColors.textSubtle),
+          ),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('No Linked Course Rubric'),
+            ),
+            ...courses.map(
+              (c) => DropdownMenuItem<String?>(
+                value: c.id,
+                child: Text(
+                  c.displayLabel,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+          onChanged: (courseId) {
+            setState(() {
+              _selectedCourseId = courseId;
+              final c = repo.getCourseById(courseId);
+              _selectedComponentId = (c != null && c.components.isNotEmpty)
+                  ? c.components.last.id
+                  : null;
+            });
+          },
+        ),
+        if (selectedCourse != null && selectedCourse.components.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String?>(
+            key: ValueKey('create_team_rubric_comp_${selectedCourse.id}'),
+            initialValue: _selectedComponentId,
+            isExpanded: true,
+            dropdownColor: AppColors.bgCard,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: context.rFont(13, min: 11.5, max: 14),
+              fontFamily: 'Inter',
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: AppColors.bgPrimary,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderSubtle),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: AppColors.primary, width: 1.5),
+              ),
+            ),
+            items: selectedCourse.components
+                .map(
+                  (comp) => DropdownMenuItem<String?>(
+                    value: comp.id,
+                    child: Text('${comp.name} (${comp.weightPercent}%)'),
+                  ),
+                )
+                .toList(),
+            onChanged: (compId) {
+              setState(() => _selectedComponentId = compId);
+            },
+          ),
+        ],
+      ],
     );
   }
 }

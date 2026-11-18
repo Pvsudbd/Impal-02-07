@@ -7,6 +7,8 @@ import '../../../../../core/utils/responsive_context.dart';
 import '../../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../../schedule/models/schedule_model.dart';
 import '../../../schedule/models/schedule_repository.dart';
+import '../../../smart_system/models/course_rubric_repository.dart';
+import '../../../smart_system/widgets/course_rubric_modals.dart';
 import '../../models/team_milestone_model.dart';
 import '../../models/team_task_model.dart';
 import 'desktop_team_schedule_banner.dart';
@@ -474,6 +476,77 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
             ),
           );
 
+          final syncRubricBtn = ListenableBuilder(
+            listenable: CourseRubricRepository(),
+            builder: (context, _) {
+              final linked = CourseRubricRepository().getLinkedRubricForTeam(
+                teamId: widget.teamCode,
+                teamName: widget.teamName,
+              );
+              final isLinked = linked != null;
+              final label = isLinked
+                  ? '${linked.course.courseCode.isNotEmpty ? linked.course.courseCode : linked.course.courseName} • ${linked.component.name} (${linked.component.weightPercent}%)'
+                  : 'Sync Grading Rubric';
+
+              return Material(
+                color: isLinked
+                    ? const Color(0xFF4A90E2).withValues(alpha: 0.14)
+                    : AppColors.bgCard,
+                borderRadius: BorderRadius.circular(8),
+                child: InkWell(
+                  key: const ValueKey('desktop_workspace_sync_rubric_btn'),
+                  onTap: () => AssignRubricToTeamDialog.showForTeam(
+                    context,
+                    teamId: widget.teamCode,
+                    teamName: widget.teamName,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isLinked
+                            ? const Color(0xFF4A90E2).withValues(alpha: 0.5)
+                            : AppColors.borderSubtle,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.grading_rounded,
+                          size: 15,
+                          color: isLinked
+                              ? const Color(0xFF60A5FA)
+                              : AppColors.textMuted,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isLinked
+                                  ? const Color(0xFF93C5FD)
+                                  : Colors.white,
+                              fontSize: 11.5,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+
           final actionButtons = isCompact
               ? Wrap(
                   spacing: 8,
@@ -584,6 +657,8 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
                     actionButtons,
                   ],
                 ),
+              const SizedBox(height: 10),
+              syncRubricBtn,
               const SizedBox(height: 14),
               if (isCompact)
                 Column(

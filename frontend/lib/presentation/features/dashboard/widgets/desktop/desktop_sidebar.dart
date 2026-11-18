@@ -8,6 +8,7 @@ enum DesktopNavDestination {
   schedule,
   tasks,
   teamMembers,
+  smartPriority,
 }
 
 /// Collapsible left navigation sidebar matching FigCraft
@@ -140,6 +141,18 @@ class DesktopSidebar extends StatelessWidget {
                               isCompact: showCompact,
                               onTap: () => onDestinationSelected(
                                 DesktopNavDestination.teamMembers,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            _NavItem(
+                              key: const ValueKey('desktop_nav_smart_priority'),
+                              icon: Icons.psychology_rounded,
+                              label: 'Smart Priority',
+                              isActive: activeDestination ==
+                                  DesktopNavDestination.smartPriority,
+                              isCompact: showCompact,
+                              onTap: () => onDestinationSelected(
+                                DesktopNavDestination.smartPriority,
                               ),
                             ),
                           ],
@@ -401,6 +414,7 @@ class _NavItem extends StatelessWidget {
   final VoidCallback onTap;
 
   const _NavItem({
+    super.key,
     required this.icon,
     required this.label,
     this.badgeText,

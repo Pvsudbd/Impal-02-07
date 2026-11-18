@@ -81,6 +81,10 @@ class TaskItemModel {
   final bool isCollegeTask;
   final bool isAlertEnabled;
   final bool isCompleted;
+  final String? rubricCourseId;
+  final String? rubricComponentId;
+  final String? rubricComponentName;
+  final int? gradeWeightPercent;
 
   const TaskItemModel({
     required this.id,
@@ -108,6 +112,10 @@ class TaskItemModel {
     this.isCollegeTask = true,
     this.isAlertEnabled = true,
     this.isCompleted = false,
+    this.rubricCourseId,
+    this.rubricComponentId,
+    this.rubricComponentName,
+    this.gradeWeightPercent,
   });
 
   String get priorityLabel {
@@ -189,6 +197,10 @@ class TaskItemModel {
     bool? isCollegeTask,
     bool? isAlertEnabled,
     bool? isCompleted,
+    String? rubricCourseId,
+    String? rubricComponentId,
+    String? rubricComponentName,
+    int? gradeWeightPercent,
   }) {
     return TaskItemModel(
       id: id ?? this.id,
@@ -217,6 +229,10 @@ class TaskItemModel {
       isCollegeTask: isCollegeTask ?? this.isCollegeTask,
       isAlertEnabled: isAlertEnabled ?? this.isAlertEnabled,
       isCompleted: isCompleted ?? this.isCompleted,
+      rubricCourseId: rubricCourseId ?? this.rubricCourseId,
+      rubricComponentId: rubricComponentId ?? this.rubricComponentId,
+      rubricComponentName: rubricComponentName ?? this.rubricComponentName,
+      gradeWeightPercent: gradeWeightPercent ?? this.gradeWeightPercent,
     );
   }
 

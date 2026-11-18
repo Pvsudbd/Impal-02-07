@@ -5,6 +5,8 @@ import '../../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../profile/models/user_profile_model.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../smart_system/models/course_rubric_model.dart';
+import '../smart_system/models/course_rubric_repository.dart';
 import '../team/widgets/submission_deadline_picker.dart';
 import 'models/task_item_model.dart';
 import 'models/task_repository.dart';
@@ -60,6 +62,10 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   late TaskPriorityLevel _selectedPriority;
   late bool _isAutomaticWeight;
   late bool _isAlertEnabled;
+  String? _selectedCourseId;
+  String? _selectedComponentId;
+  int? _customWeightPercent;
+  final CourseRubricRepository _rubricRepo = CourseRubricRepository();
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.targetTask != null;
@@ -67,6 +73,8 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   @override
   void initState() {
     super.initState();
+    _rubricRepo.init();
+    _rubricRepo.addListener(_onRubricsChanged);
     final task = widget.targetTask;
     if (task != null) {
       _isCollegeTask = task.isCollegeTask;
@@ -78,12 +86,31 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       _selectedPriority = task.priority;
       _isAutomaticWeight = task.isAutomaticWeight;
       _isAlertEnabled = task.isAlertEnabled;
+      final matched = _rubricRepo.getCourseById(task.rubricCourseId) ??
+          _rubricRepo.findCourseByTextOrId(task.course);
+      _selectedCourseId = matched?.id;
+      _selectedComponentId = task.rubricComponentId ??
+          (matched != null && matched.components.isNotEmpty
+              ? matched.components.first.id
+              : null);
+      if (task.rubricComponentId == null && task.gradeWeightPercent != null) {
+        _customWeightPercent = task.gradeWeightPercent;
+      }
     } else {
       _isCollegeTask = true;
       _titleController = TextEditingController();
+      final defaultCourse = _rubricRepo.courses.isNotEmpty
+          ? _rubricRepo.courses.first
+          : null;
       _courseController = TextEditingController(
-        text: 'SSIF-04-REG • Software Testing & Implementation',
+        text: defaultCourse?.displayLabel ??
+            'SSIF-04-REG • Software Testing & Implementation',
       );
+      _selectedCourseId = defaultCourse?.id;
+      _selectedComponentId =
+          (defaultCourse != null && defaultCourse.components.isNotEmpty)
+              ? defaultCourse.components.first.id
+              : null;
       _notesController = TextEditingController();
       _selectedDate = DateTime(2026, 10, 18);
       _selectedTime = const TimeOfDay(hour: 23, minute: 59);
@@ -93,8 +120,17 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
     }
   }
 
+  void _onRubricsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  CourseRubricModel? get _activeRubricCourse =>
+      _rubricRepo.getCourseById(_selectedCourseId) ??
+      _rubricRepo.findCourseByTextOrId(_courseController.text);
+
   @override
   void dispose() {
+    _rubricRepo.removeListener(_onRubricsChanged);
     _titleController.dispose();
     _courseController.dispose();
     _notesController.dispose();
@@ -141,6 +177,15 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
     final notes = _notesController.text.trim();
     final formattedDeadline = _formatDeadline(_selectedDate, _selectedTime);
 
+    final activeCourse = _activeRubricCourse;
+    final selectedComp = _rubricRepo.findComponent(
+      activeCourse?.id,
+      _selectedComponentId,
+    );
+    final resolvedWeight = _isCollegeTask && _isAutomaticWeight
+        ? (_customWeightPercent ?? selectedComp?.weightPercent)
+        : null;
+
     if (_isEditing) {
       final updated = widget.targetTask!.copyWith(
         title: title,
@@ -154,6 +199,13 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
         isAutomaticWeight: _isAutomaticWeight,
         isCollegeTask: _isCollegeTask,
         isAlertEnabled: _isAlertEnabled,
+        rubricCourseId: _isCollegeTask ? activeCourse?.id : null,
+        rubricComponentId:
+            _isCollegeTask && _customWeightPercent == null ? selectedComp?.id : null,
+        rubricComponentName: _isCollegeTask && _customWeightPercent == null
+            ? selectedComp?.name
+            : null,
+        gradeWeightPercent: resolvedWeight,
       );
 
       TaskRepository().updateTask(updated);
@@ -177,10 +229,19 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
         isAutomaticWeight: _isAutomaticWeight,
         isCollegeTask: _isCollegeTask,
         isAlertEnabled: _isAlertEnabled,
+        rubricCourseId: _isCollegeTask ? activeCourse?.id : null,
+        rubricComponentId:
+            _isCollegeTask && _customWeightPercent == null ? selectedComp?.id : null,
+        rubricComponentName: _isCollegeTask && _customWeightPercent == null
+            ? selectedComp?.name
+            : null,
+        gradeWeightPercent: resolvedWeight,
         subtitle: 'Personal & Team task',
         tags: [
           TaskTagModel(
-            label: 'Task',
+            label: (_isCollegeTask && selectedComp != null)
+                ? '${selectedComp.name} (${resolvedWeight ?? selectedComp.weightPercent}%)'
+                : 'Task',
             backgroundColor: _selectedPriority.badgeBg,
             textColor: Colors.white,
           ),
@@ -246,15 +307,20 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _isEditing ? 'Edit Task Details' : 'Task Details',
-                        style: TextStyle(
-                          color: AppColors.textWhite,
-                          fontSize: context.rFont(18, min: 16, max: 22),
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
+                      Expanded(
+                        child: Text(
+                          _isEditing ? 'Edit Task Details' : 'Task Details',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.textWhite,
+                            fontSize: context.rFont(18, min: 16, max: 22),
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       _buildAlertToggle(context),
                     ],
                   ),
@@ -299,6 +365,69 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                       children: [
                         _buildFieldLabel(context, 'Course'),
                         const SizedBox(height: 6),
+                        if (_rubricRepo.courses.isNotEmpty) ...[
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: _rubricRepo.courses.map((courseItem) {
+                              final isSelected =
+                                  _activeRubricCourse?.id == courseItem.id;
+                              return InkWell(
+                                key: ValueKey(
+                                    'task_course_chip_${courseItem.id}'),
+                                onTap: () {
+                                  setState(() {
+                                    _selectedCourseId = courseItem.id;
+                                    _courseController.text =
+                                        courseItem.displayLabel;
+                                    _customWeightPercent = null;
+                                    _selectedComponentId =
+                                        courseItem.components.isNotEmpty
+                                            ? courseItem.components.first.id
+                                            : null;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(999),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                            .withValues(alpha: 0.2)
+                                        : AppColors.bgCard,
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : AppColors.borderSubtle,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    courseItem.courseCode.isNotEmpty
+                                        ? '${courseItem.courseCode} • ${courseItem.courseName}'
+                                        : courseItem.courseName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.white
+                                          : AppColors.textMuted,
+                                      fontSize: context.rFont(11,
+                                          min: 10, max: 12.5),
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
                         _buildTextField(
                           controller: _courseController,
                           hintText:
@@ -329,6 +458,16 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                   CourseGradeWeightChips(
                     selectedPriority: _selectedPriority,
                     isAutomatic: _isAutomaticWeight,
+                    isCollegeTask: _isCollegeTask,
+                    rubricComponents: _activeRubricCourse?.components ?? const [],
+                    selectedComponentId: _selectedComponentId,
+                    customWeightPercent: _customWeightPercent,
+                    onComponentSelected: (comp) => setState(() {
+                      _selectedComponentId = comp?.id;
+                    }),
+                    onCustomWeightChanged: (w) => setState(() {
+                      _customWeightPercent = w;
+                    }),
                     onPriorityChanged: (p) =>
                         setState(() => _selectedPriority = p),
                     onAutomaticChanged: (a) =>
@@ -450,39 +589,46 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFF323846),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF3B4150), width: 1.0),
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                icon: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white,
-                  size: 16,
+        Expanded(
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF323846),
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: const Color(0xFF3B4150), width: 1.0),
                 ),
-                onPressed: widget.onBack ?? () => Navigator.of(context).pop(),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  onPressed: widget.onBack ?? () => Navigator.of(context).pop(),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              _isEditing ? 'Edit Task' : 'Create Task',
-              style: TextStyle(
-                color: AppColors.textWhite,
-                fontSize: context.rFont(20, min: 18, max: 24),
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w700,
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  _isEditing ? 'Edit Task' : 'Create Task',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textWhite,
+                    fontSize: context.rFont(20, min: 18, max: 24),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        const SizedBox(width: 8),
         Container(
           width: context.rIcon(42),
           height: context.rIcon(42),

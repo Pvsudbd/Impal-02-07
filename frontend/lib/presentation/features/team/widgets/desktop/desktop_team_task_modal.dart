@@ -7,6 +7,9 @@ import '../../../../common_widgets/impal_date_picker_dialog.dart';
 import '../../../../common_widgets/impal_time_picker_dialog.dart';
 import '../../../profile/models/user_profile_model.dart';
 import '../../../schedule/pop_up_konfirmasi_delete.dart';
+import '../../../smart_system/models/course_rubric_model.dart';
+import '../../../smart_system/models/course_rubric_repository.dart';
+import '../../../smart_system/widgets/course_rubric_modals.dart';
 import '../../models/team_member_model.dart';
 import '../../models/team_task_model.dart';
 import '../../models/team_task_repository.dart';
@@ -22,6 +25,7 @@ import '../../pop_up_pemberitahuan_team.dart';
 class DesktopTeamTaskModal extends StatefulWidget {
   final TeamTaskModel? existingTask;
   final String teamCode;
+  final String teamName;
   final void Function(TeamTaskModel task)? onTaskCreated;
   final void Function(TeamTaskModel updatedTask)? onTaskUpdated;
   final VoidCallback? onTaskDeleted;
@@ -30,6 +34,7 @@ class DesktopTeamTaskModal extends StatefulWidget {
     super.key,
     this.existingTask,
     this.teamCode = '7X29',
+    this.teamName = 'IMPAL Team',
     this.onTaskCreated,
     this.onTaskUpdated,
     this.onTaskDeleted,
@@ -39,6 +44,7 @@ class DesktopTeamTaskModal extends StatefulWidget {
     BuildContext context, {
     TeamTaskModel? existingTask,
     String teamCode = '7X29',
+    String teamName = 'IMPAL Team',
     void Function(TeamTaskModel task)? onTaskCreated,
     void Function(TeamTaskModel updatedTask)? onTaskUpdated,
     VoidCallback? onTaskDeleted,
@@ -49,6 +55,7 @@ class DesktopTeamTaskModal extends StatefulWidget {
       builder: (_) => DesktopTeamTaskModal(
         existingTask: existingTask,
         teamCode: teamCode,
+        teamName: teamName,
         onTaskCreated: onTaskCreated,
         onTaskUpdated: onTaskUpdated,
         onTaskDeleted: onTaskDeleted,
@@ -70,6 +77,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
   late List<TeamMemberModel> _selectedMembers;
   late bool _isAlertEnabled;
   String? _selectedMilestoneId;
+  RubricComponentModel? _overrideRubricComponent;
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.existingTask != null;
@@ -83,6 +91,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
   @override
   void initState() {
     super.initState();
+    CourseRubricRepository().init();
     final task = widget.existingTask;
     _isAlertEnabled = task?.isAlertEnabled ?? true;
     if (task != null) {
@@ -95,6 +104,18 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
       final existingMilestone =
           TeamTaskRepository().getMilestoneForTask(widget.teamCode, task.id);
       _selectedMilestoneId = existingMilestone?.id;
+      if (task.rubricComponentId != null) {
+        final linked = CourseRubricRepository().getLinkedRubricForTeam(
+          teamId: widget.teamCode,
+          teamName: widget.teamName,
+        );
+        final match = linked?.course.components
+            .where((c) => c.id == task.rubricComponentId)
+            .firstOrNull;
+        if (match != null && match.id != linked?.component.id) {
+          _overrideRubricComponent = match;
+        }
+      }
     } else {
       _taskNameController = TextEditingController();
       _descriptionController = TextEditingController();
@@ -219,6 +240,11 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
     final assignedColors = _selectedMembers.map((m) => m.avatarColor).toList();
     final daysDiff = _selectedDate.difference(DateTime.now()).inDays;
     final dueBadgeStr = daysDiff > 0 ? '${daysDiff}d' : '12h';
+    final linkedRubric = CourseRubricRepository().getLinkedRubricForTeam(
+      teamId: widget.teamCode,
+      teamName: widget.teamName,
+    );
+    final effectiveComp = _overrideRubricComponent ?? linkedRubric?.component;
 
     if (_isEditing) {
       final updatedTask = widget.existingTask!.copyWith(
@@ -231,6 +257,9 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
         deadline: _selectedDate,
         dueBadge: dueBadgeStr,
         isAlertEnabled: _isAlertEnabled,
+        rubricComponentId: effectiveComp?.id,
+        rubricComponentName: effectiveComp?.name,
+        gradeWeightPercent: effectiveComp?.weightPercent,
       );
 
       TeamTaskRepository().setTaskMilestone(
@@ -258,6 +287,9 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
         deadline: _selectedDate,
         dueBadge: dueBadgeStr,
         isAlertEnabled: _isAlertEnabled,
+        rubricComponentId: effectiveComp?.id,
+        rubricComponentName: effectiveComp?.name,
+        gradeWeightPercent: effectiveComp?.weightPercent,
       );
 
       TeamTaskRepository().setTaskMilestone(
@@ -371,6 +403,15 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
                             _buildDeadlineSection(context),
                             const SizedBox(height: 14),
                             _buildAssigneeSection(context),
+                            const SizedBox(height: 14),
+                            TeamRubricLinkSection(
+                              teamCode: widget.teamCode,
+                              teamName: widget.teamName,
+                              overrideComponentId: _overrideRubricComponent?.id,
+                              onOverrideChanged: (comp) => setState(
+                                () => _overrideRubricComponent = comp,
+                              ),
+                            ),
                             const SizedBox(height: 14),
                             _buildFieldLabel(context, 'Milestone (Optional)'),
                             const SizedBox(height: 8),

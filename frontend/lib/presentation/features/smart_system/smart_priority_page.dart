@@ -5,8 +5,10 @@ import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../notifikasi/widgets/notification_bell_button.dart';
 import '../profile/profile_page.dart';
 import 'detail_card_smart_priority.dart';
+import 'models/course_rubric_repository.dart';
 import 'models/smart_priority_model.dart';
 import 'models/smart_priority_repository.dart';
+import 'widgets/course_rubric_manager_panel.dart';
 import 'widgets/smart_engine_status_card.dart';
 import 'widgets/smart_priority_task_card.dart';
 
@@ -15,11 +17,13 @@ typedef AiSmartPriority = SmartPriorityPage;
 class SmartPriorityPage extends StatefulWidget {
   final String userName;
   final VoidCallback? onBack;
+  final int initialTab;
 
   const SmartPriorityPage({
     super.key,
     this.userName = 'Yoga Perkasa Didik',
     this.onBack,
+    this.initialTab = 0,
   });
 
   @override
@@ -29,10 +33,13 @@ class SmartPriorityPage extends StatefulWidget {
 class _SmartPriorityPageState extends State<SmartPriorityPage> {
   final SmartPriorityRepository _repo = SmartPriorityRepository.instance;
   SmartPriorityLevel? _selectedFilter;
+  late int _activeTab;
 
   @override
   void initState() {
     super.initState();
+    _activeTab = widget.initialTab.clamp(0, 1);
+    CourseRubricRepository().init();
     _repo.addListener(_onRepoChanged);
   }
 
@@ -221,12 +228,102 @@ class _SmartPriorityPageState extends State<SmartPriorityPage> {
               ),
             ),
 
+            // Top Mode Switcher (Priority Ranking | Course Rubrics)
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: context.rSpacing(16),
+                vertical: context.rSpacing(4),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.bgCard,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderSubtle),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        key: const ValueKey('smart_tab_ranking'),
+                        onTap: () => setState(() => _activeTab = 0),
+                        borderRadius: BorderRadius.circular(9),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          height: 40,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _activeTab == 0
+                                ? AppColors.primary
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Text(
+                            'Priority Ranking',
+                            style: TextStyle(
+                              color: _activeTab == 0
+                                  ? Colors.white
+                                  : AppColors.textMuted,
+                              fontSize: context.rFont(12.5, min: 11, max: 14),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: InkWell(
+                        key: const ValueKey('smart_tab_rubrics'),
+                        onTap: () => setState(() => _activeTab = 1),
+                        borderRadius: BorderRadius.circular(9),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          height: 40,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _activeTab == 1
+                                ? AppColors.primary
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Text(
+                            'Course Rubrics',
+                            style: TextStyle(
+                              color: _activeTab == 1
+                                  ? Colors.white
+                                  : AppColors.textMuted,
+                              fontSize: context.rFont(12.5, min: 11, max: 14),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: context.rSpacing(10)),
+
             // Main Scrollable Area
             Expanded(
-              child: ListView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: context.rSpacing(16)),
-                children: [
+              child: _activeTab == 1
+                  ? ListView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.rSpacing(16),
+                      ),
+                      children: [
+                        const CourseRubricManagerPanel(),
+                        SizedBox(height: context.rSpacing(24)),
+                      ],
+                    )
+                  : ListView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.rSpacing(16),
+                      ),
+                      children: [
                   // Engine Status Card (Tap to toggle Active/Inactive)
                   SmartEngineStatusCard(
                     isActive: _repo.isEngineActive,
