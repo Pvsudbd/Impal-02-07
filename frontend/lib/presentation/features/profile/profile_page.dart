@@ -268,7 +268,7 @@ class _ProfilePageState extends State<ProfilePage> {
               DesktopTopHeader(
                 title: 'Profile & Settings',
                 subtitle:
-                    'Kelola identitas mahasiswa, preferensi sistem cerdas AI, dan keamanan akun',
+                    'Manage your student identity, reminders, AI preferences, and account security',
                 searchQuery: _desktopSearchQuery,
                 searchHint: 'Search settings...',
                 searchBgColor: AppColors.bgSidebar,
@@ -276,7 +276,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 showShortcutHint: true,
                 addButtonLabel: 'Edit Profile',
                 addButtonColor: AppColors.primaryAccent,
-                showNotificationBell: false,
+                showNotificationBell: true,
                 titleFontSize: 22,
                 horizontalPadding: 32,
                 onSearchChanged: (value) {

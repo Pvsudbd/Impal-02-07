@@ -5,8 +5,8 @@ import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.d
 import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_sidebar.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/models/user_profile_model.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/profile_page.dart';
-import 'package:impal_smart_todolist/presentation/features/profile/widgets/daily_briefing_settings_modal.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/widgets/deadline_alert_settings_modal.dart';
+import 'package:impal_smart_todolist/presentation/features/profile/widgets/desktop/desktop_daily_briefing_modal.dart';
 import 'package:impal_smart_todolist/presentation/features/smart_system/smart_priority_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -54,28 +54,38 @@ void main() {
       of: find.byType(DesktopSidebar),
       matching: find.text('Settings'),
     );
-    expect(settingsNav, findsOneWidget);
-    await tester.tap(settingsNav);
+    expect(settingsNav, findsNothing);
+
+    final profileBtn = find.byKey(const ValueKey('desktop_sidebar_profile_btn'));
+    expect(profileBtn, findsOneWidget);
+    await tester.tap(profileBtn);
     await tester.pumpAndSettle();
   }
 
   group('Desktop Profile & Settings (FigCraft + Mobile Features)', () {
     testWidgets(
-      'Renders 1440x980 shell via Sidebar Settings with zero overflow & mobile additions',
+      'Renders 1440x980 FigCraft layout via Sidebar Profile Card with zero overflow & no Settings nav',
       (tester) async {
         await pumpDesktopHomeProfile(tester);
 
         expect(find.byKey(const Key('desktop_profile_settings_view')),
             findsOneWidget);
         expect(find.text('Profile & Settings'), findsOneWidget);
+        expect(
+          find.text(
+            'Manage your student identity, reminders, AI preferences, and account security',
+          ),
+          findsOneWidget,
+        );
         expect(find.text('Search settings...'), findsOneWidget);
-        expect(find.text('Edit Profile'), findsWidgets);
-        expect(find.byIcon(Icons.notifications_outlined), findsNothing);
+        expect(find.text('Edit Profile'), findsOneWidget);
 
-        // Hero card + Mobile additions (Verified badge + Bio box)
+        // Hero card + Verified badge + Bio box (FigCraft node 6285)
         expect(find.text('Yoga Perkasa Didik'), findsWidgets);
-        expect(find.text('NIM: 103072400106'), findsOneWidget);
-        expect(find.text('Active Student'), findsOneWidget);
+        expect(
+          find.text('yogaperkasa@student.telkomuniversity.ac.id'),
+          findsWidgets,
+        );
         expect(find.byKey(const Key('desktop_hero_verified_badge')),
             findsOneWidget);
         expect(find.byKey(const Key('desktop_hero_bio_box')), findsOneWidget);
@@ -87,21 +97,22 @@ void main() {
         expect(find.text('19 SKS'), findsOneWidget);
         expect(find.text('94%'), findsOneWidget);
 
-        // Right panel sections
+        // Left & right panel sections (FigCraft node 6285)
         expect(find.text('REMINDERS & SCHEDULE'), findsOneWidget);
         expect(find.text('Task Deadlines'), findsOneWidget);
         expect(find.text('Schedule Alerts'), findsOneWidget);
         expect(find.text('Team Alerts'), findsOneWidget);
-        expect(find.text('Daily Briefing Time'), findsOneWidget);
-        expect(find.text('07:00 WIB'), findsOneWidget);
-        expect(find.text('Sound & Vibration'), findsOneWidget);
-        expect(find.text('INTELLIGENT SYSTEM'), findsOneWidget);
+        expect(find.text('Daily Morning Briefing'), findsOneWidget);
+        expect(find.text('07:00 WIB • All topics • Detailed'), findsOneWidget);
+        expect(find.text('INTELLIGENT SYSTEM (AI FUZZY)'), findsOneWidget);
         expect(find.text('Fuzzy Inference Model'), findsOneWidget);
-        expect(find.text('SYSTEM ENVIRONMENT'), findsOneWidget);
+        expect(find.text('Score Explainability (XAI)'), findsOneWidget);
+        expect(find.text('ACCOUNT & INTEGRATION'), findsOneWidget);
         expect(
-          find.text('Tel-U SSO Session: Terhubung (CAS Active)'),
+          find.text('Smart Task Manager v2.0 • Team 7 IMPAL Telkom University'),
           findsOneWidget,
         );
+        expect(find.text('SYSTEM ENVIRONMENT'), findsNothing);
         expect(tester.takeException(), isNull);
       },
     );
@@ -242,15 +253,38 @@ void main() {
         await tester.tapAt(const Offset(20, 20));
         await tester.pumpAndSettle();
 
-        // Open Daily Briefing modal & toggle switch
+        // Open Daily Briefing Desktop modal, verify wording, save Compact format & toggle switch
         await tester.ensureVisible(
           find.byKey(const Key('desktop_daily_briefing_row')),
         );
         await tester.tap(find.byKey(const Key('desktop_daily_briefing_row')));
         await tester.pumpAndSettle();
-        expect(find.byType(DailyBriefingSettingsModal), findsOneWidget);
-        await tester.tapAt(const Offset(20, 20));
+        expect(find.byType(DesktopDailyBriefingModal), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(DesktopDailyBriefingModal),
+            matching: find.text('Daily Morning Briefing'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Customize delivery schedule and included agenda topics'),
+          findsOneWidget,
+        );
+        expect(find.text('BRIEFING DELIVERY TIME'), findsOneWidget);
+        expect(find.text('NOTIFICATION DISPLAY FORMAT'), findsOneWidget);
+        expect(find.text('INCLUDED BRIEFING TOPICS'), findsOneWidget);
+
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_briefing_format_compact')),
+        );
         await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_briefing_save_btn')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(DesktopDailyBriefingModal), findsNothing);
+        expect(UserProfileRepository().profile.isDailyBriefingCompact, isTrue);
 
         final beforeBriefing =
             UserProfileRepository().profile.isDailyBriefingEnabled;
@@ -261,20 +295,6 @@ void main() {
         expect(
           UserProfileRepository().profile.isDailyBriefingEnabled,
           !beforeBriefing,
-        );
-
-        // Toggle Sound & Vibration switch
-        await tester.ensureVisible(
-          find.byKey(const Key('desktop_sound_vibration_switch')),
-        );
-        final beforeSound = UserProfileRepository().profile.soundVibrationEnabled;
-        await tester.tap(
-          find.byKey(const Key('desktop_sound_vibration_switch')),
-        );
-        await tester.pumpAndSettle();
-        expect(
-          UserProfileRepository().profile.soundVibrationEnabled,
-          !beforeSound,
         );
 
         // Toggle XAI switch + verify toast
@@ -299,9 +319,7 @@ void main() {
       (tester) async {
         await pumpDesktopHomeProfile(tester);
 
-        await tester.tap(
-          find.byKey(const Key('desktop_hero_edit_profile_button')),
-        );
+        await tester.tap(find.text('Edit Profile'));
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('desktop_edit_camera_badge')), findsOneWidget);

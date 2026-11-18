@@ -8,13 +8,12 @@ enum DesktopNavDestination {
   schedule,
   tasks,
   teamMembers,
-  settings,
 }
 
 /// Collapsible left navigation sidebar matching FigCraft
 /// `Desktop - Homepage Dashboard` (260dp) and `Desktop - Minimized Sidebar` (80dp).
 class DesktopSidebar extends StatelessWidget {
-  final DesktopNavDestination activeDestination;
+  final DesktopNavDestination? activeDestination;
   final bool isCollapsed;
   final VoidCallback onToggleCollapse;
   final ValueChanged<DesktopNavDestination> onDestinationSelected;
@@ -27,7 +26,7 @@ class DesktopSidebar extends StatelessWidget {
 
   const DesktopSidebar({
     super.key,
-    required this.activeDestination,
+    this.activeDestination,
     required this.isCollapsed,
     required this.onToggleCollapse,
     required this.onDestinationSelected,
@@ -141,17 +140,6 @@ class DesktopSidebar extends StatelessWidget {
                               isCompact: showCompact,
                               onTap: () => onDestinationSelected(
                                 DesktopNavDestination.teamMembers,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            _NavItem(
-                              icon: Icons.settings_outlined,
-                              label: 'Settings',
-                              isActive: activeDestination ==
-                                  DesktopNavDestination.settings,
-                              isCompact: showCompact,
-                              onTap: () => onDestinationSelected(
-                                DesktopNavDestination.settings,
                               ),
                             ),
                           ],
@@ -295,31 +283,53 @@ class DesktopSidebar extends StatelessWidget {
       ),
     );
 
+    final isProfileActive = activeDestination == null;
+
     if (showCompact) {
       return Tooltip(
         message: 'Hi $userName ($pendingTaskCount tasks pending)',
         child: InkWell(
+          key: const ValueKey('desktop_sidebar_profile_btn'),
           onTap: onProfileTap,
           borderRadius: BorderRadius.circular(24),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            child: Center(child: avatar),
+            child: Container(
+              decoration: isProfileActive
+                  ? BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.primaryAccent,
+                        width: 2,
+                      ),
+                    )
+                  : null,
+              child: Center(child: avatar),
+            ),
           ),
         ),
       );
     }
 
     return Material(
-      color: AppColors.bgCard,
+      color: isProfileActive
+          ? AppColors.primary.withValues(alpha: 0.12)
+          : AppColors.bgCard,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
+        key: const ValueKey('desktop_sidebar_profile_btn'),
         onTap: onProfileTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.borderSubtle, width: 1),
+            border: Border.all(
+              color: isProfileActive
+                  ? AppColors.primaryAccent
+                  : AppColors.borderSubtle,
+              width: 1,
+            ),
           ),
           child: Row(
             children: [

@@ -550,8 +550,6 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                     _navigateStandaloneToTab(2);
                   case DesktopNavDestination.schedule:
                     _navigateStandaloneToTab(3);
-                  case DesktopNavDestination.settings:
-                    _navigateStandaloneToTab(4);
                 }
               },
               userName: widget.userName,

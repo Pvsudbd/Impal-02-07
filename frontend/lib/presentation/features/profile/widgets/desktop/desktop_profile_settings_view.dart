@@ -201,30 +201,26 @@ class _DesktopProfileSettingsViewState
     final profile = _repo.profile;
 
     final showHero = _matchesQuery(
-      'profile hero avatar active student nim ${profile.fullName} ${profile.studentId} ${profile.majorCampus} ${profile.email} ${profile.groupRole} ${profile.bio} edit profile',
+      'profile hero avatar active student ${profile.fullName} ${profile.email} ${profile.bio} edit profile',
     );
     final showStats = _matchesQuery(
-      'academic stats bento 28 done 5 pending 6 mk 19 sks 94% on-time semester',
-    );
-    final showAccount = _matchesQuery(
-      'account integration security official email sso terverifikasi change password bcrypt terms privacy policy log out sign out',
-    );
-    final showReminders = _matchesQuery(
-      'reminders schedule task deadlines schedule alerts lecture external team alerts meeting daily briefing time 07:00 wib sound vibration',
+      'academic stats bento 28 done 5 pending 6 mk 19 sks 94% on-time',
     );
     final showIntelligent = _matchesQuery(
-      'intelligent system fuzzy inference model mamdani max-min core explainable ai xai pop-up weights deadline proximity bobot sks kompleksitas',
+      'intelligent system fuzzy inference model mamdani min-max centroid defuzzification score explainability xai active',
     );
-    final showSystemEnv = _matchesQuery(
-      'system environment tel-u sso session cas active database sync live postgresql',
+    final showReminders = _matchesQuery(
+      'reminders schedule task deadlines schedule alerts lecture external team alerts meeting daily morning briefing 07:00 wib',
+    );
+    final showAccount = _matchesQuery(
+      'account integration security email change password bcrypt terms privacy policy academic agreement mamdani disclaimer log out sign out smart task manager',
     );
 
     final hasAnyMatch = showHero ||
         showStats ||
-        showAccount ||
-        showReminders ||
         showIntelligent ||
-        showSystemEnv;
+        showReminders ||
+        showAccount;
 
     if (!hasAnyMatch) {
       return Center(
@@ -255,7 +251,7 @@ class _DesktopProfileSettingsViewState
               ),
               SizedBox(height: context.rSpacing(6)),
               Text(
-                'Tidak ditemukan pengaturan untuk kata kunci "${widget.searchQuery}".',
+                'No settings found matching "${widget.searchQuery}".',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.textMuted,
@@ -275,12 +271,11 @@ class _DesktopProfileSettingsViewState
           onEditProfileTap: () => _openEditProfileModal(profile),
         ),
       if (showStats) const DesktopAcademicStatsGrid(),
-      if (showAccount)
-        DesktopAccountSecurityCard(
+      if (showIntelligent)
+        DesktopIntelligentSystemCard(
           profile: profile,
-          onChangePasswordTap: () => _openChangePasswordModal(profile),
-          onTermsPrivacyTap: _openTermsModal,
-          onLogoutTap: _showLogoutDialog,
+          onOpenSmartPriorityTap: () => _openSmartPriority(profile),
+          onToggleXai: _handleXaiToggle,
         ),
     ];
 
@@ -294,15 +289,14 @@ class _DesktopProfileSettingsViewState
               _repo.toggleCategoryAlert(category, value),
           onOpenDailyBriefingModal: () => _openDailyBriefingModal(profile),
           onToggleDailyBriefing: _repo.toggleDailyBriefing,
-          onToggleSoundVibration: _repo.toggleSoundVibration,
         ),
-      if (showIntelligent)
-        DesktopIntelligentSystemCard(
+      if (showAccount)
+        DesktopAccountSecurityCard(
           profile: profile,
-          onOpenSmartPriorityTap: () => _openSmartPriority(profile),
-          onToggleXai: _handleXaiToggle,
+          onChangePasswordTap: () => _openChangePasswordModal(profile),
+          onTermsPrivacyTap: _openTermsModal,
+          onLogoutTap: _showLogoutDialog,
         ),
-      if (showSystemEnv) const DesktopSystemEnvironmentCard(),
     ];
 
     return LayoutBuilder(
@@ -324,22 +318,21 @@ class _DesktopProfileSettingsViewState
                   children: [
                     Expanded(
                       child: _SeparatedColumn(
-                        gap: context.rSpacing(18),
+                        gap: context.rSpacing(16),
                         children: leftColumnWidgets,
                       ),
                     ),
                     SizedBox(width: context.rSpacing(24)),
-                    SizedBox(
-                      width: constraints.maxWidth >= 980 ? 360 : 340,
+                    Expanded(
                       child: _SeparatedColumn(
-                        gap: context.rSpacing(18),
+                        gap: context.rSpacing(16),
                         children: rightPanelWidgets,
                       ),
                     ),
                   ],
                 )
               : _SeparatedColumn(
-                  gap: context.rSpacing(18),
+                  gap: context.rSpacing(16),
                   children: [
                     ...leftColumnWidgets,
                     ...rightPanelWidgets,

@@ -983,7 +983,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  DesktopNavDestination get _activeDesktopDestination {
+  DesktopNavDestination? get _activeDesktopDestination {
     switch (_currentTab) {
       case 1:
         return DesktopNavDestination.tasks;
@@ -992,7 +992,7 @@ class _HomePageState extends State<HomePage> {
       case 3:
         return DesktopNavDestination.schedule;
       case 4:
-        return DesktopNavDestination.settings;
+        return null;
       default:
         return DesktopNavDestination.dashboard;
     }
@@ -1024,7 +1024,7 @@ class _HomePageState extends State<HomePage> {
       case 4:
         return (
           'Profile & Settings',
-          'Kelola identitas mahasiswa, preferensi sistem cerdas AI, dan keamanan akun',
+          'Manage your student identity, reminders, AI preferences, and account security',
         );
       default:
         return (
@@ -1044,8 +1044,6 @@ class _HomePageState extends State<HomePage> {
         _onTabSelected(1);
       case DesktopNavDestination.teamMembers:
         _onTabSelected(2);
-      case DesktopNavDestination.settings:
-        _onTabSelected(4);
     }
   }
 
@@ -1158,8 +1156,7 @@ class _HomePageState extends State<HomePage> {
                           onSecondaryButtonTap: isGroupDirectoryRoot
                               ? _openJoinTeamDialog
                               : null,
-                          showNotificationBell: _currentTab != 3 &&
-                              !isProfileSettings,
+                          showNotificationBell: _currentTab != 3,
                           titleFontSize: isGroupDirectoryRoot ? 18 : 22,
                           horizontalPadding: (isGroupDirectoryRoot ||
                                   isGroupWorkspace ||
