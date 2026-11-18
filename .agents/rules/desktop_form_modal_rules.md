@@ -10,6 +10,7 @@ Aturan ini mengikat seluruh modal/dialog formulir Desktop (`>= 1024 dp`) maupun 
 - `DesktopMilestoneModal` (`features/team/widgets/desktop/desktop_milestone_modal.dart`)
 - `PopUpJoinTeam` & `PopUpCreateTeam` (`features/team/`)
 - `DesktopDailyBriefingModal` (`features/profile/widgets/desktop/desktop_daily_briefing_modal.dart`)
+- `DesktopAlertSettingsModal` (`features/profile/widgets/desktop/desktop_alert_settings_modal.dart`) — *Task Deadlines, Schedule Alerts, Team Alerts*
 - `DesktopEditProfileModal` & `DesktopChangePasswordModal` (`features/profile/widgets/desktop/desktop_profile_modals.dart`)
 
 ---

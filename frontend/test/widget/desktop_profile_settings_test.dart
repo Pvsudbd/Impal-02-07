@@ -5,7 +5,7 @@ import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.d
 import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_sidebar.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/models/user_profile_model.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/profile_page.dart';
-import 'package:impal_smart_todolist/presentation/features/profile/widgets/deadline_alert_settings_modal.dart';
+import 'package:impal_smart_todolist/presentation/features/profile/widgets/desktop/desktop_alert_settings_modal.dart';
 import 'package:impal_smart_todolist/presentation/features/profile/widgets/desktop/desktop_daily_briefing_modal.dart';
 import 'package:impal_smart_todolist/presentation/features/smart_system/smart_priority_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -215,24 +215,54 @@ void main() {
       (tester) async {
         await pumpDesktopHomeProfile(tester);
 
-        // Open Task Deadlines modal
+        // Open Task Deadlines Desktop modal, add custom timing, choose Sound Only & save
         await tester.ensureVisible(
           find.byKey(const Key('desktop_alert_row_task')),
         );
         await tester.tap(find.byKey(const Key('desktop_alert_row_task')));
         await tester.pumpAndSettle();
-        expect(find.byType(DeadlineAlertSettingsModal), findsOneWidget);
-        await tester.tapAt(const Offset(20, 20));
+        expect(find.byType(DesktopAlertSettingsModal), findsOneWidget);
+        expect(find.text('Task Deadlines Settings'), findsOneWidget);
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_alert_add_timing_btn')),
+        );
         await tester.pumpAndSettle();
+        expect(find.text('2 Hours'), findsOneWidget);
+        final soundOnlyFinder = find.byKey(
+          ValueKey(
+            'desktop_alert_mode_${AlertSoundVibrationMode.soundOnly.name}',
+          ),
+        );
+        await tester.ensureVisible(soundOnlyFinder);
+        await tester.pumpAndSettle();
+        await tester.tap(soundOnlyFinder);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('desktop_alert_save_btn')));
+        await tester.pumpAndSettle();
+        expect(find.byType(DesktopAlertSettingsModal), findsNothing);
+        expect(
+          UserProfileRepository().profile.taskDeadlineAlerts.soundMode,
+          AlertSoundVibrationMode.soundOnly,
+        );
+        expect(
+          UserProfileRepository().profile.taskDeadlineAlerts.timings,
+          contains('2 Hours'),
+        );
 
-        // Open Schedule Alerts modal & toggle switch
+        // Open Schedule Alerts Desktop modal & switch Lecture -> External tab
         await tester.ensureVisible(
           find.byKey(const Key('desktop_alert_row_schedule')),
         );
         await tester.tap(find.byKey(const Key('desktop_alert_row_schedule')));
         await tester.pumpAndSettle();
-        expect(find.byType(DeadlineAlertSettingsModal), findsOneWidget);
-        await tester.tapAt(const Offset(20, 20));
+        expect(find.byType(DesktopAlertSettingsModal), findsOneWidget);
+        expect(find.text('Schedule Alerts Settings'), findsOneWidget);
+        expect(find.text('Lecture Schedule'), findsOneWidget);
+        expect(find.text('External Schedule'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('desktop_alert_subtab_1')));
+        await tester.pumpAndSettle();
+        expect(find.text('Enable External Schedule Alerts'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('desktop_alert_close_btn')));
         await tester.pumpAndSettle();
 
         await tester.ensureVisible(
@@ -243,14 +273,20 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Open Team Alerts modal & toggle switch
+        // Open Team Alerts Desktop modal & switch Team Tasks -> Team Meetings tab
         await tester.ensureVisible(
           find.byKey(const Key('desktop_alert_row_team')),
         );
         await tester.tap(find.byKey(const Key('desktop_alert_row_team')));
         await tester.pumpAndSettle();
-        expect(find.byType(DeadlineAlertSettingsModal), findsOneWidget);
-        await tester.tapAt(const Offset(20, 20));
+        expect(find.byType(DesktopAlertSettingsModal), findsOneWidget);
+        expect(find.text('Team Alerts Settings'), findsOneWidget);
+        expect(find.text('Team Tasks'), findsOneWidget);
+        expect(find.text('Team Meetings'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('desktop_alert_subtab_1')));
+        await tester.pumpAndSettle();
+        expect(find.text('Enable Team Meetings Alerts'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('desktop_alert_close_btn')));
         await tester.pumpAndSettle();
 
         // Open Daily Briefing Desktop modal, verify wording, save Compact format & toggle switch
