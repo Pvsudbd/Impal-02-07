@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:impal_smart_todolist/core/theme/app_colors.dart';
+import 'package:impal_smart_todolist/core/widgets/desktop_slide_drawer_pane.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
 import 'package:impal_smart_todolist/presentation/features/smart_system/detail_card_smart_priority.dart';
 import 'package:impal_smart_todolist/presentation/features/smart_system/models/course_rubric_repository.dart';
@@ -262,6 +264,117 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('1. INPUT PARAMETER FUZZIFICATION'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Desktop Smart Priority renders single header + Add Course button that opens inline slide drawer without overflow at 1440x980 & 1024x768',
+      (tester) async {
+        setViewport(tester, const Size(1440, 980));
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: HomePage(userName: 'Jarvis', initialTab: 5),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Only header + Add Course button is rendered (no duplicate inside CourseRubricManagerPanel)
+        expect(find.byKey(const ValueKey('rubric_add_course_btn')), findsNothing);
+        expect(find.text('+ Add Course'), findsOneWidget);
+
+        final slidePaneFinder = find.byType(DesktopSlideDrawerPane);
+        expect(slidePaneFinder, findsOneWidget);
+        expect(tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen, isFalse);
+
+        await tester.tap(find.text('+ Add Course'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(Dialog), findsNothing);
+        expect(tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen, isTrue);
+
+        final drawerFinder =
+            find.byKey(const ValueKey('desktop_add_course_slide_drawer'));
+        expect(drawerFinder, findsOneWidget);
+        expect(tester.getSize(drawerFinder).width, 440.0);
+
+        final codeField = tester.widget<TextField>(
+          find.descendant(
+            of: find.byKey(const ValueKey('course_code_field')),
+            matching: find.byType(TextField),
+          ),
+        );
+        expect(codeField.decoration?.fillColor, AppColors.bgCard);
+
+        // When Add Course drawer opens, Course Grading Rubrics moves below Mamdani ranking
+        final rankingTop =
+            tester.getTopLeft(find.text('Mamdani Inference Engine')).dy;
+        final rubricsTop =
+            tester.getTopLeft(find.text('Course Grading Rubrics')).dy;
+        expect(rankingTop, lessThan(rubricsTop));
+
+        // Main Smart Priority workspace stays interactive while drawer is open
+        final highFilterFinder = find.textContaining('High (');
+        await tester.ensureVisible(highFilterFinder);
+        await tester.tap(highFilterFinder);
+        await tester.pumpAndSettle();
+        expect(tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen, isTrue);
+
+        // Create a new course via drawer and verify drawer closes + course appears
+        await tester.enterText(
+          find.byKey(const ValueKey('course_code_field')),
+          'CS301',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('course_name_field')),
+          'Cloud Architecture',
+        );
+        await tester.tap(find.byKey(const ValueKey('save_course_btn')));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen, isFalse);
+        expect(find.textContaining('Cloud Architecture'), findsWidgets);
+
+        // Verify compact 1024x768 desktop with drawer open renders with 0 overflow
+        setViewport(tester, const Size(1024, 768));
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: HomePage(
+              key: ValueKey('sp_home_1024'),
+              userName: 'Jarvis',
+              initialTab: 5,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('+ Add Course'));
+        await tester.pumpAndSettle();
+
+        expect(tester.getSize(drawerFinder).width, 380.0);
+        expect(tester.takeException(), isNull);
+
+        // Verify ultrawide / 1920x1080 monitor ALSO stacks Course Grading Rubrics below when drawer is open
+        setViewport(tester, const Size(1920, 1080));
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: HomePage(
+              key: ValueKey('sp_home_1920'),
+              userName: 'Jarvis',
+              initialTab: 5,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('+ Add Course'));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getTopLeft(find.text('Mamdani Inference Engine')).dy,
+          lessThan(tester.getTopLeft(find.text('Course Grading Rubrics')).dy),
+        );
+        expect(tester.takeException(), isNull);
       },
     );
   });

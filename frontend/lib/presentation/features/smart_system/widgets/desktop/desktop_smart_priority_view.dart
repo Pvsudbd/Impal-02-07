@@ -12,10 +12,14 @@ import '../smart_priority_task_card.dart';
 /// Course Grading Rubrics Management & Team Sync (right).
 class DesktopSmartPriorityView extends StatefulWidget {
   final String searchQuery;
+  final bool isDrawerOpen;
+  final VoidCallback? onOpenAddCourse;
 
   const DesktopSmartPriorityView({
     super.key,
     this.searchQuery = '',
+    this.isDrawerOpen = false,
+    this.onOpenAddCourse,
   });
 
   @override
@@ -189,7 +193,7 @@ class _DesktopSmartPriorityViewState extends State<DesktopSmartPriorityView> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final useSideBySide = constraints.maxWidth >= 820;
+        final useSideBySide = !widget.isDrawerOpen && constraints.maxWidth >= 820;
 
         if (!useSideBySide) {
           return SingleChildScrollView(
@@ -197,9 +201,12 @@ class _DesktopSmartPriorityViewState extends State<DesktopSmartPriorityView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const CourseRubricManagerPanel(),
-                SizedBox(height: context.rSpacing(24)),
                 rankingColumn,
+                SizedBox(height: context.rSpacing(24)),
+                CourseRubricManagerPanel(
+                  showAddCourseButton: false,
+                  onAddCourseTap: widget.onOpenAddCourse,
+                ),
               ],
             ),
           );
@@ -215,9 +222,12 @@ class _DesktopSmartPriorityViewState extends State<DesktopSmartPriorityView> {
                 child: rankingColumn,
               ),
               SizedBox(width: context.rSpacing(24)),
-              const Expanded(
+              Expanded(
                 flex: 6,
-                child: CourseRubricManagerPanel(),
+                child: CourseRubricManagerPanel(
+                  showAddCourseButton: false,
+                  onAddCourseTap: widget.onOpenAddCourse,
+                ),
               ),
             ],
           ),

@@ -11,8 +11,15 @@ import '../models/course_rubric_repository.dart';
 /// Modal for Adding or Editing a Course (`CourseRubricModel`).
 class CourseEditorDialog extends StatefulWidget {
   final CourseRubricModel? existingCourse;
+  final bool embeddedPanel;
+  final VoidCallback? onClose;
 
-  const CourseEditorDialog({super.key, this.existingCourse});
+  const CourseEditorDialog({
+    super.key,
+    this.existingCourse,
+    this.embeddedPanel = false,
+    this.onClose,
+  });
 
   static Future<bool?> show(
     BuildContext context, {
@@ -58,6 +65,10 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
 
   void _close([bool? result]) {
     FocusManager.instance.primaryFocus?.unfocus();
+    if (widget.embeddedPanel) {
+      widget.onClose?.call();
+      return;
+    }
     Navigator.of(context).pop(result);
   }
 
@@ -104,11 +115,243 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
       icon: Icons.school_rounded,
       iconBgColor: PopUpPemberitahuan.positiveColor,
     );
+    if (widget.embeddedPanel && !_isEditing) {
+      _codeController.clear();
+      _nameController.clear();
+      setState(() {
+        _credits = 3;
+        _applyPreset = true;
+      });
+    }
     _close(true);
   }
 
   @override
   Widget build(BuildContext context) {
+    final formBody = Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!widget.embeddedPanel) ...[
+            _ModalHeader(
+              title: _isEditing ? 'Edit Course' : 'Add Course',
+              onClose: () => _close(false),
+            ),
+            SizedBox(height: context.rSpacing(18)),
+          ],
+          const _FieldLabel(label: 'Course Code'),
+          SizedBox(height: context.rSpacing(6)),
+          TextFormField(
+            key: const ValueKey('course_code_field'),
+            controller: _codeController,
+            textCapitalization: TextCapitalization.characters,
+            style: _inputTextStyle(context),
+            decoration: _inputDecoration(
+              context,
+              hint: 'e.g. SSIF-04-REG or IMPAL',
+            ),
+          ),
+          SizedBox(height: context.rSpacing(14)),
+          const _FieldLabel(label: 'Course Name'),
+          SizedBox(height: context.rSpacing(6)),
+          TextFormField(
+            key: const ValueKey('course_name_field'),
+            controller: _nameController,
+            style: _inputTextStyle(context),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) {
+                return 'Please enter the course name.';
+              }
+              return null;
+            },
+            decoration: _inputDecoration(
+              context,
+              hint: 'e.g. Software Testing & Implementation',
+            ),
+          ),
+          SizedBox(height: context.rSpacing(14)),
+          const _FieldLabel(label: 'Credits (SKS)'),
+          SizedBox(height: context.rSpacing(8)),
+          Wrap(
+            spacing: context.rSpacing(8),
+            runSpacing: context.rSpacing(8),
+            children: [1, 2, 3, 4].map((sks) {
+              final selected = _credits == sks;
+              return InkWell(
+                onTap: () => setState(() => _credits = sks),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 56,
+                    minHeight: 40,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppColors.primary.withValues(alpha: 0.18)
+                        : AppColors.bgCard,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color:
+                          selected ? AppColors.primary : AppColors.borderSubtle,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$sks SKS',
+                        style: TextStyle(
+                          color: selected ? Colors.white : AppColors.textMuted,
+                          fontSize: context.rFont(12.5, min: 11, max: 14),
+                          fontWeight:
+                              selected ? FontWeight.w700 : FontWeight.w500,
+                          fontFeatures: const [
+                            FontFeature.tabularFigures(),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          if (!_isEditing) ...[
+            SizedBox(height: context.rSpacing(14)),
+            InkWell(
+              onTap: () => setState(() => _applyPreset = !_applyPreset),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: EdgeInsets.all(context.rSpacing(12)),
+                decoration: BoxDecoration(
+                  color: AppColors.bgCard,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.borderSubtle),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: _applyPreset
+                            ? AppColors.primary
+                            : AppColors.bgPrimary,
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: _applyPreset
+                              ? AppColors.primary
+                              : AppColors.borderMedium,
+                        ),
+                      ),
+                      child: _applyPreset
+                          ? const Icon(
+                              Icons.check_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            )
+                          : null,
+                    ),
+                    SizedBox(width: context.rSpacing(10)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Apply Standard Rubric Preset',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: context.rFont(12.5, min: 11, max: 14),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            'Midterm (UTS), Final Exam (UAS), Quiz, Assignment, Team Project',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: context.rFont(11, min: 10, max: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (!widget.embeddedPanel) ...[
+            SizedBox(height: context.rSpacing(20)),
+            _PrimarySubmitButton(
+              key: const ValueKey('save_course_btn'),
+              label: _isEditing ? 'Save Changes' : 'Add Course',
+              isLoading: _isSubmitting,
+              onPressed: _submit,
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (widget.embeddedPanel) {
+      return UnfocusOnTap(
+        child: Container(
+          decoration: const BoxDecoration(
+            color: AppColors.bgPrimary,
+            border: Border(
+              left: BorderSide(color: AppColors.borderSubtle, width: 1),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 18, 16, 14),
+                child: _ModalHeader(
+                  title: _isEditing ? 'Edit Course' : 'Add Course',
+                  onClose: () => _close(false),
+                ),
+              ),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: AppColors.borderSubtle,
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+                  child: formBody,
+                ),
+              ),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: AppColors.borderSubtle,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 22),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: _PrimarySubmitButton(
+                    key: const ValueKey('save_course_btn'),
+                    label: _isEditing ? 'Save Changes' : 'Add Course',
+                    isLoading: _isSubmitting,
+                    onPressed: _submit,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.symmetric(
@@ -125,182 +368,7 @@ class _CourseEditorDialogState extends State<CourseEditorDialog> {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppColors.borderSubtle, width: 1),
             ),
-            child: SingleChildScrollView(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _ModalHeader(
-                      title: _isEditing ? 'Edit Course' : 'Add Course',
-                      onClose: () => _close(false),
-                    ),
-                    SizedBox(height: context.rSpacing(18)),
-                    const _FieldLabel(label: 'Course Code'),
-                    SizedBox(height: context.rSpacing(6)),
-                    TextFormField(
-                      key: const ValueKey('course_code_field'),
-                      controller: _codeController,
-                      textCapitalization: TextCapitalization.characters,
-                      style: _inputTextStyle(context),
-                      decoration: _inputDecoration(
-                        context,
-                        hint: 'e.g. SSIF-04-REG or IMPAL',
-                      ),
-                    ),
-                    SizedBox(height: context.rSpacing(14)),
-                    const _FieldLabel(label: 'Course Name'),
-                    SizedBox(height: context.rSpacing(6)),
-                    TextFormField(
-                      key: const ValueKey('course_name_field'),
-                      controller: _nameController,
-                      style: _inputTextStyle(context),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Please enter the course name.';
-                        }
-                        return null;
-                      },
-                      decoration: _inputDecoration(
-                        context,
-                        hint: 'e.g. Software Testing & Implementation',
-                      ),
-                    ),
-                    SizedBox(height: context.rSpacing(14)),
-                    const _FieldLabel(label: 'Credits (SKS)'),
-                    SizedBox(height: context.rSpacing(8)),
-                    Wrap(
-                      spacing: context.rSpacing(8),
-                      runSpacing: context.rSpacing(8),
-                      children: [1, 2, 3, 4].map((sks) {
-                        final selected = _credits == sks;
-                        return InkWell(
-                          onTap: () => setState(() => _credits = sks),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            constraints: const BoxConstraints(
-                              minWidth: 56,
-                              minHeight: 40,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? AppColors.primary.withValues(alpha: 0.18)
-                                  : AppColors.bgCard,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: selected
-                                    ? AppColors.primary
-                                    : AppColors.borderSubtle,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '$sks SKS',
-                                  style: TextStyle(
-                                    color: selected
-                                        ? Colors.white
-                                        : AppColors.textMuted,
-                                    fontSize:
-                                        context.rFont(12.5, min: 11, max: 14),
-                                    fontWeight: selected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    fontFeatures: const [
-                                      FontFeature.tabularFigures(),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    if (!_isEditing) ...[
-                      SizedBox(height: context.rSpacing(14)),
-                      InkWell(
-                        onTap: () =>
-                            setState(() => _applyPreset = !_applyPreset),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: EdgeInsets.all(context.rSpacing(12)),
-                          decoration: BoxDecoration(
-                            color: AppColors.bgCard,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.borderSubtle),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: _applyPreset
-                                      ? AppColors.primary
-                                      : AppColors.bgPrimary,
-                                  borderRadius: BorderRadius.circular(5),
-                                  border: Border.all(
-                                    color: _applyPreset
-                                        ? AppColors.primary
-                                        : AppColors.borderMedium,
-                                  ),
-                                ),
-                                child: _applyPreset
-                                    ? const Icon(
-                                        Icons.check_rounded,
-                                        size: 14,
-                                        color: Colors.white,
-                                      )
-                                    : null,
-                              ),
-                              SizedBox(width: context.rSpacing(10)),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Apply Standard Rubric Preset',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: context.rFont(12.5,
-                                            min: 11, max: 14),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Midterm (UTS), Final Exam (UAS), Quiz, Assignment, Team Project',
-                                      style: TextStyle(
-                                        color: AppColors.textMuted,
-                                        fontSize: context.rFont(11,
-                                            min: 10, max: 12),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                    SizedBox(height: context.rSpacing(20)),
-                    _PrimarySubmitButton(
-                      key: const ValueKey('save_course_btn'),
-                      label: _isEditing ? 'Save Changes' : 'Add Course',
-                      isLoading: _isSubmitting,
-                      onPressed: _submit,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            child: SingleChildScrollView(child: formBody),
           ),
         ),
       ),

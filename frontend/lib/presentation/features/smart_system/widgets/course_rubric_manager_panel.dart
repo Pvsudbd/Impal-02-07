@@ -14,10 +14,14 @@ import 'course_rubric_modals.dart';
 /// College Task creation forms and can be bidirectionally synced to Teams.
 class CourseRubricManagerPanel extends StatefulWidget {
   final bool showHeaderBar;
+  final bool showAddCourseButton;
+  final VoidCallback? onAddCourseTap;
 
   const CourseRubricManagerPanel({
     super.key,
     this.showHeaderBar = true,
+    this.showAddCourseButton = true,
+    this.onAddCourseTap,
   });
 
   @override
@@ -135,31 +139,34 @@ class _CourseRubricManagerPanelState extends State<CourseRubricManagerPanel> {
                   ],
                 ),
               ),
-              SizedBox(width: context.rSpacing(10)),
-              ElevatedButton.icon(
-                key: const ValueKey('rubric_add_course_btn'),
-                onPressed: () => CourseEditorDialog.show(context),
-                icon: Icon(Icons.add_rounded, size: context.rIcon(16)),
-                label: Text(
-                  'Add Course',
-                  style: TextStyle(
-                    fontSize: context.rFont(12, min: 11, max: 13.5),
-                    fontWeight: FontWeight.w700,
+              if (widget.showAddCourseButton) ...[
+                SizedBox(width: context.rSpacing(10)),
+                ElevatedButton.icon(
+                  key: const ValueKey('rubric_add_course_btn'),
+                  onPressed: widget.onAddCourseTap ??
+                      () => CourseEditorDialog.show(context),
+                  icon: Icon(Icons.add_rounded, size: context.rIcon(16)),
+                  label: Text(
+                    'Add Course',
+                    style: TextStyle(
+                      fontSize: context.rFont(12, min: 11, max: 13.5),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 44),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.rSpacing(12),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
                   ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 44),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.rSpacing(12),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 0,
-                ),
-              ),
+              ],
             ],
           ),
           SizedBox(height: context.rSpacing(14)),
@@ -167,7 +174,8 @@ class _CourseRubricManagerPanelState extends State<CourseRubricManagerPanel> {
 
         if (courses.isEmpty)
           _EmptyCourseRubricsState(
-            onAddCourse: () => CourseEditorDialog.show(context),
+            onAddCourse: widget.onAddCourseTap ??
+                () => CourseEditorDialog.show(context),
           )
         else ...[
           // Course Selector Chips

@@ -75,6 +75,7 @@ class _HomePageState extends State<HomePage> {
   bool _isSidebarCollapsed = false;
   bool _isDesktopAddTaskPanelOpen = false;
   bool _isDesktopSchedulePanelOpen = false;
+  bool _isDesktopAddCoursePanelOpen = false;
   DesktopTeamDrawerMode _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
   String _desktopSearchQuery = '';
   late final List<DesktopTeamCardData> _desktopTeams =
@@ -231,6 +232,7 @@ class _HomePageState extends State<HomePage> {
       if (index != _currentTab) {
         _isDesktopAddTaskPanelOpen = false;
         _isDesktopSchedulePanelOpen = false;
+        _isDesktopAddCoursePanelOpen = false;
         _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
       }
       _currentTab = index;
@@ -1243,7 +1245,10 @@ class _HomePageState extends State<HomePage> {
                                     profile: UserProfileRepository().profile,
                                   )
                               : (isSmartPriority
-                                  ? () => CourseEditorDialog.show(context)
+                                  ? () => setState(
+                                        () => _isDesktopAddCoursePanelOpen =
+                                            !_isDesktopAddCoursePanelOpen,
+                                      )
                                   : (isGroupDirectoryRoot
                                       ? _openCreateTeamDialog
                                       : (isGroupWorkspace
@@ -1349,9 +1354,30 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (_currentTab == 5) {
-      return DesktopSmartPriorityView(
-        key: const ValueKey('desktop_smart_priority_view'),
-        searchQuery: _desktopSearchQuery,
+      return DesktopSlideDrawerPane(
+        isOpen: _isDesktopAddCoursePanelOpen,
+        content: DesktopSmartPriorityView(
+          key: const ValueKey('desktop_smart_priority_view'),
+          searchQuery: _desktopSearchQuery,
+          isDrawerOpen: _isDesktopAddCoursePanelOpen,
+          onOpenAddCourse: () {
+            if (mounted) {
+              setState(
+                () => _isDesktopAddCoursePanelOpen =
+                    !_isDesktopAddCoursePanelOpen,
+              );
+            }
+          },
+        ),
+        drawer: CourseEditorDialog(
+          key: const ValueKey('desktop_add_course_slide_drawer'),
+          embeddedPanel: true,
+          onClose: () {
+            if (mounted) {
+              setState(() => _isDesktopAddCoursePanelOpen = false);
+            }
+          },
+        ),
       );
     }
 
