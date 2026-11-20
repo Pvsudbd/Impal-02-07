@@ -403,19 +403,10 @@ class _DesktopTasksManagementViewState
 
     final pad = context.rSpacing(24);
     final colGap = context.rSpacing(24);
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final rightPanelWidth = screenWidth >= 1280 ? 348.0 : 300.0;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(pad),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left Main Tasks Management Workspace
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+    final mainWorkspace = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
                 DesktopTaskKpiRow(
                   highCount: highCount,
                   mediumCount: mediumCount,
@@ -532,95 +523,114 @@ class _DesktopTasksManagementViewState
                     ),
                   ],
                 ],
-              ],
-            ),
-          ),
-          SizedBox(width: colGap),
+      ],
+    );
 
-          // Right Sidebar Analytics & Team Panel
-          SizedBox(
-            width: rightPanelWidth,
-            child: DesktopTasksRightPanel(
-              focusedMonth: _focusedMonth,
-              selectedDate: _selectedDate,
-              deadlineDates: deadlineDates,
-              todayDeadlineCount: todayAllCount,
-              onPreviousMonth: () {
-                setState(() {
-                  _focusedMonth = DateTime(
-                    _focusedMonth.year,
-                    _focusedMonth.month - 1,
-                    1,
-                  );
-                });
-              },
-              onNextMonth: () {
-                setState(() {
-                  _focusedMonth = DateTime(
-                    _focusedMonth.year,
-                    _focusedMonth.month + 1,
-                    1,
-                  );
-                });
-              },
-              onDateSelected: (date) {
-                setState(() {
-                  if (_selectedDate != null &&
-                      _selectedDate!.year == date.year &&
-                      _selectedDate!.month == date.month &&
-                      _selectedDate!.day == date.day) {
-                    _selectedDate = null;
-                  } else {
-                    _selectedDate = date;
-                  }
-                });
-              },
-              topPriority: _smartRepo.topPriority,
-              isFuzzyEngineActive: _smartRepo.isEngineActive,
-              onFuzzyCardTap: () {
-                if (widget.onOpenSmartPriority != null) {
-                  widget.onOpenSmartPriority!();
-                  return;
-                }
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SmartPriorityPage(userName: widget.userName),
-                  ),
-                );
-              },
-              collaborators: _buildCollaborators(),
-              onCollaboratorTap: (_) {
-                final team = TeamRepository().teams.isNotEmpty
-                    ? TeamRepository().teams.first
-                    : const TeamModel(
-                        id: '1',
-                        name: 'IMPAL Team',
-                        memberColors: [
-                          Color(0xFFF3A683),
-                          Color(0xFF786FA6),
-                          Color(0xFF63CDDA),
-                        ],
-                      );
-                if (widget.onOpenTeamDashboard != null) {
-                  widget.onOpenTeamDashboard!(team);
-                } else {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => DashboardTeamPage(
-                        userName: widget.userName,
-                        teamName: team.name,
-                        teamCode: '7X29',
-                        memberColors: team.memberColors,
-                        isStandalone: true,
-                      ),
-                    ),
-                  );
-                }
-              },
-            ),
+    final rightPanel = DesktopTasksRightPanel(
+      focusedMonth: _focusedMonth,
+      selectedDate: _selectedDate,
+      deadlineDates: deadlineDates,
+      todayDeadlineCount: todayAllCount,
+      onPreviousMonth: () {
+        setState(() {
+          _focusedMonth = DateTime(
+            _focusedMonth.year,
+            _focusedMonth.month - 1,
+            1,
+          );
+        });
+      },
+      onNextMonth: () {
+        setState(() {
+          _focusedMonth = DateTime(
+            _focusedMonth.year,
+            _focusedMonth.month + 1,
+            1,
+          );
+        });
+      },
+      onDateSelected: (date) {
+        setState(() {
+          if (_selectedDate != null &&
+              _selectedDate!.year == date.year &&
+              _selectedDate!.month == date.month &&
+              _selectedDate!.day == date.day) {
+            _selectedDate = null;
+          } else {
+            _selectedDate = date;
+          }
+        });
+      },
+      topPriority: _smartRepo.topPriority,
+      isFuzzyEngineActive: _smartRepo.isEngineActive,
+      onFuzzyCardTap: () {
+        if (widget.onOpenSmartPriority != null) {
+          widget.onOpenSmartPriority!();
+          return;
+        }
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => SmartPriorityPage(userName: widget.userName),
           ),
-        ],
-      ),
+        );
+      },
+      collaborators: _buildCollaborators(),
+      onCollaboratorTap: (_) {
+        final team = TeamRepository().teams.isNotEmpty
+            ? TeamRepository().teams.first
+            : const TeamModel(
+                id: '1',
+                name: 'IMPAL Team',
+                memberColors: [
+                  Color(0xFFF3A683),
+                  Color(0xFF786FA6),
+                  Color(0xFF63CDDA),
+                ],
+              );
+        if (widget.onOpenTeamDashboard != null) {
+          widget.onOpenTeamDashboard!(team);
+        } else {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => DashboardTeamPage(
+                userName: widget.userName,
+                teamName: team.name,
+                teamCode: '7X29',
+                memberColors: team.memberColors,
+                isStandalone: true,
+              ),
+            ),
+          );
+        }
+      },
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final sideBySide = constraints.maxWidth >= 900.0;
+        final rightPanelWidth = constraints.maxWidth >= 1120 ? 348.0 : 300.0;
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(pad),
+          child: sideBySide
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: mainWorkspace),
+                    SizedBox(width: colGap),
+                    SizedBox(width: rightPanelWidth, child: rightPanel),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    mainWorkspace,
+                    SizedBox(height: colGap),
+                    rightPanel,
+                  ],
+                ),
+        );
+      },
     );
   }
 }

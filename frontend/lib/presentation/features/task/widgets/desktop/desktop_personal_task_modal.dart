@@ -25,6 +25,7 @@ import '../task_tag_picker.dart';
 class DesktopPersonalTaskModal extends StatefulWidget {
   final TaskItemModel? task;
   final String userInitials;
+  final bool embeddedPanel;
   final void Function(TaskItemModel task)? onTaskCreated;
   final void Function(TaskItemModel updatedTask)? onTaskUpdated;
   final VoidCallback? onTaskDeleted;
@@ -34,6 +35,7 @@ class DesktopPersonalTaskModal extends StatefulWidget {
     super.key,
     this.task,
     this.userInitials = 'JS',
+    this.embeddedPanel = false,
     this.onTaskCreated,
     this.onTaskUpdated,
     this.onTaskDeleted,
@@ -202,8 +204,8 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
   }
 
   void _close([TaskItemModel? result]) {
-    if (widget.onClose != null && result == null) {
-      widget.onClose!();
+    if (widget.embeddedPanel || (widget.onClose != null && result == null)) {
+      widget.onClose?.call();
     } else {
       Navigator.of(context).pop(result);
     }
@@ -316,7 +318,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
       TaskRepository().updateTask(updated);
       widget.onTaskUpdated?.call(updated);
       PopUpPemberitahuan.taskUpdated(context, taskName: title);
-      Navigator.of(context).pop(updated);
+      _close(updated);
       return;
     }
 
@@ -352,7 +354,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
     widget.onTaskCreated?.call(newTask);
     if (mounted) {
       PopUpPemberitahuan.taskCreated(context, taskName: title);
-      Navigator.of(context).pop(newTask);
+      _close(newTask);
     }
   }
 
@@ -373,6 +375,9 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
     }
   }
 
+  Color get _controlSurfaceColor =>
+      widget.embeddedPanel ? AppColors.bgCard : AppColors.bgPrimary;
+
   @override
   Widget build(BuildContext context) {
     final disableMotion = MediaQuery.disableAnimationsOf(context);
@@ -380,7 +385,83 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
         ? Duration.zero
         : const Duration(milliseconds: 220);
 
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
+    final size = MediaQuery.sizeOf(context);
+    final maxHeight = size.height * 0.9;
+
+    final formShellColumn = Column(
+      mainAxisSize: widget.embeddedPanel ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            widget.embeddedPanel ? 20 : 24,
+            24,
+            widget.embeddedPanel ? 16 : 0,
+          ),
+          child: _buildHeaderRow(context),
+        ),
+        if (widget.embeddedPanel)
+          const Divider(height: 1, thickness: 1, color: AppColors.borderSubtle),
+        Flexible(
+          fit: widget.embeddedPanel ? FlexFit.tight : FlexFit.loose,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildCategorySelector(context, duration),
+                  SizedBox(height: context.rSpacing(14)),
+                  _buildTaskTitleField(context),
+                  SizedBox(height: context.rSpacing(14)),
+                  _buildCourseSection(context, duration),
+                  _buildDeadlineSection(context),
+                  SizedBox(height: context.rSpacing(14)),
+                  _buildTaskGradeWeightSection(context, duration),
+                  SizedBox(height: context.rSpacing(14)),
+                  TaskTagSelectorSection(
+                    selectedTags: _selectedTagLabels,
+                    darkSurface: !widget.embeddedPanel,
+                    onTagsChanged: (next) =>
+                        setState(() => _selectedTagLabels = next),
+                  ),
+                  SizedBox(height: context.rSpacing(14)),
+                  _buildNotesField(context),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (widget.embeddedPanel)
+          const Divider(height: 1, thickness: 1, color: AppColors.borderSubtle),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            widget.embeddedPanel ? 16 : 8,
+            24,
+            22,
+          ),
+          child: _buildFooterActions(context),
+        ),
+      ],
+    );
+
+    if (widget.embeddedPanel) {
+      return UnfocusOnTap(
+        child: Container(
+          decoration: const BoxDecoration(
+            color: AppColors.bgPrimary,
+            border: Border(
+              left: BorderSide(color: AppColors.borderSubtle, width: 1),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: formShellColumn,
+        ),
+      );
+    }
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -399,50 +480,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
               border: Border.all(color: AppColors.borderSubtle, width: 1),
             ),
             clipBehavior: Clip.antiAlias,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
-                  child: _buildHeaderRow(context),
-                ),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(28, 16, 28, 16),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildCategorySelector(context, duration),
-                          SizedBox(height: context.rSpacing(14)),
-                          _buildTaskTitleField(context),
-                          SizedBox(height: context.rSpacing(14)),
-                          _buildCourseSection(context, duration),
-                          _buildDeadlineSection(context),
-                          SizedBox(height: context.rSpacing(14)),
-                          _buildTaskGradeWeightSection(context, duration),
-                          SizedBox(height: context.rSpacing(14)),
-                          TaskTagSelectorSection(
-                            selectedTags: _selectedTagLabels,
-                            darkSurface: true,
-                            onTagsChanged: (next) =>
-                                setState(() => _selectedTagLabels = next),
-                          ),
-                          SizedBox(height: context.rSpacing(14)),
-                          _buildNotesField(context),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 8, 28, 22),
-                  child: _buildFooterActions(context),
-                ),
-              ],
-            ),
+            child: formShellColumn,
           ),
         ),
       ),
@@ -470,7 +508,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
         _buildTopBellAlertToggle(context),
         const SizedBox(width: 10),
         Material(
-          color: AppColors.bgPrimary,
+          color: _controlSurfaceColor,
           borderRadius: BorderRadius.circular(8),
           child: InkWell(
             key: const ValueKey('desktop_task_modal_close_btn'),
@@ -509,7 +547,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
               : const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: _isAlertEnabled ? AppColors.primary : AppColors.bgPrimary,
+            color: _isAlertEnabled ? AppColors.primary : _controlSurfaceColor,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: _isAlertEnabled
@@ -565,7 +603,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
           height: 42,
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: AppColors.bgPrimary,
+            color: _controlSurfaceColor,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: AppColors.borderSubtle, width: 1),
           ),
@@ -661,7 +699,8 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildLabel(context, 'Task Title'),
+            Flexible(child: _buildLabel(context, 'Task Title')),
+            const SizedBox(width: 8),
             Text(
               '${_titleController.text.length}/80',
               style: const TextStyle(
@@ -730,7 +769,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppColors.primary.withValues(alpha: 0.2)
-                          : AppColors.bgPrimary,
+                          : _controlSurfaceColor,
                       borderRadius: BorderRadius.circular(999),
                       border: Border.all(
                         color: isSelected
@@ -817,7 +856,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: AppColors.bgPrimary,
+      color: _controlSurfaceColor,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         key: tileKey,
@@ -872,7 +911,8 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildLabel(context, 'Task Grade Weight'),
+            Flexible(child: _buildLabel(context, 'Task Grade Weight')),
+            const SizedBox(width: 8),
             InkWell(
               key: const ValueKey('desktop_task_automatic_toggle'),
               onTap: () =>
@@ -904,7 +944,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
                       decoration: BoxDecoration(
                         color: _isAutomaticWeight
                             ? AppColors.primary
-                            : AppColors.bgPrimary,
+                            : _controlSurfaceColor,
                         borderRadius: BorderRadius.circular(999),
                         border: _isAutomaticWeight
                             ? null
@@ -1013,7 +1053,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
           curve: Curves.easeInOut,
           height: 38,
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : AppColors.bgPrimary,
+            color: isSelected ? AppColors.primary : _controlSurfaceColor,
             borderRadius: BorderRadius.circular(8),
             border: isSelected
                 ? null
@@ -1154,6 +1194,8 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
   Widget _buildLabel(BuildContext context, String text) {
     return Text(
       text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: TextStyle(
         color: Colors.white,
         fontSize: context.rFont(13, min: 12, max: 14),
@@ -1194,7 +1236,7 @@ class _DesktopPersonalTaskModalState extends State<DesktopPersonalTaskModal> {
       validator: validator,
       decoration: InputDecoration(
         filled: true,
-        fillColor: AppColors.bgPrimary,
+        fillColor: _controlSurfaceColor,
         hintText: hintText,
         hintStyle: const TextStyle(
           color: AppColors.textMuted,

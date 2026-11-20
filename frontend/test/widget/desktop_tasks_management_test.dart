@@ -362,11 +362,33 @@ void main() {
         await tester.pumpWidget(buildHarness(const Size(1440, 980)));
         await tester.pumpAndSettle();
 
+        final tasksViewFinder =
+            find.byKey(const ValueKey('desktop_tasks_management_view'));
+        final beforeTasksRect = tester.getRect(tasksViewFinder);
+
         await tester.tap(find.text('+ Add New Task'));
         await tester.pumpAndSettle();
 
         final modalFinder = find.byType(DesktopPersonalTaskModal);
         expect(modalFinder, findsOneWidget);
+
+        // Tasks page narrows simultaneously while Add Task slides in on the right
+        final drawerFinder =
+            find.byKey(const ValueKey('desktop_task_slide_drawer'));
+        expect(drawerFinder, findsOneWidget);
+        expect(find.byType(Dialog), findsNothing);
+        final afterTasksRect = tester.getRect(tasksViewFinder);
+        final drawerRect = tester.getRect(drawerFinder);
+        expect(afterTasksRect.width, lessThan(beforeTasksRect.width));
+        expect(drawerRect.right, 1440.0);
+        expect(drawerRect.left, closeTo(afterTasksRect.right, 0.5));
+
+        // Tasks page remains interactive while the Add Task drawer is open
+        await tester.tap(find.byKey(const ValueKey('desktop_filter_Today')));
+        await tester.pumpAndSettle();
+        expect(drawerFinder, findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('desktop_filter_All Tasks')));
+        await tester.pumpAndSettle();
 
         // Mobile Title Case wording (no ALL-CAPS FigCraft labels)
         Finder inModal(String text) =>
@@ -470,13 +492,28 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(modalFinder, findsNothing);
+        expect(
+          tester.getRect(tasksViewFinder).width,
+          equals(764.0),
+        );
+        tester.view.physicalSize = const Size(1440, 980);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(tasksViewFinder).width,
+          equals(beforeTasksRect.width),
+        );
         expect(find.text('Desktop Modal Personal Task'), findsOneWidget);
 
-        // Open existing personal task in Edit mode modal
+        // Open existing personal task in Edit mode modal (stays centered Dialog)
         await tester.ensureVisible(find.text('Desktop Modal Personal Task'));
         await tester.tap(find.text('Desktop Modal Personal Task'));
         await tester.pumpAndSettle();
         expect(modalFinder, findsOneWidget);
+        expect(find.byType(Dialog), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('desktop_task_slide_drawer')),
+          findsNothing,
+        );
         expect(inModal('Edit Task'), findsOneWidget);
         expect(inModal('Edit Task Details'), findsNothing);
         expect(inModal('Save Changes'), findsOneWidget);

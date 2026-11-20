@@ -73,6 +73,7 @@ class _HomePageState extends State<HomePage> {
   TeamModel? _selectedTeam;
   String _selectedTeamCode = '7X29';
   bool _isSidebarCollapsed = false;
+  bool _isDesktopAddTaskPanelOpen = false;
   String _desktopSearchQuery = '';
   late final List<DesktopTeamCardData> _desktopTeams =
       List<DesktopTeamCardData>.of(DesktopTeamDirectoryFixtures.defaultTeams);
@@ -224,6 +225,9 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       if (index != 2 || _selectedTeam != null) {
         _selectedTeam = null;
+      }
+      if (index != 1) {
+        _isDesktopAddTaskPanelOpen = false;
       }
       _currentTab = index;
     });
@@ -805,6 +809,11 @@ class _HomePageState extends State<HomePage> {
       : 'JS';
 
   Future<void> _openCreateTask() async {
+    if (context.isDesktop && _currentTab == 1) {
+      setState(() => _isDesktopAddTaskPanelOpen = !_isDesktopAddTaskPanelOpen);
+      return;
+    }
+
     final newTask = context.isDesktop
         ? await DesktopPersonalTaskModal.show(
             context,
@@ -1259,20 +1268,83 @@ class _HomePageState extends State<HomePage> {
     required int totalPendingCount,
   }) {
     if (_currentTab == 1) {
-      return DesktopTasksManagementView(
-        key: const ValueKey('desktop_tasks_management_view'),
-        userName: widget.userName,
-        searchQuery: _desktopSearchQuery,
-        onOpenScheduleTimeline: () => _onTabSelected(3),
-        onOpenSmartPriority: () => _onTabSelected(5),
-        onOpenTeamDashboard: (team) {
-          setState(() {
-            _selectedTeam = team;
-            _desktopSearchQuery = '';
-            _currentTab = 2;
-          });
+      final disableMotion = MediaQuery.disableAnimationsOf(context);
+
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final drawerWidth = constraints.maxWidth < 1000 ? 380.0 : 440.0;
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: DesktopTasksManagementView(
+                  key: const ValueKey('desktop_tasks_management_view'),
+                  userName: widget.userName,
+                  searchQuery: _desktopSearchQuery,
+                  onOpenScheduleTimeline: () => _onTabSelected(3),
+                  onOpenSmartPriority: () => _onTabSelected(5),
+                  onOpenTeamDashboard: (team) {
+                    setState(() {
+                      _selectedTeam = team;
+                      _desktopSearchQuery = '';
+                      _isDesktopAddTaskPanelOpen = false;
+                      _currentTab = 2;
+                    });
+                  },
+                  onResetSearch: () => setState(() => _desktopSearchQuery = ''),
+                ),
+              ),
+              AnimatedContainer(
+                duration: disableMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 240),
+                curve: Curves.easeInOutCubic,
+                width: _isDesktopAddTaskPanelOpen ? drawerWidth : 0.0,
+                clipBehavior: Clip.hardEdge,
+                decoration: const BoxDecoration(),
+                child: _isDesktopAddTaskPanelOpen
+                    ? OverflowBox(
+                        alignment: Alignment.topLeft,
+                        minWidth: drawerWidth,
+                        maxWidth: drawerWidth,
+                        child: SizedBox(
+                          width: drawerWidth,
+                          height: double.infinity,
+                          child: DesktopPersonalTaskModal(
+                            key: const ValueKey('desktop_task_slide_drawer'),
+                            userInitials: _userInitials,
+                            embeddedPanel: true,
+                            onClose: () {
+                              if (mounted) {
+                                setState(
+                                    () => _isDesktopAddTaskPanelOpen = false);
+                              }
+                            },
+                            onTaskCreated: (task) {
+                              if (!TaskRepository()
+                                  .tasks
+                                  .any((t) => t.id == task.id)) {
+                                TaskRepository().addTask(task);
+                              }
+                              if (mounted) {
+                                setState(() {
+                                  _tasks.insert(
+                                    0,
+                                    TaskItem.fromTaskItemModel(task),
+                                  );
+                                  _isDesktopAddTaskPanelOpen = false;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          );
         },
-        onResetSearch: () => setState(() => _desktopSearchQuery = ''),
       );
     }
 
