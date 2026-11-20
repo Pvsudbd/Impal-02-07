@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/responsive_context.dart';
+import '../../../core/widgets/desktop_slide_drawer_pane.dart';
 import '../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
@@ -21,6 +22,7 @@ import '../task/models/task_repository.dart';
 import 'create_task_team.dart';
 import 'pop_up_create_meeting.dart';
 import 'widgets/desktop/desktop_group_workspace_view.dart';
+import 'widgets/desktop/desktop_team_meeting_modal.dart';
 import 'widgets/desktop/desktop_team_task_modal.dart';
 import 'widgets/pop_up_create_milestone.dart';
 import 'widgets/team_dashboard_header.dart';
@@ -35,6 +37,9 @@ export 'models/team_task_model.dart';
 typedef DashboardKelompok = DashboardTeamPage;
 typedef DashboardTeamPageAlias = DashboardTeamPage;
 
+/// Which inline right slide drawer is currently active on Desktop Group Workspace.
+enum DesktopTeamDrawerMode { none, createTask, createMeeting }
+
 /// Standalone & embedded Team Dashboard Page
 class DashboardTeamPage extends StatefulWidget {
   final String userName;
@@ -44,6 +49,8 @@ class DashboardTeamPage extends StatefulWidget {
   final List<Color> memberColors;
   final bool isStandalone;
   final VoidCallback? onBack;
+  final DesktopTeamDrawerMode? desktopDrawerMode;
+  final ValueChanged<DesktopTeamDrawerMode>? onDesktopDrawerModeChanged;
 
   const DashboardTeamPage({
     super.key,
@@ -60,6 +67,8 @@ class DashboardTeamPage extends StatefulWidget {
     ],
     this.isStandalone = true,
     this.onBack,
+    this.desktopDrawerMode,
+    this.onDesktopDrawerModeChanged,
   });
 
   @override
@@ -73,6 +82,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   final ScrollController _milestonesScrollController = ScrollController();
   bool _assignedToMeOnly = false;
   bool _isSidebarCollapsed = false;
+  DesktopTeamDrawerMode _desktopDrawerMode = DesktopTeamDrawerMode.none;
   String _standaloneSearchQuery = '';
   String? _selectedMilestoneId;
   final GlobalKey _firstActiveTeamTaskKey = GlobalKey();
@@ -99,6 +109,14 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     _teamTaskRepository.init();
     _teamTaskRepository.addListener(_onRepositoryChanged);
     _triggerAutoScroll();
+  }
+
+  @override
+  void didUpdateWidget(covariant DashboardTeamPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.teamCode != widget.teamCode) {
+      _desktopDrawerMode = DesktopTeamDrawerMode.none;
+    }
   }
 
   void _onRepositoryChanged() {
@@ -161,7 +179,28 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     return false;
   }
 
+  DesktopTeamDrawerMode get _effectiveDrawerMode =>
+      widget.desktopDrawerMode ?? _desktopDrawerMode;
+
+  void _setDrawerMode(DesktopTeamDrawerMode next) {
+    if (widget.onDesktopDrawerModeChanged != null) {
+      widget.onDesktopDrawerModeChanged!(next);
+      return;
+    }
+    if (mounted) {
+      setState(() => _desktopDrawerMode = next);
+    }
+  }
+
   Future<void> _openCreateMeeting() async {
+    if (context.isDesktop) {
+      _setDrawerMode(
+        _effectiveDrawerMode == DesktopTeamDrawerMode.createMeeting
+            ? DesktopTeamDrawerMode.none
+            : DesktopTeamDrawerMode.createMeeting,
+      );
+      return;
+    }
     final result = await PopUpCreateMeeting.show(
       context,
       teamName: widget.teamName,
@@ -207,13 +246,10 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
 
   Future<void> _openCreateTaskPage() async {
     if (context.isDesktop) {
-      await DesktopTeamTaskModal.show(
-        context,
-        teamCode: widget.teamCode,
-        teamName: widget.teamName,
-        onTaskCreated: (task) {
-          _teamTaskRepository.addTask(widget.teamCode, task);
-        },
+      _setDrawerMode(
+        _effectiveDrawerMode == DesktopTeamDrawerMode.createTask
+            ? DesktopTeamDrawerMode.none
+            : DesktopTeamDrawerMode.createTask,
       );
       return;
     }
@@ -332,11 +368,41 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         isAssignedToCurrentUser: _isAssignedToCurrentUser,
       );
 
+      final drawerMode = _effectiveDrawerMode;
+      final Widget? activeDrawer = switch (drawerMode) {
+        DesktopTeamDrawerMode.createTask => DesktopTeamTaskModal(
+            key: const ValueKey('desktop_team_task_slide_drawer'),
+            teamCode: widget.teamCode,
+            teamName: widget.teamName,
+            embeddedPanel: true,
+            onClose: () => _setDrawerMode(DesktopTeamDrawerMode.none),
+            onTaskCreated: (task) {
+              _teamTaskRepository.addTask(widget.teamCode, task);
+              _setDrawerMode(DesktopTeamDrawerMode.none);
+            },
+          ),
+        DesktopTeamDrawerMode.createMeeting => DesktopTeamMeetingModal(
+            key: const ValueKey('desktop_team_meeting_slide_drawer'),
+            teamName: widget.teamName,
+            showTeamMeetingOption: false,
+            embeddedPanel: true,
+            onClose: () => _setDrawerMode(DesktopTeamDrawerMode.none),
+            onCreated: (_) => _setDrawerMode(DesktopTeamDrawerMode.none),
+          ),
+        DesktopTeamDrawerMode.none => null,
+      };
+
+      final workspaceWithDrawer = DesktopSlideDrawerPane(
+        isOpen: drawerMode != DesktopTeamDrawerMode.none,
+        content: desktopWorkspaceBody,
+        drawer: activeDrawer,
+      );
+
       if (!widget.isStandalone) {
-        return desktopWorkspaceBody;
+        return workspaceWithDrawer;
       }
 
-      return _buildStandaloneDesktopShell(context, desktopWorkspaceBody);
+      return _buildStandaloneDesktopShell(context, workspaceWithDrawer);
     }
 
     final dashboardScrollContent = CustomScrollView(
@@ -587,7 +653,9 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                     showNotificationBell: true,
                     horizontalPadding:
                         context.screenWidth < 1200 ? 24 : 32,
-                    customRightAction: const DesktopVoiceActiveBadge(),
+                    addButtonLabel: '+ Create Task',
+                    addButtonColor: AppColors.primaryAccent,
+                    addButtonKey: const ValueKey('dashboard_create_task_button'),
                     onSearchChanged: (value) {
                       setState(() => _standaloneSearchQuery = value);
                     },

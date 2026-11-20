@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
+import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_top_header.dart';
 import 'package:impal_smart_todolist/presentation/features/notifikasi/widgets/notification_bell_button.dart';
 import 'package:impal_smart_todolist/presentation/features/team/dashboard_team_page.dart';
 import 'package:impal_smart_todolist/presentation/features/team/models/team_task_repository.dart';
 import 'package:impal_smart_todolist/presentation/features/team/team_list_page.dart';
+import 'package:impal_smart_todolist/presentation/features/team/widgets/desktop/desktop_group_workspace_view.dart';
 import 'package:impal_smart_todolist/presentation/features/team/widgets/desktop/desktop_milestone_modal.dart';
 import 'package:impal_smart_todolist/presentation/features/team/widgets/pop_up_create_milestone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,6 +73,18 @@ void main() {
         expect(find.text('+ Create Team'), findsOneWidget);
         expect(find.byType(NotificationBellButton), findsOneWidget);
         expect(find.text('⌘K'), findsNothing);
+
+        // Bell sits before Join Team & + Create Team so the two team CTAs stay adjacent
+        final bellRect = tester.getRect(find.byType(NotificationBellButton));
+        final joinTeamRect = tester.getRect(
+          find.byKey(const ValueKey('desktop_header_secondary_btn')),
+        );
+        final createTeamRect = tester.getRect(
+          find.byKey(const ValueKey('desktop_add_task_btn')),
+        );
+        expect(bellRect.right, lessThan(joinTeamRect.left));
+        expect(joinTeamRect.right, lessThan(createTeamRect.left));
+        expect(createTeamRect.left - joinTeamRect.right, lessThan(20));
 
         // Sidebar Team Members badge
         expect(find.text('Team Members'), findsOneWidget);
@@ -274,7 +288,7 @@ void main() {
         await tester.pump(const Duration(seconds: 3));
         await tester.pumpAndSettle();
 
-        // 3. Top header + Create Team dialog
+        // 2. Top header + Create Team dialog
         await tester.tap(find.text('+ Create Team'));
         await tester.pumpAndSettle();
         expect(find.text('Create Team'), findsNWidgets(2));
@@ -291,12 +305,13 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('RPL Studio'), findsOneWidget);
 
-        // 4. Open card workspace -> DashboardTeamPage
+        // 3. Open card workspace -> DashboardTeamPage (header has + Create Task)
         await tester.tap(find.byKey(const ValueKey('desktop_team_open_dir_impal')));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
         await tester.pumpAndSettle();
         expect(find.byType(DashboardTeamPage), findsOneWidget);
+        expect(find.text('+ Create Task'), findsOneWidget);
       },
     );
 
@@ -397,7 +412,7 @@ void main() {
         );
         expect(find.byType(DashboardTeamPage), findsOneWidget);
 
-        // Top Header: Breadcrumb + Subtitle + Search + Notification Bell + Voice Active Badge
+        // Top Header: Breadcrumb + Subtitle + Search + Notification Bell + Create Task CTA (no Voice Active)
         expect(
           find.byKey(const ValueKey('desktop_header_breadcrumb_parent')),
           findsOneWidget,
@@ -409,7 +424,14 @@ void main() {
         );
         expect(find.text('Search tasks in workspace...'), findsOneWidget);
         expect(find.byType(NotificationBellButton), findsOneWidget);
-        expect(find.text('Voice Active (3 Online)'), findsOneWidget);
+        expect(find.text('Voice Active (3 Online)'), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(DesktopTopHeader),
+            matching: find.byKey(const ValueKey('dashboard_create_task_button')),
+          ),
+          findsOneWidget,
+        );
 
         // Left Column: Group Hero Workspace + Meeting Card + Team Tasks
         expect(
@@ -424,7 +446,7 @@ void main() {
         expect(find.text('+ Create Task'), findsOneWidget);
         expect(find.text('5 Team Members'), findsOneWidget);
 
-        // Hero top-row pills & buttons must hug their content width and stay on one row
+        // Hero top-row pills & button must hug their content width and stay on one row
         final sifRect = tester.getRect(
           find
               .ancestor(
@@ -436,15 +458,14 @@ void main() {
         final createMeetingRect = tester.getRect(
           find.byKey(const ValueKey('dashboard_create_meeting_button')),
         );
-        final createTaskRect = tester.getRect(
+        final createTaskHeaderRect = tester.getRect(
           find.byKey(const ValueKey('dashboard_create_task_button')),
         );
         expect(sifRect.width, lessThan(80));
         expect(createMeetingRect.width, lessThan(260));
-        expect(createTaskRect.width, lessThan(240));
-        expect(createMeetingRect.right, lessThan(createTaskRect.left));
+        expect(createTaskHeaderRect.width, lessThan(240));
         expect(
-          (sifRect.center.dy - createTaskRect.center.dy).abs(),
+          (sifRect.center.dy - createMeetingRect.center.dy).abs(),
           lessThan(10),
         );
 
@@ -601,7 +622,8 @@ void main() {
           find.byKey(const ValueKey('desktop_workspace_hero_card')),
           findsOneWidget,
         );
-        expect(find.text('Voice Active (3 Online)'), findsOneWidget);
+        expect(find.text('Voice Active (3 Online)'), findsNothing);
+        expect(find.text('+ Create Task'), findsOneWidget);
         expect(find.text('Sprint 1 Progress'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
@@ -621,9 +643,50 @@ void main() {
           const Size(1440, 980),
         );
 
-        // Open Create Team Task Modal
+        final workspaceScrollFinder =
+            find.byKey(const ValueKey('team_dashboard_scroll_view'));
+        expect(
+          find.byKey(const ValueKey('desktop_workspace_right_scroll')),
+          findsNothing,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(DesktopGroupWorkspaceView),
+            matching: find.byType(SingleChildScrollView),
+          ),
+          findsOneWidget,
+        );
+        final beforeWorkspaceWidth =
+            tester.getRect(workspaceScrollFinder).width;
+
+        // Open Create Team Task inline slide drawer
         await tester.tap(
           find.byKey(const ValueKey('dashboard_create_task_button')),
+        );
+        await tester.pumpAndSettle();
+
+        final drawerFinder =
+            find.byKey(const ValueKey('desktop_team_task_slide_drawer'));
+        expect(drawerFinder, findsOneWidget);
+        expect(find.byType(Dialog), findsNothing);
+        final drawerRect = tester.getRect(drawerFinder);
+        expect(drawerRect.right, 1440.0);
+        final afterWorkspaceWidth =
+            tester.getRect(workspaceScrollFinder).width;
+        expect(afterWorkspaceWidth, lessThan(beforeWorkspaceWidth));
+        expect(drawerRect.left, closeTo(tester.getRect(workspaceScrollFinder).right, 0.5));
+
+        // Group Workspace remains interactive while Create Team Task drawer is open
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('desktop_workspace_filter_high')),
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_workspace_filter_high')),
+        );
+        await tester.pumpAndSettle();
+        expect(drawerFinder, findsOneWidget);
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_workspace_filter_all')),
         );
         await tester.pumpAndSettle();
 
@@ -655,14 +718,16 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(seconds: 3));
         await tester.pumpAndSettle();
+        expect(drawerFinder, findsNothing);
         expect(find.text('FigCraft Team Modal QA'), findsOneWidget);
 
-        // Open Edit Mode from existing task card edit button
+        // Open Edit Mode from existing task card edit button (stays centered Dialog)
         await tester.tap(
           find.byKey(const ValueKey('desktop_team_task_edit_task_1')),
         );
         await tester.pumpAndSettle();
 
+        expect(find.byType(Dialog), findsOneWidget);
         expect(find.text('Edit Team Task'), findsOneWidget);
         expect(find.text('Delete Task'), findsOneWidget);
         expect(find.text('Save Changes'), findsOneWidget);
@@ -677,7 +742,7 @@ void main() {
     );
 
     testWidgets(
-      'opens DesktopTeamMeetingModal from + Create Meeting on desktop without Cancel',
+      'opens DesktopTeamMeetingModal from + Create Meeting as inline slide drawer with Bento workspace on desktop',
       (WidgetTester tester) async {
         await pumpAtSize(
           tester,
@@ -695,7 +760,32 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.byType(Dialog), findsOneWidget);
+        final meetingDrawerFinder =
+            find.byKey(const ValueKey('desktop_team_meeting_slide_drawer'));
+        expect(meetingDrawerFinder, findsOneWidget);
+        expect(find.byType(Dialog), findsNothing);
+        expect(tester.getRect(meetingDrawerFinder).right, 1440.0);
+
+        // Compacted workspace becomes a 2-column Bento grid (Team Members | Sprint Progress + Resources)
+        final membersRect = tester.getRect(
+          find.byKey(const ValueKey('desktop_workspace_members_card')),
+        );
+        final sprintRect = tester.getRect(
+          find.byKey(const ValueKey('desktop_workspace_sprint_card')),
+        );
+        expect((membersRect.top - sprintRect.top).abs(), lessThan(4));
+        expect(membersRect.right, lessThan(sprintRect.left));
+
+        // Workspace stays interactive while Create Meeting drawer is open
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('desktop_workspace_filter_high')),
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('desktop_workspace_filter_high')),
+        );
+        await tester.pumpAndSettle();
+        expect(meetingDrawerFinder, findsOneWidget);
+
         expect(find.text('Create Meeting'), findsWidgets);
         expect(find.text('Meeting Details'), findsNothing);
         expect(find.text('Meeting Name'), findsOneWidget);
@@ -720,7 +810,7 @@ void main() {
           find.byKey(const ValueKey('close_create_meeting_button')),
         );
         await tester.pumpAndSettle();
-        expect(find.byType(Dialog), findsNothing);
+        expect(meetingDrawerFinder, findsNothing);
         expect(tester.takeException(), isNull);
 
         // Mobile DashboardTeamPage also hides Team Meeting checkbox

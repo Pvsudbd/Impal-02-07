@@ -383,6 +383,15 @@ void main() {
         expect(drawerRect.right, 1440.0);
         expect(drawerRect.left, closeTo(afterTasksRect.right, 0.5));
 
+        // Bento layout verification: Calendar | Fuzzy Mamdani card side-by-side
+        final calRect = tester.getRect(
+          find.byKey(const ValueKey('desktop_cal_prev')),
+        );
+        final fuzzyRect = tester.getRect(
+          find.byKey(const ValueKey('desktop_fuzzy_mamdani_card')),
+        );
+        expect(calRect.right, lessThan(fuzzyRect.left));
+
         // Tasks page remains interactive while the Add Task drawer is open
         await tester.tap(find.byKey(const ValueKey('desktop_filter_Today')));
         await tester.pumpAndSettle();

@@ -31,8 +31,10 @@ class DesktopTeamMeetingModal extends StatefulWidget {
   final String? teamName;
   final bool showTeamMeetingOption;
   final ScheduleModel? existingSchedule;
+  final bool embeddedPanel;
   final ValueChanged<ScheduleModel>? onCreated;
   final ValueChanged<ScheduleModel>? onUpdated;
+  final VoidCallback? onClose;
 
   const DesktopTeamMeetingModal({
     super.key,
@@ -46,8 +48,10 @@ class DesktopTeamMeetingModal extends StatefulWidget {
     this.teamName,
     this.showTeamMeetingOption = true,
     this.existingSchedule,
+    this.embeddedPanel = false,
     this.onCreated,
     this.onUpdated,
+    this.onClose,
   });
 
   static Future<ScheduleModel?> show(
@@ -207,6 +211,10 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
 
   void _close([ScheduleModel? result]) {
     FocusManager.instance.primaryFocus?.unfocus();
+    if (widget.embeddedPanel) {
+      widget.onClose?.call();
+      return;
+    }
     Navigator.of(context).pop(result);
   }
 
@@ -399,12 +407,137 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
     }
   }
 
+  Color get _controlSurfaceColor =>
+      widget.embeddedPanel ? AppColors.bgCard : AppColors.bgPrimary;
+
   @override
   Widget build(BuildContext context) {
     final disableMotion = MediaQuery.disableAnimationsOf(context);
     final animDuration =
         disableMotion ? Duration.zero : const Duration(milliseconds: 200);
     final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
+
+    final formShellColumn = Column(
+      mainAxisSize: widget.embeddedPanel ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            widget.embeddedPanel ? 24 : 26,
+            20,
+            widget.embeddedPanel ? 24 : 26,
+            widget.embeddedPanel ? 16 : 0,
+          ),
+          child: _buildHeaderRow(context, animDuration),
+        ),
+        if (widget.embeddedPanel)
+          const Divider(height: 1, thickness: 1, color: AppColors.borderSubtle),
+        Flexible(
+          fit: widget.embeddedPanel ? FlexFit.tight : FlexFit.loose,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              widget.embeddedPanel ? 24 : 26,
+              widget.embeddedPanel ? 16 : 14,
+              widget.embeddedPanel ? 24 : 26,
+              22,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildFieldLabel(context, 'Meeting Name'),
+                const SizedBox(height: 8),
+                _buildTextField(
+                  key: const ValueKey('create_meeting_name_input'),
+                  controller: _nameController,
+                  hint: 'e.g. Weekly Standup Kelompok IMPAL',
+                  prefixIcon: Icons.groups_rounded,
+                  maxLength: 80,
+                ),
+                if (widget.showTeamMeetingOption)
+                  TeamMeetingAutocomplete(
+                    isTeamMeeting: _isTeamMeeting,
+                    teamController: _teamController,
+                    onToggleTeamMeeting: (val) {
+                      setState(() {
+                        _isTeamMeeting = val;
+                        if (!_isTeamMeeting) {
+                          _teamController.clear();
+                        }
+                      });
+                    },
+                    onTeamChanged: () => setState(() {}),
+                  ),
+                const SizedBox(height: 14),
+                _buildFieldLabel(context, 'Location'),
+                const SizedBox(height: 8),
+                _buildTextField(
+                  key: const ValueKey('create_meeting_location_input'),
+                  controller: _locationController,
+                  hint: 'e.g. Ruang Rapat / Google Meet / Discord',
+                  prefixIcon: Icons.location_on_rounded,
+                  maxLength: 80,
+                ),
+                const SizedBox(height: 14),
+                _buildDateAndTimeSection(context),
+                const SizedBox(height: 14),
+                _buildRepeatWeeklyCard(context),
+                if (_currentConflicts.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildConflictWarningBanner(_currentConflicts),
+                ],
+                const SizedBox(height: 14),
+                _buildFieldLabel(context, 'Meeting Link / URL (Optional)'),
+                const SizedBox(height: 8),
+                _buildTextField(
+                  key: const ValueKey('create_meeting_url_input'),
+                  controller: _meetingUrlController,
+                  hint: 'https://meet.google.com/... or Zoom link',
+                  prefixIcon: Icons.videocam_outlined,
+                  maxLength: 250,
+                ),
+                const SizedBox(height: 14),
+                _buildFieldLabel(context, 'Description (Optional)'),
+                const SizedBox(height: 8),
+                _buildTextField(
+                  key: const ValueKey('create_meeting_desc_input'),
+                  controller: _descController,
+                  hint: 'Write meeting agenda, topics, or notes here...',
+                  prefixIcon: Icons.notes_rounded,
+                  maxLines: 3,
+                  maxLength: 500,
+                ),
+                if (!widget.embeddedPanel) ...[
+                  const SizedBox(height: 20),
+                  _buildFooterActions(context),
+                ],
+              ],
+            ),
+          ),
+        ),
+        if (widget.embeddedPanel) ...[
+          const Divider(height: 1, thickness: 1, color: AppColors.borderSubtle),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 22),
+            child: _buildFooterActions(context),
+          ),
+        ],
+      ],
+    );
+
+    if (widget.embeddedPanel) {
+      return UnfocusOnTap(
+        child: Container(
+          decoration: const BoxDecoration(
+            color: AppColors.bgPrimary,
+            border: Border(
+              left: BorderSide(color: AppColors.borderSubtle, width: 1),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: formShellColumn,
+        ),
+      );
+    }
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -431,93 +564,7 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(23),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(26, 20, 26, 0),
-                    child: _buildHeaderRow(context, animDuration),
-                  ),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(26, 14, 26, 22),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildFieldLabel(context, 'Meeting Name'),
-                          const SizedBox(height: 8),
-                          _buildTextField(
-                            key: const ValueKey('create_meeting_name_input'),
-                            controller: _nameController,
-                            hint: 'e.g. Weekly Standup Kelompok IMPAL',
-                            prefixIcon: Icons.groups_rounded,
-                            maxLength: 80,
-                          ),
-                          if (widget.showTeamMeetingOption)
-                            TeamMeetingAutocomplete(
-                              isTeamMeeting: _isTeamMeeting,
-                              teamController: _teamController,
-                              onToggleTeamMeeting: (val) {
-                                setState(() {
-                                  _isTeamMeeting = val;
-                                  if (!_isTeamMeeting) {
-                                    _teamController.clear();
-                                  }
-                                });
-                              },
-                              onTeamChanged: () => setState(() {}),
-                            ),
-                          const SizedBox(height: 14),
-                          _buildFieldLabel(context, 'Location'),
-                          const SizedBox(height: 8),
-                          _buildTextField(
-                            key:
-                                const ValueKey('create_meeting_location_input'),
-                            controller: _locationController,
-                            hint: 'e.g. Ruang Rapat / Google Meet / Discord',
-                            prefixIcon: Icons.location_on_rounded,
-                            maxLength: 80,
-                          ),
-                          const SizedBox(height: 14),
-                          _buildDateAndTimeSection(context),
-                          const SizedBox(height: 14),
-                          _buildRepeatWeeklyCard(context),
-                          if (_currentConflicts.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            _buildConflictWarningBanner(_currentConflicts),
-                          ],
-                          const SizedBox(height: 14),
-                          _buildFieldLabel(
-                              context, 'Meeting Link / URL (Optional)'),
-                          const SizedBox(height: 8),
-                          _buildTextField(
-                            key: const ValueKey('create_meeting_url_input'),
-                            controller: _meetingUrlController,
-                            hint: 'https://meet.google.com/... or Zoom link',
-                            prefixIcon: Icons.videocam_outlined,
-                            maxLength: 250,
-                          ),
-                          const SizedBox(height: 14),
-                          _buildFieldLabel(context, 'Description (Optional)'),
-                          const SizedBox(height: 8),
-                          _buildTextField(
-                            key: const ValueKey('create_meeting_desc_input'),
-                            controller: _descController,
-                            hint:
-                                'Write meeting agenda, topics, or notes here...',
-                            prefixIcon: Icons.notes_rounded,
-                            maxLines: 3,
-                            maxLength: 500,
-                          ),
-                          const SizedBox(height: 20),
-                          _buildFooterActions(context),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: formShellColumn,
             ),
           ),
         ),
@@ -546,7 +593,7 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
         _buildAlertToggle(context, animDuration),
         const SizedBox(width: 10),
         Material(
-          color: AppColors.bgPrimary,
+          color: _controlSurfaceColor,
           borderRadius: BorderRadius.circular(8),
           child: InkWell(
             key: const ValueKey('close_create_meeting_button'),
@@ -602,7 +649,7 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
           duration: animDuration,
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
           decoration: BoxDecoration(
-            color: _isAlertEnabled ? AppColors.primary : AppColors.bgPrimary,
+            color: _isAlertEnabled ? AppColors.primary : _controlSurfaceColor,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color:
@@ -693,7 +740,7 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
             ? Icon(prefixIcon, color: AppColors.textMuted, size: 18)
             : null,
         filled: true,
-        fillColor: AppColors.bgPrimary,
+        fillColor: _controlSurfaceColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.borderSubtle),
@@ -739,7 +786,7 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
         _buildFieldLabel(context, 'Date & Time'),
         const SizedBox(height: 8),
         Material(
-          color: AppColors.bgPrimary,
+          color: _controlSurfaceColor,
           borderRadius: BorderRadius.circular(10),
           child: InkWell(
             key: const ValueKey('create_meeting_date_picker_button'),
@@ -832,7 +879,7 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: AppColors.bgPrimary,
+      color: _controlSurfaceColor,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         key: key,
@@ -875,7 +922,7 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: _controlSurfaceColor,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.borderSubtle),
       ),
@@ -922,7 +969,7 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: _controlSurfaceColor,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFFBBF24), width: 1),
       ),

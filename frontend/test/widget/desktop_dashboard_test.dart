@@ -199,6 +199,81 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+
+    testWidgets(
+      'opens + Add Task as non-blocking inline right slide drawer on Dashboard Overview',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1440, 980);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(buildHarness(const Size(1440, 980)));
+        await tester.pumpAndSettle();
+
+        final scrollFinder =
+            find.byKey(const ValueKey('desktop_homepage_scroll'));
+        final beforeWidth = tester.getRect(scrollFinder).width;
+
+        await tester.tap(find.text('+ Add Task'));
+        await tester.pumpAndSettle();
+
+        final drawerFinder =
+            find.byKey(const ValueKey('desktop_task_slide_drawer'));
+        expect(drawerFinder, findsOneWidget);
+        expect(find.byType(Dialog), findsNothing);
+
+        final afterRect = tester.getRect(scrollFinder);
+        final drawerRect = tester.getRect(drawerFinder);
+        expect(afterRect.width, lessThan(beforeWidth));
+        expect(drawerRect.right, 1440.0);
+        expect(drawerRect.left, closeTo(afterRect.right, 0.5));
+
+        // Bento layout verification: Today's Schedule | Dashboard Statistics side-by-side
+        final todayScheduleRect = tester.getRect(find.text("Today's Schedule"));
+        final statsHeaderRect =
+            tester.getRect(find.text('Dashboard Statistics'));
+        expect(
+          (todayScheduleRect.top - statsHeaderRect.top).abs(),
+          lessThan(6),
+        );
+        expect(todayScheduleRect.right, lessThan(statsHeaderRect.left));
+
+        // Dashboard remains interactive while Add Task drawer is open
+        final collegeFilter = find.descendant(
+          of: find.byType(DesktopOngoingTasksSection),
+          matching: find.text('College'),
+        );
+        await tester.ensureVisible(collegeFilter);
+        await tester.tap(collegeFilter);
+        await tester.pumpAndSettle();
+        expect(drawerFinder, findsOneWidget);
+
+        // Compact 1024x768 check with zero overflow
+        tester.view.physicalSize = const Size(1024, 768);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+
+        // Create task and verify drawer slides closed cleanly
+        await tester.enterText(
+          find.byKey(const ValueKey('desktop_task_title_input')),
+          'Dashboard Slide Drawer Task',
+        );
+        await tester.pump();
+        await tester.tap(find.byKey(const ValueKey('submit_task_button')));
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+
+        expect(drawerFinder, findsNothing);
+        tester.view.physicalSize = const Size(1440, 980);
+        await tester.pumpAndSettle();
+        expect(tester.getRect(scrollFinder).width, equals(beforeWidth));
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }
 

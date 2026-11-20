@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/responsive_context.dart';
+import '../../../core/widgets/desktop_slide_drawer_pane.dart';
 import '../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
@@ -35,7 +36,6 @@ import '../team/pop_up_create_team.dart';
 import '../team/pop_up_join_team.dart';
 import '../team/team_list_page.dart';
 import '../team/widgets/desktop/desktop_group_directory_view.dart';
-import '../team/widgets/desktop/desktop_group_workspace_view.dart';
 import 'models/dashboard_models.dart';
 import 'widgets/desktop/desktop_hero_focus_card.dart';
 import 'widgets/desktop/desktop_ongoing_tasks_section.dart';
@@ -74,6 +74,7 @@ class _HomePageState extends State<HomePage> {
   String _selectedTeamCode = '7X29';
   bool _isSidebarCollapsed = false;
   bool _isDesktopAddTaskPanelOpen = false;
+  DesktopTeamDrawerMode _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
   String _desktopSearchQuery = '';
   late final List<DesktopTeamCardData> _desktopTeams =
       List<DesktopTeamCardData>.of(DesktopTeamDirectoryFixtures.defaultTeams);
@@ -226,8 +227,9 @@ class _HomePageState extends State<HomePage> {
       if (index != 2 || _selectedTeam != null) {
         _selectedTeam = null;
       }
-      if (index != 1) {
+      if (index != _currentTab) {
         _isDesktopAddTaskPanelOpen = false;
+        _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
       }
       _currentTab = index;
     });
@@ -809,7 +811,7 @@ class _HomePageState extends State<HomePage> {
       : 'JS';
 
   Future<void> _openCreateTask() async {
-    if (context.isDesktop && _currentTab == 1) {
+    if (context.isDesktop && (_currentTab == 0 || _currentTab == 1)) {
       setState(() => _isDesktopAddTaskPanelOpen = !_isDesktopAddTaskPanelOpen);
       return;
     }
@@ -1101,10 +1103,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Widget _buildVoiceActiveBadge(BuildContext context) {
-    return const DesktopVoiceActiveBadge();
-  }
-
   Widget _buildDesktopShell(BuildContext context, bool canPop) {
     final activeTasks = _tasks.where((t) => !t.isCompleted).toList();
     final completedCount = _tasks.where((t) => t.isCompleted).length;
@@ -1198,15 +1196,21 @@ class _HomePageState extends State<HomePage> {
                                   ? '+ Add Course'
                                   : (isGroupDirectoryRoot
                                       ? '+ Create Team'
-                                      : (_currentTab == 3
-                                          ? '+ Add Schedule'
-                                          : (_currentTab == 1
-                                              ? '+ Add New Task'
-                                              : '+ Add Task')))),
+                                      : (isGroupWorkspace
+                                          ? '+ Create Task'
+                                          : (_currentTab == 3
+                                              ? '+ Add Schedule'
+                                              : (_currentTab == 1
+                                                  ? '+ Add New Task'
+                                                  : '+ Add Task'))))),
                           addButtonColor: (isGroupDirectoryRoot ||
+                                  isGroupWorkspace ||
                                   isProfileSettings)
                               ? AppColors.primaryAccent
                               : AppColors.primary,
+                          addButtonKey: isGroupWorkspace
+                              ? const ValueKey('dashboard_create_task_button')
+                              : null,
                           secondaryButtonLabel:
                               isGroupDirectoryRoot ? 'Join Team' : null,
                           secondaryButtonIcon: isGroupDirectoryRoot
@@ -1222,9 +1226,6 @@ class _HomePageState extends State<HomePage> {
                                   isProfileSettings)
                               ? (context.screenWidth < 1200 ? 24 : 32)
                               : 28,
-                          customRightAction: isGroupWorkspace
-                              ? _buildVoiceActiveBadge(context)
-                              : null,
                           onSearchChanged: (value) {
                             setState(() => _desktopSearchQuery = value);
                           },
@@ -1237,9 +1238,20 @@ class _HomePageState extends State<HomePage> {
                                   ? () => CourseEditorDialog.show(context)
                                   : (isGroupDirectoryRoot
                                       ? _openCreateTeamDialog
-                                      : (_currentTab == 3
-                                          ? _openCreateSchedule
-                                          : _openCreateTask))),
+                                      : (isGroupWorkspace
+                                          ? () => setState(
+                                                () => _desktopTeamDrawerMode =
+                                                    _desktopTeamDrawerMode ==
+                                                            DesktopTeamDrawerMode
+                                                                .createTask
+                                                        ? DesktopTeamDrawerMode
+                                                            .none
+                                                        : DesktopTeamDrawerMode
+                                                            .createTask,
+                                              )
+                                          : (_currentTab == 3
+                                              ? _openCreateSchedule
+                                              : _openCreateTask)))),
                         );
                       },
                     ),
@@ -1261,6 +1273,37 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _wrapWithPersonalTaskSlideDrawer(Widget content) {
+    return DesktopSlideDrawerPane(
+      isOpen: _isDesktopAddTaskPanelOpen,
+      content: content,
+      drawer: DesktopPersonalTaskModal(
+        key: const ValueKey('desktop_task_slide_drawer'),
+        userInitials: _userInitials,
+        embeddedPanel: true,
+        onClose: () {
+          if (mounted) {
+            setState(() => _isDesktopAddTaskPanelOpen = false);
+          }
+        },
+        onTaskCreated: (task) {
+          if (!TaskRepository().tasks.any((t) => t.id == task.id)) {
+            TaskRepository().addTask(task);
+          }
+          if (mounted) {
+            setState(() {
+              _tasks.insert(
+                0,
+                TaskItem.fromTaskItemModel(task),
+              );
+              _isDesktopAddTaskPanelOpen = false;
+            });
+          }
+        },
+      ),
+    );
+  }
+
   Widget _buildDesktopBody(
     BuildContext context, {
     required List<TaskItem> activeTasks,
@@ -1268,83 +1311,23 @@ class _HomePageState extends State<HomePage> {
     required int totalPendingCount,
   }) {
     if (_currentTab == 1) {
-      final disableMotion = MediaQuery.disableAnimationsOf(context);
-
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final drawerWidth = constraints.maxWidth < 1000 ? 380.0 : 440.0;
-
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: DesktopTasksManagementView(
-                  key: const ValueKey('desktop_tasks_management_view'),
-                  userName: widget.userName,
-                  searchQuery: _desktopSearchQuery,
-                  onOpenScheduleTimeline: () => _onTabSelected(3),
-                  onOpenSmartPriority: () => _onTabSelected(5),
-                  onOpenTeamDashboard: (team) {
-                    setState(() {
-                      _selectedTeam = team;
-                      _desktopSearchQuery = '';
-                      _isDesktopAddTaskPanelOpen = false;
-                      _currentTab = 2;
-                    });
-                  },
-                  onResetSearch: () => setState(() => _desktopSearchQuery = ''),
-                ),
-              ),
-              AnimatedContainer(
-                duration: disableMotion
-                    ? Duration.zero
-                    : const Duration(milliseconds: 240),
-                curve: Curves.easeInOutCubic,
-                width: _isDesktopAddTaskPanelOpen ? drawerWidth : 0.0,
-                clipBehavior: Clip.hardEdge,
-                decoration: const BoxDecoration(),
-                child: _isDesktopAddTaskPanelOpen
-                    ? OverflowBox(
-                        alignment: Alignment.topLeft,
-                        minWidth: drawerWidth,
-                        maxWidth: drawerWidth,
-                        child: SizedBox(
-                          width: drawerWidth,
-                          height: double.infinity,
-                          child: DesktopPersonalTaskModal(
-                            key: const ValueKey('desktop_task_slide_drawer'),
-                            userInitials: _userInitials,
-                            embeddedPanel: true,
-                            onClose: () {
-                              if (mounted) {
-                                setState(
-                                    () => _isDesktopAddTaskPanelOpen = false);
-                              }
-                            },
-                            onTaskCreated: (task) {
-                              if (!TaskRepository()
-                                  .tasks
-                                  .any((t) => t.id == task.id)) {
-                                TaskRepository().addTask(task);
-                              }
-                              if (mounted) {
-                                setState(() {
-                                  _tasks.insert(
-                                    0,
-                                    TaskItem.fromTaskItemModel(task),
-                                  );
-                                  _isDesktopAddTaskPanelOpen = false;
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          );
-        },
+      return _wrapWithPersonalTaskSlideDrawer(
+        DesktopTasksManagementView(
+          key: const ValueKey('desktop_tasks_management_view'),
+          userName: widget.userName,
+          searchQuery: _desktopSearchQuery,
+          onOpenScheduleTimeline: () => _onTabSelected(3),
+          onOpenSmartPriority: () => _onTabSelected(5),
+          onOpenTeamDashboard: (team) {
+            setState(() {
+              _selectedTeam = team;
+              _desktopSearchQuery = '';
+              _isDesktopAddTaskPanelOpen = false;
+              _currentTab = 2;
+            });
+          },
+          onResetSearch: () => setState(() => _desktopSearchQuery = ''),
+        ),
       );
     }
 
@@ -1387,6 +1370,8 @@ class _HomePageState extends State<HomePage> {
             setState(() {
               _selectedTeam = team;
               _desktopSearchQuery = '';
+              _isDesktopAddTaskPanelOpen = false;
+              _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
               _selectedTeamCode =
                   match.isNotEmpty ? match.first.inviteCode : '7X29';
             });
@@ -1402,9 +1387,17 @@ class _HomePageState extends State<HomePage> {
         searchQuery: _desktopSearchQuery,
         memberColors: _selectedTeam!.memberColors,
         isStandalone: false,
+        desktopDrawerMode: _desktopTeamDrawerMode,
+        onDesktopDrawerModeChanged: (mode) {
+          if (mounted) {
+            setState(() => _desktopTeamDrawerMode = mode);
+          }
+        },
         onBack: () => setState(() {
           _selectedTeam = null;
           _desktopSearchQuery = '';
+          _isDesktopAddTaskPanelOpen = false;
+          _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
         }),
       );
     }
@@ -1454,69 +1447,86 @@ class _HomePageState extends State<HomePage> {
     final personalCount = activeTasks.where((t) => !t.isCollegeTask).length;
     final teamCount = activeTasks.where((t) => t.isTeamTask).length;
 
-    return SingleChildScrollView(
-      key: const ValueKey('desktop_homepage_scroll'),
-      padding: EdgeInsets.fromLTRB(
-        context.rSpacing(28),
-        context.rSpacing(22),
-        context.rSpacing(28),
-        context.rSpacing(28),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                DesktopHeroFocusCard(
-                  featuredTask: featuredTask,
-                  onContinueTap: () => _openEditTask(featuredTask),
-                ),
-                const SizedBox(height: 24),
-                DesktopOngoingTasksSection(
-                  tasks: filteredTasks,
-                  totalPendingCount: totalPendingCount,
-                  collegeCount: collegeCount,
-                  personalCount: personalCount,
-                  teamCount: teamCount,
-                  selectedCategory: _selectedCategory,
-                  onCategorySelected: (cat) {
-                    setState(() => _selectedCategory = cat);
-                  },
-                  onSeeAllTap: () => _onTabSelected(1),
-                  onTaskTap: _openEditTask,
-                  onTaskToggleComplete: _handleTaskCompleted,
-                  onClearFilterTap: () {
-                    setState(() {
-                      _selectedCategory = 'All';
-                      _desktopSearchQuery = '';
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 24),
-          SizedBox(
-            width: context.screenWidth < 1200 ? 310 : 350,
-            child: DesktopStatsPanel(
-              fallbackSchedule: _schedules.first,
-              avgProgressPercent: avgProgress,
-              pendingCount: totalPendingCount,
-              completedCount: completedCount,
-              urgentDeadlineCount: urgentCount,
-              collegeTaskCount: collegeCount,
-              personalTaskCount: personalCount,
-              onScheduleSeeAllTap: () => _onTabSelected(3),
-              onEditSchedule: _openEditSchedule,
-              onDeleteSchedule: _deleteSchedule,
-              onToggleScheduleAlert: _toggleScheduleAlert,
-              onSmartPriorityTap: () => _onTabSelected(5),
-            ),
-          ),
-        ],
-      ),
+    final leftOverviewColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DesktopHeroFocusCard(
+          featuredTask: featuredTask,
+          onContinueTap: () => _openEditTask(featuredTask),
+        ),
+        const SizedBox(height: 24),
+        DesktopOngoingTasksSection(
+          tasks: filteredTasks,
+          totalPendingCount: totalPendingCount,
+          collegeCount: collegeCount,
+          personalCount: personalCount,
+          teamCount: teamCount,
+          selectedCategory: _selectedCategory,
+          onCategorySelected: (cat) {
+            setState(() => _selectedCategory = cat);
+          },
+          onSeeAllTap: () => _onTabSelected(1),
+          onTaskTap: _openEditTask,
+          onTaskToggleComplete: _handleTaskCompleted,
+          onClearFilterTap: () {
+            setState(() {
+              _selectedCategory = 'All';
+              _desktopSearchQuery = '';
+            });
+          },
+        ),
+      ],
     );
+
+    final statsPanel = DesktopStatsPanel(
+      fallbackSchedule: _schedules.first,
+      avgProgressPercent: avgProgress,
+      pendingCount: totalPendingCount,
+      completedCount: completedCount,
+      urgentDeadlineCount: urgentCount,
+      collegeTaskCount: collegeCount,
+      personalTaskCount: personalCount,
+      onScheduleSeeAllTap: () => _onTabSelected(3),
+      onEditSchedule: _openEditSchedule,
+      onDeleteSchedule: _deleteSchedule,
+      onToggleScheduleAlert: _toggleScheduleAlert,
+      onSmartPriorityTap: () => _onTabSelected(5),
+    );
+
+    final dashboardOverviewContent = LayoutBuilder(
+      builder: (context, constraints) {
+        final sideBySide = constraints.maxWidth >= 900.0;
+        final statsWidth = constraints.maxWidth >= 1120 ? 350.0 : 310.0;
+
+        return SingleChildScrollView(
+          key: const ValueKey('desktop_homepage_scroll'),
+          padding: EdgeInsets.fromLTRB(
+            context.rSpacing(28),
+            context.rSpacing(22),
+            context.rSpacing(28),
+            context.rSpacing(28),
+          ),
+          child: sideBySide
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: leftOverviewColumn),
+                    const SizedBox(width: 24),
+                    SizedBox(width: statsWidth, child: statsPanel),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    leftOverviewColumn,
+                    const SizedBox(height: 24),
+                    statsPanel,
+                  ],
+                ),
+        );
+      },
+    );
+
+    return _wrapWithPersonalTaskSlideDrawer(dashboardOverviewContent);
   }
 }

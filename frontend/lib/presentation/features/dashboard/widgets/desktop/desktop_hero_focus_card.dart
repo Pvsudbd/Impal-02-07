@@ -78,44 +78,41 @@ class DesktopHeroFocusCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Middle headline + CTA row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      featuredTask.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: context.rFont(20, min: 18, max: 22),
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.3,
-                      ),
+          // Middle headline + CTA row (stacks cleanly on ultra-narrow split panes)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final headline = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    featuredTask.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: context.rFont(20, min: 18, max: 22),
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitleText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: context.rFont(13, min: 12, max: 14),
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w500,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitleText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: context.rFont(13, min: 12, max: 14),
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Material(
+                  ),
+                ],
+              );
+
+              final continueBtn = Material(
                 color: AppColors.primary,
                 borderRadius: BorderRadius.circular(10),
                 child: InkWell(
@@ -138,8 +135,28 @@ class DesktopHeroFocusCard extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-            ],
+              );
+
+              if (constraints.maxWidth < 360) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    headline,
+                    const SizedBox(height: 12),
+                    continueBtn,
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(child: headline),
+                  const SizedBox(width: 16),
+                  continueBtn,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 16),
 

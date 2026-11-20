@@ -114,7 +114,7 @@ class DesktopGroupWorkspaceView extends StatefulWidget {
   final ValueChanged<TeamMilestoneModel> onDeleteMilestone;
   final ValueChanged<bool> onAssignedToMeChanged;
   final VoidCallback onCreateMeeting;
-  final VoidCallback onCreateTask;
+  final VoidCallback? onCreateTask;
   final ValueChanged<TeamTaskModel> onEditTask;
   final ValueChanged<TeamTaskModel> onToggleTaskCompletion;
   final ValueChanged<ScheduleModel> onEditSchedule;
@@ -142,7 +142,7 @@ class DesktopGroupWorkspaceView extends StatefulWidget {
     required this.onDeleteMilestone,
     required this.onAssignedToMeChanged,
     required this.onCreateMeeting,
-    required this.onCreateTask,
+    this.onCreateTask,
     required this.onEditTask,
     required this.onToggleTaskCompletion,
     required this.onEditSchedule,
@@ -245,75 +245,83 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
 
   @override
   Widget build(BuildContext context) {
-    final rightPanelWidth = context.screenWidth < 1200 ? 310.0 : 340.0;
-    final horizontalPad = context.screenWidth < 1200 ? 24.0 : 32.0;
+    final mainColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildHeroWorkspaceCard(context),
+        const SizedBox(height: 16),
+        ValueListenableBuilder<List<ScheduleModel>>(
+          valueListenable: ScheduleRepository().schedulesNotifier,
+          builder: (context, allSchedules, _) {
+            return DesktopTeamScheduleBanner(
+              containerKey: const ValueKey(
+                'desktop_workspace_meeting_card',
+              ),
+              joinButtonKey: const ValueKey(
+                'desktop_workspace_join_meeting_btn',
+              ),
+              meetings: _teamMeetings(allSchedules),
+              showCreateMeetingButton: true,
+              onCreateMeetingTap: widget.onCreateMeeting,
+              onJoinMeetingTap: _handleJoinMeeting,
+              onEditMeetingTap: widget.onEditSchedule,
+              onDeleteMeetingTap: widget.onDeleteSchedule,
+              onToggleAlertTap: _handleToggleMeetingAlert,
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        _buildTasksSection(context),
+      ],
+    );
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPad,
-        20,
-        horizontalPad,
-        24,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              key: const ValueKey('team_dashboard_scroll_view'),
-              controller: widget.scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildHeroWorkspaceCard(context),
-                  const SizedBox(height: 16),
-                  ValueListenableBuilder<List<ScheduleModel>>(
-                    valueListenable: ScheduleRepository().schedulesNotifier,
-                    builder: (context, allSchedules, _) {
-                      return DesktopTeamScheduleBanner(
-                        containerKey: const ValueKey(
-                          'desktop_workspace_meeting_card',
-                        ),
-                        joinButtonKey: const ValueKey(
-                          'desktop_workspace_join_meeting_btn',
-                        ),
-                        meetings: _teamMeetings(allSchedules),
-                        showCreateMeetingButton: true,
-                        onCreateMeetingTap: widget.onCreateMeeting,
-                        onJoinMeetingTap: _handleJoinMeeting,
-                        onEditMeetingTap: widget.onEditSchedule,
-                        onDeleteMeetingTap: widget.onDeleteSchedule,
-                        onToggleAlertTap: _handleToggleMeetingAlert,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTasksSection(context),
-                ],
-              ),
-            ),
+    final sidePanelContent = DesktopTeamWorkspacePanel(
+      teamCode: widget.teamCode,
+      teamName: widget.teamName,
+      onManageMembersTap: widget.onMembersTap,
+      onAddMilestoneTap: widget.onAddMilestone,
+      onMilestoneTap: widget.milestones.isNotEmpty
+          ? () => widget.onMilestoneSelected(
+                widget.milestones.first.id,
+              )
+          : null,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final sideBySide = constraints.maxWidth >= 900.0;
+        final rightPanelWidth = constraints.maxWidth >= 1120 ? 340.0 : 300.0;
+        final horizontalPad = constraints.maxWidth >= 1120 ? 32.0 : 24.0;
+
+        return SingleChildScrollView(
+          key: const ValueKey('team_dashboard_scroll_view'),
+          controller: widget.scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            horizontalPad,
+            20,
+            horizontalPad,
+            24,
           ),
-          const SizedBox(width: 24),
-          SizedBox(
-            width: rightPanelWidth,
-            child: SingleChildScrollView(
-              key: const ValueKey('desktop_workspace_right_scroll'),
-              child: DesktopTeamWorkspacePanel(
-                teamCode: widget.teamCode,
-                teamName: widget.teamName,
-                onManageMembersTap: widget.onMembersTap,
-                onAddMilestoneTap: widget.onAddMilestone,
-                onMilestoneTap: widget.milestones.isNotEmpty
-                    ? () => widget.onMilestoneSelected(
-                          widget.milestones.first.id,
-                        )
-                    : null,
-              ),
-            ),
-          ),
-        ],
-      ),
+          child: sideBySide
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: mainColumn),
+                    const SizedBox(width: 24),
+                    SizedBox(width: rightPanelWidth, child: sidePanelContent),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    mainColumn,
+                    const SizedBox(height: 20),
+                    sidePanelContent,
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -449,33 +457,6 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
             ),
           );
 
-          final createTaskBtn = Material(
-            color: AppColors.primaryAccent,
-            borderRadius: BorderRadius.circular(8),
-            child: InkWell(
-              key: const ValueKey('dashboard_create_task_button'),
-              onTap: widget.onCreateTask,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: const Center(
-                  widthFactor: 1.0,
-                  heightFactor: 1.0,
-                  child: Text(
-                    '+ Create Task',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-
           final syncRubricBtn = ListenableBuilder(
             listenable: CourseRubricRepository(),
             builder: (context, _) {
@@ -547,22 +528,7 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
             },
           );
 
-          final actionButtons = isCompact
-              ? Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [createMeetingBtn, createTaskBtn],
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    createMeetingBtn,
-                    const SizedBox(width: 8),
-                    createTaskBtn,
-                  ],
-                );
+          final actionButtons = createMeetingBtn;
 
           final bottomLeftText = Text(
             'Sprint 1: Deliverable Wireframe UI, Architecture Diagram, & Test Plan',

@@ -16,6 +16,8 @@ class DesktopTopHeader extends StatefulWidget {
   final bool showShortcutHint;
   final String addButtonLabel;
   final Color addButtonColor;
+  final Key? addButtonKey;
+  final bool showAddButton;
   final String? secondaryButtonLabel;
   final IconData? secondaryButtonIcon;
   final VoidCallback? onSecondaryButtonTap;
@@ -40,6 +42,8 @@ class DesktopTopHeader extends StatefulWidget {
     this.showShortcutHint = true,
     this.addButtonLabel = '+ Add Task',
     this.addButtonColor = AppColors.primary,
+    this.addButtonKey,
+    this.showAddButton = true,
     this.secondaryButtonLabel,
     this.secondaryButtonIcon,
     this.onSecondaryButtonTap,
@@ -217,19 +221,20 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
             ),
             const SizedBox(width: 16),
             _buildSearchBox(context),
+            if (widget.showNotificationBell) ...[
+              const SizedBox(width: 12),
+              const NotificationBellButton(size: 40, iconSize: 19),
+            ],
             if (widget.secondaryButtonLabel != null &&
                 widget.onSecondaryButtonTap != null) ...[
               const SizedBox(width: 12),
               _buildSecondaryButton(context),
             ],
-            if (widget.showNotificationBell) ...[
+            if (widget.customRightAction != null || widget.showAddButton)
               const SizedBox(width: 12),
-              const NotificationBellButton(size: 40, iconSize: 19),
-            ],
-            const SizedBox(width: 12),
             if (widget.customRightAction != null)
               widget.customRightAction!
-            else
+            else if (widget.showAddButton)
               _buildAddTaskButton(context),
           ],
         ),
@@ -373,7 +378,7 @@ class _DesktopTopHeaderState extends State<DesktopTopHeader> {
       color: widget.addButtonColor,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
-        key: const ValueKey('desktop_add_task_btn'),
+        key: widget.addButtonKey ?? const ValueKey('desktop_add_task_btn'),
         onTap: widget.onAddTaskTap,
         borderRadius: BorderRadius.circular(10),
         child: ConstrainedBox(

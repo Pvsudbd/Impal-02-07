@@ -79,14 +79,10 @@ class _DesktopStatsPanelState extends State<DesktopStatsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final todaySchedule = _buildTodayScheduleSection(context);
+    final statsAndKpis = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. Today's Schedule header + multi-schedule switcher + live card
-        _buildTodayScheduleSection(context),
-        const SizedBox(height: 20),
-
-        // 2. Dashboard Statistics Header + AI Smart Priority shortcut
         Row(
           children: [
             Expanded(
@@ -153,12 +149,8 @@ class _DesktopStatsPanelState extends State<DesktopStatsPanel> {
           ],
         ),
         const SizedBox(height: 12),
-
-        // Live AI Smart Priority Banner (Mobile Parity)
         _buildLiveAiSmartPriorityBanner(),
         const SizedBox(height: 16),
-
-        // 3. KPI Row
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -175,18 +167,54 @@ class _DesktopStatsPanelState extends State<DesktopStatsPanel> {
             ),
           ],
         ),
-        const SizedBox(height: 18),
-
-        // 4. Task Load Distribution Donut Card
-        _TaskLoadDistributionCard(
-          collegeCount: widget.collegeTaskCount,
-          personalCount: widget.personalTaskCount,
-        ),
-        const SizedBox(height: 18),
-
-        // 5. Weekly Productivity Bar Chart Card
-        const _WeeklyProductivityCard(),
       ],
+    );
+    final loadCard = _TaskLoadDistributionCard(
+      collegeCount: widget.collegeTaskCount,
+      personalCount: widget.personalTaskCount,
+    );
+    const weeklyCard = _WeeklyProductivityCard();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 520.0) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: todaySchedule),
+                  const SizedBox(width: 20),
+                  Expanded(child: statsAndKpis),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: loadCard),
+                  const SizedBox(width: 20),
+                  const Expanded(child: weeklyCard),
+                ],
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            todaySchedule,
+            const SizedBox(height: 20),
+            statsAndKpis,
+            const SizedBox(height: 18),
+            loadCard,
+            const SizedBox(height: 18),
+            weeklyCard,
+          ],
+        );
+      },
     );
   }
 

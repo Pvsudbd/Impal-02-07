@@ -60,37 +60,64 @@ class DesktopTasksRightPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gap = context.rSpacing(20);
+    final calendarCard = RepaintBoundary(
+      child: _MonthlyCalendarCard(
+        focusedMonth: focusedMonth,
+        selectedDate: selectedDate,
+        deadlineDates: deadlineDates,
+        todayDeadlineCount: todayDeadlineCount,
+        onPreviousMonth: onPreviousMonth,
+        onNextMonth: onNextMonth,
+        onDateSelected: onDateSelected,
+      ),
+    );
+    final fuzzyCard = RepaintBoundary(
+      child: _FuzzyMamdaniWeightCard(
+        topPriority: topPriority,
+        isEngineActive: isFuzzyEngineActive,
+        onTap: onFuzzyCardTap,
+      ),
+    );
+    final collaboratorsCard = RepaintBoundary(
+      child: _ActiveCollaboratorsCard(
+        collaborators: collaborators,
+        onCollaboratorTap: onCollaboratorTap,
+      ),
+    );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        RepaintBoundary(
-          child: _MonthlyCalendarCard(
-            focusedMonth: focusedMonth,
-            selectedDate: selectedDate,
-            deadlineDates: deadlineDates,
-            todayDeadlineCount: todayDeadlineCount,
-            onPreviousMonth: onPreviousMonth,
-            onNextMonth: onNextMonth,
-            onDateSelected: onDateSelected,
-          ),
-        ),
-        SizedBox(height: gap),
-        RepaintBoundary(
-          child: _FuzzyMamdaniWeightCard(
-            topPriority: topPriority,
-            isEngineActive: isFuzzyEngineActive,
-            onTap: onFuzzyCardTap,
-          ),
-        ),
-        SizedBox(height: gap),
-        RepaintBoundary(
-          child: _ActiveCollaboratorsCard(
-            collaborators: collaborators,
-            onCollaboratorTap: onCollaboratorTap,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 520.0) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: calendarCard),
+              SizedBox(width: gap),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    fuzzyCard,
+                    SizedBox(height: gap),
+                    collaboratorsCard,
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            calendarCard,
+            SizedBox(height: gap),
+            fuzzyCard,
+            SizedBox(height: gap),
+            collaboratorsCard,
+          ],
+        );
+      },
     );
   }
 }

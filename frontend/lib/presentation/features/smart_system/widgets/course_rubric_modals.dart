@@ -1327,6 +1327,7 @@ class TeamRubricLinkSection extends StatelessWidget {
   final String teamName;
   final String? overrideComponentId;
   final ValueChanged<RubricComponentModel?> onOverrideChanged;
+  final bool darkSurface;
 
   const TeamRubricLinkSection({
     super.key,
@@ -1334,6 +1335,7 @@ class TeamRubricLinkSection extends StatelessWidget {
     required this.teamName,
     required this.overrideComponentId,
     required this.onOverrideChanged,
+    this.darkSurface = true,
   });
 
   @override
@@ -1352,7 +1354,7 @@ class TeamRubricLinkSection extends StatelessWidget {
             width: double.infinity,
             padding: EdgeInsets.all(context.rSpacing(12)),
             decoration: BoxDecoration(
-              color: AppColors.bgPrimary,
+              color: darkSurface ? AppColors.bgPrimary : AppColors.bgCard,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: AppColors.borderSubtle),
             ),

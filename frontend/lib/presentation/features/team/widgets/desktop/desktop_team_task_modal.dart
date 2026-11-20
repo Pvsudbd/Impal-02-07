@@ -28,18 +28,22 @@ class DesktopTeamTaskModal extends StatefulWidget {
   final TeamTaskModel? existingTask;
   final String teamCode;
   final String teamName;
+  final bool embeddedPanel;
   final void Function(TeamTaskModel task)? onTaskCreated;
   final void Function(TeamTaskModel updatedTask)? onTaskUpdated;
   final VoidCallback? onTaskDeleted;
+  final VoidCallback? onClose;
 
   const DesktopTeamTaskModal({
     super.key,
     this.existingTask,
     this.teamCode = '7X29',
     this.teamName = 'IMPAL Team',
+    this.embeddedPanel = false,
     this.onTaskCreated,
     this.onTaskUpdated,
     this.onTaskDeleted,
+    this.onClose,
   });
 
   static Future<TeamTaskModel?> show(
@@ -176,6 +180,10 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
 
   void _close([TeamTaskModel? result]) {
     FocusManager.instance.primaryFocus?.unfocus();
+    if (widget.embeddedPanel) {
+      widget.onClose?.call();
+      return;
+    }
     Navigator.of(context).pop(result);
   }
 
@@ -338,12 +346,117 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
     }
   }
 
+  Color get _controlSurfaceColor =>
+      widget.embeddedPanel ? AppColors.bgCard : AppColors.bgPrimary;
+
   @override
   Widget build(BuildContext context) {
     final disableMotion = MediaQuery.disableAnimationsOf(context);
     final animDuration =
         disableMotion ? Duration.zero : const Duration(milliseconds: 200);
     final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
+
+    final formShellColumn = Column(
+      mainAxisSize: widget.embeddedPanel ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            widget.embeddedPanel ? 20 : 24,
+            24,
+            widget.embeddedPanel ? 16 : 0,
+          ),
+          child: _buildHeaderRow(context, animDuration),
+        ),
+        if (widget.embeddedPanel)
+          const Divider(height: 1, thickness: 1, color: AppColors.borderSubtle),
+        Flexible(
+          fit: widget.embeddedPanel ? FlexFit.tight : FlexFit.loose,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildFieldLabel(context, 'Task Name'),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    key: const ValueKey('desktop_team_task_name_input'),
+                    controller: _taskNameController,
+                    hint: 'e.g. Design System Implementation',
+                    maxLength: 80,
+                  ),
+                  const SizedBox(height: 14),
+                  _buildFieldLabel(context, 'Description'),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    key: const ValueKey('desktop_team_task_desc_input'),
+                    controller: _descriptionController,
+                    hint: 'Write a description here',
+                    maxLength: 500,
+                    minLines: 3,
+                    maxLines: 4,
+                  ),
+                  const SizedBox(height: 14),
+                  _buildDeadlineSection(context),
+                  const SizedBox(height: 14),
+                  _buildAssigneeSection(context),
+                  const SizedBox(height: 14),
+                  TeamRubricLinkSection(
+                    teamCode: widget.teamCode,
+                    teamName: widget.teamName,
+                    overrideComponentId: _overrideRubricComponent?.id,
+                    darkSurface: !widget.embeddedPanel,
+                    onOverrideChanged: (comp) => setState(
+                      () => _overrideRubricComponent = comp,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildFieldLabel(context, 'Milestone (Optional)'),
+                  const SizedBox(height: 8),
+                  _buildMilestoneDropdown(context),
+                  const SizedBox(height: 14),
+                  TaskTagSelectorSection(
+                    selectedTags: _selectedTagLabels,
+                    darkSurface: !widget.embeddedPanel,
+                    onTagsChanged: (next) =>
+                        setState(() => _selectedTagLabels = next),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (widget.embeddedPanel)
+          const Divider(height: 1, thickness: 1, color: AppColors.borderSubtle),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            widget.embeddedPanel ? 16 : 8,
+            24,
+            22,
+          ),
+          child: _buildFooterActions(context),
+        ),
+      ],
+    );
+
+    if (widget.embeddedPanel) {
+      return UnfocusOnTap(
+        child: Container(
+          decoration: const BoxDecoration(
+            color: AppColors.bgPrimary,
+            border: Border(
+              left: BorderSide(color: AppColors.borderSubtle, width: 1),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: formShellColumn,
+        ),
+      );
+    }
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -370,78 +483,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(23),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
-                    child: _buildHeaderRow(context, animDuration),
-                  ),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(28, 16, 28, 24),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildFieldLabel(context, 'Task Name'),
-                            const SizedBox(height: 8),
-                            _buildTextField(
-                              key: const ValueKey(
-                                  'desktop_team_task_name_input'),
-                              controller: _taskNameController,
-                              hint: 'e.g. Design System Implementation',
-                              maxLength: 80,
-                            ),
-                            const SizedBox(height: 14),
-                            _buildFieldLabel(context, 'Description'),
-                            const SizedBox(height: 8),
-                            _buildTextField(
-                              key: const ValueKey(
-                                  'desktop_team_task_desc_input'),
-                              controller: _descriptionController,
-                              hint: 'Write a description here',
-                              maxLength: 500,
-                              minLines: 3,
-                              maxLines: 4,
-                            ),
-                            const SizedBox(height: 14),
-                            _buildDeadlineSection(context),
-                            const SizedBox(height: 14),
-                            _buildAssigneeSection(context),
-                            const SizedBox(height: 14),
-                            TeamRubricLinkSection(
-                              teamCode: widget.teamCode,
-                              teamName: widget.teamName,
-                              overrideComponentId: _overrideRubricComponent?.id,
-                              onOverrideChanged: (comp) => setState(
-                                () => _overrideRubricComponent = comp,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            _buildFieldLabel(context, 'Milestone (Optional)'),
-                            const SizedBox(height: 8),
-                            _buildMilestoneDropdown(context),
-                            const SizedBox(height: 14),
-                            TaskTagSelectorSection(
-                              selectedTags: _selectedTagLabels,
-                              darkSurface: true,
-                              onTagsChanged: (next) =>
-                                  setState(() => _selectedTagLabels = next),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(28, 8, 28, 22),
-                    child: _buildFooterActions(context),
-                  ),
-                ],
-              ),
+              child: formShellColumn,
             ),
           ),
         ),
@@ -470,7 +512,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
         _buildTopBellAlertToggle(context, animDuration),
         const SizedBox(width: 10),
         Material(
-          color: AppColors.bgPrimary,
+          color: _controlSurfaceColor,
           borderRadius: BorderRadius.circular(8),
           child: InkWell(
             key: const ValueKey('desktop_team_task_modal_close_btn'),
@@ -525,7 +567,8 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
           duration: animDuration,
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
           decoration: BoxDecoration(
-            color: _isAlertEnabled ? AppColors.primary : AppColors.bgPrimary,
+            color:
+                _isAlertEnabled ? AppColors.primary : _controlSurfaceColor,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color:
@@ -608,7 +651,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
           fontFamily: 'Inter',
         ),
         filled: true,
-        fillColor: AppColors.bgPrimary,
+        fillColor: _controlSurfaceColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.borderSubtle),
@@ -672,7 +715,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: AppColors.bgPrimary,
+      color: _controlSurfaceColor,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         key: key,
@@ -752,7 +795,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
           width: double.infinity,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: AppColors.bgPrimary,
+            color: _controlSurfaceColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.borderSubtle, width: 1),
           ),
@@ -845,8 +888,11 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
                 width: 20,
                 height: 20,
                 decoration: BoxDecoration(
-                  color:
-                      isSelected ? AppColors.primary : const Color(0xFF323846),
+                  color: isSelected
+                      ? AppColors.primary
+                      : (widget.embeddedPanel
+                          ? AppColors.bgPrimary
+                          : AppColors.bgCard),
                   borderRadius: BorderRadius.circular(5),
                   border: Border.all(
                     color: isSelected
@@ -877,7 +923,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: _controlSurfaceColor,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.borderSubtle, width: 1),
       ),
@@ -886,7 +932,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
           key: const ValueKey('desktop_team_task_milestone_dropdown'),
           value: _selectedMilestoneId,
           isExpanded: true,
-          dropdownColor: AppColors.bgPrimary,
+          dropdownColor: _controlSurfaceColor,
           icon: const Icon(
             Icons.keyboard_arrow_down_rounded,
             color: AppColors.textMuted,

@@ -134,19 +134,47 @@ class DesktopTeamWorkspacePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final repo = TeamTaskRepository();
+    final gap = context.rSpacing(20);
+    final membersCard = _buildMembersCard(context);
+    final sprintCard = ListenableBuilder(
+      listenable: repo,
+      builder: (context, _) => _buildSprintCard(context, repo),
+    );
+    final resourcesCard = _buildResourcesCard(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildMembersCard(context),
-        SizedBox(height: context.rSpacing(20)),
-        ListenableBuilder(
-          listenable: repo,
-          builder: (context, _) => _buildSprintCard(context, repo),
-        ),
-        SizedBox(height: context.rSpacing(20)),
-        _buildResourcesCard(context),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 520.0) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: membersCard),
+              SizedBox(width: gap),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    sprintCard,
+                    SizedBox(height: gap),
+                    resourcesCard,
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            membersCard,
+            SizedBox(height: gap),
+            sprintCard,
+            SizedBox(height: gap),
+            resourcesCard,
+          ],
+        );
+      },
     );
   }
 
