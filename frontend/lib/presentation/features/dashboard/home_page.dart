@@ -74,6 +74,7 @@ class _HomePageState extends State<HomePage> {
   String _selectedTeamCode = '7X29';
   bool _isSidebarCollapsed = false;
   bool _isDesktopAddTaskPanelOpen = false;
+  bool _isDesktopSchedulePanelOpen = false;
   DesktopTeamDrawerMode _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
   String _desktopSearchQuery = '';
   late final List<DesktopTeamCardData> _desktopTeams =
@@ -229,6 +230,7 @@ class _HomePageState extends State<HomePage> {
       }
       if (index != _currentTab) {
         _isDesktopAddTaskPanelOpen = false;
+        _isDesktopSchedulePanelOpen = false;
         _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
       }
       _currentTab = index;
@@ -847,6 +849,12 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _openCreateSchedule() async {
     if (context.isDesktop) {
+      if (_currentTab == 3) {
+        setState(
+          () => _isDesktopSchedulePanelOpen = !_isDesktopSchedulePanelOpen,
+        );
+        return;
+      }
       await DesktopScheduleModal.show(context);
       return;
     }
@@ -1348,10 +1356,22 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (_currentTab == 3) {
-      return DesktopScheduleMatrixView(
-        key: const ValueKey('desktop_schedule_matrix_view'),
-        searchQuery: _desktopSearchQuery,
-        onResetSearch: () => setState(() => _desktopSearchQuery = ''),
+      return DesktopSlideDrawerPane(
+        isOpen: _isDesktopSchedulePanelOpen,
+        content: DesktopScheduleMatrixView(
+          key: const ValueKey('desktop_schedule_matrix_view'),
+          searchQuery: _desktopSearchQuery,
+          onResetSearch: () => setState(() => _desktopSearchQuery = ''),
+        ),
+        drawer: DesktopScheduleModal(
+          key: const ValueKey('desktop_schedule_slide_drawer'),
+          embeddedPanel: true,
+          onClose: () {
+            if (mounted) {
+              setState(() => _isDesktopSchedulePanelOpen = false);
+            }
+          },
+        ),
       );
     }
 

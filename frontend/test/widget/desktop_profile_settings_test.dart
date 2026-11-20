@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:impal_smart_todolist/core/widgets/desktop_slide_drawer_pane.dart';
 import 'package:impal_smart_todolist/presentation/features/auth/forgot_password_page.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_sidebar.dart';
@@ -214,12 +215,24 @@ void main() {
       (tester) async {
         await pumpDesktopHomeProfile(tester);
 
-        // Open Task Deadlines Desktop modal, add custom timing, choose Sound Only & save
+        // Open Task Deadlines Desktop inline slide drawer, add custom timing, choose Sound Only & save
+        final slidePaneFinder = find.byType(DesktopSlideDrawerPane);
+        expect(slidePaneFinder, findsOneWidget);
+        expect(
+          tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen,
+          isFalse,
+        );
+
         await tester.ensureVisible(
           find.byKey(const Key('desktop_alert_row_task')),
         );
         await tester.tap(find.byKey(const Key('desktop_alert_row_task')));
         await tester.pumpAndSettle();
+        expect(find.byType(Dialog), findsNothing);
+        expect(
+          tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen,
+          isTrue,
+        );
         expect(find.byType(DesktopAlertSettingsModal), findsOneWidget);
         expect(find.text('Task Deadlines Settings'), findsOneWidget);
         await tester.tap(
@@ -238,7 +251,10 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.byKey(const ValueKey('desktop_alert_save_btn')));
         await tester.pumpAndSettle();
-        expect(find.byType(DesktopAlertSettingsModal), findsNothing);
+        expect(
+          tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen,
+          isFalse,
+        );
         expect(
           UserProfileRepository().profile.taskDeadlineAlerts.soundMode,
           AlertSoundVibrationMode.soundOnly,
@@ -248,21 +264,46 @@ void main() {
           contains('2 Hours'),
         );
 
-        // Open Schedule Alerts Desktop modal & switch Lecture -> External tab
+        // Open Schedule Alerts inline drawer & switch directly to Team Alerts while open
         await tester.ensureVisible(
           find.byKey(const Key('desktop_alert_row_schedule')),
         );
         await tester.tap(find.byKey(const Key('desktop_alert_row_schedule')));
         await tester.pumpAndSettle();
-        expect(find.byType(DesktopAlertSettingsModal), findsOneWidget);
+        expect(find.byType(Dialog), findsNothing);
+        expect(
+          tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen,
+          isTrue,
+        );
         expect(find.text('Schedule Alerts Settings'), findsOneWidget);
         expect(find.text('Lecture Schedule'), findsOneWidget);
         expect(find.text('External Schedule'), findsOneWidget);
         await tester.tap(find.byKey(const ValueKey('desktop_alert_subtab_1')));
         await tester.pumpAndSettle();
         expect(find.text('Enable External Schedule Alerts'), findsOneWidget);
+
+        // Non-blocking left pane: tap Team Alerts directly while drawer is open
+        await tester.ensureVisible(
+          find.byKey(const Key('desktop_alert_row_team')),
+        );
+        await tester.tap(find.byKey(const Key('desktop_alert_row_team')));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen,
+          isTrue,
+        );
+        expect(find.text('Team Alerts Settings'), findsOneWidget);
+        expect(find.text('Team Tasks'), findsOneWidget);
+        expect(find.text('Team Meetings'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('desktop_alert_subtab_1')));
+        await tester.pumpAndSettle();
+        expect(find.text('Enable Team Meetings Alerts'), findsOneWidget);
         await tester.tap(find.byKey(const ValueKey('desktop_alert_close_btn')));
         await tester.pumpAndSettle();
+        expect(
+          tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen,
+          isFalse,
+        );
 
         await tester.ensureVisible(
           find.byKey(const Key('desktop_alert_switch_schedule')),
@@ -272,28 +313,17 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Open Team Alerts Desktop modal & switch Team Tasks -> Team Meetings tab
-        await tester.ensureVisible(
-          find.byKey(const Key('desktop_alert_row_team')),
-        );
-        await tester.tap(find.byKey(const Key('desktop_alert_row_team')));
-        await tester.pumpAndSettle();
-        expect(find.byType(DesktopAlertSettingsModal), findsOneWidget);
-        expect(find.text('Team Alerts Settings'), findsOneWidget);
-        expect(find.text('Team Tasks'), findsOneWidget);
-        expect(find.text('Team Meetings'), findsOneWidget);
-        await tester.tap(find.byKey(const ValueKey('desktop_alert_subtab_1')));
-        await tester.pumpAndSettle();
-        expect(find.text('Enable Team Meetings Alerts'), findsOneWidget);
-        await tester.tap(find.byKey(const ValueKey('desktop_alert_close_btn')));
-        await tester.pumpAndSettle();
-
-        // Open Daily Briefing Desktop modal, verify wording, save Compact format & toggle switch
+        // Open Daily Briefing inline drawer, verify wording, save Compact format & toggle switch
         await tester.ensureVisible(
           find.byKey(const Key('desktop_daily_briefing_row')),
         );
         await tester.tap(find.byKey(const Key('desktop_daily_briefing_row')));
         await tester.pumpAndSettle();
+        expect(find.byType(Dialog), findsNothing);
+        expect(
+          tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen,
+          isTrue,
+        );
         expect(find.byType(DesktopDailyBriefingModal), findsOneWidget);
         expect(
           find.descendant(
@@ -318,7 +348,10 @@ void main() {
           find.byKey(const ValueKey('desktop_briefing_save_btn')),
         );
         await tester.pumpAndSettle();
-        expect(find.byType(DesktopDailyBriefingModal), findsNothing);
+        expect(
+          tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen,
+          isFalse,
+        );
         expect(UserProfileRepository().profile.isDailyBriefingCompact, isTrue);
 
         final beforeBriefing =
@@ -415,12 +448,18 @@ void main() {
       (tester) async {
         await pumpDesktopHomeProfile(tester);
 
-        // Open Terms & Privacy Policy Modal
+        // Open Terms & Privacy Policy inline drawer
+        final slidePaneFinder = find.byType(DesktopSlideDrawerPane);
         final termsBtn = find.byKey(const Key('desktop_open_terms_button'));
         await tester.ensureVisible(termsBtn);
         await tester.tap(termsBtn);
         await tester.pumpAndSettle();
 
+        expect(find.byType(Dialog), findsNothing);
+        expect(
+          tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen,
+          isTrue,
+        );
         expect(find.text('Terms & Privacy'), findsOneWidget);
         expect(find.text('Terms of Service & Privacy'), findsOneWidget);
         expect(find.text('1. Acceptance of Terms'), findsOneWidget);
@@ -434,6 +473,22 @@ void main() {
         expect(find.text('Saya Mengerti & Tutup'), findsNothing);
         await tester.tap(find.byKey(const Key('desktop_terms_close_button')));
         await tester.pumpAndSettle();
+        expect(
+          tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen,
+          isFalse,
+        );
+
+        // Verify compact 1024x768 desktop renders open drawer with zero overflow
+        await pumpDesktopHomeProfile(tester, size: const Size(1024, 768));
+        await tester.ensureVisible(find.byKey(const Key('desktop_alert_row_schedule')));
+        await tester.tap(find.byKey(const Key('desktop_alert_row_schedule')));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.byKey(const ValueKey('desktop_alert_close_btn')));
+        await tester.pumpAndSettle();
+
+        // Restore 1440x980 before Change Password dialog redirect check
+        await pumpDesktopHomeProfile(tester);
 
         // Open Change Password confirmation dialog mirroring Mobile & verify redirect to ForgotPassword
         final passBtn =

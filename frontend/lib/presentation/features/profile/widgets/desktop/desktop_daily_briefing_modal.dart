@@ -13,11 +13,15 @@ import '../../models/user_profile_model.dart';
 /// `1024x768` viewports, `48x48dp` `[✕]` dismissal, and tabular figures.
 class DesktopDailyBriefingModal extends StatefulWidget {
   final UserProfileModel profile;
+  final bool embeddedPanel;
+  final VoidCallback? onClose;
   final VoidCallback? onSaved;
 
   const DesktopDailyBriefingModal({
     super.key,
     required this.profile,
+    this.embeddedPanel = false,
+    this.onClose,
     this.onSaved,
   });
 
@@ -59,6 +63,10 @@ class _DesktopDailyBriefingModalState extends State<DesktopDailyBriefingModal> {
 
   void _close() {
     FocusManager.instance.primaryFocus?.unfocus();
+    if (widget.embeddedPanel) {
+      widget.onClose?.call();
+      return;
+    }
     Navigator.of(context).pop();
   }
 
@@ -145,6 +153,143 @@ class _DesktopDailyBriefingModalState extends State<DesktopDailyBriefingModal> {
     final animDuration =
         disableAnimations ? Duration.zero : const Duration(milliseconds: 180);
 
+    final panelColumn = Column(
+      mainAxisSize: widget.embeddedPanel ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        _buildHeader(context),
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: widget.embeddedPanel
+              ? AppColors.borderSubtle
+              : AppColors.borderSubtle.withValues(alpha: 0.65),
+        ),
+        Flexible(
+          fit: widget.embeddedPanel ? FlexFit.tight : FlexFit.loose,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              context.rSpacing(22),
+              context.rSpacing(16),
+              context.rSpacing(22),
+              context.rSpacing(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildMasterSwitchCard(context),
+                SizedBox(height: context.rSpacing(16)),
+                _buildSectionHeader(
+                  context,
+                  title: 'BRIEFING DELIVERY TIME',
+                  subtitle:
+                      'Select when the briefing summary should be delivered:',
+                ),
+                SizedBox(height: context.rSpacing(10)),
+                _buildDeliveryTimeCard(context),
+                SizedBox(height: context.rSpacing(18)),
+                _buildSectionHeader(
+                  context,
+                  title: 'NOTIFICATION DISPLAY FORMAT',
+                  subtitle:
+                      'Choose how the briefing summary is formatted on your lock screen:',
+                ),
+                SizedBox(height: context.rSpacing(10)),
+                _buildFormatOption(
+                  context,
+                  fieldKey: const ValueKey(
+                    'desktop_briefing_format_detailed',
+                  ),
+                  isCompact: false,
+                  title: 'Detailed Agenda (Recommended)',
+                  subtitle:
+                      'Lists specific agenda titles, times & bullet points directly on lock screen',
+                  icon: Icons.format_list_bulleted_rounded,
+                ),
+                SizedBox(height: context.rSpacing(8)),
+                _buildFormatOption(
+                  context,
+                  fieldKey: const ValueKey(
+                    'desktop_briefing_format_compact',
+                  ),
+                  isCompact: true,
+                  title: 'Compact Summary',
+                  subtitle:
+                      'Minimal overview with total agenda count only (e.g. "3 agendas scheduled today")',
+                  icon: Icons.short_text_rounded,
+                ),
+                SizedBox(height: context.rSpacing(18)),
+                _buildSectionHeader(
+                  context,
+                  title: 'INCLUDED BRIEFING TOPICS',
+                  subtitle:
+                      'Choose which agendas will be summarized in your morning report:',
+                ),
+                SizedBox(height: context.rSpacing(10)),
+                _buildTopicsCard(context),
+              ],
+            ),
+          ),
+        ),
+        if (widget.embeddedPanel)
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: AppColors.borderSubtle,
+          ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            context.rSpacing(22),
+            context.rSpacing(widget.embeddedPanel ? 14 : 10),
+            context.rSpacing(22),
+            context.rSpacing(18),
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              key: const ValueKey('desktop_briefing_save_btn'),
+              onPressed: _save,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                'Save Briefing Preferences',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: context.rFont(14.5, min: 13, max: 16),
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (widget.embeddedPanel) {
+      return UnfocusOnTap(
+        child: Container(
+          key: const ValueKey('desktop_briefing_panel'),
+          decoration: const BoxDecoration(
+            color: AppColors.bgPrimary,
+            border: Border(
+              left: BorderSide(color: AppColors.borderSubtle, width: 1),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: panelColumn,
+        ),
+      );
+    }
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.symmetric(
@@ -182,117 +327,7 @@ class _DesktopDailyBriefingModalState extends State<DesktopDailyBriefingModal> {
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildHeader(context),
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: AppColors.borderSubtle.withValues(alpha: 0.65),
-                  ),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        context.rSpacing(22),
-                        context.rSpacing(16),
-                        context.rSpacing(22),
-                        context.rSpacing(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildMasterSwitchCard(context),
-                          SizedBox(height: context.rSpacing(16)),
-                          _buildSectionHeader(
-                            context,
-                            title: 'BRIEFING DELIVERY TIME',
-                            subtitle:
-                                'Select when the briefing summary should be delivered:',
-                          ),
-                          SizedBox(height: context.rSpacing(10)),
-                          _buildDeliveryTimeCard(context),
-                          SizedBox(height: context.rSpacing(18)),
-                          _buildSectionHeader(
-                            context,
-                            title: 'NOTIFICATION DISPLAY FORMAT',
-                            subtitle:
-                                'Choose how the briefing summary is formatted on your lock screen:',
-                          ),
-                          SizedBox(height: context.rSpacing(10)),
-                          _buildFormatOption(
-                            context,
-                            fieldKey: const ValueKey(
-                              'desktop_briefing_format_detailed',
-                            ),
-                            isCompact: false,
-                            title: 'Detailed Agenda (Recommended)',
-                            subtitle:
-                                'Lists specific agenda titles, times & bullet points directly on lock screen',
-                            icon: Icons.format_list_bulleted_rounded,
-                          ),
-                          SizedBox(height: context.rSpacing(8)),
-                          _buildFormatOption(
-                            context,
-                            fieldKey: const ValueKey(
-                              'desktop_briefing_format_compact',
-                            ),
-                            isCompact: true,
-                            title: 'Compact Summary',
-                            subtitle:
-                                'Minimal overview with total agenda count only (e.g. "3 agendas scheduled today")',
-                            icon: Icons.short_text_rounded,
-                          ),
-                          SizedBox(height: context.rSpacing(18)),
-                          _buildSectionHeader(
-                            context,
-                            title: 'INCLUDED BRIEFING TOPICS',
-                            subtitle:
-                                'Choose which agendas will be summarized in your morning report:',
-                          ),
-                          SizedBox(height: context.rSpacing(10)),
-                          _buildTopicsCard(context),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      context.rSpacing(22),
-                      context.rSpacing(10),
-                      context.rSpacing(22),
-                      context.rSpacing(18),
-                    ),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        key: const ValueKey('desktop_briefing_save_btn'),
-                        onPressed: _save,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: Text(
-                          'Save Briefing Preferences',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: context.rFont(14.5, min: 13, max: 16),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: panelColumn,
             ),
           ),
         ),

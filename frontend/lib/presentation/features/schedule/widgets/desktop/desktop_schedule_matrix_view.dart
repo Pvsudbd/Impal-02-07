@@ -753,7 +753,10 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 'Schedule Directory ($_selectedView)',
@@ -764,7 +767,6 @@ class _DesktopScheduleMatrixViewState extends State<DesktopScheduleMatrixView> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -834,117 +836,155 @@ class _ScheduleDirectoryRow extends StatelessWidget {
     final dateText =
         '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 36,
-            decoration: BoxDecoration(
-              color: schedule.accentColor,
-              borderRadius: BorderRadius.circular(4),
+    final infoBlock = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              schedule.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w700,
+              ),
             ),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 7,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: schedule.statusColor.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                schedule.status,
+                style: TextStyle(
+                  color: schedule.statusColor,
+                  fontSize: 10,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Text(
+          '$dateText • ${schedule.formattedTime} • ${schedule.location ?? schedule.type}${schedule.notes != null && schedule.notes!.trim().isNotEmpty ? ' • ${schedule.notes}' : ''}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 11.5,
+            fontFamily: 'Inter',
+            fontFeatures: [FontFeature.tabularFigures()],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        ),
+      ],
+    );
+
+    final actionButtons = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          key: ValueKey('desktop_dir_alert_${schedule.id}'),
+          tooltip: schedule.isAlertEnabled ? 'Mute alert' : 'Enable alert',
+          onPressed: onToggleAlert,
+          icon: Icon(
+            schedule.isAlertEnabled
+                ? Icons.notifications_active_outlined
+                : Icons.notifications_off_outlined,
+            size: 18,
+            color: schedule.isAlertEnabled
+                ? AppColors.primaryAccent
+                : AppColors.textMuted,
+          ),
+        ),
+        IconButton(
+          key: ValueKey('desktop_dir_edit_${schedule.id}'),
+          tooltip: 'Edit schedule',
+          onPressed: onEdit,
+          icon: const Icon(
+            Icons.edit_outlined,
+            size: 18,
+            color: Colors.white,
+          ),
+        ),
+        IconButton(
+          key: ValueKey('desktop_dir_delete_${schedule.id}'),
+          tooltip: 'Delete schedule',
+          onPressed: onDelete,
+          icon: const Icon(
+            Icons.delete_outline_rounded,
+            size: 18,
+            color: AppColors.error,
+          ),
+        ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 380;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.bgCard,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.borderSubtle),
+          ),
+          child: isCompact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
-                      child: Text(
-                        schedule.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: schedule.accentColor,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(child: infoBlock),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: schedule.statusColor.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        schedule.status,
-                        style: TextStyle(
-                          color: schedule.statusColor,
-                          fontSize: 10,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: actionButtons,
                     ),
                   ],
+                )
+              : Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: schedule.accentColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: infoBlock),
+                    const SizedBox(width: 8),
+                    actionButtons,
+                  ],
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  '$dateText • ${schedule.formattedTime} • ${schedule.location ?? schedule.type}${schedule.notes != null && schedule.notes!.trim().isNotEmpty ? ' • ${schedule.notes}' : ''}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11.5,
-                    fontFamily: 'Inter',
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            key: ValueKey('desktop_dir_alert_${schedule.id}'),
-            tooltip: schedule.isAlertEnabled ? 'Mute alert' : 'Enable alert',
-            onPressed: onToggleAlert,
-            icon: Icon(
-              schedule.isAlertEnabled
-                  ? Icons.notifications_active_outlined
-                  : Icons.notifications_off_outlined,
-              size: 18,
-              color: schedule.isAlertEnabled
-                  ? AppColors.primaryAccent
-                  : AppColors.textMuted,
-            ),
-          ),
-          IconButton(
-            key: ValueKey('desktop_dir_edit_${schedule.id}'),
-            tooltip: 'Edit schedule',
-            onPressed: onEdit,
-            icon: const Icon(
-              Icons.edit_outlined,
-              size: 18,
-              color: Colors.white,
-            ),
-          ),
-          IconButton(
-            key: ValueKey('desktop_dir_delete_${schedule.id}'),
-            tooltip: 'Delete schedule',
-            onPressed: onDelete,
-            icon: const Icon(
-              Icons.delete_outline_rounded,
-              size: 18,
-              color: AppColors.error,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

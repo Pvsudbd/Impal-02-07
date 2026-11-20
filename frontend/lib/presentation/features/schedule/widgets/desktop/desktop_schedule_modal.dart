@@ -24,12 +24,16 @@ class DesktopScheduleModal extends StatefulWidget {
   final ScheduleModel? schedule;
   final DateTime? initialDate;
   final String? initialType;
+  final bool embeddedPanel;
+  final VoidCallback? onClose;
 
   const DesktopScheduleModal({
     super.key,
     this.schedule,
     this.initialDate,
     this.initialType,
+    this.embeddedPanel = false,
+    this.onClose,
   });
 
   static Future<bool?> show(
@@ -222,7 +226,7 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
       } else {
         PopUpPemberitahuan.scheduleDeleted(context);
       }
-      Navigator.of(context).pop(true);
+      _close(true);
     }
   }
 
@@ -239,8 +243,6 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
       );
       return;
     }
-
-    setState(() => _isSubmitting = true);
 
     final isEdit = widget.isEdit;
     final isMeeting = _selectedType == 'Meeting';
@@ -274,7 +276,6 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
         conflicts: conflicts,
       );
       if (proceed != true || !mounted) {
-        if (mounted) setState(() => _isSubmitting = false);
         return;
       }
       conflictConfirmed = true;
@@ -293,10 +294,11 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
       if (!conflictConfirmed) {
         final confirmed = await PopUpKonfirmasiEdit.show(context);
         if (confirmed != true || !mounted) {
-          if (mounted) setState(() => _isSubmitting = false);
           return;
         }
       }
+
+      setState(() => _isSubmitting = true);
 
       final updated = widget.schedule!.copyWith(
         title: enteredText,
@@ -326,16 +328,17 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
         } else {
           PopUpPemberitahuan.scheduleUpdated(context);
         }
-        Navigator.of(context).pop(true);
+        _close(true);
       }
     } else {
       if (!conflictConfirmed) {
         final confirmed = await PopUpMakeSchedule.show(context);
         if (confirmed != true || !mounted) {
-          if (mounted) setState(() => _isSubmitting = false);
           return;
         }
       }
+
+      setState(() => _isSubmitting = true);
 
       final newSchedule = ScheduleModel(
         id: 'sch_${DateTime.now().millisecondsSinceEpoch}',
@@ -366,9 +369,32 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
         } else {
           PopUpPemberitahuan.scheduleCreated(context);
         }
-        Navigator.of(context).pop(true);
+        if (widget.embeddedPanel) {
+          _titleController.clear();
+          _locationController.clear();
+          _meetingUrlController.clear();
+          _notesController.clear();
+          _teamController.clear();
+          _isTeamMeeting = false;
+        }
+        _close(true);
       }
     }
+  }
+
+  Color get _controlSurfaceColor =>
+      widget.embeddedPanel ? AppColors.bgCard : AppColors.bgPrimary;
+
+  void _close(bool result) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (widget.embeddedPanel) {
+      if (mounted && _isSubmitting) {
+        setState(() => _isSubmitting = false);
+      }
+      widget.onClose?.call();
+      return;
+    }
+    Navigator.of(context).pop(result);
   }
 
   @override
@@ -381,41 +407,29 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
     final isLecture = _selectedType == 'Lecture';
     final isMeeting = _selectedType == 'Meeting';
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: UnfocusOnTap(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: 540,
-            maxHeight: maxHeight,
+    final formShellColumn = Column(
+      mainAxisSize: widget.embeddedPanel ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            widget.embeddedPanel ? 24 : 28,
+            widget.embeddedPanel ? 20 : 24,
+            widget.embeddedPanel ? 24 : 28,
+            widget.embeddedPanel ? 16 : 0,
           ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.bgCard,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.borderSubtle, width: 1),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x66000000),
-                  blurRadius: 32,
-                  offset: Offset(0, 14),
-                ),
-              ],
+          child: _buildHeaderRow(context, animDuration),
+        ),
+        if (widget.embeddedPanel)
+          const Divider(height: 1, thickness: 1, color: AppColors.borderSubtle),
+        Flexible(
+          fit: widget.embeddedPanel ? FlexFit.tight : FlexFit.loose,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              widget.embeddedPanel ? 24 : 28,
+              16,
+              widget.embeddedPanel ? 24 : 28,
+              24,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(23),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
-                    child: _buildHeaderRow(context, animDuration),
-                  ),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(28, 16, 28, 24),
                       child: Form(
                         key: _formKey,
                         child: Column(
@@ -529,15 +543,66 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
                                   'Add reminders, assignment info, or topics...',
                               maxLines: 3,
                             ),
-                            const SizedBox(height: 20),
-                            _buildFooterActions(context),
+                            if (!widget.embeddedPanel) ...[
+                              const SizedBox(height: 20),
+                              _buildFooterActions(context),
+                            ],
                           ],
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+        if (widget.embeddedPanel) ...[
+          const Divider(height: 1, thickness: 1, color: AppColors.borderSubtle),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 22),
+            child: _buildFooterActions(context),
+          ),
+        ],
+      ],
+    );
+
+    if (widget.embeddedPanel) {
+      return UnfocusOnTap(
+        child: Container(
+          decoration: const BoxDecoration(
+            color: AppColors.bgPrimary,
+            border: Border(
+              left: BorderSide(color: AppColors.borderSubtle, width: 1),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: formShellColumn,
+        ),
+      );
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: UnfocusOnTap(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 540,
+            maxHeight: maxHeight,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.bgCard,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.borderSubtle, width: 1),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 32,
+                  offset: Offset(0, 14),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(23),
+              child: formShellColumn,
             ),
           ),
         ),
@@ -602,14 +667,11 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
         _buildTopBellAlertToggle(context, animDuration),
         const SizedBox(width: 10),
         Material(
-          color: AppColors.bgPrimary,
+          color: _controlSurfaceColor,
           borderRadius: BorderRadius.circular(8),
           child: InkWell(
             key: const ValueKey('desktop_schedule_modal_close_btn'),
-            onTap: () {
-              FocusManager.instance.primaryFocus?.unfocus();
-              Navigator.of(context).pop(false);
-            },
+            onTap: () => _close(false),
             borderRadius: BorderRadius.circular(8),
             child: Container(
               width: 32,
@@ -659,7 +721,7 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
           duration: animDuration,
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
           decoration: BoxDecoration(
-            color: _isAlertEnabled ? AppColors.primary : AppColors.bgPrimary,
+            color: _isAlertEnabled ? AppColors.primary : _controlSurfaceColor,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color:
@@ -704,7 +766,7 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: _controlSurfaceColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.borderSubtle, width: 1),
       ),
@@ -729,26 +791,34 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 9),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        icon,
-                        size: 15,
-                        color: isSelected ? Colors.white : AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        type,
-                        style: TextStyle(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: widget.embeddedPanel ? 4 : 6,
+                    vertical: 9,
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          icon,
+                          size: 15,
                           color: isSelected ? Colors.white : AppColors.textMuted,
-                          fontSize: 12.5,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w600,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Text(
+                          type,
+                          style: TextStyle(
+                            color:
+                                isSelected ? Colors.white : AppColors.textMuted,
+                            fontSize: 12.5,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -811,7 +881,7 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
             ? Icon(prefixIcon, color: AppColors.textMuted, size: 18)
             : null,
         filled: true,
-        fillColor: AppColors.bgPrimary,
+        fillColor: _controlSurfaceColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.borderSubtle),
@@ -839,7 +909,7 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
         _buildFieldLabel(context, 'Date'),
         const SizedBox(height: 8),
         Material(
-          color: AppColors.bgPrimary,
+          color: _controlSurfaceColor,
           borderRadius: BorderRadius.circular(10),
           child: InkWell(
             key: const ValueKey('desktop_schedule_date_btn'),
@@ -929,7 +999,7 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: AppColors.bgPrimary,
+      color: _controlSurfaceColor,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         key: key,
@@ -976,7 +1046,7 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: _controlSurfaceColor,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.borderSubtle),
       ),
@@ -1023,7 +1093,7 @@ class _DesktopScheduleModalState extends State<DesktopScheduleModal> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: _controlSurfaceColor,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFFBBF24), width: 1),
       ),

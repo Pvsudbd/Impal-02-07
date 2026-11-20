@@ -1010,7 +1010,14 @@ class DesktopChangePasswordModal extends StatelessWidget {
 /// read-only document view (`Terms & Privacy`, `'v1.2 Active'`, 6 English clauses,
 /// `Academic Advisory Note`, bullet points, top-right `[✕]` without bottom CTA).
 class DesktopTermsPrivacyModal extends StatelessWidget {
-  const DesktopTermsPrivacyModal({super.key});
+  final bool embeddedPanel;
+  final VoidCallback? onClose;
+
+  const DesktopTermsPrivacyModal({
+    super.key,
+    this.embeddedPanel = false,
+    this.onClose,
+  });
 
   static Future<void> show(BuildContext context) {
     return showDialog<void>(
@@ -1022,6 +1029,10 @@ class DesktopTermsPrivacyModal extends StatelessWidget {
 
   void _close(BuildContext context) {
     FocusManager.instance.primaryFocus?.unfocus();
+    if (embeddedPanel) {
+      onClose?.call();
+      return;
+    }
     Navigator.of(context).pop();
   }
 
@@ -1033,6 +1044,294 @@ class DesktopTermsPrivacyModal extends StatelessWidget {
     final disableAnimations = context.animationsDisabled;
     final animDuration =
         disableAnimations ? Duration.zero : const Duration(milliseconds: 180);
+
+    final panelColumn = Column(
+      mainAxisSize: embeddedPanel ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            context.rSpacing(22),
+            context.rSpacing(16),
+            context.rSpacing(10),
+            context.rSpacing(12),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Terms & Privacy',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: context.rFont(16, min: 14, max: 18),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF064E3B).withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                    width: 0.8,
+                  ),
+                ),
+                child: Text(
+                  'v1.2 Active',
+                  style: TextStyle(
+                    color: const Color(0xFF34D399),
+                    fontSize: context.rFont(10.5, min: 9.5, max: 12),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  key: const Key('desktop_terms_close_button'),
+                  onTap: () => _close(context),
+                  borderRadius: BorderRadius.circular(8),
+                  child: const SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Center(
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: AppColors.textMuted,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(
+          height: 1,
+          thickness: 1,
+          color: AppColors.borderSubtle,
+        ),
+        Flexible(
+          fit: embeddedPanel ? FlexFit.tight : FlexFit.loose,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              context.rSpacing(22),
+              context.rSpacing(18),
+              context.rSpacing(22),
+              context.rSpacing(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Terms of Service & Privacy',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: context.rFont(20, min: 18, max: 24),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'IMPAL Smart Task & Schedule Prioritization System • Telkom University',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: context.rFont(11.5, min: 10.5, max: 13),
+                    fontFamily: 'Inter',
+                    height: 1.35,
+                  ),
+                ),
+                SizedBox(height: context.rSpacing(14)),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(context.rSpacing(16)),
+                  decoration: BoxDecoration(
+                    color: embeddedPanel
+                        ? AppColors.bgCard
+                        : const Color(0xFF1E232E),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: embeddedPanel
+                          ? const Color(0xFF3E4554)
+                          : AppColors.borderSubtle.withValues(alpha: 0.45),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSection(
+                        context,
+                        title: '1. Acceptance of Terms',
+                        content:
+                            'By creating an account, registering your student credentials, or connecting through Telkom University Single Sign-On (SSO), you agree to comply with and be bound by these Terms of Service and all applicable university academic policies.',
+                      ),
+                      SizedBox(height: context.rSpacing(16)),
+                      _buildSection(
+                        context,
+                        title: '2. AI-Driven Recommendation Core',
+                        content:
+                            'IMPAL integrates a Mamdani Fuzzy Inference System that analyzes deadline proximity, syllabus grade weight, and complexity to compute a crisp recommendation score (0–100).',
+                      ),
+                      SizedBox(height: context.rSpacing(10)),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          color: embeddedPanel
+                              ? AppColors.bgPrimary
+                              : const Color(0xFF252A36),
+                          child: IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Container(
+                                  width: 3.5,
+                                  color: AppColors.primary,
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(
+                                      context.rSpacing(12),
+                                    ),
+                                    child: Text.rich(
+                                      TextSpan(
+                                        children: [
+                                          const TextSpan(
+                                            text: 'Academic Advisory Note: ',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text:
+                                                'Priority scores generated by the system serve solely as planning guidance. Students retain complete individual responsibility for meeting all submission deadlines set by course lecturers.',
+                                            style: TextStyle(
+                                              color: AppColors.textMuted,
+                                              fontSize: context.rFont(
+                                                11,
+                                                min: 10,
+                                                max: 12,
+                                              ),
+                                              fontFamily: 'Inter',
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: context.rSpacing(16)),
+                      _buildSection(
+                        context,
+                        title: '3. Student Privacy & SSO Data Security',
+                        content:
+                            'We collect and process your Student ID (NIM), registered university email, academic program, and course schedules synchronized via the Central Authentication Service (CAS).',
+                      ),
+                      SizedBox(height: context.rSpacing(6)),
+                      _buildBullet(
+                        context,
+                        'All student credential exchanges use TLS 1.3 protocol encryption.',
+                      ),
+                      _buildBullet(
+                        context,
+                        'Data is restricted exclusively to task calculation and timetable syncing.',
+                      ),
+                      _buildBullet(
+                        context,
+                        'Student records are never sold, rented, or distributed to commercial parties.',
+                      ),
+                      SizedBox(height: context.rSpacing(16)),
+                      _buildSection(
+                        context,
+                        title: '4. Team Collaboration Code of Conduct',
+                        content:
+                            'When participating in team workspaces (Group Projects):',
+                      ),
+                      SizedBox(height: context.rSpacing(6)),
+                      _buildBullet(
+                        context,
+                        'Do not delete or alter task items assigned to other team members without mutual agreement.',
+                      ),
+                      _buildBullet(
+                        context,
+                        'Keep 4-character team join codes confidential within your designated project group',
+                      ),
+                      _buildBullet(
+                        context,
+                        'Observe the Telkom University Academic Honor Code in all shared group deliverables',
+                      ),
+                      SizedBox(height: context.rSpacing(16)),
+                      _buildSection(
+                        context,
+                        title: '5. Algorithm Explainability (XAI) Rights',
+                        content:
+                            'Users possess the explicit right to inspect how priorities were deduced through the Explainability Modal, detailing membership degrees, fired fuzzy rules, and centroid calculation formulas.',
+                      ),
+                      SizedBox(height: context.rSpacing(16)),
+                      _buildSection(
+                        context,
+                        title: '6. Termination & Account Unlinking',
+                        content:
+                            'Students may unlink their Telkom SSO account, clear local cached schedules, or request full task catalog deletion upon semester completion.',
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: context.rSpacing(16)),
+                Center(
+                  child: Text(
+                    'IMPAL Group 7 • Telkom University © 2026',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: const Color(0xFF64748B),
+                      fontSize: context.rFont(10.5, min: 9.5, max: 12),
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (embeddedPanel) {
+      return Container(
+        key: const ValueKey('desktop_terms_panel'),
+        decoration: const BoxDecoration(
+          color: AppColors.bgPrimary,
+          border: Border(
+            left: BorderSide(color: AppColors.borderSubtle, width: 1),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: panelColumn,
+      );
+    }
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -1070,280 +1369,7 @@ class DesktopTermsPrivacyModal extends StatelessWidget {
                 ),
               ],
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    context.rSpacing(22),
-                    context.rSpacing(16),
-                    context.rSpacing(10),
-                    context.rSpacing(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Terms & Privacy',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: context.rFont(16, min: 14, max: 18),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              const Color(0xFF064E3B).withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color:
-                                const Color(0xFF10B981).withValues(alpha: 0.4),
-                            width: 0.8,
-                          ),
-                        ),
-                        child: Text(
-                          'v1.2 Active',
-                          style: TextStyle(
-                            color: const Color(0xFF34D399),
-                            fontSize: context.rFont(10.5, min: 9.5, max: 12),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          key: const Key('desktop_terms_close_button'),
-                          onTap: () => _close(context),
-                          borderRadius: BorderRadius.circular(8),
-                          child: const SizedBox(
-                            width: 48,
-                            height: 48,
-                            child: Center(
-                              child: Icon(
-                                Icons.close_rounded,
-                                color: AppColors.textMuted,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: AppColors.borderSubtle,
-                ),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                      context.rSpacing(22),
-                      context.rSpacing(18),
-                      context.rSpacing(22),
-                      context.rSpacing(20),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Terms of Service & Privacy',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: context.rFont(20, min: 18, max: 24),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'IMPAL Smart Task & Schedule Prioritization System • Telkom University',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: context.rFont(11.5, min: 10.5, max: 13),
-                            fontFamily: 'Inter',
-                            height: 1.35,
-                          ),
-                        ),
-                        SizedBox(height: context.rSpacing(14)),
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(context.rSpacing(16)),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1E232E),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: AppColors.borderSubtle
-                                  .withValues(alpha: 0.45),
-                              width: 1,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSection(
-                                context,
-                                title: '1. Acceptance of Terms',
-                                content:
-                                    'By creating an account, registering your student credentials, or connecting through Telkom University Single Sign-On (SSO), you agree to comply with and be bound by these Terms of Service and all applicable university academic policies.',
-                              ),
-                              SizedBox(height: context.rSpacing(16)),
-                              _buildSection(
-                                context,
-                                title: '2. AI-Driven Recommendation Core',
-                                content:
-                                    'IMPAL integrates a Mamdani Fuzzy Inference System that analyzes deadline proximity, syllabus grade weight, and complexity to compute a crisp recommendation score (0–100).',
-                              ),
-                              SizedBox(height: context.rSpacing(10)),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  color: const Color(0xFF252A36),
-                                  child: IntrinsicHeight(
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        Container(
-                                          width: 3.5,
-                                          color: AppColors.primary,
-                                        ),
-                                        Expanded(
-                                          child: Padding(
-                                            padding: EdgeInsets.all(
-                                              context.rSpacing(12),
-                                            ),
-                                            child: Text.rich(
-                                              TextSpan(
-                                                children: [
-                                                  const TextSpan(
-                                                    text:
-                                                        'Academic Advisory Note: ',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 11,
-                                                      fontFamily: 'Inter',
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                    ),
-                                                  ),
-                                                  TextSpan(
-                                                    text:
-                                                        'Priority scores generated by the system serve solely as planning guidance. Students retain complete individual responsibility for meeting all submission deadlines set by course lecturers.',
-                                                    style: TextStyle(
-                                                      color:
-                                                          AppColors.textMuted,
-                                                      fontSize: context.rFont(
-                                                        11,
-                                                        min: 10,
-                                                        max: 12,
-                                                      ),
-                                                      fontFamily: 'Inter',
-                                                      height: 1.4,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: context.rSpacing(16)),
-                              _buildSection(
-                                context,
-                                title: '3. Student Privacy & SSO Data Security',
-                                content:
-                                    'We collect and process your Student ID (NIM), registered university email, academic program, and course schedules synchronized via the Central Authentication Service (CAS).',
-                              ),
-                              SizedBox(height: context.rSpacing(6)),
-                              _buildBullet(
-                                context,
-                                'All student credential exchanges use TLS 1.3 protocol encryption.',
-                              ),
-                              _buildBullet(
-                                context,
-                                'Data is restricted exclusively to task calculation and timetable syncing.',
-                              ),
-                              _buildBullet(
-                                context,
-                                'Student records are never sold, rented, or distributed to commercial parties.',
-                              ),
-                              SizedBox(height: context.rSpacing(16)),
-                              _buildSection(
-                                context,
-                                title:
-                                    '4. Team Collaboration Code of Conduct',
-                                content:
-                                    'When participating in team workspaces (Group Projects):',
-                              ),
-                              SizedBox(height: context.rSpacing(6)),
-                              _buildBullet(
-                                context,
-                                'Do not delete or alter task items assigned to other team members without mutual agreement.',
-                              ),
-                              _buildBullet(
-                                context,
-                                'Keep 4-character team join codes confidential within your designated project group',
-                              ),
-                              _buildBullet(
-                                context,
-                                'Observe the Telkom University Academic Honor Code in all shared group deliverables',
-                              ),
-                              SizedBox(height: context.rSpacing(16)),
-                              _buildSection(
-                                context,
-                                title: '5. Algorithm Explainability (XAI) Rights',
-                                content:
-                                    'Users possess the explicit right to inspect how priorities were deduced through the Explainability Modal, detailing membership degrees, fired fuzzy rules, and centroid calculation formulas.',
-                              ),
-                              SizedBox(height: context.rSpacing(16)),
-                              _buildSection(
-                                context,
-                                title: '6. Termination & Account Unlinking',
-                                content:
-                                    'Students may unlink their Telkom SSO account, clear local cached schedules, or request full task catalog deletion upon semester completion.',
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: context.rSpacing(16)),
-                        Center(
-                          child: Text(
-                            'IMPAL Group 7 • Telkom University © 2026',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: const Color(0xFF64748B),
-                              fontSize: context.rFont(10.5, min: 9.5, max: 12),
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: panelColumn,
           ),
         ),
       ),

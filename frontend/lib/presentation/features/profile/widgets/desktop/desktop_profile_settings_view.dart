@@ -4,15 +4,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/page_transitions.dart';
 import '../../../../../core/utils/responsive_context.dart';
+import '../../../../../core/widgets/desktop_slide_drawer_pane.dart';
 import '../../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../../auth/login_page.dart';
 import '../../../smart_system/smart_priority_page.dart';
 import '../../models/user_profile_model.dart';
-import '../daily_briefing_settings_modal.dart';
-import '../deadline_alert_settings_modal.dart';
+import 'desktop_alert_settings_modal.dart';
+import 'desktop_daily_briefing_modal.dart';
 import 'desktop_profile_hero_card.dart';
 import 'desktop_profile_modals.dart';
 import 'desktop_profile_right_panel.dart';
+
+enum _DesktopProfileDrawerKind {
+  none,
+  taskAlerts,
+  scheduleAlerts,
+  teamAlerts,
+  dailyBriefing,
+  termsPrivacy,
+}
 
 /// FigCraft `Desktop - Profile & Settings` (`node 5976`, `1440×980`) workspace enriched with mobile features.
 class DesktopProfileSettingsView extends StatefulWidget {
@@ -35,6 +45,8 @@ class DesktopProfileSettingsView extends StatefulWidget {
 class _DesktopProfileSettingsViewState
     extends State<DesktopProfileSettingsView> {
   final UserProfileRepository _repo = UserProfileRepository();
+  _DesktopProfileDrawerKind _activeDrawer = _DesktopProfileDrawerKind.none;
+  _DesktopProfileDrawerKind _lastDrawer = _DesktopProfileDrawerKind.none;
 
   @override
   void initState() {
@@ -76,43 +88,95 @@ class _DesktopProfileSettingsViewState
     );
   }
 
+  void _toggleDrawer(_DesktopProfileDrawerKind kind) {
+    setState(() {
+      if (_activeDrawer == kind) {
+        _activeDrawer = _DesktopProfileDrawerKind.none;
+      } else {
+        _activeDrawer = kind;
+        _lastDrawer = kind;
+      }
+    });
+  }
+
+  void _closeDrawer() {
+    if (mounted && _activeDrawer != _DesktopProfileDrawerKind.none) {
+      setState(() => _activeDrawer = _DesktopProfileDrawerKind.none);
+    }
+  }
+
   void _openTermsModal() {
-    DesktopTermsPrivacyModal.show(context);
+    _toggleDrawer(_DesktopProfileDrawerKind.termsPrivacy);
   }
 
   void _openCategoryAlertModal(
     UserProfileModel profile,
     AlertCategoryType category,
   ) {
-    DeadlineAlertSettingsModal.show(
-      context,
-      profile: profile,
-      category: category,
-      onSave: ({
-        required bool enabled,
-        required List<String> timings,
-        required AlertSoundVibrationMode mode,
-      }) {
-        if (category == AlertCategoryType.taskDeadline) {
-          _repo.updateCategoryAlertSettings(
-            category: AlertCategoryType.taskDeadline,
-            enabled: enabled,
-            timings: timings,
-            mode: mode,
-          );
-        }
-      },
-    );
+    switch (category) {
+      case AlertCategoryType.taskDeadline:
+        _toggleDrawer(_DesktopProfileDrawerKind.taskAlerts);
+      case AlertCategoryType.schedule:
+      case AlertCategoryType.classSchedule:
+        _toggleDrawer(_DesktopProfileDrawerKind.scheduleAlerts);
+      case AlertCategoryType.team:
+      case AlertCategoryType.teamMeeting:
+        _toggleDrawer(_DesktopProfileDrawerKind.teamAlerts);
+    }
   }
 
   void _openDailyBriefingModal(UserProfileModel profile) {
-    DailyBriefingSettingsModal.show(
-      context,
-      profile: profile,
-      onSaved: () {
-        if (mounted) setState(() {});
-      },
-    );
+    _toggleDrawer(_DesktopProfileDrawerKind.dailyBriefing);
+  }
+
+  Widget _buildDrawerPanel(UserProfileModel profile) {
+    final effectiveKind = _activeDrawer != _DesktopProfileDrawerKind.none
+        ? _activeDrawer
+        : _lastDrawer;
+
+    switch (effectiveKind) {
+      case _DesktopProfileDrawerKind.taskAlerts:
+        return DesktopAlertSettingsModal(
+          key: const ValueKey('desktop_profile_drawer_task_alerts'),
+          profile: profile,
+          category: AlertCategoryType.taskDeadline,
+          embeddedPanel: true,
+          onClose: _closeDrawer,
+        );
+      case _DesktopProfileDrawerKind.scheduleAlerts:
+        return DesktopAlertSettingsModal(
+          key: const ValueKey('desktop_profile_drawer_schedule_alerts'),
+          profile: profile,
+          category: AlertCategoryType.schedule,
+          embeddedPanel: true,
+          onClose: _closeDrawer,
+        );
+      case _DesktopProfileDrawerKind.teamAlerts:
+        return DesktopAlertSettingsModal(
+          key: const ValueKey('desktop_profile_drawer_team_alerts'),
+          profile: profile,
+          category: AlertCategoryType.team,
+          embeddedPanel: true,
+          onClose: _closeDrawer,
+        );
+      case _DesktopProfileDrawerKind.dailyBriefing:
+        return DesktopDailyBriefingModal(
+          key: const ValueKey('desktop_profile_drawer_daily_briefing'),
+          profile: profile,
+          embeddedPanel: true,
+          onClose: _closeDrawer,
+          onSaved: () {
+            if (mounted) setState(() {});
+          },
+        );
+      case _DesktopProfileDrawerKind.termsPrivacy:
+      case _DesktopProfileDrawerKind.none:
+        return DesktopTermsPrivacyModal(
+          key: const ValueKey('desktop_profile_drawer_terms_privacy'),
+          embeddedPanel: true,
+          onClose: _closeDrawer,
+        );
+    }
   }
 
   void _openSmartPriority(UserProfileModel profile) {
@@ -305,47 +369,51 @@ class _DesktopProfileSettingsViewState
         ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isTwoColumn = constraints.maxWidth >= 860 &&
-            leftColumnWidgets.isNotEmpty &&
-            rightPanelWidgets.isNotEmpty;
+    return DesktopSlideDrawerPane(
+      isOpen: _activeDrawer != _DesktopProfileDrawerKind.none,
+      content: LayoutBuilder(
+        builder: (context, constraints) {
+          final isTwoColumn = constraints.maxWidth >= 860 &&
+              leftColumnWidgets.isNotEmpty &&
+              rightPanelWidgets.isNotEmpty;
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            context.rSpacing(32),
-            context.rSpacing(20),
-            context.rSpacing(32),
-            context.rSpacing(24),
-          ),
-          child: isTwoColumn
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _SeparatedColumn(
-                        gap: context.rSpacing(16),
-                        children: leftColumnWidgets,
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              context.rSpacing(32),
+              context.rSpacing(20),
+              context.rSpacing(32),
+              context.rSpacing(24),
+            ),
+            child: isTwoColumn
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _SeparatedColumn(
+                          gap: context.rSpacing(16),
+                          children: leftColumnWidgets,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: context.rSpacing(24)),
-                    Expanded(
-                      child: _SeparatedColumn(
-                        gap: context.rSpacing(16),
-                        children: rightPanelWidgets,
+                      SizedBox(width: context.rSpacing(24)),
+                      Expanded(
+                        child: _SeparatedColumn(
+                          gap: context.rSpacing(16),
+                          children: rightPanelWidgets,
+                        ),
                       ),
-                    ),
-                  ],
-                )
-              : _SeparatedColumn(
-                  gap: context.rSpacing(16),
-                  children: [
-                    ...leftColumnWidgets,
-                    ...rightPanelWidgets,
-                  ],
-                ),
-        );
-      },
+                    ],
+                  )
+                : _SeparatedColumn(
+                    gap: context.rSpacing(16),
+                    children: [
+                      ...leftColumnWidgets,
+                      ...rightPanelWidgets,
+                    ],
+                  ),
+          );
+        },
+      ),
+      drawer: _buildDrawerPanel(profile),
     );
   }
 }

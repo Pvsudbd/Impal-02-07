@@ -16,6 +16,8 @@ import '../../models/user_profile_model.dart';
 class DesktopAlertSettingsModal extends StatefulWidget {
   final UserProfileModel profile;
   final AlertCategoryType category;
+  final bool embeddedPanel;
+  final VoidCallback? onClose;
   final void Function({
     required bool enabled,
     required List<String> timings,
@@ -26,6 +28,8 @@ class DesktopAlertSettingsModal extends StatefulWidget {
     super.key,
     required this.profile,
     this.category = AlertCategoryType.taskDeadline,
+    this.embeddedPanel = false,
+    this.onClose,
     this.onSave,
   });
 
@@ -218,6 +222,10 @@ class _DesktopAlertSettingsModalState extends State<DesktopAlertSettingsModal> {
 
   void _close() {
     FocusManager.instance.primaryFocus?.unfocus();
+    if (widget.embeddedPanel) {
+      widget.onClose?.call();
+      return;
+    }
     Navigator.of(context).pop();
   }
 
@@ -290,6 +298,142 @@ class _DesktopAlertSettingsModalState extends State<DesktopAlertSettingsModal> {
     final animDuration =
         disableAnimations ? Duration.zero : const Duration(milliseconds: 180);
 
+    final panelColumn = Column(
+      mainAxisSize: widget.embeddedPanel ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        _buildHeader(context),
+        if (_hasSubTabs) _buildSubTabSwitcher(context),
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: widget.embeddedPanel
+              ? AppColors.borderSubtle
+              : AppColors.borderSubtle.withValues(alpha: 0.65),
+        ),
+        Flexible(
+          fit: widget.embeddedPanel ? FlexFit.tight : FlexFit.loose,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              context.rSpacing(22),
+              context.rSpacing(16),
+              context.rSpacing(22),
+              context.rSpacing(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildMasterSwitchCard(context, current),
+                SizedBox(height: context.rSpacing(18)),
+                _buildRemindBeforeHeader(context, current),
+                SizedBox(height: context.rSpacing(4)),
+                Text(
+                  'Tap chip to toggle alert • Tap ✕ to delete interval:',
+                  style: TextStyle(
+                    color: const Color(0xFF94A3B8),
+                    fontSize: context.rFont(11.5, min: 10, max: 13),
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                SizedBox(height: context.rSpacing(10)),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: current.availablePresets
+                      .map((t) => _buildTimingChip(t, current))
+                      .toList(),
+                ),
+                SizedBox(height: context.rSpacing(14)),
+                _buildCustomTimingRow(context, current),
+                SizedBox(height: context.rSpacing(20)),
+                Text(
+                  'SOUND & VIBRATION MODE',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: context.rFont(11.5, min: 10, max: 13),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                SizedBox(height: context.rSpacing(5)),
+                Text(
+                  'Select how you want alerts delivered to your device:',
+                  style: TextStyle(
+                    color: const Color(0xFF94A3B8),
+                    fontSize: context.rFont(12, min: 10.5, max: 13.5),
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                SizedBox(height: context.rSpacing(10)),
+                for (final mode in AlertSoundVibrationMode.values) ...[
+                  _buildModeCard(context, mode: mode, state: current),
+                  if (mode != AlertSoundVibrationMode.values.last)
+                    SizedBox(height: context.rSpacing(8)),
+                ],
+              ],
+            ),
+          ),
+        ),
+        if (widget.embeddedPanel)
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: AppColors.borderSubtle,
+          ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            context.rSpacing(22),
+            context.rSpacing(widget.embeddedPanel ? 14 : 10),
+            context.rSpacing(22),
+            context.rSpacing(18),
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              key: const ValueKey('desktop_alert_save_btn'),
+              onPressed: _save,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                'Save Alert Preferences',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: context.rFont(14.5, min: 13, max: 16),
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (widget.embeddedPanel) {
+      return UnfocusOnTap(
+        child: Container(
+          key: ValueKey('desktop_alert_panel_${widget.category.name}'),
+          decoration: const BoxDecoration(
+            color: AppColors.bgPrimary,
+            border: Border(
+              left: BorderSide(color: AppColors.borderSubtle, width: 1),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: panelColumn,
+        ),
+      );
+    }
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.symmetric(
@@ -327,116 +471,7 @@ class _DesktopAlertSettingsModalState extends State<DesktopAlertSettingsModal> {
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildHeader(context),
-                  if (_hasSubTabs) _buildSubTabSwitcher(context),
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: AppColors.borderSubtle.withValues(alpha: 0.65),
-                  ),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        context.rSpacing(22),
-                        context.rSpacing(16),
-                        context.rSpacing(22),
-                        context.rSpacing(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildMasterSwitchCard(context, current),
-                          SizedBox(height: context.rSpacing(18)),
-                          _buildRemindBeforeHeader(context, current),
-                          SizedBox(height: context.rSpacing(4)),
-                          Text(
-                            'Tap chip to toggle alert • Tap ✕ to delete interval:',
-                            style: TextStyle(
-                              color: const Color(0xFF94A3B8),
-                              fontSize: context.rFont(11.5, min: 10, max: 13),
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                          SizedBox(height: context.rSpacing(10)),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: current.availablePresets
-                                .map((t) => _buildTimingChip(t, current))
-                                .toList(),
-                          ),
-                          SizedBox(height: context.rSpacing(14)),
-                          _buildCustomTimingRow(context, current),
-                          SizedBox(height: context.rSpacing(20)),
-                          Text(
-                            'SOUND & VIBRATION MODE',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: context.rFont(11.5, min: 10, max: 13),
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.6,
-                            ),
-                          ),
-                          SizedBox(height: context.rSpacing(5)),
-                          Text(
-                            'Select how you want alerts delivered to your device:',
-                            style: TextStyle(
-                              color: const Color(0xFF94A3B8),
-                              fontSize: context.rFont(12, min: 10.5, max: 13.5),
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                          SizedBox(height: context.rSpacing(10)),
-                          for (final mode in AlertSoundVibrationMode.values) ...[
-                            _buildModeCard(context, mode: mode, state: current),
-                            if (mode != AlertSoundVibrationMode.values.last)
-                              SizedBox(height: context.rSpacing(8)),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      context.rSpacing(22),
-                      context.rSpacing(10),
-                      context.rSpacing(22),
-                      context.rSpacing(18),
-                    ),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        key: const ValueKey('desktop_alert_save_btn'),
-                        onPressed: _save,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: Text(
-                          'Save Alert Preferences',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: context.rFont(14.5, min: 13, max: 16),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: panelColumn,
             ),
           ),
         ),
@@ -698,19 +733,23 @@ class _DesktopAlertSettingsModalState extends State<DesktopAlertSettingsModal> {
             !current.availablePresets.every(_currentDefaultPresets.contains);
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'REMIND ME BEFORE',
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: context.rFont(11.5, min: 10, max: 13),
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.6,
+        Expanded(
+          child: Text(
+            'REMIND ME BEFORE',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: context.rFont(11.5, min: 10, max: 13),
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+            ),
           ),
         ),
-        if (isModified)
+        if (isModified) ...[
+          const SizedBox(width: 8),
           InkWell(
             key: const ValueKey('desktop_alert_reset_btn'),
             onTap: () {
@@ -738,6 +777,7 @@ class _DesktopAlertSettingsModalState extends State<DesktopAlertSettingsModal> {
               ),
             ),
           ),
+        ],
       ],
     );
   }

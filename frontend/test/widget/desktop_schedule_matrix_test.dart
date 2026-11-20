@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:impal_smart_todolist/core/theme/app_colors.dart';
+import 'package:impal_smart_todolist/core/widgets/desktop_slide_drawer_pane.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/home_page.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_sidebar.dart';
 import 'package:impal_smart_todolist/presentation/features/dashboard/widgets/desktop/desktop_top_header.dart';
@@ -341,6 +343,81 @@ void main() {
         expect(find.text('Edit Schedule'), findsOneWidget);
         expect(find.text('Delete Schedule'), findsOneWidget);
         expect(find.text('Save Changes'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      '+ Add Schedule opens inline slide-from-right drawer with non-blocking Schedule Matrix & zero overflow at 1440x980 and 1024x768',
+      (tester) async {
+        tester.view.physicalSize = const Size(1440, 980);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(buildHarness(const Size(1440, 980)));
+        await tester.pumpAndSettle();
+
+        final slidePaneFinder = find.byType(DesktopSlideDrawerPane);
+        expect(slidePaneFinder, findsOneWidget);
+        expect(tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen, isFalse);
+
+        await tester.tap(find.text('+ Add Schedule'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(Dialog), findsNothing);
+        expect(tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen, isTrue);
+
+        final drawerFinder = find.byKey(const ValueKey('desktop_schedule_slide_drawer'));
+        expect(drawerFinder, findsOneWidget);
+        expect(tester.getSize(drawerFinder).width, 440.0);
+
+        final titleInput = tester.widget<TextField>(
+          find.descendant(
+            of: find.byKey(const ValueKey('desktop_schedule_title_input')),
+            matching: find.byType(TextField),
+          ),
+        );
+        expect(titleInput.decoration?.fillColor, AppColors.bgCard);
+
+        // Main schedule matrix remains interactive while drawer is open
+        await tester.tap(find.byKey(const ValueKey('desktop_schedule_view_All')));
+        await tester.pumpAndSettle();
+        expect(find.text('Schedule Directory (All)'), findsOneWidget);
+        expect(tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen, isTrue);
+
+        // Close drawer via [X] button without popping HomePage
+        await tester.tap(find.byKey(const ValueKey('desktop_schedule_modal_close_btn')));
+        await tester.pumpAndSettle();
+        expect(tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen, isFalse);
+
+        // Re-open, create schedule, verify submit closes drawer and resets cleanly
+        await tester.tap(find.text('+ Add Schedule'));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const ValueKey('desktop_schedule_title_input')),
+          'IMPAL Sprint Demo',
+        );
+        await tester.tap(find.byKey(const ValueKey('desktop_schedule_submit_btn')));
+        await tester.pumpAndSettle();
+
+        if (find.text('Save Anyway').evaluate().isNotEmpty) {
+          await tester.tap(find.text('Save Anyway'));
+        } else {
+          expect(find.text('Make Schedule?'), findsOneWidget);
+          await tester.tap(find.text('Make'));
+        }
+        await tester.pumpAndSettle();
+        expect(tester.widget<DesktopSlideDrawerPane>(slidePaneFinder).isOpen, isFalse);
+        expect(find.text('IMPAL Sprint Demo'), findsWidgets);
+
+        // Verify narrow desktop 1024x768 with slide drawer open has 0 overflow
+        tester.view.physicalSize = const Size(1024, 768);
+        await tester.pumpWidget(buildHarness(const Size(1024, 768)));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('+ Add Schedule'));
+        await tester.pumpAndSettle();
+
+        expect(tester.getSize(drawerFinder).width, 380.0);
         expect(tester.takeException(), isNull);
       },
     );
