@@ -52,6 +52,8 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _currentTab = widget.initialTab;
     ScheduleRepository().init();
+    TeamRepository().fetchTeamsFromApi();
+    TaskRepository().fetchTasksFromApi();
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('is_logged_in', true);
       prefs.setString('auth_user', widget.userName);

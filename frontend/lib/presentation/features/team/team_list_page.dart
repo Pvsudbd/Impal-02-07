@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../schedule/models/schedule_model.dart';
@@ -184,9 +185,20 @@ class _TeamListContentViewState extends State<TeamListContentView> {
   void initState() {
     super.initState();
     ScheduleRepository().init();
+    TeamRepository().teamsNotifier.addListener(_onTeamsChanged);
     TeamRepository().fetchTeamsFromApi().then((_) {
       if (mounted) setState(() {});
     });
+  }
+
+  void _onTeamsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    TeamRepository().teamsNotifier.removeListener(_onTeamsChanged);
+    super.dispose();
   }
 
   void _openSchedulePage() {
@@ -418,28 +430,80 @@ class _TeamListContentViewState extends State<TeamListContentView> {
         ),
         const SizedBox(height: 10),
 
-        for (int i = 0; i < _teams.length; i++) ...[
-          TeamCard(
-            team: _teams[i],
-            onTap: () {
-              if (widget.onTeamSelected != null) {
-                widget.onTeamSelected!(_teams[i]);
-              } else {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => DashboardTeamPage(
-                      userName: widget.userName,
-                      teamName: _teams[i].name,
-                      teamCode: '7X29',
-                      memberColors: _teams[i].memberColors,
-                    ),
+        if (_teams.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+            decoration: BoxDecoration(
+              color: AppColors.bgCard,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.borderSubtle,
+                width: 1,
+              ),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
                   ),
-                );
-              }
-            },
-          ),
-          if (i < _teams.length - 1) const SizedBox(height: 12),
-        ],
+                  child: const Icon(
+                    Icons.groups_outlined,
+                    size: 24,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'No Teams Joined Yet',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Create your own team or enter an invite code to collaborate with your classmates.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12.5,
+                    fontFamily: 'Inter',
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          for (int i = 0; i < _teams.length; i++) ...[
+            TeamCard(
+              team: _teams[i],
+              onTap: () {
+                if (widget.onTeamSelected != null) {
+                  widget.onTeamSelected!(_teams[i]);
+                } else {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => DashboardTeamPage(
+                        userName: widget.userName,
+                        teamName: _teams[i].name,
+                        teamCode: _teams[i].inviteCode ?? '7X29',
+                        memberColors: _teams[i].memberColors,
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+            if (i < _teams.length - 1) const SizedBox(height: 12),
+          ],
       ],
     );
   }

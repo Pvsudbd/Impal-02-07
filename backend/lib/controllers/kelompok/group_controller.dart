@@ -28,15 +28,28 @@ class GroupController {
       }
 
       // Query seluruh kelompok di mana user adalah leader ATAU anggota terdaftar
-      final sql = '''
-        SELECT DISTINCT g.id_group, g.id_leader, g.group_name, g.description, g.invite_code, g.created_at
-        FROM "groups" g
-        LEFT JOIN group_member gm ON g.id_group = gm.id_group
-        WHERE g.id_leader = @idUser OR gm.id_student = @idUser
-        ORDER BY g.created_at DESC
-      ''';
-
-      final results = await Database.query(sql, {'idUser': idUser});
+      QueryResult results;
+      try {
+        results = await Database.query('''
+          SELECT DISTINCT g.id_group, g.id_leader, g.group_name, g.description, g.invite_code, g.created_at
+          FROM "groups" g
+          LEFT JOIN group_member gm ON g.id_group = gm.id_group
+          WHERE g.id_leader = @idUser OR gm.id_user = @idUser
+          ORDER BY g.created_at DESC
+        ''', {'idUser': idUser});
+      } catch (e) {
+        if (e.toString().contains('id_user') || e.toString().contains('gm.id_user')) {
+          results = await Database.query('''
+            SELECT DISTINCT g.id_group, g.id_leader, g.group_name, g.description, g.invite_code, g.created_at
+            FROM "groups" g
+            LEFT JOIN group_member gm ON g.id_group = gm.id_group
+            WHERE g.id_leader = @idUser OR gm.id_student = @idUser
+            ORDER BY g.created_at DESC
+          ''', {'idUser': idUser});
+        } else {
+          rethrow;
+        }
+      }
       final List<Map<String, dynamic>> groupsData = [];
 
       for (final row in results.rows) {
@@ -103,9 +116,11 @@ class GroupController {
             headers: {'Content-Type': 'application/json'});
       }
 
-      // Generate kode jika tidak disediakan atau cek keunikan
+      // Generate kode jika tidak disediakan atau cek keunikan (maksimal 10 karakter untuk VARCHAR(10))
       if (inviteCode == null || inviteCode.isEmpty) {
-        inviteCode = _uuid.v4().substring(0, 6).toUpperCase();
+        inviteCode = _uuid.v4().replaceAll('-', '').substring(0, 6).toUpperCase();
+      } else if (inviteCode.length > 10) {
+        inviteCode = inviteCode.substring(0, 10).toUpperCase();
       }
 
       // Validasi keunikan invite_code di PostgreSQL
@@ -114,12 +129,13 @@ class GroupController {
         {'code': inviteCode},
       );
       if (existingCode.rows.isNotEmpty) {
-        inviteCode = '${inviteCode}_${_uuid.v4().substring(0, 3).toUpperCase()}';
+        inviteCode = _uuid.v4().replaceAll('-', '').substring(0, 6).toUpperCase();
       }
 
-      final idGroup = 'grp_${_uuid.v4()}';
+      // Standar UUID 36 karakter (VARCHAR(36)), tanpa prefix 'grp_' agar tidak melebihi VARCHAR(36)
+      final idGroup = _uuid.v4();
 
-      // 1. Insert ke tabel groups (groups memiliki kolom id_group, id_leader, group_name, description, invite_code, created_at)
+      // 1. Insert ke tabel groups
       final insertGroupSql = '''
         INSERT INTO "groups" (id_group, id_leader, group_name, description, invite_code, created_at)
         VALUES (@idGroup, @idLeader, @groupName, @description, @inviteCode, CURRENT_TIMESTAMP)
@@ -133,18 +149,37 @@ class GroupController {
         'inviteCode': inviteCode,
       });
 
-      // 2. Otomatis tambahkan pencipta sebagai LEADER di tabel group_member (menggunakan kolom id_student)
-      final idMember = 'mem_${_uuid.v4()}';
-      final insertMemberSql = '''
-        INSERT INTO group_member (id_member, id_group, id_student, role, joined_at)
-        VALUES (@idMember, @idGroup, @idUser, 'LEADER', CURRENT_TIMESTAMP)
-      ''';
-
-      await Database.query(insertMemberSql, {
-        'idMember': idMember,
-        'idGroup': idGroup,
-        'idUser': idUser,
-      });
+      // 2. Otomatis tambahkan pencipta sebagai LEADER di tabel group_member (UUID 36 karakter)
+      final idMember = _uuid.v4();
+      try {
+        await Database.query(
+          '''
+          INSERT INTO group_member (id_member, id_group, id_user, role, joined_at)
+          VALUES (@idMember, @idGroup, @idUser, 'LEADER', CURRENT_TIMESTAMP)
+          ''',
+          {
+            'idMember': idMember,
+            'idGroup': idGroup,
+            'idUser': idUser,
+          },
+        );
+      } catch (e) {
+        if (e.toString().contains('id_user')) {
+          await Database.query(
+            '''
+            INSERT INTO group_member (id_member, id_group, id_student, role, joined_at)
+            VALUES (@idMember, @idGroup, @idUser, 'LEADER', CURRENT_TIMESTAMP)
+            ''',
+            {
+              'idMember': idMember,
+              'idGroup': idGroup,
+              'idUser': idUser,
+            },
+          );
+        } else {
+          rethrow;
+        }
+      }
 
       return Response(201,
         body: jsonEncode({
@@ -211,10 +246,22 @@ class GroupController {
       final groupName = groupRow['group_name'].toString();
 
       // 2. Cek apakah user sudah terdaftar di kelompok ini
-      final memberCheck = await Database.query(
-        'SELECT id_member FROM group_member WHERE id_group = @idGroup AND id_student = @idUser',
-        {'idGroup': idGroup, 'idUser': idUser},
-      );
+      QueryResult memberCheck;
+      try {
+        memberCheck = await Database.query(
+          'SELECT id_member FROM group_member WHERE id_group = @idGroup AND id_user = @idUser',
+          {'idGroup': idGroup, 'idUser': idUser},
+        );
+      } catch (e) {
+        if (e.toString().contains('id_user')) {
+          memberCheck = await Database.query(
+            'SELECT id_member FROM group_member WHERE id_group = @idGroup AND id_student = @idUser',
+            {'idGroup': idGroup, 'idUser': idUser},
+          );
+        } else {
+          rethrow;
+        }
+      }
 
       if (memberCheck.rows.isNotEmpty) {
         return Response(400,
@@ -229,18 +276,37 @@ class GroupController {
             headers: {'Content-Type': 'application/json'});
       }
 
-      // 3. Tambahkan ke group_member (menggunakan id_student)
-      final idMember = 'mem_${_uuid.v4()}';
-      final insertMemberSql = '''
-        INSERT INTO group_member (id_member, id_group, id_student, role, joined_at)
-        VALUES (@idMember, @idGroup, @idUser, 'MEMBER', CURRENT_TIMESTAMP)
-      ''';
-
-      await Database.query(insertMemberSql, {
-        'idMember': idMember,
-        'idGroup': idGroup,
-        'idUser': idUser,
-      });
+      // 3. Tambahkan ke group_member (UUID 36 karakter)
+      final idMember = _uuid.v4();
+      try {
+        await Database.query(
+          '''
+          INSERT INTO group_member (id_member, id_group, id_user, role, joined_at)
+          VALUES (@idMember, @idGroup, @idUser, 'MEMBER', CURRENT_TIMESTAMP)
+          ''',
+          {
+            'idMember': idMember,
+            'idGroup': idGroup,
+            'idUser': idUser,
+          },
+        );
+      } catch (e) {
+        if (e.toString().contains('id_user')) {
+          await Database.query(
+            '''
+            INSERT INTO group_member (id_member, id_group, id_student, role, joined_at)
+            VALUES (@idMember, @idGroup, @idUser, 'MEMBER', CURRENT_TIMESTAMP)
+            ''',
+            {
+              'idMember': idMember,
+              'idGroup': idGroup,
+              'idUser': idUser,
+            },
+          );
+        } else {
+          rethrow;
+        }
+      }
 
       return Response.ok(
         jsonEncode({
@@ -292,13 +358,28 @@ class GroupController {
       final group = groupQuery.rows.first;
 
       // Ambil anggota
-      final membersQuery = await Database.query('''
-        SELECT gm.id_member, gm.role, gm.joined_at, u.id_user, u.name, u.email
-        FROM group_member gm
-        JOIN users u ON gm.id_student = u.id_user
-        WHERE gm.id_group = @idGroup
-        ORDER BY gm.role DESC, gm.joined_at ASC
-      ''', {'idGroup': idGroup});
+      QueryResult membersQuery;
+      try {
+        membersQuery = await Database.query('''
+          SELECT gm.id_member, gm.role, gm.joined_at, u.id_user, u.name, u.email
+          FROM group_member gm
+          JOIN users u ON gm.id_user = u.id_user
+          WHERE gm.id_group = @idGroup
+          ORDER BY gm.role DESC, gm.joined_at ASC
+        ''', {'idGroup': idGroup});
+      } catch (e) {
+        if (e.toString().contains('id_user') || e.toString().contains('gm.id_user')) {
+          membersQuery = await Database.query('''
+            SELECT gm.id_member, gm.role, gm.joined_at, u.id_user, u.name, u.email
+            FROM group_member gm
+            JOIN users u ON gm.id_student = u.id_user
+            WHERE gm.id_group = @idGroup
+            ORDER BY gm.role DESC, gm.joined_at ASC
+          ''', {'idGroup': idGroup});
+        } else {
+          rethrow;
+        }
+      }
 
       // Ambil rapat kelompok
       final meetingsQuery = await Database.query('''
@@ -382,7 +463,7 @@ class GroupController {
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idMeeting = 'meet_${_uuid.v4()}';
+      final idMeeting = _uuid.v4();
       final sql = '''
         INSERT INTO meeting_schedule (id_meeting, id_group, meeting_title, description, start_time, platform_location, created_at)
         VALUES (@idMeeting, @idGroup, @title, @description, @startTime::timestamptz, @location, CURRENT_TIMESTAMP)
@@ -466,7 +547,7 @@ class GroupController {
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idGroupTask = 'gtask_${_uuid.v4()}';
+      final idGroupTask = _uuid.v4();
       final sql = '''
         INSERT INTO group_task (id_group_task, id_group, id_assigned_to, task_title, description, deadline, grade_weight, priority, is_completed, created_at, updated_at)
         VALUES (@idGroupTask, @idGroup, @assignedTo, @title, @desc, @deadline::timestamptz, @weight, @priority, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)

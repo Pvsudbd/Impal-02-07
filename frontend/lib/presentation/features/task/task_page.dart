@@ -125,6 +125,7 @@ class _TaskContentViewState extends State<TaskContentView> {
   void initState() {
     super.initState();
     _repository.init();
+    _repository.fetchTasksFromApi();
     _repository.addListener(_onRepositoryChanged);
     _teamTaskRepository.init();
     _teamTaskRepository.addListener(_onRepositoryChanged);
@@ -377,9 +378,15 @@ class _TaskContentViewState extends State<TaskContentView> {
     final tasks = _sortedTasks;
     final firstActiveId = tasks.where((t) => !t.isCompleted).map((t) => t.id).firstOrNull;
 
-    return CustomScrollView(
-      controller: _scrollController,
-      physics: const BouncingScrollPhysics(),
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _repository.fetchTasksFromApi();
+      },
+      color: AppColors.primary,
+      backgroundColor: AppColors.bgCard,
+      child: CustomScrollView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
@@ -711,6 +718,7 @@ class _TaskContentViewState extends State<TaskContentView> {
           child: SizedBox(height: context.rSpacing(100)),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 }

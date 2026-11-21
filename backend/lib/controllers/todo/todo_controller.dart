@@ -83,7 +83,7 @@ class TodoController {
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idItem = 'todo_${_uuid.v4()}';
+      final idItem = _uuid.v4();
       final sql = '''
         INSERT INTO todo_item (id_item, id_user, activity_title, notes, date, is_done, created_at, updated_at)
         VALUES (@idItem, @idUser, @title, @notes, @date::date, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)

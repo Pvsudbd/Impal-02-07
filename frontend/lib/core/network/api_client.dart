@@ -19,7 +19,7 @@ class ApiClient {
         return 'http://localhost:3000';
     }
   }
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
   static const Duration requestTimeout = Duration(seconds: 15);
 
   // ==========================================
@@ -46,7 +46,15 @@ class ApiClient {
         )
         .timeout(requestTimeout);
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    try {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {
+        'status': 'error',
+        'statusCode': response.statusCode,
+        'message': response.body.isNotEmpty ? response.body : 'HTTP ${response.statusCode}',
+      };
+    }
   }
 
   static Future<Map<String, dynamic>> get(
@@ -60,7 +68,15 @@ class ApiClient {
     };
 
     final response = await http.get(uri, headers: headers).timeout(requestTimeout);
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    try {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {
+        'status': 'error',
+        'statusCode': response.statusCode,
+        'message': response.body.isNotEmpty ? response.body : 'HTTP ${response.statusCode}',
+      };
+    }
   }
 
   static Future<Map<String, dynamic>> put(
@@ -82,7 +98,15 @@ class ApiClient {
         )
         .timeout(requestTimeout);
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    try {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {
+        'status': 'error',
+        'statusCode': response.statusCode,
+        'message': response.body.isNotEmpty ? response.body : 'HTTP ${response.statusCode}',
+      };
+    }
   }
 
   static Future<Map<String, dynamic>> delete(
@@ -96,7 +120,15 @@ class ApiClient {
     };
 
     final response = await http.delete(uri, headers: headers).timeout(requestTimeout);
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    try {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {
+        'status': 'error',
+        'statusCode': response.statusCode,
+        'message': response.body.isNotEmpty ? response.body : 'HTTP ${response.statusCode}',
+      };
+    }
   }
 
   // ==========================================

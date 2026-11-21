@@ -135,6 +135,28 @@ Setiap kali Agent melakukan penambahan fitur baru, perbaikan kode (*bug fix*), *
 3. **Kewajiban Otomatis:**
    - **DILARANG** menyelesaikan respon ke pengguna tanpa mencatat atau memperbarui berkas fitur terkait di folder `.agents/features/`.
 
+---
+
+## 8. 🛡️ Standar Integritas Data & Manajemen State Multi-Akun (Database Constraints & Multi-User State Isolation)
+
+Demi menjaga integritas database dan mencegah kebocoran data antar-pengguna saat berganti akun di satu perangkat:
+
+### A. Kepatuhan Batas Panjang Primary Key UUID (`VARCHAR(36)`) di Database
+1. **Standar Ukuran UUID**: Seluruh kolom Primary Key dan Foreign Key bertipe UUID di database PostgreSQL (`id_user`, `id_group`, `id_member`, `id_agenda`, `id_task`, `id_item`, `id_meeting`, `id_group_task`, `id_sub_task`, `id_notification`) didefinisikan dengan tipe data **`VARCHAR(36)`**.
+2. ❌ **LARANGAN KERAS (FORBIDDEN)**:
+   - **DILARANG** menambahkan prefix string kustom pada UUID (misalnya: `'grp_' + _uuid.v4()`, `'mem_' + _uuid.v4()`, `'meet_' + _uuid.v4()`, `'gtask_' + _uuid.v4()`, `'todo_' + _uuid.v4()`).
+   - Penambahan prefix tersebut menghasilkan panjang string 40–42 karakter yang pasti memicu error fatal basis data: `value too long for type character varying(36)`.
+3. ✅ **MANDAT WAJIB**:
+   - Selalu gunakan string UUID v4 murni berukuran tepat 36 karakter: `final id = _uuid.v4();`.
+   - Untuk kolom kode unik pendek seperti `invite_code` pada tabel `groups` (`VARCHAR(10)`), panjang string yang di-generate tidak boleh melebihi 10 karakter.
+
+### B. Isolasi Data Sesi & Pembersihan State Singleton (Multi-Account Session Cleanliness)
+Di sisi Frontend Flutter, repository data yang menggunakan pola Singleton in-memory (`TeamRepository`, `ScheduleRepository`, `UserProfileRepository`, dll.) menyimpan state di RAM:
+1. **Pembersihan Wajib saat Logout**: Setiap kali alur *Logout / Sign Out* dieksekusi (di `profile_page.dart` maupun `home_header.dart`), Agent **WAJIB** memanggil method `.clear()` atau `.reset()` pada seluruh singleton repository yang menyimpan data pengguna, selain menghapus token sesi di `SharedPreferences`.
+2. **Sinkronisasi Tanpa Blocking Empty List**: Pada method sinkronisasi data API (seperti `fetchTeamsFromApi()`), **DILARANG** memblokir penimpaan data dengan kondisi `if (fetched.isNotEmpty) { _data = fetched; }`. Jika API mengembalikan array kosong `[]` (karena akun baru belum memiliki data di server), state lokal **WAJIB** diperbarui menjadi `[]` agar data akun sebelumnya tidak bocor ke layar akun yang baru login.
+3. **Penyediaan Empty State UI**: Saat data lokal kosong (`_teams.isEmpty`), sediakan tampilan antarmuka *Empty State* yang ramah pengguna, alih-alih menampilkan data dummy atau data milik akun lain.
+
+
 
 
 

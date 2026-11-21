@@ -170,6 +170,112 @@ class TaskItemModel {
     return 'Kelompok IMPAL';
   }
 
+  /// Formats a DateTime into standardized UI format (e.g. 'Sat 11 Oct 2026, 23: 59 WIB').
+  static String formatDeadlineDateTime(DateTime dt) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final dayName = days[dt.weekday - 1];
+    final monthName = months[dt.month - 1];
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$dayName ${dt.day} $monthName ${dt.year}, $h: $m WIB';
+  }
+
+  /// Deserializes a backend JSON Map (from GET /api/task or POST /api/task) into TaskItemModel.
+  factory TaskItemModel.fromBackendJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is DateTime) return val;
+      return DateTime.tryParse(val.toString()) ?? DateTime.now();
+    }
+
+    final id = json['id_task']?.toString() ?? json['id']?.toString() ?? '';
+    final title = json['task_title']?.toString() ?? json['title']?.toString() ?? 'Untitled Task';
+    final course = json['course_code']?.toString() ?? json['course']?.toString() ?? '';
+    final notes = json['description']?.toString() ?? json['notes']?.toString() ?? '';
+    final dt = parseDate(json['deadline']);
+    final isCompleted = json['is_completed'] == 1 || json['is_completed'] == true;
+    final isAutomaticWeight = json['is_fuzzy_auto'] != false && json['is_fuzzy_auto'] != 0;
+    final priority = TaskPriorityLevel.fromString(json['priority']?.toString() ?? 'medium');
+
+    final now = DateTime.now();
+    final isPastDeadline = dt.isBefore(now);
+
+    String durationBadge;
+    Color durationBadgeColor;
+    if (isPastDeadline) {
+      durationBadge = 'Overdue';
+      durationBadgeColor = const Color(0xFFFF7D65);
+    } else {
+      final diffHours = dt.difference(now).inHours;
+      if (diffHours < 24) {
+        durationBadge = '${diffHours > 0 ? diffHours : 1}h';
+      } else {
+        final daysDiff = dt.difference(now).inDays;
+        durationBadge = '${daysDiff}d';
+      }
+      durationBadgeColor = const Color(0xFF5B93FF);
+    }
+
+    final tags = <TaskTagModel>[
+      TaskTagModel(
+        label: isPastDeadline ? 'Overdue' : 'Task',
+        backgroundColor: isPastDeadline ? const Color(0xFFFF7D65) : priority.badgeBg,
+        textColor: Colors.white,
+      ),
+      if (course.isNotEmpty)
+        TaskTagModel(
+          label: course.length > 20 ? course.substring(0, 20) : course,
+          backgroundColor: const Color(0xFF786FA6),
+          textColor: Colors.white,
+        ),
+    ];
+
+    final score = (json['priority_score'] as num?)?.toDouble() ?? 0.0;
+    final centroidStr = isPastDeadline
+        ? 'N/A (Overdue)'
+        : (score > 0.0 ? 'z* = ${score.toStringAsFixed(1)}' : 'z* = 32.4');
+
+    return TaskItemModel(
+      id: id,
+      title: title,
+      priority: priority,
+      durationBadge: durationBadge,
+      durationBadgeColor: durationBadgeColor,
+      durationTextColor: Colors.white,
+      deadlineDate: dt,
+      formattedDeadline: formatDeadlineDateTime(dt),
+      tags: tags,
+      course: course,
+      notes: notes,
+      isAutomaticWeight: isAutomaticWeight,
+      isCompleted: isCompleted,
+      isCollegeTask: course.isNotEmpty,
+      centroidDefuzzification: centroidStr,
+      centroidScale: 'scale(0-100)',
+      warningNotice: '*This task is assigned to you',
+      dateCreated: 'Created',
+    );
+  }
+
+  /// Serializes TaskItemModel into backend compatible JSON payload.
+  Map<String, dynamic> toBackendJson() {
+    return {
+      'id_task': id,
+      'task_title': title,
+      'description': notes,
+      'course_code': course,
+      'deadline': deadlineDate.toIso8601String(),
+      'priority': priority.label.toUpperCase(),
+      'is_fuzzy_auto': isAutomaticWeight,
+      'is_completed': isCompleted,
+      'grade_weight': 0.0,
+    };
+  }
+
   TaskItemModel copyWith({
     String? id,
     String? title,

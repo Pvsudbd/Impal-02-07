@@ -15,6 +15,8 @@ import 'widgets/profile_fuzzy_card.dart';
 import 'widgets/profile_hero_card.dart';
 import 'widgets/profile_settings_group.dart';
 import 'widgets/profile_stats_row.dart';
+import '../team/models/team_repository.dart';
+import '../task/models/task_repository.dart';
 
 // Aliases for backwards compatibility with Figma exports
 typedef Profile = ProfilePage;
@@ -237,6 +239,8 @@ class _ProfilePageState extends State<ProfilePage> {
               await prefs.remove('auth_token');
               await prefs.remove('jwt_token');
               await prefs.remove('auth_user');
+              TeamRepository().clear();
+              TaskRepository().clear();
               if (context.mounted) {
                 Navigator.pushReplacement(
                   context,

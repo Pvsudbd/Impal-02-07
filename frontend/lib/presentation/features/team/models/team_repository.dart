@@ -87,14 +87,19 @@ class TeamRepository {
             .map((item) => TeamModel.fromMap(item as Map<String, dynamic>))
             .toList();
 
-        if (fetched.isNotEmpty) {
-          _teams = fetched;
-          teamsNotifier.value = List.unmodifiable(_teams);
-        }
+        // Selalu sinkronisasikan _teams dengan data milik akun yang sedang aktif
+        _teams = fetched;
+        teamsNotifier.value = List.unmodifiable(_teams);
       }
     } catch (e) {
       debugPrint('[TEAM_REPO] fetchTeamsFromApi error: $e');
     }
+  }
+
+  /// Membersihkan data tim di memori saat logout
+  void clear() {
+    _teams = [];
+    teamsNotifier.value = [];
   }
 
   /// Panggil API untuk join team via invite code (POST /api/groups/join)

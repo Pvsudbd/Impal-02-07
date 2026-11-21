@@ -44,15 +44,15 @@ class Task {
     }
 
     return Task(
-      taskId: json['id_task']?.toString() ?? '',
-      userId: json['id_user']?.toString() ?? json['userId']?.toString() ?? '',
-      courseCode: json['course_code']?.toString() ?? json['courseCode']?.toString() ?? '',
+      taskId: json['id_task']?.toString() ?? json['id']?.toString() ?? '',
+      userId: json['id_user']?.toString() ?? json['id_student']?.toString() ?? json['userId']?.toString() ?? '',
+      courseCode: json['course_code']?.toString() ?? json['courseCode']?.toString() ?? json['course']?.toString() ?? '',
       taskTitle: json['task_title']?.toString() ?? json['title']?.toString() ?? '',
-      description: json['description']?.toString() ?? '',
+      description: json['description']?.toString() ?? json['notes']?.toString() ?? '',
       deadline: parseDate(json['deadline']),
-      gradeWeight: (json['grade_weight'] as num?)?.toDouble() ?? 0.0,
-      priorityScore: (json['priority_score'] as num?)?.toDouble() ?? 0.0,
-      priority: json['priority']?.toString() ?? 'MEDIUM',
+      gradeWeight: (json['grade_weight'] as num?)?.toDouble() ?? (json['gradeWeight'] as num?)?.toDouble() ?? 0.0,
+      priorityScore: (json['priority_score'] as num?)?.toDouble() ?? (json['priorityScore'] as num?)?.toDouble() ?? 0.0,
+      priority: (json['priority']?.toString() ?? 'MEDIUM').toUpperCase(),
       isFuzzyAuto: json['is_fuzzy_auto'] == 1 || json['is_fuzzy_auto'] == true,
       isCompleted: json['is_completed'] == 1 || json['is_completed'] == true,
     );
@@ -61,16 +61,21 @@ class Task {
   Map<String, dynamic> toJson() {
     return {
       'id_task': _taskId,
+      'id': _taskId,
       'id_user': _userId,
+      'id_student': _userId,
       'course_code': _courseCode,
+      'course': _courseCode,
       'task_title': _taskTitle,
+      'title': _taskTitle,
       'description': _description,
+      'notes': _description,
       'deadline': _deadline.toIso8601String(),
       'grade_weight': _gradeWeight,
       'priority_score': _priorityScore,
       'priority': _priority,
-      'is_fuzzy_auto': _isFuzzyAuto ? 1 : 0,
-      'is_completed': _isCompleted ? 1 : 0,
+      'is_fuzzy_auto': _isFuzzyAuto,
+      'is_completed': _isCompleted,
     };
   }
 

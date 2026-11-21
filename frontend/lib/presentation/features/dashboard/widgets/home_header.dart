@@ -6,6 +6,8 @@ import '../../../../core/utils/responsive_context.dart';
 import '../../auth/login_page.dart';
 import '../../notifikasi/widgets/notification_bell_button.dart';
 import '../../profile/profile_page.dart';
+import '../../team/models/team_repository.dart';
+import '../../task/models/task_repository.dart';
 
 /// Top header banner showing user greeting, pending task count, and avatar.
 /// Standardized across Home, Task, Team List, and Schedule pages.
@@ -68,6 +70,8 @@ class HomeHeader extends StatelessWidget {
               await prefs.remove('auth_token');
               await prefs.remove('jwt_token');
               await prefs.remove('auth_user');
+              TeamRepository().clear();
+              TaskRepository().clear();
               if (context.mounted) {
                 Navigator.pushReplacement(
                   context,

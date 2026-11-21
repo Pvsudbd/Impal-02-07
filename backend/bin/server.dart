@@ -8,6 +8,7 @@ import '../lib/routes/agenda/agenda_routes.dart';
 import '../lib/routes/profile/profile_routes.dart';
 import '../lib/routes/kelompok/group_routes.dart';
 import '../lib/routes/todo/todo_routes.dart';
+import '../lib/routes/task/task_routes.dart';
 
 void main(List<String> args) async {
   Database.init();
@@ -34,6 +35,7 @@ void main(List<String> args) async {
           'groups': '/api/groups',
           'joinGroup': '/api/groups/join',
           'todo': '/api/todo',
+          'task': '/api/task',
         },
       },
     );
@@ -115,6 +117,11 @@ void main(List<String> args) async {
   // 5. Mount Todo routes under /api/todo
   app.mount('/api/todo', fromShelfHandler(TodoRoutes().router));
 
+  // 6. Mount Task routes under /api/task and /api/tasks
+  final taskRoutes = fromShelfHandler(TaskRoutes().router);
+  app.mount('/api/task', taskRoutes);
+  app.mount('/api/tasks', taskRoutes);
+
   // ─── GLOBAL DART FROG PIPELINE ────────────────────────────────────────────
   final handler = const Pipeline()
       .addMiddleware(corsMiddleware())
@@ -138,5 +145,6 @@ void main(List<String> args) async {
   print('👥 Kelompok: http://localhost:${server.port}/api/groups');
   print('👥 Join Tim: http://localhost:${server.port}/api/groups/join');
   print('📝 To-Do   : http://localhost:${server.port}/api/todo');
+  print('📋 Tugas   : http://localhost:${server.port}/api/task');
   print('========================================================');
 }

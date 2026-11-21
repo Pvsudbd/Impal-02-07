@@ -153,81 +153,99 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
 
     setState(() => _isSubmitting = true);
 
-    // Simulate async network latency
-    await Future.delayed(const Duration(milliseconds: 350));
-
     final title = _titleController.text.trim();
     final course = _isCollegeTask ? _courseController.text.trim() : '';
     final notes = _notesController.text.trim();
 
-    if (_isEditing) {
-      final updated = widget.targetTask!.copyWith(
-        title: title,
-        course: course.isNotEmpty
-            ? course
-            : (_isCollegeTask ? widget.targetTask!.course : ''),
-        notes: notes,
-        deadlineDate: _selectedDate,
-        formattedDeadline: formattedDeadline,
-        priority: _selectedPriority,
-        durationBadge: isPastDeadline ? 'Overdue' : widget.targetTask!.durationBadge,
-        durationBadgeColor: isPastDeadline ? const Color(0xFFFF7D65) : widget.targetTask!.durationBadgeColor,
-        isAutomaticWeight: isPastDeadline ? false : _isAutomaticWeight,
-        centroidDefuzzification: isPastDeadline ? 'N/A (Overdue)' : widget.targetTask!.centroidDefuzzification,
-        isCollegeTask: _isCollegeTask,
-        isAlertEnabled: _isAlertEnabled,
-      );
+    try {
+      if (_isEditing) {
+        final updated = widget.targetTask!.copyWith(
+          title: title,
+          course: course.isNotEmpty
+              ? course
+              : (_isCollegeTask ? widget.targetTask!.course : ''),
+          notes: notes,
+          deadlineDate: _selectedDate,
+          formattedDeadline: formattedDeadline,
+          priority: _selectedPriority,
+          durationBadge: isPastDeadline ? 'Overdue' : widget.targetTask!.durationBadge,
+          durationBadgeColor: isPastDeadline ? const Color(0xFFFF7D65) : widget.targetTask!.durationBadgeColor,
+          isAutomaticWeight: isPastDeadline ? false : _isAutomaticWeight,
+          centroidDefuzzification: isPastDeadline ? 'N/A (Overdue)' : widget.targetTask!.centroidDefuzzification,
+          isCollegeTask: _isCollegeTask,
+          isAlertEnabled: _isAlertEnabled,
+        );
 
-      TaskRepository().updateTask(updated);
-      widget.onTaskUpdated?.call(updated);
-      if (mounted) {
-        PopUpPemberitahuan.taskUpdated(context, taskName: title);
-        Navigator.of(context).pop(updated);
+        await TaskRepository().updateTaskApi(updated);
+        widget.onTaskUpdated?.call(updated);
+        if (mounted) {
+          PopUpPemberitahuan.taskUpdated(context, taskName: title);
+          Navigator.of(context).pop(updated);
+        }
+      } else {
+        final newTask = TaskItemModel(
+          id: '',
+          title: title,
+          course: _isCollegeTask
+              ? (course.isNotEmpty ? course : 'General Course')
+              : '',
+          notes: notes,
+          deadlineDate: _selectedDate,
+          formattedDeadline: formattedDeadline,
+          priority: _selectedPriority,
+          durationBadge: isPastDeadline
+              ? 'Overdue'
+              : (_selectedPriority == TaskPriorityLevel.high ? '12h' : '24h'),
+          durationBadgeColor: isPastDeadline
+              ? const Color(0xFFFF7D65)
+              : const Color(0xFF5B93FF),
+          durationTextColor: Colors.white,
+          isAutomaticWeight: isPastDeadline ? false : _isAutomaticWeight,
+          isCollegeTask: _isCollegeTask,
+          isAlertEnabled: _isAlertEnabled,
+          subtitle: 'Personal & Team task',
+          tags: [
+            TaskTagModel(
+              label: isPastDeadline ? 'Overdue' : 'Task',
+              backgroundColor: isPastDeadline ? const Color(0xFFFF7D65) : _selectedPriority.badgeBg,
+              textColor: Colors.white,
+            ),
+            if (course.isNotEmpty)
+              TaskTagModel(
+                label: course.length > 20 ? course.substring(0, 20) : course,
+                backgroundColor: const Color(0xFF786FA6),
+                textColor: Colors.white,
+              ),
+          ],
+          groupMembers: const ['Personal Task • Jarvis'],
+          dateCreated: 'Today',
+          centroidDefuzzification: isPastDeadline ? 'N/A (Overdue)' : 'z* = 32.4',
+          centroidScale: 'scale(0-100)',
+        );
+
+        final created = await TaskRepository().createTaskApi(newTask);
+        final finalTask = created ?? newTask;
+        widget.onTaskCreated?.call(finalTask);
+        if (mounted) {
+          PopUpPemberitahuan.taskCreated(context, taskName: title);
+          Navigator.of(context).pop(finalTask);
+        }
       }
-    } else {
-      final newTask = TaskItemModel(
-        id: 'task_${DateTime.now().millisecondsSinceEpoch}',
-        title: title,
-        course: _isCollegeTask
-            ? (course.isNotEmpty ? course : 'General Course')
-            : '',
-        notes: notes,
-        deadlineDate: _selectedDate,
-        formattedDeadline: formattedDeadline,
-        priority: _selectedPriority,
-        durationBadge: isPastDeadline
-            ? 'Overdue'
-            : (_selectedPriority == TaskPriorityLevel.high ? '12h' : '24h'),
-        durationBadgeColor: isPastDeadline
-            ? const Color(0xFFFF7D65)
-            : const Color(0xFF5B93FF),
-        durationTextColor: Colors.white,
-        isAutomaticWeight: isPastDeadline ? false : _isAutomaticWeight,
-        isCollegeTask: _isCollegeTask,
-        isAlertEnabled: _isAlertEnabled,
-        subtitle: 'Personal & Team task',
-        tags: [
-          TaskTagModel(
-            label: isPastDeadline ? 'Overdue' : 'Task',
-            backgroundColor: isPastDeadline ? const Color(0xFFFF7D65) : _selectedPriority.badgeBg,
-            textColor: Colors.white,
-          ),
-        ],
-        groupMembers: const ['Personal Task • Jarvis'],
-        dateCreated: 'Today',
-        centroidDefuzzification: isPastDeadline ? 'N/A (Overdue)' : 'z* = 32.4',
-        centroidScale: 'scale(0-100)',
-      );
-
-      widget.onTaskCreated?.call(newTask);
+    } catch (e) {
       if (mounted) {
-        PopUpPemberitahuan.taskCreated(context, taskName: title);
-        Navigator.of(context).pop(newTask);
+        final errText = e.toString().replaceAll('Exception:', '').trim();
+        PopUpPemberitahuan.warning(
+          context,
+          title: 'Failed to Save Task',
+          message: errText.isNotEmpty
+              ? errText
+              : 'Could not connect to database. Make sure backend server is running.',
+        );
       }
-    }
-
-    if (mounted) {
-      setState(() => _isSubmitting = false);
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -655,12 +673,24 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                 'Are you sure you want to delete this personal task? This action cannot be undone.',
           );
           if (confirmed == true && context.mounted) {
-            TaskRepository().deleteTask(widget.targetTask!.id);
-            PopUpPemberitahuan.taskDeleted(
-              context,
-              taskName: widget.targetTask!.title,
-            );
-            Navigator.of(context).pop();
+            try {
+              await TaskRepository().deleteTaskApi(widget.targetTask!.id);
+              if (context.mounted) {
+                PopUpPemberitahuan.taskDeleted(
+                  context,
+                  taskName: widget.targetTask!.title,
+                );
+                Navigator.of(context).pop();
+              }
+            } catch (e) {
+              if (context.mounted) {
+                PopUpPemberitahuan.warning(
+                  context,
+                  title: 'Failed to Delete',
+                  message: e.toString().replaceAll('Exception:', '').trim(),
+                );
+              }
+            }
           }
         },
         icon: const Icon(
