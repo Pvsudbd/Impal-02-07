@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/utils/page_transitions.dart';
+import '../../../core/utils/responsive_context.dart';
 import '../../../core/utils/top_toast.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import 'login_page.dart';
@@ -166,6 +167,8 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = context.isDesktop;
+
     final topNavBar = Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -205,8 +208,69 @@ class _ForgotPasswordState extends State<ForgotPassword> {
       ],
     );
 
+    final methodCards = <Widget>[
+      RecoveryMethodCard(
+        isSelected: _selectedMethod == RecoveryMethod.email,
+        title: isDesktop ? 'Send to Email' : 'Send Link via Email',
+        subtitle: isDesktop
+            ? 'Link dispatched to your registered academic email'
+            : 'Recovery link sent to your registered academic email',
+        icon: Icons.mail_outline_rounded,
+        onTap: () => setState(() {
+          _selectedMethod = RecoveryMethod.email;
+          _emailError = null;
+          _phoneError = null;
+        }),
+      ),
+      const SizedBox(height: 10),
+      RecoveryMethodCard(
+        isSelected: _selectedMethod == RecoveryMethod.sms,
+        title: 'Send 6-Digit Code via SMS',
+        subtitle: 'Receive confirmation code on your mobile phone',
+        icon: Icons.chat_bubble_outline_rounded,
+        onTap: () => setState(() {
+          _selectedMethod = RecoveryMethod.sms;
+          _emailError = null;
+          _phoneError = null;
+        }),
+      ),
+    ];
+
+    final dynamicInput = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      child: _selectedMethod == RecoveryMethod.email
+          ? AuthTextField(
+              key: const ValueKey('email_form'),
+              label: isDesktop ? 'Email' : 'Email or Student ID',
+              controller: _emailController,
+              hintText: 'Enter registered email or Student ID',
+              prefixIcon: Icons.mail_outline_rounded,
+              keyboardType: TextInputType.emailAddress,
+              errorText: _emailError,
+              onTap: TopToast.dismiss,
+            )
+          : _buildPhoneForm(),
+    );
+
     return AuthCardWrapper(
       topNavBar: topNavBar,
+      onDesktopBack: _navigateBack,
+      desktopTopTrailingAction: InkWell(
+        onTap: _showHelpInfo,
+        borderRadius: BorderRadius.circular(6),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Text(
+            'Help?',
+            style: TextStyle(
+              color: Color(0xFFFA6144),
+              fontSize: 12,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -217,8 +281,8 @@ class _ForgotPasswordState extends State<ForgotPassword> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 60,
-                  height: 60,
+                  width: 58,
+                  height: 58,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFA6144),
                     borderRadius: BorderRadius.circular(18),
@@ -231,31 +295,33 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                     ],
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.lock_reset_rounded,
-                    size: 32,
+                  child: Icon(
+                    isDesktop ? Icons.vpn_key_rounded : Icons.lock_reset_rounded,
+                    size: 30,
                     color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text(
+                Text(
                   'Forgot Password?',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 22,
+                    fontSize: isDesktop ? 26 : 22,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.5,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const SizedBox(
-                  width: 320,
+                SizedBox(
+                  width: isDesktop ? 360 : 320,
                   child: Text(
-                    'Choose where you would like to receive password recovery instructions.',
+                    isDesktop
+                        ? 'Enter your registered Student ID or campus email to receive password reset instructions.'
+                        : 'Choose where you would like to receive password recovery instructions.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Color(0xFF8E95A5),
                       fontSize: 13,
                       fontFamily: 'Inter',
@@ -268,50 +334,15 @@ class _ForgotPasswordState extends State<ForgotPassword> {
           ),
           const SizedBox(height: 24),
 
-          // Recovery Method Selectors
-          RecoveryMethodCard(
-            isSelected: _selectedMethod == RecoveryMethod.email,
-            title: 'Send Link via Email',
-            subtitle: 'Recovery link sent to your registered academic email',
-            icon: Icons.mail_outline_rounded,
-            onTap: () => setState(() {
-              _selectedMethod = RecoveryMethod.email;
-              _emailError = null;
-              _phoneError = null;
-            }),
-          ),
-          const SizedBox(height: 10),
-          RecoveryMethodCard(
-            isSelected: _selectedMethod == RecoveryMethod.sms,
-            title: 'Send 6-Digit Code via SMS',
-            subtitle: 'Receive confirmation code on your mobile phone',
-            icon: Icons.chat_bubble_outline_rounded,
-            onTap: () => setState(() {
-              _selectedMethod = RecoveryMethod.sms;
-              _emailError = null;
-              _phoneError = null;
-            }),
-          ),
-          const SizedBox(height: 16),
-
-          // Dynamic Form Input
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            child: _selectedMethod == RecoveryMethod.email
-                ? AuthTextField(
-                    key: const ValueKey('email_form'),
-                    label: 'Email or Student ID',
-                    controller: _emailController,
-                    hintText: 'Enter registered email or Student ID',
-                    prefixIcon: Icons.mail_outline_rounded,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _handleSendRecovery(),
-                    errorText: _emailError,
-                    onTap: TopToast.dismiss,
-                  )
-                : _buildPhoneForm(),
-          ),
+          if (isDesktop) ...[
+            dynamicInput,
+            const SizedBox(height: 16),
+            ...methodCards,
+          ] else ...[
+            ...methodCards,
+            const SizedBox(height: 16),
+            dynamicInput,
+          ],
           const SizedBox(height: 16),
 
           // Notice Banner

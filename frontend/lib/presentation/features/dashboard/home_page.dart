@@ -2,21 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/page_transitions.dart';
+import '../../../core/utils/responsive_context.dart';
+import '../../../core/widgets/desktop_slide_drawer_pane.dart';
+import '../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
+import '../auth/login_page.dart';
+import '../profile/models/user_profile_model.dart';
+import '../profile/widgets/desktop/desktop_profile_modals.dart';
+import '../profile/widgets/desktop/desktop_profile_settings_view.dart';
 import '../schedule/models/schedule_model.dart';
 import '../schedule/models/schedule_repository.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
 import '../schedule/schedule_form_page.dart';
 import '../schedule/schedule_page.dart';
+import '../schedule/widgets/desktop/desktop_schedule_matrix_view.dart';
+import '../schedule/widgets/desktop/desktop_schedule_modal.dart';
+import '../smart_system/models/course_rubric_repository.dart';
 import '../smart_system/models/smart_priority_repository.dart';
 import '../smart_system/smart_priority_page.dart';
+import '../smart_system/widgets/course_rubric_modals.dart';
+import '../smart_system/widgets/desktop/desktop_smart_priority_view.dart';
+import '../task/models/tag_repository.dart';
 import '../task/models/task_repository.dart';
 import '../task/task_page.dart';
+import '../task/widgets/desktop/desktop_personal_task_modal.dart';
+import '../task/widgets/desktop/desktop_tasks_management_view.dart';
 import '../team/dashboard_team_page.dart';
+import '../team/models/desktop_team_directory_models.dart';
 import '../team/pop_up_create_meeting.dart';
+import '../team/pop_up_create_team.dart';
+import '../team/pop_up_join_team.dart';
 import '../team/team_list_page.dart';
+import '../team/widgets/desktop/desktop_group_directory_view.dart';
 import 'models/dashboard_models.dart';
+import 'widgets/desktop/desktop_hero_focus_card.dart';
+import 'widgets/desktop/desktop_ongoing_tasks_section.dart';
+import 'widgets/desktop/desktop_sidebar.dart';
+import 'widgets/desktop/desktop_stats_panel.dart';
+import 'widgets/desktop/desktop_top_header.dart';
 import 'widgets/home_categories_section.dart';
 import 'widgets/home_header.dart';
 import 'widgets/home_schedule_section.dart';
@@ -46,18 +71,102 @@ class _HomePageState extends State<HomePage> {
   late int _currentTab;
   String _selectedCategory = 'All';
   TeamModel? _selectedTeam;
+  String _selectedTeamCode = '7X29';
+  bool _isSidebarCollapsed = false;
+  bool _isDesktopAddTaskPanelOpen = false;
+  bool _isDesktopSchedulePanelOpen = false;
+  bool _isDesktopAddCoursePanelOpen = false;
+  DesktopTeamDrawerMode _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
+  String _desktopSearchQuery = '';
+  late final List<DesktopTeamCardData> _desktopTeams =
+      List<DesktopTeamCardData>.of(DesktopTeamDirectoryFixtures.defaultTeams);
+
+  List<TaskItem> _tasks = [];
 
   @override
   void initState() {
     super.initState();
     _currentTab = widget.initialTab;
     ScheduleRepository().init();
+    TaskRepository().init();
+    CourseRubricRepository().init();
+    TaskTagRepository().init();
+    UserProfileRepository().init(userName: widget.userName);
     TeamRepository().fetchTeamsFromApi();
+    TeamRepository().teamsNotifier.addListener(_syncTeamsFromRepo);
+    _syncTeamsFromRepo();
     TaskRepository().fetchTasksFromApi();
+    TaskRepository().addListener(_syncTasksFromRepo);
+    _syncTasksFromRepo();
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('is_logged_in', true);
       prefs.setString('auth_user', widget.userName);
     });
+  }
+
+  void _syncTasksFromRepo() {
+    if (!mounted) return;
+    setState(() {
+      _tasks = TaskRepository()
+          .tasks
+          .map(TaskItem.fromTaskItemModel)
+          .toList();
+    });
+  }
+
+  void _syncTeamsFromRepo() {
+    if (!mounted) return;
+    final apiTeams = TeamRepository().teams;
+    if (apiTeams.isEmpty) return;
+
+    final List<DesktopTeamCardData> updated = [];
+    for (final t in apiTeams) {
+      final existingIndex = _desktopTeams.indexWhere(
+        (d) => d.id == t.id || (t.inviteCode != null && d.inviteCode == t.inviteCode),
+      );
+      if (existingIndex != -1) {
+        updated.add(_desktopTeams[existingIndex]);
+      } else {
+        updated.add(
+          DesktopTeamCardData(
+            id: t.id,
+            name: t.name,
+            subtitle: 'Kelompok kolaborasi',
+            badgeLabel: 'Mata Kuliah',
+            badgeBgColor: const Color(0xFF47373B),
+            badgeTextColor: AppColors.primaryAccent,
+            category: TeamDirectoryCategory.mataKuliah,
+            members: t.memberColors
+                .map((c) => TeamMemberAvatar(
+                      initials: t.name.isNotEmpty ? t.name[0].toUpperCase() : 'M',
+                      bgColor: c,
+                    ))
+                .toList(),
+            completedTasks: 0,
+            totalTasks: 0,
+            progressColor: AppColors.primaryAccent,
+            percentTextColor: AppColors.primaryAccent,
+            inviteCode: t.inviteCode ?? t.id,
+          ),
+        );
+      }
+    }
+    for (final d in _desktopTeams) {
+      if (!updated.any((u) => u.id == d.id || u.inviteCode == d.inviteCode)) {
+        updated.add(d);
+      }
+    }
+    setState(() {
+      _desktopTeams.clear();
+      _desktopTeams.addAll(updated);
+    });
+  }
+
+  @override
+  void dispose() {
+    TaskRepository().removeListener(_syncTasksFromRepo);
+    TeamRepository().teamsNotifier.removeListener(_syncTeamsFromRepo);
+    super.dispose();
   }
 
   final List<ScheduleItem> _schedules = const [
@@ -74,113 +183,6 @@ class _HomePageState extends State<HomePage> {
     CategoryItem(name: 'Personal', count: '05 Tasks', icon: Icons.person_rounded),
   ];
 
-  final List<TaskItem> _tasks = [
-    const TaskItem(
-      id: 'home_task_1',
-      title: 'Wallet App Design',
-      dueBadge: '6d',
-      dueColor: Color(0xFF5B93FF),
-      dueTextColor: Colors.white,
-      isUrgent: false,
-      members: [Color(0xFFF3A683), Color(0xFF786FA6), Color(0xFF63CDDA)],
-      progress: 0.46,
-      deadline: 'Sat 11 Oct 2026, 23:59 WIB',
-      tags: [
-        TaskTag(label: 'Team', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
-        TaskTag(label: 'Figma', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
-      ],
-      groupMembers: [
-        'Andi sukamoto (Leader)',
-        'Rayya Gemintang Nusasntarra',
-        'Kafi Rijal Perkasa Situmorang',
-      ],
-      course: 'SSIF-04-REG • Software Testing & Implementation',
-      dateCreated: 'Monday, 30 Sep 2026',
-      centroidDefuzzification: 'z* = 28.6',
-      centroidScale: 'scale(0-100)',
-      warningNotice: '*This task is asigned to you, and you can’t delete',
-      isCollegeTask: true,
-    ),
-    const TaskItem(
-      id: 'home_task_2',
-      title: 'IMPAL Figma Design',
-      subtitle: 'Create team UI page',
-      dueBadge: '6d',
-      dueColor: Color(0xFF5B93FF),
-      dueTextColor: Colors.white,
-      isUrgent: false,
-      deadline: 'Sat 11 Oct 2026, 23:59 WIB',
-      tags: [
-        TaskTag(label: 'Personal', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
-        TaskTag(label: 'Figma', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
-      ],
-      groupMembers: [
-        'Personal Task • Jarvis',
-      ],
-      course: 'SSIF-04-REG • Software Testing & Implementation',
-      dateCreated: 'Tuesday, 01 Oct 2026',
-      centroidDefuzzification: 'z* = 34.2',
-      centroidScale: 'scale(0-100)',
-      warningNotice: '*This task is asigned to you, and you can’t delete',
-      isCollegeTask: false,
-    ),
-    const TaskItem(
-      id: 'home_task_3',
-      title: 'Dashboard & Mobile App',
-      dueBadge: '4d',
-      dueColor: Color(0xFFFF7D65),
-      dueTextColor: Colors.white,
-      isUrgent: true,
-      members: [
-        Color(0xFFF3A683),
-        Color(0xFF786FA6),
-        Color(0xFF63CDDA),
-        Color(0xFFE77F67),
-        Color(0xFF778BEB),
-      ],
-      progress: 0.76,
-      deadline: 'Sat 11 Oct 2026, 23:59 WIB',
-      tags: [
-        TaskTag(label: 'Team', bg: Color(0xFF786FA6), text: Color(0xFF382A72)),
-        TaskTag(label: 'Code', bg: Color(0xFF63CDDA), text: Color(0xFF1C636D)),
-      ],
-      groupMembers: [
-        'Andi sukamoto (Leader)',
-        'Rayya Gemintang Nusasntarra',
-        'Kafi Rijal Perkasa Situmorang',
-      ],
-      course: 'SSIF-04-REG • Software Testing & Implementation',
-      dateCreated: 'Wednesday, 02 Oct 2026',
-      centroidDefuzzification: 'z* = 78.4',
-      centroidScale: 'scale(0-100)',
-      warningNotice: '*This task is asigned to you, and you can’t delete',
-      isCollegeTask: true,
-    ),
-    const TaskItem(
-      id: 'home_task_4',
-      title: 'IMPAL Frontend Slicing',
-      subtitle: 'Dashboard UI implementation',
-      dueBadge: '17d',
-      dueColor: Color(0xFF5B93FF),
-      dueTextColor: Colors.white,
-      isUrgent: false,
-      deadline: 'Sat 11 Oct 2026, 23:59 WIB',
-      tags: [
-        TaskTag(label: 'Personal', bg: Color(0xFF778BEB), text: Color(0xFF2E3E8C)),
-        TaskTag(label: 'Code', bg: Color(0xFF63CDDA), text: Color(0xFF1C636D)),
-      ],
-      groupMembers: [
-        'Personal Task • Jarvis',
-      ],
-      course: 'SSIF-04-REG • Software Testing & Implementation',
-      dateCreated: 'Thursday, 03 Oct 2026',
-      centroidDefuzzification: 'z* = 19.8',
-      centroidScale: 'scale(0-100)',
-      warningNotice: '*This task is asigned to you, and you can’t delete',
-      isCollegeTask: false,
-    ),
-  ];
-
   void _onCategorySelected(String name) {
     setState(() {
       _selectedCategory = _selectedCategory == name ? 'All' : name;
@@ -193,6 +195,12 @@ class _HomePageState extends State<HomePage> {
       if (index != 2 || _selectedTeam != null) {
         _selectedTeam = null;
       }
+      if (index != _currentTab) {
+        _isDesktopAddTaskPanelOpen = false;
+        _isDesktopSchedulePanelOpen = false;
+        _isDesktopAddCoursePanelOpen = false;
+        _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
+      }
       _currentTab = index;
     });
   }
@@ -200,6 +208,8 @@ class _HomePageState extends State<HomePage> {
   void _openEditSchedule(ScheduleModel item) async {
     if (item.type.trim().toLowerCase() == 'meeting') {
       await PopUpCreateMeeting.showEdit(context, existingSchedule: item);
+    } else if (context.isDesktop) {
+      await DesktopScheduleModal.show(context, schedule: item);
     } else {
       await Navigator.of(context).push<bool>(
         MaterialPageRoute(builder: (_) => ScheduleFormPage(schedule: item)),
@@ -290,7 +300,10 @@ class _HomePageState extends State<HomePage> {
           builder: (_) => DashboardTeamPage(
             userName: widget.userName,
             teamName: team.name,
-            teamCode: '7X29',
+            teamId: team.id,
+            teamCode: (team.inviteCode != null && team.inviteCode!.isNotEmpty)
+                ? team.inviteCode!
+                : team.id,
             memberColors: team.memberColors,
             isStandalone: true,
           ),
@@ -299,16 +312,30 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    final updatedModel = await Navigator.of(context).push<TaskItemModel>(
-      MaterialPageRoute(
-        builder: (_) => EditTaskPage(
-          task: item.toTaskItemModel(),
-          userInitials: widget.userName.length >= 2
-              ? widget.userName.substring(0, 2).toUpperCase()
-              : 'JS',
-        ),
-      ),
-    );
+    final updatedModel = context.isDesktop
+        ? await DesktopPersonalTaskModal.show(
+            context,
+            task: item.toTaskItemModel(),
+            userInitials: _userInitials,
+            onTaskDeleted: () {
+              if (!mounted) return;
+              setState(() {
+                _tasks.removeWhere(
+                  (t) =>
+                      (t.id.isNotEmpty && t.id == item.id) ||
+                      t.title == item.title,
+                );
+              });
+            },
+          )
+        : await Navigator.of(context).push<TaskItemModel>(
+            MaterialPageRoute(
+              builder: (_) => EditTaskPage(
+                task: item.toTaskItemModel(),
+                userInitials: _userInitials,
+              ),
+            ),
+          );
 
     if (updatedModel != null && mounted) {
       setState(() {
@@ -350,6 +377,15 @@ class _HomePageState extends State<HomePage> {
                 categories: _categories,
                 selectedCategory: _selectedCategory,
                 onCategorySelected: _onCategorySelected,
+                totalCount: _tasks.where((t) => !t.isCompleted).length,
+                collegeCount: _tasks
+                    .where((t) => !t.isCompleted && t.isCollegeTask)
+                    .length,
+                personalCount: _tasks
+                    .where((t) => !t.isCompleted && !t.isCollegeTask)
+                    .length,
+                teamCount:
+                    _tasks.where((t) => !t.isCompleted && t.isTeamTask).length,
               ),
               const SizedBox(height: 16),
               _buildAiSmartPriorityBanner(),
@@ -361,6 +397,9 @@ class _HomePageState extends State<HomePage> {
       ],
     );
 
+    final mobileTabIndex =
+        (_currentTab >= 0 && _currentTab <= 3) ? _currentTab : 0;
+
     final homeContent = Stack(
       children: [
         AnimatedSwitcher(
@@ -370,19 +409,23 @@ class _HomePageState extends State<HomePage> {
           transitionBuilder: (child, animation) {
             return FadeTransition(opacity: animation, child: child);
           },
-          child: _currentTab == 3
+          child: mobileTabIndex == 3
               ? ScheduleContentView(
                   key: const ValueKey('schedule_tab_content'),
                   userName: widget.userName,
                   showBackButton: false,
                 )
-              : (_currentTab == 2
+              : (mobileTabIndex == 2
                   ? (_selectedTeam != null
                       ? DashboardTeamPage(
                           key: ValueKey('team_dashboard_${_selectedTeam!.id}'),
                           userName: widget.userName,
                           teamName: _selectedTeam!.name,
-                          teamCode: '7X29',
+                          teamId: _selectedTeam!.id,
+                          teamCode: (_selectedTeam!.inviteCode != null &&
+                                  _selectedTeam!.inviteCode!.isNotEmpty)
+                              ? _selectedTeam!.inviteCode!
+                              : _selectedTeam!.id,
                           memberColors: _selectedTeam!.memberColors,
                           isStandalone: false,
                           onBack: () => setState(() => _selectedTeam = null),
@@ -394,7 +437,7 @@ class _HomePageState extends State<HomePage> {
                           onOpenSchedule: () => setState(() => _currentTab = 3),
                           onTeamSelected: (team) => setState(() => _selectedTeam = team),
                         ))
-                  : (_currentTab == 1
+                  : (mobileTabIndex == 1
                       ? TaskContentView(
                           key: const ValueKey('task_tab_content'),
                           userName: widget.userName,
@@ -407,7 +450,7 @@ class _HomePageState extends State<HomePage> {
           right: 0,
           bottom: 0,
           child: ImpalBottomNavBar(
-            currentTab: _currentTab,
+            currentTab: mobileTabIndex,
             onTabSelected: _onTabSelected,
           ),
         ),
@@ -437,6 +480,10 @@ class _HomePageState extends State<HomePage> {
           child: wrappedHomeContent,
         ),
       );
+    }
+
+    if (context.isDesktop) {
+      return _buildDesktopShell(context, canPop);
     }
 
     return Scaffold(
@@ -627,13 +674,34 @@ class _HomePageState extends State<HomePage> {
     PopUpPemberitahuan.taskCompleted(context, taskName: task.title);
   }
 
+  List<TaskItem> _applyCategoryFilter(
+    List<TaskItem> activeTasks,
+    String category,
+  ) {
+    final lower = category.trim().toLowerCase();
+    if (category == 'All' || lower.isEmpty) {
+      return activeTasks;
+    }
+    if (lower == 'college') {
+      return activeTasks.where((t) => t.isCollegeTask).toList();
+    }
+    if (lower == 'personal') {
+      return activeTasks.where((t) => !t.isCollegeTask).toList();
+    }
+    if (lower == 'team') {
+      return activeTasks.where((t) => t.isTeamTask).toList();
+    }
+    return activeTasks.where((t) {
+      return t.tags.any((tag) => tag.label.trim().toLowerCase() == lower) ||
+          t.course.toLowerCase().contains(lower) ||
+          t.title.toLowerCase().contains(lower);
+    }).toList();
+  }
+
   Widget _buildOngoingTaskSection() {
     final activeTasks = _tasks.where((t) => !t.isCompleted).toList();
-    final displayedTasks = _selectedCategory == 'All'
-        ? activeTasks
-        : _selectedCategory.toLowerCase() == 'college'
-            ? activeTasks.where((t) => t.isCollegeTask).toList()
-            : activeTasks.where((t) => !t.isCollegeTask).toList();
+    final displayedTasks =
+        _applyCategoryFilter(activeTasks, _selectedCategory);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -713,5 +781,752 @@ class _HomePageState extends State<HomePage> {
             ),
       ],
     );
+  }
+
+  String get _userInitials => widget.userName.trim().length >= 2
+      ? widget.userName.trim().substring(0, 2).toUpperCase()
+      : 'JS';
+
+  Future<void> _openCreateTask() async {
+    if (context.isDesktop && (_currentTab == 0 || _currentTab == 1)) {
+      setState(() => _isDesktopAddTaskPanelOpen = !_isDesktopAddTaskPanelOpen);
+      return;
+    }
+
+    final newTask = context.isDesktop
+        ? await DesktopPersonalTaskModal.show(
+            context,
+            userInitials: _userInitials,
+            onTaskCreated: (task) {
+              TaskRepository().addTask(task);
+            },
+          )
+        : await Navigator.of(context).push<TaskItemModel>(
+            MaterialPageRoute(
+              builder: (_) => CreateTaskPage(
+                userInitials: _userInitials,
+                onTaskCreated: (task) {
+                  TaskRepository().addTask(task);
+                },
+              ),
+            ),
+          );
+
+    if (newTask != null && mounted) {
+      if (!TaskRepository().tasks.any((t) => t.id == newTask.id)) {
+        TaskRepository().addTask(newTask);
+      }
+      setState(() {
+        _tasks.insert(0, TaskItem.fromTaskItemModel(newTask));
+      });
+    }
+  }
+
+  Future<void> _openCreateSchedule() async {
+    if (context.isDesktop) {
+      if (_currentTab == 3) {
+        setState(
+          () => _isDesktopSchedulePanelOpen = !_isDesktopSchedulePanelOpen,
+        );
+        return;
+      }
+      await DesktopScheduleModal.show(context);
+      return;
+    }
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => const ScheduleFormPage(),
+      ),
+    );
+  }
+
+  Future<void> _handleJoinTeamByCode(String rawCode) async {
+    final code = rawCode.trim().toUpperCase();
+    if (code.length < 4) {
+      PopUpPemberitahuan.teamWarning(
+        context,
+        title: 'Invalid Invite Code',
+        message: 'Please enter a valid 4-character team invite code.',
+      );
+      return;
+    }
+
+    final res = await TeamRepository().joinTeamApi(code);
+    if (!mounted) return;
+
+    if (res['status'] == 'success') {
+      await TeamRepository().fetchTeamsFromApi();
+      if (!mounted) return;
+      _syncTeamsFromRepo();
+      final teamName = res['data']?['group_name']?.toString() ?? 'Team $code';
+      PopUpPemberitahuan.teamJoined(
+        context,
+        teamName: teamName,
+        inviteCode: code,
+      );
+    } else {
+      final errorMsg = res['message']?.toString() ?? 'Failed to join team.';
+      if (errorMsg.toLowerCase().contains('already a member') ||
+          errorMsg.toLowerCase().contains('already join')) {
+        PopUpPemberitahuan.teamWarning(
+          context,
+          title: 'Already Joined',
+          message: 'You have already joined this team.',
+        );
+      } else {
+        PopUpPemberitahuan.teamWarning(
+          context,
+          title: 'Join Team Failed',
+          message: errorMsg,
+        );
+      }
+    }
+  }
+
+  Future<void> _openJoinTeamDialog() async {
+    final code = await PopUpJoinTeam.show(context);
+    if (!mounted || code == null) return;
+    await _handleJoinTeamByCode(code);
+  }
+
+  Future<void> _openCreateTeamDialog() async {
+    final result = await PopUpCreateTeam.show(context);
+    if (!mounted || result == null) return;
+
+    final newCard = DesktopTeamCardData(
+      id: 'team_created_${DateTime.now().millisecondsSinceEpoch}',
+      name: result.name,
+      subtitle: result.description.isNotEmpty
+          ? result.description
+          : 'Kelompok kolaborasi baru',
+      badgeLabel: 'Mata Kuliah',
+      badgeBgColor: const Color(0xFF47373B),
+      badgeTextColor: AppColors.primaryAccent,
+      category: TeamDirectoryCategory.mataKuliah,
+      members: [
+        TeamMemberAvatar(
+          initials: widget.userName.isNotEmpty
+              ? widget.userName[0].toUpperCase()
+              : 'R',
+          bgColor: AppColors.primaryAccent,
+        ),
+      ],
+      completedTasks: 0,
+      totalTasks: 5,
+      progressColor: AppColors.primaryAccent,
+      percentTextColor: AppColors.primaryAccent,
+      inviteCode: result.inviteCode,
+      isPrimaryAction: true,
+    );
+
+    setState(() {
+      _desktopTeams.add(newCard);
+    });
+    TeamRepository().addTeam(newCard.toTeamModel());
+
+    PopUpPemberitahuan.teamCreated(
+      context,
+      teamName: result.name,
+      inviteCode: result.inviteCode,
+    );
+  }
+
+  void _showDesktopLogoutDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.bgPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Sign Out',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'Inter',
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to log out of your account?',
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 14,
+            fontFamily: 'Inter',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('is_logged_in', false);
+              await prefs.remove('auth_user');
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  AuthFadeRoute(page: const Login()),
+                );
+              }
+            },
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  DesktopNavDestination? get _activeDesktopDestination {
+    switch (_currentTab) {
+      case 1:
+        return DesktopNavDestination.tasks;
+      case 2:
+        return DesktopNavDestination.teamMembers;
+      case 3:
+        return DesktopNavDestination.schedule;
+      case 4:
+        return null;
+      case 5:
+        return DesktopNavDestination.smartPriority;
+      default:
+        return DesktopNavDestination.dashboard;
+    }
+  }
+
+  (String, String) get _desktopHeaderCopy {
+    switch (_currentTab) {
+      case 1:
+        return (
+          'Tasks Management',
+          'Organize, prioritize, and track your academic assignments',
+        );
+      case 2:
+        if (_selectedTeam != null) {
+          return (
+            _selectedTeam!.name,
+            'Implementasi & Pengujian Perangkat Lunak • SIF-45-02',
+          );
+        }
+        return (
+          'Study Teams & Groups',
+          'Manage course study teams, team meetings, and collaboration progress',
+        );
+      case 3:
+        return (
+          'Weekly Schedule Matrix',
+          'Track your weekly lectures, lab sessions, and group study meetings',
+        );
+      case 4:
+        return (
+          'Profile & Settings',
+          'Manage your student identity, reminders, AI preferences, and account security',
+        );
+      case 5:
+        return (
+          'Smart Priority & Course Rubrics',
+          'Configure course grading weights and inspect Mamdani Fuzzy priority rankings',
+        );
+      default:
+        return (
+          'Dashboard Overview',
+          'Stay productive and keep track of your ongoing courses & tasks',
+        );
+    }
+  }
+
+  void _onDesktopDestinationSelected(DesktopNavDestination destination) {
+    switch (destination) {
+      case DesktopNavDestination.dashboard:
+        _onTabSelected(0);
+      case DesktopNavDestination.schedule:
+        _onTabSelected(3);
+      case DesktopNavDestination.tasks:
+        _onTabSelected(1);
+      case DesktopNavDestination.teamMembers:
+        _onTabSelected(2);
+      case DesktopNavDestination.smartPriority:
+        _onTabSelected(5);
+    }
+  }
+
+  Widget _buildDesktopShell(BuildContext context, bool canPop) {
+    final activeTasks = _tasks.where((t) => !t.isCompleted).toList();
+    final completedCount = _tasks.where((t) => t.isCompleted).length;
+    final repoTasks = TaskRepository().tasks;
+    final totalPendingCount = repoTasks.isNotEmpty
+        ? repoTasks.where((t) => !t.isCompleted).length
+        : activeTasks.length;
+
+    final scheduleCount = ScheduleRepository().schedulesNotifier.value.isNotEmpty
+        ? ScheduleRepository().schedulesNotifier.value.length
+        : _schedules.length;
+
+    final (headerTitle, headerSubtitle) = _desktopHeaderCopy;
+
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_selectedTeam != null) {
+          setState(() => _selectedTeam = null);
+        } else if (_currentTab != 0) {
+          _onTabSelected(0);
+        }
+      },
+      child: UnfocusOnTap(
+        child: Scaffold(
+          backgroundColor: AppColors.bgPrimary,
+          body: Row(
+            children: [
+              DesktopSidebar(
+                activeDestination: _activeDesktopDestination,
+                isCollapsed: _isSidebarCollapsed,
+                onToggleCollapse: () {
+                  setState(() => _isSidebarCollapsed = !_isSidebarCollapsed);
+                },
+                onDestinationSelected: _onDesktopDestinationSelected,
+                userName: widget.userName,
+                scheduleCount: scheduleCount,
+                pendingTaskCount: totalPendingCount,
+                teamCount: _desktopTeams.length,
+                onProfileTap: () => _onTabSelected(4),
+                onLogoutTap: _showDesktopLogoutDialog,
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Builder(
+                      builder: (_) {
+                        final isGroupDirectoryRoot =
+                            _currentTab == 2 && _selectedTeam == null;
+                        final isGroupWorkspace =
+                            _currentTab == 2 && _selectedTeam != null;
+                        final isProfileSettings = _currentTab == 4;
+                        final isSmartPriority = _currentTab == 5;
+                        return DesktopTopHeader(
+                          title: headerTitle,
+                          subtitle: headerSubtitle,
+                          breadcrumbParent:
+                              isGroupWorkspace ? 'Team Members' : null,
+                          onBreadcrumbParentTap: isGroupWorkspace
+                              ? () => setState(() {
+                                    _selectedTeam = null;
+                                    _desktopSearchQuery = '';
+                                  })
+                              : null,
+                          searchQuery: _desktopSearchQuery,
+                          searchHint: isProfileSettings
+                              ? 'Search settings...'
+                              : (isSmartPriority
+                                  ? 'Search ranked tasks or courses...'
+                                  : (isGroupDirectoryRoot
+                                      ? 'Search study teams or courses...'
+                                      : (isGroupWorkspace
+                                          ? 'Search tasks in workspace...'
+                                          : (_currentTab == 3
+                                              ? 'Search schedule or class...'
+                                              : 'Search tasks or courses...')))),
+                          searchBgColor: (isGroupDirectoryRoot ||
+                                  isGroupWorkspace ||
+                                  isProfileSettings)
+                              ? AppColors.bgSidebar
+                              : AppColors.bgCard,
+                          showLeadingSearchIcon: isGroupDirectoryRoot ||
+                              isGroupWorkspace ||
+                              isProfileSettings,
+                          showShortcutHint:
+                              !isGroupDirectoryRoot && !isGroupWorkspace,
+                          addButtonLabel: isProfileSettings
+                              ? 'Edit Profile'
+                              : (isSmartPriority
+                                  ? '+ Add Course'
+                                  : (isGroupDirectoryRoot
+                                      ? '+ Create Team'
+                                      : (isGroupWorkspace
+                                          ? '+ Create Task'
+                                          : (_currentTab == 3
+                                              ? '+ Add Schedule'
+                                              : (_currentTab == 1
+                                                  ? '+ Add New Task'
+                                                  : '+ Add Task'))))),
+                          addButtonColor: (isGroupDirectoryRoot ||
+                                  isGroupWorkspace ||
+                                  isProfileSettings)
+                              ? AppColors.primaryAccent
+                              : AppColors.primary,
+                          addButtonKey: isGroupWorkspace
+                              ? const ValueKey('dashboard_create_task_button')
+                              : null,
+                          secondaryButtonLabel:
+                              isGroupDirectoryRoot ? 'Join Team' : null,
+                          secondaryButtonIcon: isGroupDirectoryRoot
+                              ? Icons.group_add_outlined
+                              : null,
+                          onSecondaryButtonTap: isGroupDirectoryRoot
+                              ? _openJoinTeamDialog
+                              : null,
+                          showNotificationBell: _currentTab != 3,
+                          titleFontSize: isGroupDirectoryRoot ? 18 : 22,
+                          horizontalPadding: (isGroupDirectoryRoot ||
+                                  isGroupWorkspace ||
+                                  isProfileSettings)
+                              ? (context.screenWidth < 1200 ? 24 : 32)
+                              : 28,
+                          onSearchChanged: (value) {
+                            setState(() => _desktopSearchQuery = value);
+                          },
+                          onAddTaskTap: isProfileSettings
+                              ? () => DesktopEditProfileModal.show(
+                                    context,
+                                    profile: UserProfileRepository().profile,
+                                  )
+                              : (isSmartPriority
+                                  ? () => setState(
+                                        () => _isDesktopAddCoursePanelOpen =
+                                            !_isDesktopAddCoursePanelOpen,
+                                      )
+                                  : (isGroupDirectoryRoot
+                                      ? _openCreateTeamDialog
+                                      : (isGroupWorkspace
+                                          ? () => setState(
+                                                () => _desktopTeamDrawerMode =
+                                                    _desktopTeamDrawerMode ==
+                                                            DesktopTeamDrawerMode
+                                                                .createTask
+                                                        ? DesktopTeamDrawerMode
+                                                            .none
+                                                        : DesktopTeamDrawerMode
+                                                            .createTask,
+                                              )
+                                          : (_currentTab == 3
+                                              ? _openCreateSchedule
+                                              : _openCreateTask)))),
+                        );
+                      },
+                    ),
+                    Expanded(
+                      child: _buildDesktopBody(
+                        context,
+                        activeTasks: activeTasks,
+                        completedCount: completedCount,
+                        totalPendingCount: totalPendingCount,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _wrapWithPersonalTaskSlideDrawer(Widget content) {
+    return DesktopSlideDrawerPane(
+      isOpen: _isDesktopAddTaskPanelOpen,
+      content: content,
+      drawer: DesktopPersonalTaskModal(
+        key: const ValueKey('desktop_task_slide_drawer'),
+        userInitials: _userInitials,
+        embeddedPanel: true,
+        onClose: () {
+          if (mounted) {
+            setState(() => _isDesktopAddTaskPanelOpen = false);
+          }
+        },
+        onTaskCreated: (task) {
+          if (!TaskRepository().tasks.any((t) => t.id == task.id)) {
+            TaskRepository().addTask(task);
+          }
+          if (mounted) {
+            setState(() {
+              _tasks.insert(
+                0,
+                TaskItem.fromTaskItemModel(task),
+              );
+              _isDesktopAddTaskPanelOpen = false;
+            });
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildDesktopBody(
+    BuildContext context, {
+    required List<TaskItem> activeTasks,
+    required int completedCount,
+    required int totalPendingCount,
+  }) {
+    if (_currentTab == 1) {
+      return _wrapWithPersonalTaskSlideDrawer(
+        DesktopTasksManagementView(
+          key: const ValueKey('desktop_tasks_management_view'),
+          userName: widget.userName,
+          searchQuery: _desktopSearchQuery,
+          onOpenScheduleTimeline: () => _onTabSelected(3),
+          onOpenSmartPriority: () => _onTabSelected(5),
+          onOpenTeamDashboard: (team) {
+            setState(() {
+              _selectedTeam = team;
+              _desktopSearchQuery = '';
+              _isDesktopAddTaskPanelOpen = false;
+              _currentTab = 2;
+            });
+          },
+          onResetSearch: () => setState(() => _desktopSearchQuery = ''),
+        ),
+      );
+    }
+
+    if (_currentTab == 4) {
+      return DesktopProfileSettingsView(
+        key: const ValueKey('desktop_profile_settings_view'),
+        searchQuery: _desktopSearchQuery,
+        fallbackUserName: widget.userName,
+        onOpenSmartPriority: () => _onTabSelected(5),
+      );
+    }
+
+    if (_currentTab == 5) {
+      return DesktopSlideDrawerPane(
+        isOpen: _isDesktopAddCoursePanelOpen,
+        content: DesktopSmartPriorityView(
+          key: const ValueKey('desktop_smart_priority_view'),
+          searchQuery: _desktopSearchQuery,
+          isDrawerOpen: _isDesktopAddCoursePanelOpen,
+          onOpenAddCourse: () {
+            if (mounted) {
+              setState(
+                () => _isDesktopAddCoursePanelOpen =
+                    !_isDesktopAddCoursePanelOpen,
+              );
+            }
+          },
+        ),
+        drawer: CourseEditorDialog(
+          key: const ValueKey('desktop_add_course_slide_drawer'),
+          embeddedPanel: true,
+          onClose: () {
+            if (mounted) {
+              setState(() => _isDesktopAddCoursePanelOpen = false);
+            }
+          },
+        ),
+      );
+    }
+
+    if (_currentTab == 3) {
+      return DesktopSlideDrawerPane(
+        isOpen: _isDesktopSchedulePanelOpen,
+        content: DesktopScheduleMatrixView(
+          key: const ValueKey('desktop_schedule_matrix_view'),
+          searchQuery: _desktopSearchQuery,
+          onResetSearch: () => setState(() => _desktopSearchQuery = ''),
+        ),
+        drawer: DesktopScheduleModal(
+          key: const ValueKey('desktop_schedule_slide_drawer'),
+          embeddedPanel: true,
+          onClose: () {
+            if (mounted) {
+              setState(() => _isDesktopSchedulePanelOpen = false);
+            }
+          },
+        ),
+      );
+    }
+
+    if (_currentTab != 0) {
+      if (_selectedTeam == null) {
+        return DesktopGroupDirectoryView(
+          key: const ValueKey('desktop_team_tab'),
+          searchQuery: _desktopSearchQuery,
+          teams: _desktopTeams,
+          onJoinByCode: _handleJoinTeamByCode,
+          onOpenScheduleTap: () => _onTabSelected(3),
+          onTeamSelected: (team) {
+            final match = _desktopTeams
+                .where((item) => item.id == team.id)
+                .toList();
+            setState(() {
+              _selectedTeam = team;
+              _desktopSearchQuery = '';
+              _isDesktopAddTaskPanelOpen = false;
+              _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
+              _selectedTeamCode = (team.inviteCode != null &&
+                      team.inviteCode!.isNotEmpty)
+                  ? team.inviteCode!
+                  : (match.isNotEmpty && match.first.inviteCode.isNotEmpty
+                      ? match.first.inviteCode
+                      : team.id);
+            });
+          },
+        );
+      }
+
+      return DashboardTeamPage(
+        key: ValueKey('desktop_team_dashboard_${_selectedTeam!.id}'),
+        userName: widget.userName,
+        teamName: _selectedTeam!.name,
+        teamId: _selectedTeam!.id,
+        teamCode: (_selectedTeam!.inviteCode != null &&
+                _selectedTeam!.inviteCode!.isNotEmpty)
+            ? _selectedTeam!.inviteCode!
+            : (_selectedTeamCode.isNotEmpty ? _selectedTeamCode : _selectedTeam!.id),
+        searchQuery: _desktopSearchQuery,
+        memberColors: _selectedTeam!.memberColors,
+        isStandalone: false,
+        desktopDrawerMode: _desktopTeamDrawerMode,
+        onDesktopDrawerModeChanged: (mode) {
+          if (mounted) {
+            setState(() => _desktopTeamDrawerMode = mode);
+          }
+        },
+        onBack: () => setState(() {
+          _selectedTeam = null;
+          _desktopSearchQuery = '';
+          _isDesktopAddTaskPanelOpen = false;
+          _desktopTeamDrawerMode = DesktopTeamDrawerMode.none;
+        }),
+      );
+    }
+
+    // Apply category / custom tag + desktop search filters
+    var filteredTasks = _applyCategoryFilter(activeTasks, _selectedCategory);
+
+    final query = _desktopSearchQuery.trim().toLowerCase();
+    if (query.isNotEmpty) {
+      filteredTasks = filteredTasks.where((t) {
+        return t.title.toLowerCase().contains(query) ||
+            (t.subtitle?.toLowerCase().contains(query) ?? false) ||
+            t.course.toLowerCase().contains(query) ||
+            t.tags.any((tag) => tag.label.toLowerCase().contains(query));
+      }).toList();
+    }
+
+    final featuredTask = activeTasks.isNotEmpty ? activeTasks.first : null;
+
+    // Compute live KPI metrics
+    final progressItems = activeTasks.where((t) => t.progress != null).toList();
+    final avgProgress = progressItems.isEmpty
+        ? 57
+        : ((progressItems.fold<double>(0, (sum, t) => sum + t.progress!) /
+                    progressItems.length) *
+                100)
+            .round();
+    final urgentCount = activeTasks.where((t) {
+      if (t.isUrgent) return true;
+      final days = int.tryParse(t.dueBadge.replaceAll(RegExp(r'[^0-9]'), ''));
+      return days != null && days < 6;
+    }).length;
+    final collegeCount = activeTasks.where((t) => t.isCollegeTask).length;
+    final personalCount = activeTasks.where((t) => !t.isCollegeTask).length;
+    final teamCount = activeTasks.where((t) => t.isTeamTask).length;
+
+    final leftOverviewColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (featuredTask != null) ...[
+          DesktopHeroFocusCard(
+            featuredTask: featuredTask,
+            onContinueTap: () => _openEditTask(featuredTask),
+          ),
+          const SizedBox(height: 24),
+        ],
+        DesktopOngoingTasksSection(
+          tasks: filteredTasks,
+          totalPendingCount: totalPendingCount,
+          collegeCount: collegeCount,
+          personalCount: personalCount,
+          teamCount: teamCount,
+          selectedCategory: _selectedCategory,
+          onCategorySelected: (cat) {
+            setState(() => _selectedCategory = cat);
+          },
+          onSeeAllTap: () => _onTabSelected(1),
+          onTaskTap: _openEditTask,
+          onTaskToggleComplete: _handleTaskCompleted,
+          onClearFilterTap: () {
+            setState(() {
+              _selectedCategory = 'All';
+              _desktopSearchQuery = '';
+            });
+          },
+        ),
+      ],
+    );
+
+    final statsPanel = DesktopStatsPanel(
+      fallbackSchedule: _schedules.first,
+      avgProgressPercent: avgProgress,
+      pendingCount: totalPendingCount,
+      completedCount: completedCount,
+      urgentDeadlineCount: urgentCount,
+      collegeTaskCount: collegeCount,
+      personalTaskCount: personalCount,
+      onScheduleSeeAllTap: () => _onTabSelected(3),
+      onEditSchedule: _openEditSchedule,
+      onDeleteSchedule: _deleteSchedule,
+      onToggleScheduleAlert: _toggleScheduleAlert,
+      onSmartPriorityTap: () => _onTabSelected(5),
+    );
+
+    final dashboardOverviewContent = LayoutBuilder(
+      builder: (context, constraints) {
+        final sideBySide = constraints.maxWidth >= 900.0;
+        final statsWidth = constraints.maxWidth >= 1120 ? 350.0 : 310.0;
+
+        return SingleChildScrollView(
+          key: const ValueKey('desktop_homepage_scroll'),
+          padding: EdgeInsets.fromLTRB(
+            context.rSpacing(28),
+            context.rSpacing(22),
+            context.rSpacing(28),
+            context.rSpacing(28),
+          ),
+          child: sideBySide
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: leftOverviewColumn),
+                    const SizedBox(width: 24),
+                    SizedBox(width: statsWidth, child: statsPanel),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    leftOverviewColumn,
+                    const SizedBox(height: 24),
+                    statsPanel,
+                  ],
+                ),
+        );
+      },
+    );
+
+    return _wrapWithPersonalTaskSlideDrawer(dashboardOverviewContent);
   }
 }

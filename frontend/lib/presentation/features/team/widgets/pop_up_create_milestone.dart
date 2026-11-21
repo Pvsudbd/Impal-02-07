@@ -7,6 +7,7 @@ import '../../../common_widgets/impal_time_picker_dialog.dart';
 import '../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../models/team_task_model.dart';
 import '../models/team_task_repository.dart';
+import 'desktop/desktop_milestone_modal.dart';
 
 /// Modal dialog for creating and editing a team task Milestone with a General Deadline.
 ///
@@ -26,7 +27,17 @@ class PopUpCreateMilestone extends StatefulWidget {
     BuildContext context, {
     required String teamCode,
     TeamMilestoneModel? existingMilestone,
+    VoidCallback? onMilestoneDeleted,
   }) {
+    if (MediaQuery.sizeOf(context).width >= 1024) {
+      return DesktopMilestoneModal.show(
+        context,
+        teamCode: teamCode,
+        existingMilestone: existingMilestone,
+        onMilestoneDeleted: onMilestoneDeleted,
+      );
+    }
+
     return showDialog<TeamMilestoneModel>(
       context: context,
       barrierDismissible: true,

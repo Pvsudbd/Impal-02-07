@@ -10,6 +10,18 @@ import '../../config/db.dart';
 class GroupController {
   static const _uuid = Uuid();
 
+  /// Konversi semua DateTime dalam Map ke String ISO 8601 agar bisa di-jsonEncode
+  static dynamic _toJsonSafe(dynamic v) {
+    if (v is DateTime) return v.toIso8601String();
+    if (v is Map) return v.map((k, val) => MapEntry(k.toString(), _toJsonSafe(val)));
+    if (v is List) return v.map(_toJsonSafe).toList();
+    return v;
+  }
+
+  static Map<String, dynamic> _serializeRow(Map<String, dynamic> row) {
+    return row.map((k, v) => MapEntry(k, _toJsonSafe(v)));
+  }
+
   // Helper mengambil idUser dari token JWT yang telah diverifikasi middleware
   static String? _getUserId(Request req) {
     final user = (req.context['user'] ?? req.context['student']) as Map<String, dynamic>?;
@@ -33,8 +45,8 @@ class GroupController {
         results = await Database.query('''
           SELECT DISTINCT g.id_group, g.id_leader, g.group_name, g.description, g.invite_code, g.created_at
           FROM "groups" g
-          LEFT JOIN group_member gm ON g.id_group = gm.id_group
-          WHERE g.id_leader = @idUser OR gm.id_user = @idUser
+          LEFT JOIN group_member gm ON g.id_group::text = gm.id_group::text
+          WHERE g.id_leader::text = @idUser OR gm.id_user::text = @idUser
           ORDER BY g.created_at DESC
         ''', {'idUser': idUser});
       } catch (e) {
@@ -42,8 +54,8 @@ class GroupController {
           results = await Database.query('''
             SELECT DISTINCT g.id_group, g.id_leader, g.group_name, g.description, g.invite_code, g.created_at
             FROM "groups" g
-            LEFT JOIN group_member gm ON g.id_group = gm.id_group
-            WHERE g.id_leader = @idUser OR gm.id_student = @idUser
+            LEFT JOIN group_member gm ON g.id_group::text = gm.id_group::text
+            WHERE g.id_leader::text = @idUser OR gm.id_student::text = @idUser
             ORDER BY g.created_at DESC
           ''', {'idUser': idUser});
         } else {
@@ -57,7 +69,7 @@ class GroupController {
 
         // Hitung jumlah anggota untuk setiap kelompok
         final countRes = await Database.query(
-          'SELECT COUNT(*) AS total FROM group_member WHERE id_group = @idGroup',
+          'SELECT COUNT(*) AS total FROM group_member WHERE id_group::text = @idGroup',
           {'idGroup': idGroup},
         );
         final memberCount = countRes.rows.isNotEmpty
@@ -67,11 +79,11 @@ class GroupController {
         groupsData.add({
           'id_group': idGroup,
           'id': idGroup,
-          'id_leader': row['id_leader'],
-          'group_name': row['group_name'],
-          'name': row['group_name'],
-          'description': row['description'],
-          'invite_code': row['invite_code'],
+          'id_leader': row['id_leader']?.toString(),
+          'group_name': row['group_name']?.toString(),
+          'name': row['group_name']?.toString(),
+          'description': row['description']?.toString(),
+          'invite_code': row['invite_code']?.toString(),
           'member_count': memberCount,
           'membersLabel': '$memberCount members',
         });
@@ -249,13 +261,13 @@ class GroupController {
       QueryResult memberCheck;
       try {
         memberCheck = await Database.query(
-          'SELECT id_member FROM group_member WHERE id_group = @idGroup AND id_user = @idUser',
+          'SELECT id_member FROM group_member WHERE id_group::text = @idGroup AND id_user::text = @idUser',
           {'idGroup': idGroup, 'idUser': idUser},
         );
       } catch (e) {
         if (e.toString().contains('id_user')) {
           memberCheck = await Database.query(
-            'SELECT id_member FROM group_member WHERE id_group = @idGroup AND id_student = @idUser',
+            'SELECT id_member FROM group_member WHERE id_group::text = @idGroup AND id_student::text = @idUser',
             {'idGroup': idGroup, 'idUser': idUser},
           );
         } else {
@@ -332,6 +344,49 @@ class GroupController {
     }
   }
 
+  // Helper untuk mencari grup berdasarkan id_group UUID, invite_code, atau group_name
+  static Future<Map<String, dynamic>?> _findGroupRecord(String idOrCode) async {
+    try {
+      final res = await Database.query(
+        '''
+        SELECT * FROM "groups" 
+        WHERE id_group::text = @val 
+           OR UPPER(invite_code) = UPPER(@val) 
+           OR LOWER(group_name) = LOWER(@val) 
+        LIMIT 1
+        ''',
+        {'val': idOrCode},
+      );
+      if (res.rows.isNotEmpty) {
+        return res.rows.first.assoc();
+      }
+    } catch (e) {
+      print('[GROUPS] _findGroupRecord error: $e');
+    }
+    return null;
+  }
+
+  // Helper mencari profil user secara toleran terhadap skema id_user / id_student dan name / nama
+  static Future<Map<String, dynamic>?> _findUserById(String uid) async {
+    final queries = [
+      'SELECT id_user, name, email FROM users WHERE id_user::text = @uid LIMIT 1',
+      'SELECT id_student AS id_user, name, email FROM users WHERE id_student::text = @uid LIMIT 1',
+      'SELECT id_user, nama AS name, email FROM users WHERE id_user::text = @uid LIMIT 1',
+      'SELECT id_student AS id_user, nama AS name, email FROM users WHERE id_student::text = @uid LIMIT 1',
+      'SELECT id_user, username AS name, email FROM users WHERE id_user::text = @uid LIMIT 1',
+      'SELECT id_student AS id_user, username AS name, email FROM users WHERE id_student::text = @uid LIMIT 1',
+    ];
+    for (final q in queries) {
+      try {
+        final res = await Database.query(q, {'uid': uid});
+        if (res.rows.isNotEmpty) {
+          return res.rows.first.assoc();
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
   // ─── 4. DETAIL KELOMPOK (MEMBERS, MEETINGS, TASKS) ─────────────────────────
   // GET /api/groups/<idGroup>
   static Future<Response> getGroupDetails(Request req, String idGroup) async {
@@ -343,72 +398,132 @@ class GroupController {
             headers: {'Content-Type': 'application/json'});
       }
 
-      // Ambil data kelompok
-      final groupQuery = await Database.query(
-        'SELECT * FROM "groups" WHERE id_group = @idGroup',
-        {'idGroup': idGroup},
-      );
+      // Ambil data kelompok (support id_group UUID, invite_code, atau group_name)
+      final group = await _findGroupRecord(idGroup);
 
-      if (groupQuery.rows.isEmpty) {
+      if (group == null) {
         return Response(404,
             body: jsonEncode({'status': 'error', 'message': 'Group not found'}),
             headers: {'Content-Type': 'application/json'});
       }
 
-      final group = groupQuery.rows.first;
+      final realIdGroup = group['id_group']?.toString() ?? idGroup;
+      final idLeader = group['id_leader']?.toString();
 
-      // Ambil anggota
-      QueryResult membersQuery;
+      // Ambil seluruh anggota terdaftar dari group_member
+      List<Map<String, dynamic>> memberList = [];
       try {
-        membersQuery = await Database.query('''
-          SELECT gm.id_member, gm.role, gm.joined_at, u.id_user, u.name, u.email
-          FROM group_member gm
-          JOIN users u ON gm.id_user = u.id_user
-          WHERE gm.id_group = @idGroup
-          ORDER BY gm.role DESC, gm.joined_at ASC
-        ''', {'idGroup': idGroup});
+        final gmRes = await Database.query(
+          'SELECT * FROM group_member WHERE id_group::text = @idGroup',
+          {'idGroup': realIdGroup},
+        );
+        print('[GROUPS] getGroupDetails found ${gmRes.rows.length} member rows for group $realIdGroup');
+        for (final gmRow in gmRes.rows) {
+          final uid = (gmRow['id_user'] ?? gmRow['id_student'] ?? gmRow['member_id'])?.toString();
+          if (uid != null && uid.isNotEmpty) {
+            final uRow = await _findUserById(uid);
+            final rawRole = gmRow['role']?.toString().toUpperCase() ?? 'MEMBER';
+            final isGroupLeader = (idLeader != null && uid == idLeader) || rawRole == 'LEADER';
+            final rawJoinedAt = gmRow['joined_at'] ?? gmRow['joined_date'];
+            memberList.add({
+              'id_member': gmRow['id_member']?.toString() ?? 'mem_$uid',
+              'role': isGroupLeader ? 'LEADER' : 'MEMBER',
+              'joined_at': rawJoinedAt is DateTime ? rawJoinedAt.toIso8601String() : rawJoinedAt?.toString(),
+              'id_user': uRow?['id_user']?.toString() ?? uid,
+              'name': uRow?['name']?.toString() ?? uid,
+              'email': uRow?['email']?.toString() ?? '',
+            });
+          }
+        }
       } catch (e) {
-        if (e.toString().contains('id_user') || e.toString().contains('gm.id_user')) {
-          membersQuery = await Database.query('''
-            SELECT gm.id_member, gm.role, gm.joined_at, u.id_user, u.name, u.email
-            FROM group_member gm
-            JOIN users u ON gm.id_student = u.id_user
-            WHERE gm.id_group = @idGroup
-            ORDER BY gm.role DESC, gm.joined_at ASC
-          ''', {'idGroup': idGroup});
+        print('[GROUPS] getGroupDetails fetch group_member error: $e');
+      }
+
+      // Pastikan leader (pencipta kelompok) selalu masuk jika belum terdaftar di group_member
+      if (idLeader != null && idLeader.isNotEmpty) {
+        final leaderIndex = memberList.indexWhere((m) =>
+            m['id_user']?.toString() == idLeader ||
+            m['id_member']?.toString() == idLeader);
+        if (leaderIndex != -1) {
+          memberList[leaderIndex]['role'] = 'LEADER';
         } else {
-          rethrow;
+          final lr = await _findUserById(idLeader);
+          final rawCreatedAt = group['created_at'];
+          memberList.insert(0, {
+            'id_member': 'leader_$idLeader',
+            'role': 'LEADER',
+            'joined_at': rawCreatedAt is DateTime ? rawCreatedAt.toIso8601String() : rawCreatedAt?.toString(),
+            'id_user': lr?['id_user']?.toString() ?? idLeader,
+            'name': lr?['name']?.toString() ?? 'Team Leader',
+            'email': lr?['email']?.toString() ?? '',
+          });
         }
       }
 
+      // Pastikan selain idLeader memiliki role MEMBER
+      if (idLeader != null && idLeader.isNotEmpty) {
+        for (final m in memberList) {
+          if (m['id_user']?.toString() != idLeader && m['role'] == 'LEADER') {
+            m['role'] = 'MEMBER';
+          }
+        }
+      }
+
+      // Sort: LEADER selalu paling atas, lalu member
+      memberList.sort((a, b) {
+        if (a['role'] == 'LEADER' && b['role'] != 'LEADER') return -1;
+        if (b['role'] == 'LEADER' && a['role'] != 'LEADER') return 1;
+        return (a['name']?.toString() ?? '').compareTo(b['name']?.toString() ?? '');
+      });
+
       // Ambil rapat kelompok
-      final meetingsQuery = await Database.query('''
-        SELECT * FROM meeting_schedule
-        WHERE id_group = @idGroup
-        ORDER BY start_time ASC
-      ''', {'idGroup': idGroup});
+      QueryResult meetingsQuery;
+      try {
+        meetingsQuery = await Database.query('''
+          SELECT * FROM meeting_schedule
+          WHERE id_group::text = @idGroup
+          ORDER BY start_time ASC
+        ''', {'idGroup': realIdGroup});
+      } catch (_) {
+        meetingsQuery = await Database.query('SELECT 1 WHERE 1=0');
+      }
 
       // Ambil tugas kelompok
-      final tasksQuery = await Database.query('''
-        SELECT gt.*, u.name AS pic_name
-        FROM group_task gt
-        LEFT JOIN users u ON gt.id_assigned_to = u.id_user
-        WHERE gt.id_group = @idGroup
-        ORDER BY gt.deadline ASC
-      ''', {'idGroup': idGroup});
+      QueryResult tasksQuery;
+      try {
+        tasksQuery = await Database.query('''
+          SELECT gt.*, u.name AS pic_name
+          FROM group_task gt
+          LEFT JOIN users u ON gt.id_assigned_to::text = u.id_user::text
+          WHERE gt.id_group::text = @idGroup
+          ORDER BY gt.deadline ASC
+        ''', {'idGroup': realIdGroup});
+      } catch (_) {
+        try {
+          tasksQuery = await Database.query('''
+            SELECT gt.*, u.name AS pic_name
+            FROM group_task gt
+            LEFT JOIN users u ON gt.id_assigned_to::text = u.id_student::text
+            WHERE gt.id_group::text = @idGroup
+            ORDER BY gt.deadline ASC
+          ''', {'idGroup': realIdGroup});
+        } catch (_) {
+          tasksQuery = await Database.query('SELECT 1 WHERE 1=0');
+        }
+      }
 
       return Response.ok(
         jsonEncode({
           'status': 'success',
           'data': {
-            'id_group': group['id_group'],
-            'group_name': group['group_name'],
-            'description': group['description'],
-            'invite_code': group['invite_code'],
-            'id_leader': group['id_leader'],
-            'members': membersQuery.rows.map((r) => r.assoc()).toList(),
-            'meetings': meetingsQuery.rows.map((r) => r.assoc()).toList(),
-            'tasks': tasksQuery.rows.map((r) => r.assoc()).toList(),
+            'id_group': group['id_group']?.toString(),
+            'group_name': group['group_name']?.toString(),
+            'description': group['description']?.toString(),
+            'invite_code': group['invite_code']?.toString(),
+            'id_leader': group['id_leader']?.toString(),
+            'members': memberList.map(_serializeRow).toList(),
+            'meetings': meetingsQuery.rows.map((r) => _serializeRow(r.assoc())).toList(),
+            'tasks': tasksQuery.rows.map((r) => _serializeRow(r.assoc())).toList(),
           },
         }),
         headers: {'Content-Type': 'application/json'},
@@ -426,11 +541,14 @@ class GroupController {
   // GET /api/groups/<idGroup>/meetings
   static Future<Response> getGroupMeetings(Request req, String idGroup) async {
     try {
+      final group = await _findGroupRecord(idGroup);
+      final realIdGroup = group?['id_group']?.toString() ?? idGroup;
+
       final results = await Database.query('''
         SELECT * FROM meeting_schedule
         WHERE id_group = @idGroup
         ORDER BY start_time ASC
-      ''', {'idGroup': idGroup});
+      ''', {'idGroup': realIdGroup});
 
       return Response.ok(
         jsonEncode({
@@ -451,6 +569,9 @@ class GroupController {
   // POST /api/groups/<idGroup>/meetings
   static Future<Response> createMeeting(Request req, String idGroup) async {
     try {
+      final group = await _findGroupRecord(idGroup);
+      final realIdGroup = group?['id_group']?.toString() ?? idGroup;
+
       final body = jsonDecode(await req.readAsString()) as Map<String, dynamic>;
       final title = (body['meeting_title'] ?? body['title'])?.toString().trim();
       final description = body['description']?.toString();
@@ -471,7 +592,7 @@ class GroupController {
 
       await Database.query(sql, {
         'idMeeting': idMeeting,
-        'idGroup': idGroup,
+        'idGroup': realIdGroup,
         'title': title,
         'description': description,
         'startTime': startTime,
@@ -484,7 +605,7 @@ class GroupController {
           'message': 'Meeting created successfully',
           'data': {
             'id_meeting': idMeeting,
-            'id_group': idGroup,
+            'id_group': realIdGroup,
             'meeting_title': title,
             'description': description,
             'start_time': startTime,
@@ -506,13 +627,16 @@ class GroupController {
   // GET /api/groups/<idGroup>/tasks
   static Future<Response> getGroupTasks(Request req, String idGroup) async {
     try {
+      final group = await _findGroupRecord(idGroup);
+      final realIdGroup = group?['id_group']?.toString() ?? idGroup;
+
       final tasksQuery = await Database.query('''
         SELECT gt.*, u.name AS pic_name
         FROM group_task gt
         LEFT JOIN users u ON gt.id_assigned_to = u.id_user
         WHERE gt.id_group = @idGroup
         ORDER BY gt.deadline ASC
-      ''', {'idGroup': idGroup});
+      ''', {'idGroup': realIdGroup});
 
       return Response.ok(
         jsonEncode({
@@ -533,6 +657,9 @@ class GroupController {
   // POST /api/groups/<idGroup>/tasks
   static Future<Response> createGroupTask(Request req, String idGroup) async {
     try {
+      final group = await _findGroupRecord(idGroup);
+      final realIdGroup = group?['id_group']?.toString() ?? idGroup;
+
       final body = jsonDecode(await req.readAsString()) as Map<String, dynamic>;
       final taskTitle = (body['task_title'] ?? body['title'])?.toString().trim();
       final description = body['description']?.toString() ?? '';
@@ -555,7 +682,7 @@ class GroupController {
 
       await Database.query(sql, {
         'idGroupTask': idGroupTask,
-        'idGroup': idGroup,
+        'idGroup': realIdGroup,
         'assignedTo': assignedTo,
         'title': taskTitle,
         'desc': description,
@@ -570,7 +697,7 @@ class GroupController {
           'message': 'Group task created successfully',
           'data': {
             'id_group_task': idGroupTask,
-            'id_group': idGroup,
+            'id_group': realIdGroup,
             'task_title': taskTitle,
             'deadline': deadline,
             'grade_weight': gradeWeight,

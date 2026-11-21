@@ -156,6 +156,39 @@ Di sisi Frontend Flutter, repository data yang menggunakan pola Singleton in-mem
 2. **Sinkronisasi Tanpa Blocking Empty List**: Pada method sinkronisasi data API (seperti `fetchTeamsFromApi()`), **DILARANG** memblokir penimpaan data dengan kondisi `if (fetched.isNotEmpty) { _data = fetched; }`. Jika API mengembalikan array kosong `[]` (karena akun baru belum memiliki data di server), state lokal **WAJIB** diperbarui menjadi `[]` agar data akun sebelumnya tidak bocor ke layar akun yang baru login.
 3. **Penyediaan Empty State UI**: Saat data lokal kosong (`_teams.isEmpty`), sediakan tampilan antarmuka *Empty State* yang ramah pengguna, alih-alih menampilkan data dummy atau data milik akun lain.
 
+---
+
+## 9. 🎨 Standar Komponen UI Task & Panduan Transisi Data Dummy (UI Integrity & Mock Cleanup)
+
+Untuk menjaga konsistensi visual saat menghapus data dummy/mock dari proyek:
+
+### A. Pengetahuan Komponen & Sumber Rujukan UI Resmi
+Seluruh card dan badge tugas sudah diimplementasikan dalam komponen mandiri dan modular (karya Kafi / tim) yang menjadi rujukan baku desain:
+1. **`HomeTaskCard`** (`frontend/lib/presentation/features/dashboard/widgets/home_task_card.dart`): Card tugas ringkas di beranda Dashboard dengan dukungan ekspansi.
+2. **`TaskExpandableCard`** (`frontend/lib/presentation/features/task/widgets/task_expandable_card.dart`): Card tugas lengkap di halaman Tasks dengan detail defuzzifikasi, rubrik nilai, dan aksi edit/selesai.
+3. **`TeamTaskCard`** (`frontend/lib/presentation/features/team/widgets/team_task_card.dart`): Card tugas kelompok dengan avatar anggota, badge prioritas, dan time range.
+4. **`DesktopTaskGridCard`** (`frontend/lib/presentation/features/dashboard/widgets/desktop/desktop_task_grid_card.dart`): Card responsif 2-kolom untuk tampilan Desktop.
+
+### B. Spesifikasi Baku Tingkat Prioritas (High, Medium, Low)
+Penghapusan data dummy tidak boleh mengubah aturan pewarnaan dan styling prioritas berikut:
+- 🔴 **High Priority**:
+  - Background: `AppColors.primary` (`#FF7D65` / Coral Red-Orange)
+  - Teks: `Colors.white`, Font: Inter 10.5dp Bold (`FontWeight.w700`), Label: `'High'` atau `'HIGH'`
+- 🟡 **Medium Priority**:
+  - Background: `#FBBF24` (Amber Gold)
+  - Teks: `#1F2937` (Dark Gray), Font: Inter 10.5dp Bold (`FontWeight.w700`), Label: `'Medium'` atau `'MEDIUM'`
+- 🟢 **Low Priority**:
+  - Background: `#6EE7B7` (Mint Green)
+  - Teks: `#064E3B` (Dark Green), Font: Inter 10.5dp Bold (`FontWeight.w700`), Label: `'Low'` atau `'LOW'`
+- ⚪ **Completed Task**:
+  - Background: `#363C48`, Teks: `#8E95A5`, Judul tugas dicoret (*lineThrough*).
+
+### C. Aturan Pembersihan Data Dummy & Empty State
+1. **Data Dummy Sebagai Placeholder Sementara**: Data statis seperti list task awal di `home_page.dart` (`_tasks`), `TaskItemModel.defaultTasks`, atau `TeamTaskRepository._teamTasks['7X29']` (yang memuat nama fiktif seperti *Andi Sukamoto*, *Rayya Gemintang*, dll. dari kelompok yang belum di-join) dapat dibersihkan dan diganti dengan data dinamis dari `TaskRepository().tasks`.
+2. **Kewajiban Fallback Empty State**: Jika pengguna belum memiliki task atau belum bergabung dengan kelompok apapun, UI **WAJIB** menampilkan komponen *Empty State* yang sudah tersedia (ikon `Icons.assignment_turned_in_outlined` dengan pesan ramah pengguna), dan **DILARANG** menampilkan data kelompok atau anggota lain yang tidak relevan.
+3. **Pemahaman Visual Tetap Terjaga**: Setiap Agent yang bekerja di masa mendatang diwajibkan membaca aturan ini sehingga tidak kehilangan pemahaman mengenai spesifikasi UI meskipun data dummy di kode telah dihapus sepenuhnya.
+
+
 
 
 

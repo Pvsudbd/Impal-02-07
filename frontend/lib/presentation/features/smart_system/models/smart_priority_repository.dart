@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../profile/models/user_profile_model.dart';
+import 'course_rubric_repository.dart';
 import 'smart_priority_model.dart';
 
 class SmartPriorityRepository extends ChangeNotifier {
@@ -10,6 +11,7 @@ class SmartPriorityRepository extends ChangeNotifier {
   SmartPriorityRepository._internal() {
     _initDefaultData();
     UserProfileRepository().addListener(notifyListeners);
+    CourseRubricRepository().addListener(_onRubricsChanged);
   }
 
   late List<SmartPriorityModel> _items;
@@ -152,6 +154,46 @@ class SmartPriorityRepository extends ChangeNotifier {
             'The deadline is over two weeks away with minor grade weighting (10%). Mamdani Defuzzification calculates an output of 28.6, recommending completion after critical assignments are submitted.',
       ),
     ];
+  }
+
+  void _onRubricsChanged() {
+    final repo = CourseRubricRepository();
+    _items = _items.map((item) {
+      int? weight;
+      if (item.id == 'sp-1') {
+        weight = repo.findComponent('course_ai', 'comp_ai_sprint')?.weightPercent;
+      } else if (item.id == 'sp-2') {
+        weight = repo.findComponent('course_ling', 'comp_ling_essay')?.weightPercent;
+      } else if (item.id == 'sp-3') {
+        weight = repo.findComponent('course_impal', 'comp_impal_quiz')?.weightPercent;
+      }
+      if (weight == null) return item;
+      final tier = weight >= 30 ? 'High' : (weight >= 20 ? 'Medium' : 'Low');
+      final text = '$weight% ($tier)';
+      return SmartPriorityModel(
+        id: item.id,
+        rank: item.rank,
+        rankLabel: item.rankLabel,
+        title: item.title,
+        categoryTag: item.categoryTag,
+        score: item.score,
+        level: item.level,
+        timeLeftText: item.timeLeftText,
+        courseWeightText: text,
+        deadlineParam: item.deadlineParam,
+        courseWeightParam: FuzzifiedParameter(
+          label: 'Course Grade Weight: $text',
+          valueText: text,
+          degree: item.courseWeightParam.degree,
+          degreeLabel: item.courseWeightParam.degreeLabel,
+          accentColor: item.courseWeightParam.accentColor,
+          membershipValues: item.courseWeightParam.membershipValues,
+        ),
+        aggregationAreaText: item.aggregationAreaText,
+        reasonExplanation: item.reasonExplanation,
+      );
+    }).toList();
+    notifyListeners();
   }
 
   int getCount(SmartPriorityLevel? level) {

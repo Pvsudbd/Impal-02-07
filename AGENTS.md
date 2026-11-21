@@ -272,6 +272,12 @@ Tugas utamamu adalah memimpin tim pengembang antarmuka multi-agent berbasis arsi
   - **Pengaturan Pengingat & AI Fuzzy:** Pengaturan switch `Deadline Alerts`, `Sound & Vibration`, pemilih jam `Daily Morning Briefing` via `showImpalTimePicker`, serta status kartu `Fuzzy Inference Model`.
   - **Formulir Edit Profil:** Form input terstandarisasi (`ProfileTextField`) dengan leading icon, pill verified pada email kampus, notice banner SSO, dan pop-up `PopUpPemberitahuan.profileUpdated`.
 
+* **Standar Formulir & Modal Desktop (Mobile Wording Parity Law):**
+  - Seluruh modal formulir Desktop (`DesktopScheduleModal`, `DesktopPersonalTaskModal`, `DesktopTeamTaskModal`, `DesktopTeamMeetingModal`, `PopUpJoinTeam`, `PopUpCreateTeam`, `DesktopEditProfileModal`, `DesktopChangePasswordModal`) **wajib mengikuti wording, kapitalisasi Title Case, dan kesederhanaan header versi Mobile** (detail lengkap di [.agents/rules/desktop_form_modal_rules.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/.agents/rules/desktop_form_modal_rules.md)):
+    - **Dilarang menambahkan kalimat/subjudul ekstra di bawah judul modal** apabila versi Mobile tidak menampilkannya.
+    - **Dilarang menyalin huruf FULL KAPITAL (ALL-CAPS) atau istilah FigCraft yang menyimpang dari Mobile** (misalnya: gunakan `Date`, `Time Duration`, `Repeat Weekly`, bukan `DATE & DAY`, `TIME SLOT (24-HOUR FORMAT)`, `REPEAT EVERY WEEK`).
+    - Gunakan tombol `[✕]` di pojok kanan atas untuk menutup modal (panggil `FocusManager.instance.primaryFocus?.unfocus()` sebelum `pop`) tanpa tombol `Cancel` redundan di footer kiri, serta border input `AppColors.borderSubtle` yang hanya menjadi `AppColors.primary` saat fokus.
+
 * **Protokol Pop-Up Pemberitahuan Aksi (100% English UI Mandate & Strict Sentiment Color Law):**
   - **ATURAN MUTLAK BAHASA INGGRIS:** Seluruh teks notifikasi (`PopUpPemberitahuan`), judul, deskripsi pesan, toast feedback, validasi form, dialog konfirmasi (`PopUpKonfirmasiDelete`), dan alert sistem **WAJIB 100% MENGGUNAKAN BAHASA INGGRIS** tanpa kompromi. Dilarang keras menggunakan bahasa Indonesia pada string UI / pop-up.
   - **HUKUM BAKU WARNA SENTIMEN NOTIFIKASI (STRICT COLOR SENTIMENT LAW):**

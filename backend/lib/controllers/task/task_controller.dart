@@ -39,16 +39,16 @@ class TaskController {
           SELECT t.*, c.course_name
           FROM task t
           LEFT JOIN course c ON t.course_code = c.course_code
-          WHERE t.id_user = @idUser
+          WHERE t.id_student = @idUser
           ORDER BY t.is_completed ASC, t.deadline ASC
         ''', {'idUser': idUser});
       } catch (e) {
-        if (e.toString().contains('id_user')) {
+        if (e.toString().contains('id_student')) {
           results = await Database.query('''
             SELECT t.*, c.course_name
             FROM task t
             LEFT JOIN course c ON t.course_code = c.course_code
-            WHERE t.id_student = @idUser
+            WHERE t.id_user = @idUser
             ORDER BY t.is_completed ASC, t.deadline ASC
           ''', {'idUser': idUser});
         } else {
@@ -97,16 +97,16 @@ class TaskController {
           SELECT t.*, c.course_name
           FROM task t
           LEFT JOIN course c ON t.course_code = c.course_code
-          WHERE t.id_task = @idTask AND t.id_user = @idUser
+          WHERE t.id_task = @idTask AND t.id_student = @idUser
           LIMIT 1
         ''', {'idTask': idTask, 'idUser': idUser});
       } catch (e) {
-        if (e.toString().contains('id_user')) {
+        if (e.toString().contains('id_student')) {
           results = await Database.query('''
             SELECT t.*, c.course_name
             FROM task t
             LEFT JOIN course c ON t.course_code = c.course_code
-            WHERE t.id_task = @idTask AND t.id_student = @idUser
+            WHERE t.id_task = @idTask AND t.id_user = @idUser
             LIMIT 1
           ''', {'idTask': idTask, 'idUser': idUser});
         } else {
@@ -243,16 +243,18 @@ class TaskController {
       // Generate pure UUID v4 (36 chars, mematuhi Section 8A AGENTS.md)
       final idTask = _uuid.v4();
       final deadlineStr = deadline.toIso8601String();
+      final isFuzzyAutoInt = isFuzzyAuto ? 1 : 0;
+      final isCompletedInt = isCompleted ? 1 : 0;
 
       try {
         await Database.query('''
           INSERT INTO task (
-            id_task, id_user, course_code, task_title, description,
+            id_task, id_student, course_code, task_title, description,
             deadline, grade_weight, priority_score, priority,
             is_fuzzy_auto, is_completed, created_at, updated_at
           ) VALUES (
             @idTask, @idUser, @courseCode, @taskTitle, @description,
-            @deadline::timestamptz, @gradeWeight, @priorityScore, @priority,
+            @deadline::timestamp, @gradeWeight, @priorityScore, @priority,
             @isFuzzyAuto, @isCompleted, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
           )
         ''', {
@@ -265,20 +267,20 @@ class TaskController {
           'gradeWeight': gradeWeight,
           'priorityScore': priorityScore,
           'priority': priority,
-          'isFuzzyAuto': isFuzzyAuto,
-          'isCompleted': isCompleted,
+          'isFuzzyAuto': isFuzzyAutoInt,
+          'isCompleted': isCompletedInt,
         });
       } catch (e) {
-        print('[TASK] Primary insert error: $e. Retrying with id_student fallback...');
-        if (e.toString().contains('id_user') || e.toString().contains('column "id_user"')) {
+        print('[TASK] Primary insert (id_student) error: $e. Retrying with id_user fallback...');
+        if (e.toString().contains('id_student')) {
           await Database.query('''
             INSERT INTO task (
-              id_task, id_student, course_code, task_title, description,
+              id_task, id_user, course_code, task_title, description,
               deadline, grade_weight, priority_score, priority,
               is_fuzzy_auto, is_completed, created_at, updated_at
             ) VALUES (
               @idTask, @idUser, @courseCode, @taskTitle, @description,
-              @deadline::timestamptz, @gradeWeight, @priorityScore, @priority,
+              @deadline::timestamp, @gradeWeight, @priorityScore, @priority,
               @isFuzzyAuto, @isCompleted, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
           ''', {
@@ -291,8 +293,8 @@ class TaskController {
             'gradeWeight': gradeWeight,
             'priorityScore': priorityScore,
             'priority': priority,
-            'isFuzzyAuto': isFuzzyAuto,
-            'isCompleted': isCompleted,
+            'isFuzzyAuto': isFuzzyAutoInt,
+            'isCompleted': isCompletedInt,
           });
         } else {
           rethrow;
@@ -405,13 +407,13 @@ class TaskController {
       QueryResult existing;
       try {
         existing = await Database.query(
-          'SELECT * FROM task WHERE id_task = @idTask AND id_user = @idUser LIMIT 1',
+          'SELECT * FROM task WHERE id_task = @idTask AND id_student = @idUser LIMIT 1',
           {'idTask': idTask, 'idUser': idUser},
         );
       } catch (e) {
-        if (e.toString().contains('id_user')) {
+        if (e.toString().contains('id_student')) {
           existing = await Database.query(
-            'SELECT * FROM task WHERE id_task = @idTask AND id_student = @idUser LIMIT 1',
+            'SELECT * FROM task WHERE id_task = @idTask AND id_user = @idUser LIMIT 1',
             {'idTask': idTask, 'idUser': idUser},
           );
         } else {
@@ -436,20 +438,23 @@ class TaskController {
       final finalCompleted = isCompleted ?? (current['is_completed'] == true || current['is_completed'] == 1);
       final finalCourse = courseCode ?? current['course_code']?.toString() ?? 'GEN-DEFAULT';
 
+      final finalFuzzyInt = finalFuzzy ? 1 : 0;
+      final finalCompletedInt = finalCompleted ? 1 : 0;
+
       try {
         await Database.query('''
           UPDATE task SET
             task_title = @title,
             description = @desc,
             course_code = @course,
-            deadline = @deadline::timestamptz,
+            deadline = @deadline::timestamp,
             grade_weight = @weight,
             priority_score = @score,
             priority = @priority,
             is_fuzzy_auto = @fuzzy,
             is_completed = @completed,
             updated_at = CURRENT_TIMESTAMP
-          WHERE id_task = @idTask AND id_user = @idUser
+          WHERE id_task = @idTask AND id_student = @idUser
         ''', {
           'title': finalTitle,
           'desc': finalDesc,
@@ -458,26 +463,26 @@ class TaskController {
           'weight': finalWeight,
           'score': finalScore,
           'priority': finalPriority,
-          'fuzzy': finalFuzzy,
-          'completed': finalCompleted,
+          'fuzzy': finalFuzzyInt,
+          'completed': finalCompletedInt,
           'idTask': idTask,
           'idUser': idUser,
         });
       } catch (e) {
-        if (e.toString().contains('id_user')) {
+        if (e.toString().contains('id_student')) {
           await Database.query('''
             UPDATE task SET
               task_title = @title,
               description = @desc,
               course_code = @course,
-              deadline = @deadline::timestamptz,
+              deadline = @deadline::timestamp,
               grade_weight = @weight,
               priority_score = @score,
               priority = @priority,
               is_fuzzy_auto = @fuzzy,
               is_completed = @completed,
               updated_at = CURRENT_TIMESTAMP
-            WHERE id_task = @idTask AND id_student = @idUser
+            WHERE id_task = @idTask AND id_user = @idUser
           ''', {
             'title': finalTitle,
             'desc': finalDesc,
@@ -486,8 +491,8 @@ class TaskController {
             'weight': finalWeight,
             'score': finalScore,
             'priority': finalPriority,
-            'fuzzy': finalFuzzy,
-            'completed': finalCompleted,
+            'fuzzy': finalFuzzyInt,
+            'completed': finalCompletedInt,
             'idTask': idTask,
             'idUser': idUser,
           });
@@ -540,16 +545,16 @@ class TaskController {
       try {
         res = await Database.query('''
           UPDATE task
-          SET is_completed = NOT is_completed, updated_at = CURRENT_TIMESTAMP
-          WHERE id_task = @idTask AND id_user = @idUser
+          SET is_completed = (CASE WHEN is_completed = 1 THEN 0 ELSE 1 END), updated_at = CURRENT_TIMESTAMP
+          WHERE id_task = @idTask AND id_student = @idUser
           RETURNING is_completed, task_title
         ''', {'idTask': idTask, 'idUser': idUser});
       } catch (e) {
-        if (e.toString().contains('id_user')) {
+        if (e.toString().contains('id_student')) {
           res = await Database.query('''
             UPDATE task
-            SET is_completed = NOT is_completed, updated_at = CURRENT_TIMESTAMP
-            WHERE id_task = @idTask AND id_student = @idUser
+            SET is_completed = (CASE WHEN is_completed = 1 THEN 0 ELSE 1 END), updated_at = CURRENT_TIMESTAMP
+            WHERE id_task = @idTask AND id_user = @idUser
             RETURNING is_completed, task_title
           ''', {'idTask': idTask, 'idUser': idUser});
         } else {
@@ -600,13 +605,13 @@ class TaskController {
       QueryResult res;
       try {
         res = await Database.query(
-          'DELETE FROM task WHERE id_task = @idTask AND id_user = @idUser',
+          'DELETE FROM task WHERE id_task = @idTask AND id_student = @idUser',
           {'idTask': idTask, 'idUser': idUser},
         );
       } catch (e) {
-        if (e.toString().contains('id_user')) {
+        if (e.toString().contains('id_student')) {
           res = await Database.query(
-            'DELETE FROM task WHERE id_task = @idTask AND id_student = @idUser',
+            'DELETE FROM task WHERE id_task = @idTask AND id_user = @idUser',
             {'idTask': idTask, 'idUser': idUser},
           );
         } else {

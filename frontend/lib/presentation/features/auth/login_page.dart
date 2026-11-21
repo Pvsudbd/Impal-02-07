@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/page_transitions.dart';
+import '../../../core/utils/responsive_context.dart';
 import '../../../core/utils/top_toast.dart';
 import '../../../data/datasources/auth_remote_datasource.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
@@ -122,13 +123,21 @@ class _LoginState extends State<Login> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = context.isDesktop;
+
     return AuthCardWrapper(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment:
+            isDesktop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
           // 1. Signature Brand Header
-          const AuthBrandHeader(),
+          AuthBrandHeader(
+            alignStart: isDesktop,
+            subtitle: isDesktop
+                ? 'AI-Driven Academic Task & Schedule Prioritization System'
+                : 'AI-Driven Academic Task & Schedule\nPrioritization System',
+          ),
 
           // 2. Credentials Form
           Column(
@@ -193,11 +202,11 @@ class _LoginState extends State<Login> {
                                   : null,
                             ),
                             const SizedBox(width: 8),
-                            const Flexible(
+                            Flexible(
                               child: Text(
-                                'Remember me',
+                                isDesktop ? 'Remember my account' : 'Remember me',
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Color(0xFFD1D5DB),
                                   fontSize: 12,
                                   fontFamily: 'Inter',

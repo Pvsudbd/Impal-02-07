@@ -20,7 +20,6 @@ class TaskRepository with ChangeNotifier {
   void init() {
     if (_initialized) return;
     _tasks.clear();
-    _tasks.addAll(TaskItemModel.defaultTasks);
     _initialized = true;
   }
 
@@ -28,7 +27,8 @@ class TaskRepository with ChangeNotifier {
   void resetToDefaults() {
     _initialized = false;
     _tasks.clear();
-    init();
+    _tasks.addAll(TaskItemModel.defaultTasks);
+    _initialized = true;
     notifyListeners();
   }
 

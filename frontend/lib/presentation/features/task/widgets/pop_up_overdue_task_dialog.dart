@@ -168,13 +168,17 @@ class PopUpOverdueTaskDialog extends StatelessWidget {
                     size: 15,
                   ),
                   SizedBox(width: 6),
-                  Text(
-                    'Status: Overdue • Fuzzy Weight: Off',
-                    style: TextStyle(
-                      color: Color(0xFFFA6144),
-                      fontSize: 11.5,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
+                  Flexible(
+                    child: Text(
+                      'Status: Overdue • Fuzzy Weight: Off',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Color(0xFFFA6144),
+                        fontSize: 11.5,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],

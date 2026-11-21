@@ -46,6 +46,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF282D37),
+        canvasColor: const Color(0xFF282D37),
         fontFamily: 'Inter',
       ),
       builder: (context, child) {

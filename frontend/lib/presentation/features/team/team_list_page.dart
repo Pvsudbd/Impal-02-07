@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/responsive_context.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../schedule/models/schedule_model.dart';
@@ -56,11 +57,8 @@ class _TeamListPageState extends State<TeamListPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.isStandalone) {
-      return TeamListContentView(
-        userName: widget.userName,
-        showBackButton: false,
-      );
+    if (!widget.isStandalone || context.isDesktop) {
+      return HomePage(userName: widget.userName, initialTab: 2);
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -267,6 +265,8 @@ class _TeamListContentViewState extends State<TeamListContentView> {
     if (!mounted) return;
 
     if (res['status'] == 'success') {
+      await TeamRepository().fetchTeamsFromApi();
+      if (!mounted) return;
       setState(() {});
       final teamName = res['data']?['group_name']?.toString();
       PopUpPemberitahuan.teamJoined(
@@ -276,11 +276,20 @@ class _TeamListContentViewState extends State<TeamListContentView> {
       );
     } else {
       final errorMsg = res['message']?.toString() ?? 'Failed to join team.';
-      PopUpPemberitahuan.teamWarning(
-        context,
-        title: 'Join Team Failed',
-        message: errorMsg,
-      );
+      if (errorMsg.toLowerCase().contains('already a member') ||
+          errorMsg.toLowerCase().contains('already join')) {
+        PopUpPemberitahuan.teamWarning(
+          context,
+          title: 'Already Joined',
+          message: 'You have already joined this team.',
+        );
+      } else {
+        PopUpPemberitahuan.teamWarning(
+          context,
+          title: 'Join Team Failed',
+          message: errorMsg,
+        );
+      }
     }
   }
 
@@ -494,7 +503,11 @@ class _TeamListContentViewState extends State<TeamListContentView> {
                       builder: (_) => DashboardTeamPage(
                         userName: widget.userName,
                         teamName: _teams[i].name,
-                        teamCode: _teams[i].inviteCode ?? '7X29',
+                        teamId: _teams[i].id,
+                        teamCode: (_teams[i].inviteCode != null &&
+                                _teams[i].inviteCode!.isNotEmpty)
+                            ? _teams[i].inviteCode!
+                            : _teams[i].id,
                         memberColors: _teams[i].memberColors,
                       ),
                     ),

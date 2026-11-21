@@ -4,7 +4,13 @@ import '../../../../core/utils/responsive_context.dart';
 import '../../../../core/widgets/unfocus_on_tap.dart';
 import '../profile/models/user_profile_model.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../smart_system/models/course_rubric_model.dart';
+import '../smart_system/models/course_rubric_repository.dart';
+import '../smart_system/widgets/course_rubric_modals.dart';
+import '../task/models/tag_repository.dart';
+import '../task/widgets/task_tag_picker.dart';
 import 'models/team_member_model.dart';
+import 'models/team_repository.dart';
 import 'models/team_task_model.dart';
 import 'models/team_task_repository.dart';
 import 'pop_up_pemberitahuan_team.dart';
@@ -37,6 +43,8 @@ class CreateTaskTeamPage extends StatefulWidget {
   final VoidCallback? onBack;
   final String userInitials;
   final String teamCode;
+  final String teamName;
+  final List<TeamMemberModel>? groupMembers;
 
   const CreateTaskTeamPage({
     super.key,
@@ -46,6 +54,8 @@ class CreateTaskTeamPage extends StatefulWidget {
     this.onBack,
     this.userInitials = 'JS',
     this.teamCode = '7X29',
+    this.teamName = 'IMPAL Team',
+    this.groupMembers,
   });
 
   @override
@@ -59,9 +69,12 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
 
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
+  late List<TeamMemberModel> _availableMembers;
   late List<TeamMemberModel> _selectedMembers;
   late bool _isAlertEnabled;
   String? _selectedMilestoneId;
+  RubricComponentModel? _overrideRubricComponent;
+  List<String> _selectedTagLabels = [];
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.existingTask != null;
@@ -69,23 +82,83 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
   @override
   void initState() {
     super.initState();
+    CourseRubricRepository().init();
+    TaskTagRepository().init();
+
+    final fallbackName =
+        widget.userInitials == 'JS' ? 'Jarvis' : widget.userInitials;
+    final cached = TeamRepository().getCachedMembers(
+      widget.teamCode,
+      fallbackUserName: fallbackName,
+    );
+    final initialList = (widget.groupMembers != null && widget.groupMembers!.length >= cached.length)
+        ? widget.groupMembers!
+        : cached;
+    _availableMembers = initialList.isNotEmpty ? initialList : [];
+
+    if (_availableMembers.isEmpty) {
+      _availableMembers = [
+        TeamMemberModel(
+          id: 'member_self',
+          name: fallbackName,
+          avatarColor: const Color(0xFFF3A683),
+        ),
+      ];
+    }
+
+    TeamRepository()
+        .fetchGroupMembers(
+      widget.teamCode,
+      fallbackUserName: fallbackName,
+    )
+        .then((fetched) {
+      if (mounted && fetched.isNotEmpty) {
+        setState(() {
+          _availableMembers = fetched;
+          if (_selectedMembers.isEmpty ||
+              _selectedMembers.every((s) => s.id == 'member_self')) {
+            final currentUserMatch = _availableMembers.where((m) =>
+                m.name.toLowerCase().contains(fallbackName.toLowerCase())).firstOrNull;
+            _selectedMembers = [currentUserMatch ?? _availableMembers.first];
+          }
+        });
+      }
+    });
+
     final task = widget.existingTask;
     _isAlertEnabled = task?.isAlertEnabled ?? true;
     if (task != null) {
       _taskNameController = TextEditingController(text: task.title);
-      _descriptionController = TextEditingController(text: task.description ?? '');
-      _selectedDate = task.deadline ?? DateTime(2026, 10, 18);
+      _descriptionController =
+          TextEditingController(text: task.description ?? '');
+      final now = DateTime.now();
+      _selectedDate = task.deadline ?? DateTime(now.year, now.month, now.day);
       _selectedTime = _parseTimeOfDay(task.timeRange);
       _selectedMembers = _matchMembers(task.assignedTo);
+      _selectedTagLabels = task.tags.map((t) => t.label).toList();
       final existingMilestone =
           TeamTaskRepository().getMilestoneForTask(widget.teamCode, task.id);
       _selectedMilestoneId = existingMilestone?.id;
+      if (task.rubricComponentId != null) {
+        final linked = CourseRubricRepository().getLinkedRubricForTeam(
+          teamId: widget.teamCode,
+          teamName: widget.teamName,
+        );
+        final match = linked?.course.components
+            .where((c) => c.id == task.rubricComponentId)
+            .firstOrNull;
+        if (match != null && match.id != linked?.component.id) {
+          _overrideRubricComponent = match;
+        }
+      }
     } else {
       _taskNameController = TextEditingController();
       _descriptionController = TextEditingController();
-      _selectedDate = DateTime(2026, 10, 18);
+      final now = DateTime.now();
+      _selectedDate = DateTime(now.year, now.month, now.day);
       _selectedTime = const TimeOfDay(hour: 23, minute: 59);
-      _selectedMembers = [TeamMemberModel.defaultMembers.first];
+      _selectedMembers =
+          _availableMembers.isNotEmpty ? [_availableMembers.first] : [];
       _selectedMilestoneId = null;
     }
   }
@@ -107,7 +180,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
     return const TimeOfDay(hour: 23, minute: 59);
   }
 
-  static List<TeamMemberModel> _matchMembers(String assignedTo) {
+  List<TeamMemberModel> _matchMembers(String assignedTo) {
     final names = assignedTo
         .split(',')
         .map((s) => s.trim().toLowerCase())
@@ -115,12 +188,14 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         .toList();
 
     final matched = <TeamMemberModel>[];
-    for (final member in TeamMemberModel.defaultMembers) {
+    for (final member in _availableMembers) {
       if (names.contains(member.name.toLowerCase())) {
         matched.add(member);
       }
     }
-    return matched.isNotEmpty ? matched : [TeamMemberModel.defaultMembers.first];
+    return matched.isNotEmpty
+        ? matched
+        : (_availableMembers.isNotEmpty ? [_availableMembers.first] : []);
   }
 
   Future<void> _handleSaveTask() async {
@@ -176,6 +251,12 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
 
     final daysDiff = _selectedDate.difference(DateTime.now()).inDays;
     final dueBadgeStr = isPastDeadline ? 'Overdue' : (daysDiff > 0 ? '${daysDiff}d' : '12h');
+    final linkedRubric = CourseRubricRepository().getLinkedRubricForTeam(
+      teamId: widget.teamCode,
+      teamName: widget.teamName,
+    );
+    final effectiveComp = _overrideRubricComponent ?? linkedRubric?.component;
+    final tagModels = TaskTagRepository().toTaskTagModels(_selectedTagLabels);
 
     if (_isEditing) {
       final updatedTask = widget.existingTask!.copyWith(
@@ -185,9 +266,13 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         assigneeColors: assignedColors,
         timeRange: timeStr,
         description: _descriptionController.text.trim(),
-        deadline: _selectedDate,
+        deadline: fullDeadline,
         dueBadge: dueBadgeStr,
         isAlertEnabled: _isAlertEnabled,
+        rubricComponentId: effectiveComp?.id,
+        rubricComponentName: effectiveComp?.name,
+        gradeWeightPercent: effectiveComp?.weightPercent,
+        tags: tagModels,
       );
 
       TeamTaskRepository().setTaskMilestone(
@@ -216,9 +301,13 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         assigneeColors: assignedColors,
         timeRange: timeStr,
         description: _descriptionController.text.trim(),
-        deadline: _selectedDate,
+        deadline: fullDeadline,
         dueBadge: dueBadgeStr,
         isAlertEnabled: _isAlertEnabled,
+        rubricComponentId: effectiveComp?.id,
+        rubricComponentName: effectiveComp?.name,
+        gradeWeightPercent: effectiveComp?.weightPercent,
+        tags: tagModels,
       );
 
       TeamTaskRepository().setTaskMilestone(
@@ -267,16 +356,21 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _isEditing ? 'Edit Team Task' : 'Team Task Details',
-                        style: TextStyle(
-                          color: AppColors.textWhite,
-                          fontSize: context.rFont(18, min: 16, max: 22),
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.1,
+                      Flexible(
+                        child: Text(
+                          _isEditing ? 'Edit Team Task' : 'Team Task Details',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.textWhite,
+                            fontSize: context.rFont(18, min: 16, max: 22),
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.1,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       _buildAlertToggle(context),
                     ],
                   ),
@@ -317,10 +411,19 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
 
                   // Assign To Dropdown (Multi-Select)
                   AssigneeDropdown(
-                    members: TeamMemberModel.defaultMembers,
+                    members: _availableMembers,
                     selectedMembers: _selectedMembers,
                     onMembersChanged: (members) =>
                         setState(() => _selectedMembers = members),
+                  ),
+                  SizedBox(height: context.rSpacing(16)),
+
+                  TeamRubricLinkSection(
+                    teamCode: widget.teamCode,
+                    teamName: widget.teamName,
+                    overrideComponentId: _overrideRubricComponent?.id,
+                    onOverrideChanged: (comp) =>
+                        setState(() => _overrideRubricComponent = comp),
                   ),
                   SizedBox(height: context.rSpacing(16)),
 
@@ -328,6 +431,13 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
                   _buildSectionLabel(context, 'Milestone (Optional)'),
                   SizedBox(height: context.rSpacing(8)),
                   _buildMilestoneSelector(context),
+                  SizedBox(height: context.rSpacing(16)),
+
+                  TaskTagSelectorSection(
+                    selectedTags: _selectedTagLabels,
+                    onTagsChanged: (next) =>
+                        setState(() => _selectedTagLabels = next),
+                  ),
                   SizedBox(height: context.rSpacing(24)),
 
                   // Submit Button (Dynamic: "Save Changes" or "Create Task")

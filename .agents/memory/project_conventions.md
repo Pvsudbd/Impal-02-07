@@ -43,7 +43,13 @@
 - Setiap aksi mutasi data (Create, Update, Delete, Submit Form) wajib memicu `PopUpPemberitahuan` / `PopUpPemberitahuanTeam`.
 - Desain: Dark container (`#323846` / `#282D37`), icon badge berwarna (Hijau untuk positif, Orange/Coral untuk peringatan/negatif, Sky Blue untuk info/netral), auto-dismiss.
 
-### 8. Dokumentasi & Roadmap Wajib
+### 8. Paritas Wording Modal Formulir Desktop (Desktop Form Modal Parity)
+- Mengacu lengkap pada [.agents/rules/desktop_form_modal_rules.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/.agents/rules/desktop_form_modal_rules.md).
+- **Tanpa Subtitle Tambahan di Header Modal:** Jika form mobile tidak memiliki kalimat deskriptif di bawah judul utama, modal desktop wajib hanya menampilkan judul + tombol `[✕]` (serta `Alert On/Off` bila ada).
+- **Wording & Kapitalisasi Persis Mobile:** Dilarang menggunakan label ALL-CAPS atau istilah berbeda dari FigCraft (gunakan `Date`, `Time Duration`, `Repeat Weekly`, `Task Grade Weight`, `Full Name`, `Current Password`, Title Case 100% English).
+- **Tanpa Tombol `Cancel` Redundan:** Tutup modal via `[✕]` kanan atas (dengan `FocusManager.instance.primaryFocus?.unfocus()` sebelum `pop`); footer Create full-width CTA, footer Edit `Delete ...` + `Save Changes`.
+
+### 9. Dokumentasi & Roadmap Wajib
 - Selesai mengerjakan fitur, bugfix, atau refactoring, **WAJIB** memperbarui [ROADMAP_AUDIT_DAN_PENINGKATAN.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/ROADMAP_AUDIT_DAN_PENINGKATAN.md).
 
 ### 9. Standar Teknologi Backend (Dart Frog & PostgreSQL)
