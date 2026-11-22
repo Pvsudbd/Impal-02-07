@@ -122,7 +122,7 @@ class _LoginState extends State<Login> {
               AuthTextField(
                 label: 'Username or Email',
                 controller: _usernameController,
-                hintText: 'Enter your student ID or email',
+                hintText: 'Enter your username or email',
                 prefixIcon: Icons.person_outline_rounded,
                 errorText: _usernameError,
                 onTap: TopToast.dismiss,

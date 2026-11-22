@@ -94,7 +94,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
           ],
         ),
         content: const Text(
-          'If you no longer have access to your registered student email or phone number, please contact your Telkom University campus academic administrator.',
+          'If you no longer have access to your registered email or phone number, please contact our support administrator.',
           style: TextStyle(
             color: Color(0xFFD1D5DB),
             fontSize: 13,
@@ -118,14 +118,13 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     if (_selectedMethod == RecoveryMethod.email) {
       final text = _emailController.text.trim();
       if (text.isEmpty) {
-        setState(() => _emailError = 'Please enter your email or Student ID');
+        setState(() => _emailError = 'Please enter your email');
         return;
       }
       final isEmailFormat = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(text);
-      final isStudentIdFormat = RegExp(r'^\d{8,14}$').hasMatch(text);
 
-      if (!isEmailFormat && !isStudentIdFormat) {
-        setState(() => _emailError = 'Enter a valid email address or 8-14 digit Student ID');
+      if (!isEmailFormat) {
+        setState(() => _emailError = 'Enter a valid email address');
         return;
       }
     } else {
@@ -241,9 +240,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
       child: _selectedMethod == RecoveryMethod.email
           ? AuthTextField(
               key: const ValueKey('email_form'),
-              label: isDesktop ? 'Email' : 'Email or Student ID',
+              label: 'Email',
               controller: _emailController,
-              hintText: 'Enter registered email or Student ID',
+              hintText: 'Enter your registered email',
               prefixIcon: Icons.mail_outline_rounded,
               keyboardType: TextInputType.emailAddress,
               errorText: _emailError,
@@ -318,7 +317,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                   width: isDesktop ? 360 : 320,
                   child: Text(
                     isDesktop
-                        ? 'Enter your registered Student ID or campus email to receive password reset instructions.'
+                        ? 'Enter your registered email address to receive password reset instructions.'
                         : 'Choose where you would like to receive password recovery instructions.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(

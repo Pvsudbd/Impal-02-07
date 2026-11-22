@@ -208,7 +208,7 @@ class _RegisterState extends State<Register> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Register your student identity for smart academic prioritization.',
+            'Create your account for smart task and schedule prioritization.',
             style: TextStyle(
               color: Color(0xFF8E95A5),
               fontSize: 13,
