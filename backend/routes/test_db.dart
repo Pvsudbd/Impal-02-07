@@ -17,14 +17,14 @@ Future<Response> onRequest(RequestContext context) async {
       },
     );
   } catch (e) {
+    print('[TEST_DB] error: $e');
     return Response.json(
       statusCode: HttpStatus.internalServerError,
       body: {
         'status': 'error',
         'framework': 'Dart Frog',
-        'message': 'Gagal terhubung ke database server: $e',
+        'message': 'Gagal terhubung ke database server.',
       },
     );
   }
 }
-

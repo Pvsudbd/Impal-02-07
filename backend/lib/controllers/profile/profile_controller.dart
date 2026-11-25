@@ -8,9 +8,13 @@ import '../../models/profile/profile_model.dart';
 /// - Whitelists allowable fields (Mass Assignment protection).
 /// - Sanitizes error responses to prevent internal information leakage.
 class ProfileController {
+  static const _jsonHeaders = {'Content-Type': 'application/json'};
+  static final _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
   // Helper to extract authenticated user from JWT
   static Map<String, dynamic>? _getAuthUser(Request req) {
-    return (req.context['user'] ?? req.context['student']) as Map<String, dynamic>?;
+    return (req.context['user'] ?? req.context['student'])
+        as Map<String, dynamic>?;
   }
 
   // ─── GET /api/profile or /api/user ─────────────────────────────────────────
@@ -18,9 +22,11 @@ class ProfileController {
     try {
       final user = _getAuthUser(req);
       if (user == null) {
-        return Response(401,
-            body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
-            headers: {'Content-Type': 'application/json'});
+        return Response(
+          401,
+          body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
+          headers: _jsonHeaders,
+        );
       }
 
       final idUser = (user['idUser'] ?? user['idStudent']) as String;
@@ -28,8 +34,11 @@ class ProfileController {
 
       if (profile == null) {
         return Response.notFound(
-          jsonEncode({'status': 'error', 'message': 'Profil pengguna tidak ditemukan.'}),
-          headers: {'Content-Type': 'application/json'},
+          jsonEncode({
+            'status': 'error',
+            'message': 'Profil pengguna tidak ditemukan.',
+          }),
+          headers: _jsonHeaders,
         );
       }
 
@@ -39,13 +48,16 @@ class ProfileController {
           'message': 'Profil berhasil diambil.',
           'data': profile.toJson(),
         }),
-        headers: {'Content-Type': 'application/json'},
+        headers: _jsonHeaders,
       );
     } catch (e, stack) {
       print('[PROFILE] getProfile error: $e\n$stack');
       return Response.internalServerError(
-        body: jsonEncode({'status': 'error', 'message': 'Gagal mengambil data profil.'}),
-        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Gagal mengambil data profil.',
+        }),
+        headers: _jsonHeaders,
       );
     }
   }
@@ -55,30 +67,71 @@ class ProfileController {
     try {
       final user = _getAuthUser(req);
       if (user == null) {
-        return Response(401,
-            body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
-            headers: {'Content-Type': 'application/json'});
+        return Response(
+          401,
+          body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
+          headers: _jsonHeaders,
+        );
       }
 
       final idUser = (user['idUser'] ?? user['idStudent']) as String;
       final bodyText = await req.readAsString();
       if (bodyText.isEmpty) {
         return Response.badRequest(
-          body: jsonEncode({'status': 'error', 'message': 'Request body tidak boleh kosong'}),
-          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Request body tidak boleh kosong',
+          }),
+          headers: _jsonHeaders,
         );
       }
 
-      final body = jsonDecode(bodyText) as Map<String, dynamic>;
+      final decoded = jsonDecode(bodyText);
+      if (decoded is! Map<String, dynamic>) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Format JSON tidak valid.',
+          }),
+          headers: _jsonHeaders,
+        );
+      }
+
       // Whitelist only allowed fields to prevent Mass Assignment
-      final name = body['name'] as String? ?? body['fullName'] as String?;
-      final email = body['email'] as String?;
+      final name = decoded['name'] as String? ?? decoded['fullName'] as String?;
+      final email = decoded['email'] as String?;
 
       if (name == null || name.trim().isEmpty) {
         return Response.badRequest(
-          body: jsonEncode({'status': 'error', 'message': 'Nama lengkap wajib diisi.'}),
-          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Nama lengkap wajib diisi.',
+          }),
+          headers: _jsonHeaders,
         );
+      }
+
+      if (name.trim().length > 100) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Nama lengkap maksimal 100 karakter.',
+          }),
+          headers: _jsonHeaders,
+        );
+      }
+
+      if (email != null && email.trim().isNotEmpty) {
+        final cleanEmail = email.trim().toLowerCase();
+        if (cleanEmail.length > 100 || !_emailRegex.hasMatch(cleanEmail)) {
+          return Response.badRequest(
+            body: jsonEncode({
+              'status': 'error',
+              'message': 'Format email tidak valid.',
+            }),
+            headers: _jsonHeaders,
+          );
+        }
       }
 
       await ProfileModel.updateProfile(
@@ -95,13 +148,33 @@ class ProfileController {
           'message': 'Profil berhasil diperbarui.',
           'data': updated?.toJson(),
         }),
-        headers: {'Content-Type': 'application/json'},
+        headers: _jsonHeaders,
+      );
+    } on DuplicateEmailException catch (e) {
+      return Response(
+        409,
+        body: jsonEncode({
+          'status': 'error',
+          'message': e.message,
+        }),
+        headers: _jsonHeaders,
+      );
+    } on FormatException {
+      return Response.badRequest(
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Format JSON tidak valid.',
+        }),
+        headers: _jsonHeaders,
       );
     } catch (e, stack) {
       print('[PROFILE] updateProfile error: $e\n$stack');
       return Response.internalServerError(
-        body: jsonEncode({'status': 'error', 'message': 'Gagal memperbarui profil.'}),
-        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Gagal memperbarui profil.',
+        }),
+        headers: _jsonHeaders,
       );
     }
   }
@@ -111,43 +184,80 @@ class ProfileController {
     try {
       final user = _getAuthUser(req);
       if (user == null) {
-        return Response(401,
-            body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
-            headers: {'Content-Type': 'application/json'});
+        return Response(
+          401,
+          body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
+          headers: _jsonHeaders,
+        );
       }
 
       final idUser = (user['idUser'] ?? user['idStudent']) as String;
       final bodyText = await req.readAsString();
       if (bodyText.isEmpty) {
         return Response.badRequest(
-          body: jsonEncode({'status': 'error', 'message': 'Request body tidak boleh kosong'}),
-          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Request body tidak boleh kosong',
+          }),
+          headers: _jsonHeaders,
         );
       }
 
-      final body = jsonDecode(bodyText) as Map<String, dynamic>;
-      final currentPassword = body['currentPassword'] as String?;
-      final newPassword = body['newPassword'] as String?;
-
-      if (currentPassword == null || currentPassword.isEmpty ||
-          newPassword == null || newPassword.isEmpty) {
+      final decoded = jsonDecode(bodyText);
+      if (decoded is! Map<String, dynamic>) {
         return Response.badRequest(
-          body: jsonEncode({'status': 'error', 'message': 'Password saat ini dan password baru wajib diisi.'}),
-          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Format JSON tidak valid.',
+          }),
+          headers: _jsonHeaders,
+        );
+      }
+
+      final currentPassword = decoded['currentPassword'] as String?;
+      final newPassword = decoded['newPassword'] as String?;
+
+      if (currentPassword == null ||
+          currentPassword.isEmpty ||
+          newPassword == null ||
+          newPassword.isEmpty) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Password saat ini dan password baru wajib diisi.',
+          }),
+          headers: _jsonHeaders,
         );
       }
 
       if (newPassword.length < 6) {
         return Response.badRequest(
-          body: jsonEncode({'status': 'error', 'message': 'Password baru minimal harus 6 karakter.'}),
-          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Password baru minimal harus 6 karakter.',
+          }),
+          headers: _jsonHeaders,
+        );
+      }
+
+      if (newPassword.contains(RegExp(r'\s'))) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Password baru tidak boleh mengandung spasi.',
+          }),
+          headers: _jsonHeaders,
         );
       }
 
       if (newPassword == currentPassword) {
         return Response.badRequest(
-          body: jsonEncode({'status': 'error', 'message': 'Password baru tidak boleh sama dengan password saat ini.'}),
-          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'status': 'error',
+            'message':
+                'Password baru tidak boleh sama dengan password saat ini.',
+          }),
+          headers: _jsonHeaders,
         );
       }
 
@@ -161,7 +271,7 @@ class ProfileController {
         return Response(
           400,
           body: jsonEncode({'status': 'error', 'message': result['message']}),
-          headers: {'Content-Type': 'application/json'},
+          headers: _jsonHeaders,
         );
       }
 
@@ -170,13 +280,24 @@ class ProfileController {
           'status': 'success',
           'message': result['message'],
         }),
-        headers: {'Content-Type': 'application/json'},
+        headers: _jsonHeaders,
+      );
+    } on FormatException {
+      return Response.badRequest(
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Format JSON tidak valid.',
+        }),
+        headers: _jsonHeaders,
       );
     } catch (e, stack) {
       print('[PROFILE] changePassword error: $e\n$stack');
       return Response.internalServerError(
-        body: jsonEncode({'status': 'error', 'message': 'Gagal mengganti password.'}),
-        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Gagal mengganti password.',
+        }),
+        headers: _jsonHeaders,
       );
     }
   }
@@ -186,14 +307,18 @@ class ProfileController {
     try {
       final user = _getAuthUser(req);
       if (user == null) {
-        return Response(401,
-            body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
-            headers: {'Content-Type': 'application/json'});
+        return Response(
+          401,
+          body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
+          headers: _jsonHeaders,
+        );
       }
 
       final idUser = (user['idUser'] ?? user['idStudent']) as String;
       final dateQuery = req.url.queryParameters['date'];
-      final targetDate = dateQuery != null ? DateTime.tryParse(dateQuery) ?? DateTime.now() : DateTime.now();
+      final targetDate = dateQuery != null
+          ? DateTime.tryParse(dateQuery) ?? DateTime.now()
+          : DateTime.now();
 
       final agendas = await ProfileModel.viewDailyAgenda(idUser, targetDate);
 
@@ -201,17 +326,21 @@ class ProfileController {
         jsonEncode({
           'status': 'success',
           'message': 'Jadwal harian berhasil diambil.',
-          'date': "${targetDate.year.toString().padLeft(4, '0')}-${targetDate.month.toString().padLeft(2, '0')}-${targetDate.day.toString().padLeft(2, '0')}",
+          'date':
+              "${targetDate.year.toString().padLeft(4, '0')}-${targetDate.month.toString().padLeft(2, '0')}-${targetDate.day.toString().padLeft(2, '0')}",
           'total': agendas.length,
           'data': agendas,
         }),
-        headers: {'Content-Type': 'application/json'},
+        headers: _jsonHeaders,
       );
     } catch (e, stack) {
       print('[PROFILE] viewDailyAgenda error: $e\n$stack');
       return Response.internalServerError(
-        body: jsonEncode({'status': 'error', 'message': 'Gagal mengambil jadwal harian.'}),
-        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Gagal mengambil jadwal harian.',
+        }),
+        headers: _jsonHeaders,
       );
     }
   }
@@ -221,9 +350,11 @@ class ProfileController {
     try {
       final user = _getAuthUser(req);
       if (user == null) {
-        return Response(401,
-            body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
-            headers: {'Content-Type': 'application/json'});
+        return Response(
+          401,
+          body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
+          headers: _jsonHeaders,
+        );
       }
 
       final idUser = (user['idUser'] ?? user['idStudent']) as String;
@@ -236,13 +367,16 @@ class ProfileController {
           'total': courses.length,
           'data': courses,
         }),
-        headers: {'Content-Type': 'application/json'},
+        headers: _jsonHeaders,
       );
     } catch (e, stack) {
       print('[PROFILE] viewCourseSchedule error: $e\n$stack');
       return Response.internalServerError(
-        body: jsonEncode({'status': 'error', 'message': 'Gagal mengambil jadwal kuliah.'}),
-        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Gagal mengambil jadwal kuliah.',
+        }),
+        headers: _jsonHeaders,
       );
     }
   }
@@ -252,9 +386,11 @@ class ProfileController {
     try {
       final user = _getAuthUser(req);
       if (user == null) {
-        return Response(401,
-            body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
-            headers: {'Content-Type': 'application/json'});
+        return Response(
+          401,
+          body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
+          headers: _jsonHeaders,
+        );
       }
 
       final idUser = (user['idUser'] ?? user['idStudent']) as String;
@@ -267,13 +403,16 @@ class ProfileController {
           'total': tasks.length,
           'data': tasks,
         }),
-        headers: {'Content-Type': 'application/json'},
+        headers: _jsonHeaders,
       );
     } catch (e, stack) {
       print('[PROFILE] viewRemainingTasks error: $e\n$stack');
       return Response.internalServerError(
-        body: jsonEncode({'status': 'error', 'message': 'Gagal mengambil sisa tugas.'}),
-        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Gagal mengambil sisa tugas.',
+        }),
+        headers: _jsonHeaders,
       );
     }
   }
@@ -283,27 +422,46 @@ class ProfileController {
     try {
       final user = _getAuthUser(req);
       if (user == null) {
-        return Response(401,
-            body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
-            headers: {'Content-Type': 'application/json'});
+        return Response(
+          401,
+          body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
+          headers: _jsonHeaders,
+        );
       }
 
       final idUser = (user['idUser'] ?? user['idStudent']) as String;
       final bodyText = await req.readAsString();
       if (bodyText.isEmpty) {
         return Response.badRequest(
-          body: jsonEncode({'status': 'error', 'message': 'Request body tidak boleh kosong'}),
-          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Request body tidak boleh kosong',
+          }),
+          headers: _jsonHeaders,
         );
       }
 
-      final body = jsonDecode(bodyText) as Map<String, dynamic>;
-      final inviteCode = body['inviteCode'] as String? ?? body['teamCode'] as String?;
+      final decoded = jsonDecode(bodyText);
+      if (decoded is! Map<String, dynamic>) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Format JSON tidak valid.',
+          }),
+          headers: _jsonHeaders,
+        );
+      }
+
+      final inviteCode =
+          decoded['inviteCode'] as String? ?? decoded['teamCode'] as String?;
 
       if (inviteCode == null || inviteCode.trim().isEmpty) {
         return Response.badRequest(
-          body: jsonEncode({'status': 'error', 'message': 'Kode undangan kelompok wajib diisi.'}),
-          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Kode undangan kelompok wajib diisi.',
+          }),
+          headers: _jsonHeaders,
         );
       }
 
@@ -312,7 +470,7 @@ class ProfileController {
         return Response(
           400,
           body: jsonEncode({'status': 'error', 'message': result['message']}),
-          headers: {'Content-Type': 'application/json'},
+          headers: _jsonHeaders,
         );
       }
 
@@ -322,13 +480,24 @@ class ProfileController {
           'message': result['message'],
           'data': result['data'],
         }),
-        headers: {'Content-Type': 'application/json'},
+        headers: _jsonHeaders,
+      );
+    } on FormatException {
+      return Response.badRequest(
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Format JSON tidak valid.',
+        }),
+        headers: _jsonHeaders,
       );
     } catch (e, stack) {
       print('[PROFILE] joinGroup error: $e\n$stack');
       return Response.internalServerError(
-        body: jsonEncode({'status': 'error', 'message': 'Gagal bergabung ke kelompok.'}),
-        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Gagal bergabung ke kelompok.',
+        }),
+        headers: _jsonHeaders,
       );
     }
   }

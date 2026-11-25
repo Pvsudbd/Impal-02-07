@@ -19,9 +19,20 @@ class QueryResult {
   QueryResult(this.rows, {this.affectedRows = 0});
 }
 
+/// Wrapper around an active PostgreSQL transaction session.
+class DbTransaction {
+  final TxSession _tx;
+
+  DbTransaction._(this._tx);
+
+  Future<QueryResult> query(String sql, [Map<String, dynamic>? params]) {
+    return Database._executeOn(_tx, sql, params);
+  }
+}
+
 class Database {
-  static Connection? _connection;
-  static late final DotEnv _env;
+  static Pool<void>? _pool;
+  static late DotEnv _env;
   static bool _initialized = false;
 
   static void init() {
@@ -31,47 +42,72 @@ class Database {
     }
   }
 
-  static String get envPort => _env['PORT'] ?? '3000';
-  static String get jwtSecret => _env['JWT_SECRET'] ?? 'impal07_secret_key_ganti_ini_di_production';
-  static String get dbName => _env['DB_NAME'] ?? 'db_manajemen_tugas';
-
-  static Future<Connection> getConnection() async {
+  static String _requireEnv(String key) {
     init();
-    if (_connection == null || !_connection!.isOpen) {
-      final host = _env['DB_HOST'] ?? '172.22.245.175';
-      final port = int.tryParse(_env['DB_PORT'] ?? '5432') ?? 5432;
-      final user = _env['DB_USER'] ?? 'Todolist_Dev';
-      final password = _env['DB_PASSWORD'] ?? 'ProjectImpal227';
+    final value = _env[key]?.trim();
+    if (value == null || value.isEmpty) {
+      throw StateError(
+        'Missing required environment variable: $key. '
+        'Copy .env.example to .env and configure it.',
+      );
+    }
+    return value;
+  }
+
+  static String get envPort {
+    init();
+    return _env['PORT']?.trim().isNotEmpty == true ? _env['PORT']!.trim() : '3000';
+  }
+
+  static String get jwtSecret => _requireEnv('JWT_SECRET');
+  static String get dbName => _requireEnv('DB_NAME');
+
+  /// Returns the shared PostgreSQL connection pool, initializing it on first use.
+  static Pool<void> getPool() {
+    init();
+    if (_pool == null) {
+      final host = _requireEnv('DB_HOST');
+      final portStr = _env['DB_PORT']?.trim();
+      final port = int.tryParse(portStr ?? '5432') ?? 5432;
+      final user = _requireEnv('DB_USER');
+      final password = _requireEnv('DB_PASSWORD');
       final database = dbName;
-      final sslMode = (_env['DB_SSL']?.toLowerCase() == 'true')
+      final maxConn = int.tryParse(_env['DB_POOL_MAX']?.trim() ?? '10') ?? 10;
+      final sslMode = (_env['DB_SSL']?.trim().toLowerCase() == 'true')
           ? SslMode.require
           : SslMode.disable;
 
-      _connection = await Connection.open(
-        Endpoint(
-          host: host,
-          port: port,
-          database: database,
-          username: user,
-          password: password,
-        ),
-        settings: ConnectionSettings(
+      _pool = Pool.withEndpoints(
+        [
+          Endpoint(
+            host: host,
+            port: port,
+            database: database,
+            username: user,
+            password: password,
+          ),
+        ],
+        settings: PoolSettings(
+          maxConnectionCount: maxConn,
           sslMode: sslMode,
+          connectTimeout: const Duration(seconds: 10),
+          queryTimeout: const Duration(seconds: 15),
+          idleCheckAfter: const Duration(seconds: 30),
         ),
       );
     }
-    return _connection!;
+    return _pool!;
   }
 
-  static Future<QueryResult> query(String sql, [Map<String, dynamic>? params]) async {
-    final conn = await getConnection();
-
-    // Auto-normalize MySQL dialect into PostgreSQL dialect
-    // 1. Ganti backtick `groups` menjadi double quote "groups"
+  static Future<QueryResult> _executeOn(
+    Session session,
+    String sql, [
+    Map<String, dynamic>? params,
+  ]) async {
+    // Normalize backticks to double quotes and :param placeholders to @param
     var pgSql = sql.replaceAll('`', '"');
 
-    // 2. Normalisasi named parameter dari MySQL style (:param) ke PostgreSQL Sql.named style (@param)
-    var effectiveParams = <String, dynamic>{};
+    final effectiveParams = <String, dynamic>{};
     if (params != null && params.isNotEmpty) {
       for (final key in params.keys) {
         pgSql = pgSql.replaceAllMapped(
@@ -86,38 +122,35 @@ class Database {
       }
     }
 
-    try {
-      if (effectiveParams.isNotEmpty) {
-        final result = await conn.execute(
-          Sql.named(pgSql),
-          parameters: effectiveParams,
-        );
-        final rows = result.map((r) => QueryRow(r.toColumnMap(), r.toList())).toList();
-        return QueryResult(rows, affectedRows: result.affectedRows);
-      } else {
-        final result = await conn.execute(pgSql);
-        final rows = result.map((r) => QueryRow(r.toColumnMap(), r.toList())).toList();
-        return QueryResult(rows, affectedRows: result.affectedRows);
-      }
-    } catch (e) {
-      // Re-connect jika koneksi terputus
-      if (e.toString().contains('closed') || e.toString().contains('broken')) {
-        _connection = null;
-        final retryConn = await getConnection();
-        if (effectiveParams.isNotEmpty) {
-          final result = await retryConn.execute(
-            Sql.named(pgSql),
-            parameters: effectiveParams,
-          );
-          final rows = result.map((r) => QueryRow(r.toColumnMap(), r.toList())).toList();
-          return QueryResult(rows, affectedRows: result.affectedRows);
-        } else {
-          final result = await retryConn.execute(pgSql);
-          final rows = result.map((r) => QueryRow(r.toColumnMap(), r.toList())).toList();
-          return QueryResult(rows, affectedRows: result.affectedRows);
-        }
-      }
-      rethrow;
+    if (effectiveParams.isNotEmpty) {
+      final result = await session.execute(
+        Sql.named(pgSql),
+        parameters: effectiveParams,
+      );
+      final rows = result.map((r) => QueryRow(r.toColumnMap(), r.toList())).toList();
+      return QueryResult(rows, affectedRows: result.affectedRows);
+    } else {
+      final result = await session.execute(pgSql);
+      final rows = result.map((r) => QueryRow(r.toColumnMap(), r.toList())).toList();
+      return QueryResult(rows, affectedRows: result.affectedRows);
     }
+  }
+
+  /// Executes a single SQL statement on the shared connection pool.
+  static Future<QueryResult> query(String sql, [Map<String, dynamic>? params]) {
+    return _executeOn(getPool(), sql, params);
+  }
+
+  /// Executes [action] atomically inside a PostgreSQL database transaction.
+  static Future<T> transaction<T>(
+    Future<T> Function(DbTransaction tx) action,
+  ) {
+    return getPool().runTx((txSession) => action(DbTransaction._(txSession)));
+  }
+
+  /// Closes the shared connection pool gracefully.
+  static Future<void> close() async {
+    await _pool?.close();
+    _pool = null;
   }
 }

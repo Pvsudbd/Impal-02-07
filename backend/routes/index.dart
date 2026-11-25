@@ -13,6 +13,7 @@ Response onRequest(RequestContext context) {
         'tables': '/tables',
         'auth': '/api/auth',
         'agenda': '/api/agenda',
+        'courses': '/api/courses',
         'profile': '/api/profile',
       },
     },

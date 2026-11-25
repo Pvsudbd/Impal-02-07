@@ -36,19 +36,24 @@
 - **Modal Bottom Sheet** $\to$ **Centered Dialog Box**.
 
 ### 7. Pop-Up Pemberitahuan, Dialog & Aksi (100% English UI Mandate & Strict Sentiment Color Law)
-- **ATURAN MUTLAK BAHASA INGGRIS:** Seluruh teks notifikasi (`PopUpPemberitahuan`), judul, pesan, dialog konfirmasi (`PopUpKonfirmasiDelete`), toast SnackBar, validasi form, dan alert sistem **WAJIB 100% MENGGUNAKAN BAHASA INGGRIS** tanpa terkecuali. Dilarang keras menggunakan bahasa Indonesia pada string UI / pop-up.
+- **ATURAN MUTLAK BAHASA INGGRIS:** Seluruh teks notifikasi (`PopUpPemberitahuan`), judul, pesan, dialog konfirmasi (`PopUpKonfirmasiDelete`), toast SnackBar, validasi form, dan alert sistem **WAJIB 100% MENGGUNAKAN BAHASA INGGRIS** tanpa terkecuali.
 - **HUKUM BAKU WARNA SENTIMEN NOTIFIKASI:**
-  - **HAL POSITIF MUTLAK HIJAU (`#10B981` / `PopUpPemberitahuan.positiveColor`):** Semua peristiwa positif (pembuatan data: *Create Milestone, Create Task, Create Schedule, Create Meeting, Create Team*; pembaruan/simpan perubahan: *Update Milestone, Update Task, Update Schedule, Profile Updated, Password Updated*; penyelesaian tugas: *Task Completed, All Tasks Completed*; verifikasi berhasil: *Login Success, Team Joined, Code Copied, Code Verified*) **WAJIB 100% MENGGUNAKAN BADGE IKON HIJAU (`#10B981`)**. Dilarang keras menggunakan warna oranye/coral untuk hal yang positif.
-  - **HAL NEGATIF / KURANG POSITIF MUTLAK ORANYE (`#FA6144` / `PopUpPemberitahuan.negativeColor`):** Semua peristiwa yang bernilai destruktif atau peringatan (penghapusan data: *Delete Milestone, Delete Task, Delete Schedule, Delete Meeting*; peringatan validasi: *Terms Warning, Form Warning*; penolakan akses: *Access Denied*) **WAJIB 100% MENGGUNAKAN BADGE IKON ORANYE (`#FA6144`)**.
-- Setiap aksi mutasi data (Create, Update, Delete, Submit Form) wajib memicu `PopUpPemberitahuan` / `PopUpPemberitahuanTeam`.
-- Desain: Dark container (`#323846` / `#282D37`), icon badge berwarna (Hijau untuk positif, Orange/Coral untuk peringatan/negatif, Sky Blue untuk info/netral), auto-dismiss.
+  - **HAL POSITIF MUTLAK HIJAU (`#10B981`):** Create, Update, Completed, Verify Success.
+  - **HAL NEGATIF / PERINGATAN MUTLAK ORANYE (`#FA6144`):** Delete, Form Warning, Access Denied.
+- Setiap aksi mutasi data wajib memicu `PopUpPemberitahuan` / `PopUpPemberitahuanTeam`.
 
-### 8. Dokumentasi & Roadmap Wajib
-- Selesai mengerjakan fitur, bugfix, atau refactoring, **WAJIB** memperbarui [ROADMAP_AUDIT_DAN_PENINGKATAN.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/ROADMAP_AUDIT_DAN_PENINGKATAN.md).
+### 8. Dokumentasi, Roadmap & Sinkronisasi Skill Wajib
+- Selesai mengerjakan fitur, bugfix, atau refactoring, **WAJIB** memperbarui [ROADMAP_AUDIT_DAN_PENINGKATAN.md](../../ROADMAP_AUDIT_DAN_PENINGKATAN.md), `.agents/features/<fitur>.md`, dan menjalankan `.agents/skills/sync-project-skills/SKILL.md`.
 
-### 9. Standar Teknologi Backend (Dart Frog & PostgreSQL)
-- **Framework REST API**: **Dart Frog** (`dart_frog`) sebagai framework resmi server backend.
-- **Koneksi Database**: **PostgreSQL 15+** remote server (`172.22.245.175:5432`) menggunakan driver resmi `package:postgres`.
+### 9. Standar Teknologi & Konvensi Live Backend (Dart Frog & PostgreSQL)
+- **Framework REST API**: **Dart Frog** (`dart_frog`) + Shelf sub-routers pada `PORT=3000`.
+- **Koneksi Database**: **PostgreSQL** (`db_manajemen_tugas`) via `Database.getPool()` (`Pool.withEndpoints`) dan `Database.transaction((tx) async { ... })` di `backend/lib/config/db.dart`. Kredensial wajib dari `.env` (tanpa hardcoded fallback).
 - **Format Envelope JSON**: `{ "status": "success" | "error", "message": "...", "data": ... }`.
-- **Arsitektur Sinkronisasi**: Isar DB (Frontend) $\leftrightarrow$ Dart Frog (Backend Gateway) $\leftrightarrow$ PostgreSQL (Remote Database).
-- **Dokumentasi Arsitektur Lengkap**: [backend_dart_frog_architecture.md](file:///D:/Telkom%20University/Semester%205/TodoList/Impal-02-07/.agents/features/backend_dart_frog_architecture.md) & [DART_FROG_ARCHITECTURE.md](file:///D:/Telkom%20University/Semester%205/TodoList/Impal-02-07/document/DART_FROG_ARCHITECTURE.md).
+- **Kontrak `GET /api/agenda`**: Mengembalikan `data` berupa `List` gabungan (`CourseSchedule` + `PersonalSchedule`) agar kompatibel dengan `ScheduleRepository` di frontend.
+- **Konvensi Skema Live DB (`db_manajemen_tugas`)**:
+  - Semua tabel kepemilikan user memakai `id_user` (bukan `id_student`).
+  - Kolom flag legacy (`task.is_completed`, `task.is_fuzzy_auto`, `group_task.is_completed`, `group_task.is_fuzzy_auto`, `group_sub_task.is_completed`, `notification.is_read`, `todo_item.is_done`) bertipe **`integer` (`0`/`1`)** — query wajib memakai `= 1` / `= 0`.
+  - Kolom `task.priority` dan `group_task.priority` bertipe `VARCHAR(6)` (`HIGH`, `MEDIUM`, `LOW`).
+  - Tabel legacy tidak memiliki FK `ON DELETE CASCADE` di DB live, sehingga `delete` wajib menghapus tabel anak lalu tabel induk dalam `Database.transaction`.
+  - Tabel `users` dan `agenda` tidak memiliki default timestamp di DB live, sehingga `INSERT`/`UPDATE` wajib menyertakan `NOW()`.
+- **Dokumentasi Arsitektur**: [backend_dart_frog_architecture.md](../features/backend_dart_frog_architecture.md), [DART_FROG_ARCHITECTURE.md](../../document/DART_FROG_ARCHITECTURE.md), dan [live_schema_snapshot.md](../skills/impal-backend-engineer/references/live_schema_snapshot.md).

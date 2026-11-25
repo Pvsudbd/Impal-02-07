@@ -5,10 +5,12 @@ import '../lib/middleware/cors_middleware.dart';
 import '../lib/middleware/database_provider.dart';
 import '../lib/routes/auth/auth_routes.dart';
 import '../lib/routes/agenda/agenda_routes.dart';
+import '../lib/routes/course/course_routes.dart';
 import '../lib/routes/profile/profile_routes.dart';
 
 void main(List<String> args) async {
   Database.init();
+  Database.getPool();
 
   final app = Router();
 
@@ -19,13 +21,15 @@ void main(List<String> args) async {
         'status': 'success',
         'framework': 'Dart Frog',
         'version': '1.2.6',
-        'message': 'Backend Impal-02-07 (Dart Frog REST API) berjalan dengan sukses!',
+        'message':
+            'Backend Impal-02-07 (Dart Frog REST API) berjalan dengan sukses!',
         'endpoints': {
           'root': '/',
           'testDb': '/test-db',
           'tables': '/tables',
           'auth': '/api/auth',
           'agenda': '/api/agenda',
+          'courses': '/api/courses',
           'course': '/api/agenda/course',
           'personal': '/api/agenda/personal',
           'profile': '/api/profile',
@@ -37,7 +41,8 @@ void main(List<String> args) async {
   // ─── TEST DB CONNECTION ───────────────────────────────────────────────────
   app.get('/test-db', (RequestContext context) async {
     try {
-      final results = await Database.query('SELECT COUNT(*) AS total FROM users');
+      final results =
+          await Database.query('SELECT COUNT(*) AS total FROM users');
       final total = results.rows.isNotEmpty ? results.rows.first.colAt(0) : 0;
       return Response.json(
         body: {
@@ -56,7 +61,7 @@ void main(List<String> args) async {
         body: {
           'status': 'error',
           'framework': 'Dart Frog',
-          'message': 'Gagal terhubung ke database server: $e',
+          'message': 'Gagal terhubung ke database server.',
         },
       );
     }
@@ -68,7 +73,8 @@ void main(List<String> args) async {
       final results = await Database.query(
         "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename",
       );
-      final tables = results.rows.map((r) => r.colAt(0)?.toString() ?? '').toList();
+      final tables =
+          results.rows.map((r) => r.colAt(0)?.toString() ?? '').toList();
       return Response.json(
         body: {
           'status': 'success',
@@ -78,12 +84,13 @@ void main(List<String> args) async {
         },
       );
     } catch (e) {
+      print('[SERVER] Get tables error: $e');
       return Response.json(
         statusCode: HttpStatus.internalServerError,
         body: {
           'status': 'error',
           'framework': 'Dart Frog',
-          'message': e.toString(),
+          'message': 'Gagal mengambil daftar tabel database.',
         },
       );
     }
@@ -96,7 +103,10 @@ void main(List<String> args) async {
   // 2. Mount Agenda routes under /api/agenda
   app.mount('/api/agenda', fromShelfHandler(AgendaRoutes().router));
 
-  // 3. Mount Profile routes under /api/profile, /api/user, and /api/student
+  // 3. Mount Course catalog routes under /api/courses
+  app.mount('/api/courses', fromShelfHandler(CourseRoutes().router));
+
+  // 4. Mount Profile routes under /api/profile, /api/user, and /api/student
   final profileRoutes = fromShelfHandler(ProfileRoutes().router);
   app.mount('/api/profile', profileRoutes);
   app.mount('/api/user', profileRoutes);
@@ -112,11 +122,22 @@ void main(List<String> args) async {
   final port = int.tryParse(Database.envPort) ?? 3000;
   final server = await serve(handler, InternetAddress.anyIPv4, port);
 
+  try {
+    ProcessSignal.sigint.watch().listen((_) async {
+      await server.close(force: true);
+      await Database.close();
+      exit(0);
+    });
+  } catch (_) {
+    // Signal watching may be unsupported in some embedded runners
+  }
+
   print('========================================================');
   print('🚀 Backend Dart Frog berjalan di http://localhost:${server.port}');
   print('📊 Test DB : http://localhost:${server.port}/test-db');
   print('📋 Tabel   : http://localhost:${server.port}/tables');
   print('🔐 Auth    : http://localhost:${server.port}/api/auth/login');
+  print('📚 Courses : http://localhost:${server.port}/api/courses');
   print('📅 Jadwal  : http://localhost:${server.port}/api/agenda');
   print('📅 Kuliah  : http://localhost:${server.port}/api/agenda/course');
   print('📅 Personal: http://localhost:${server.port}/api/agenda/personal');

@@ -17,14 +17,14 @@ Future<Response> onRequest(RequestContext context) async {
       },
     );
   } catch (e) {
+    print('[TABLES] error: $e');
     return Response.json(
       statusCode: HttpStatus.internalServerError,
       body: {
         'status': 'error',
         'framework': 'Dart Frog',
-        'message': e.toString(),
+        'message': 'Gagal mengambil daftar tabel database.',
       },
     );
   }
 }
-

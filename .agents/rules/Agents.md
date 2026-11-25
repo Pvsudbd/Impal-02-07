@@ -1,140 +1,63 @@
 # 🤖 Agent Rules & Guidelines (Workspace Navigation & Feature Implementation)
 
-Dokumen ini berisi instruksi dan batasan wajib bagi AI Agent saat bekerja di repositori ini.
+Dokumen ini berisi instruksi dan batasan wajib bagi AI Agent saat bekerja di repositori **Impal-02-07**.
 
 ---
 
 ## 1. 📂 Batasan Akses Direktori (Workspace Boundaries)
 
-Saat bekerja di dalam direktori induk `D:\Telkom University\Semester 5`, Agent **HANYA** diperbolehkan mengakses, membaca, mencari, atau memodifikasi file pada dua folder berikut:
-- ✅ `D:\Telkom University\Semester 5\TodoList` (Source code proyek aplikasi Frontend & Backend)
-- ✅ `D:\Telkom University\Semester 5\Impal` (Dokumentasi Tugas Besar, Diagram UML, SKPL, ERD)
-
-⚠️ **LARANGAN KERAS (STRICT RESTRICTION):**
-- **DILARANG** mengakses, membaca, mencari (`search_dir`, `grep_search`, `list_dir`, `view_file`, dll.), ataupun memodifikasi folder dan file lain di luar folder `Impal` dan `TodoList` di direktori `D:\Telkom University\Semester 5` (misalnya folder mata kuliah lain atau berkas pribadi).
+Agent **HANYA** diperbolehkan mengakses, membaca, mencari, atau memodifikasi berkas di dalam workspace proyek `Impal-02-07/` (serta dokumen pendukung di direktori kerja aktif yang diminta pengguna).
 
 ---
 
 ## 2. 📐 Aturan Wajib Sebelum Membuat Fitur Baru (New Feature Workflow)
 
-Setiap kali Agent diminta untuk membuat, merancang, atau merefactor fitur baru (baik di sisi Frontend Flutter maupun Backend), Agent **WAJIB** membaca dan mematuhi dokumentasi arsitektur resmi terlebih dahulu:
-
-### A. Rujukan Class Diagram (Struktur Kelas & OOP)
-- **Lokasi File**: `D:\Telkom University\Semester 5\Impal\ImpalTB\Impal\Tubes\02_Diagram_dan_Model\Class_Diagram.md`
-- **Fungsi & Kewajiban**:
-  - Wajib memeriksa nama class, nama atribut (lengkap dengan tipe data & access modifier), dan signature method (parameter & return type).
-  - Wajib mengikuti kaidah relasi antar-kelas (Inheritance/Generalization, Composition, Association, Dependency) sesuai diagram resmi.
-
-### B. Rujukan ERD & Skema Database (Physical Schema & MySQL)
-- **Lokasi File**: `D:\Telkom University\Semester 5\Impal\ImpalTB\Impal\Tubes\02_Diagram_dan_Model\Entity_Relationship_Diagram.md`
-- **Fungsi & Kewajiban**:
-  - Wajib memeriksa struktur nama tabel, nama kolom, tipe data SQL, Foreign Key, dan relasi fisik (misal: Class Table Inheritance pada `agenda`, `course_schedule`, `personal_schedule`).
+Setiap kali Agent diminta membuat, merancang, atau merefaktor fitur baru:
+1. **Rujukan Backend & Live Schema:** Baca `.agents/skills/impal-backend-engineer/SKILL.md` dan `.agents/skills/impal-backend-engineer/references/live_schema_snapshot.md` (atau jalankan `scripts/introspect_schema.dart` untuk mengecek kolom aktual PostgreSQL).
+2. **Rujukan Arsitektur Proyek:** Periksa `document/DATABASE_REQUIREMENTS.md` dan `document/DART_FROG_ARCHITECTURE.md` sebagai acuan arsitektur resmi.
+3. **Konsultasi Memori Dinamis:** Baca `.agents/memory/project_conventions.md` dan `.agents/memory/anti_patterns.md`.
 
 ---
 
-## 3. 🎯 Prinsip Konsistensi & Integritas Dokumen
+## 3. 🛑 Batasan Operasi Git (Git Restrictions)
 
-1. **Single Source of Truth**:
-   - Selalu jadikan `Class_Diagram.md` dan `Entity_Relationship_Diagram.md` di folder `02_Diagram_dan_Model` sebagai satu-satunya rujukan utama.
-   - **JANGAN PERNAH** menggunakan file usang / arsip lama (seperti `CDlama.md` di folder `vault/`).
-2. **Validasi Desain Sebelum Implementasi**:
-   - Pastikan entitas model, DTO, atau query database yang dibuat di kode selaras 100% dengan apa yang didefinisikan pada Class Diagram dan ERD.
+- ❌ **DILARANG:** Melakukan `git commit`, `git push`, atau mutasi riwayat Git tanpa instruksi tegas dari pengguna.
+- ✅ **DIPERBOLEHKAN:** Perintah read-only seperti `git status`, `git diff`, `git log`, `git branch`.
 
 ---
 
-## 4. 🛑 Batasan Operasi Git (Git Restrictions)
+## 4. 🏗️ Standar Framework Backend & Struktur Folder (Dart Frog & PostgreSQL)
 
-Demi menjaga keamanan dan riwayat version control proyek:
-- ❌ **DILARANG KERAS (FORBIDDEN)**:
-  - Melakukan `git commit` atau `git push` ke GitHub/remote repository secara mandiri/otomatis.
-  - Memodifikasi riwayat commit atau melakukan operasi mutasi Git tanpa instruksi tegas dari pengguna.
-- ✅ **DIPERBOLEHKAN (READ-ONLY INSPECTION)**:
-  - Perintah git yang bersifat pemeriksaan status / observasi lokal, seperti `git status`, `git diff`, `git log`, `git branch`, dan sejenisnya.
-
----
-
-## 5. 🏗️ Standar Framework Backend & Konvensi Struktur Folder (Dart Frog & Feature-Based Grouping)
-
-### A. Mandat Framework Backend: Dart Frog
-1. **Framework Standar Resmi**: Seluruh pengembangan endpoint REST API di backend **WAJIB** menggunakan atau mengikuti arsitektur **Dart Frog** (`dart_frog`).
-2. **Koneksi Database**: Menggunakan driver resmi `package:postgres` (PostgreSQL 15+ remote server) dengan parameterized queries aman tanpa SQL Injection.
-3. **Standar Response Envelope**: Semua response JSON wajib mengikuti format baku Dart Frog:
+1. **Framework Resmi:** Dart Frog (`dart_frog`) + Shelf sub-routers pada port `3000`.
+2. **Database:** PostgreSQL (`db_manajemen_tugas`) menggunakan `Database.getPool()` dan `Database.transaction((tx) async { ... })` dari `backend/lib/config/db.dart`.
+3. **Standar Response Envelope:**
    ```json
    {
      "status": "success" | "error",
      "message": "Pesan informasi yang jelas",
-     "data": {} // Objek hasil atau list data
+     "data": {}
    }
    ```
-4. **Middleware & Context**: Menggunakan JWT Authentication Middleware untuk menginjeksi context user (`idUser`, `email`) ke setiap request handler, serta menerapkan proteksi BOLA/IDOR pada level middleware/controller.
-
-### B. Konvensi Struktur Folder Berbasis Fitur (Feature-Based Grouping)
-Ketika mengimplementasikan atau menambahkan fitur baru di backend (`backend/lib/`), Agent **WAJIB** mengorganisasi file ke dalam subfolder bernama fitur tersebut di setiap layernya agar terstruktur, rapi, dan mudah dirawat:
-- `lib/controllers/<nama_fitur>/`
-- `lib/models/<nama_fitur>/`
-- `lib/routes/<nama_fitur>/`
-- `lib/middleware/<nama_fitur>/` (jika fitur membutuhkan middleware khusus)
-- `lib/config/<nama_fitur>/` (jika ada konfigurasi spesifik fitur)
-
-**Contoh Implementasi:**
-Jika membuat fitur bernama `makan` (sebagaimana pola yang sudah diterapkan pada `auth`, `agenda`, `kelompok`, `task`):
-```text
-backend/lib/
-├── controllers/
-│   └── makan/
-│       └── makan_controller.dart
-├── models/
-│   └── makan/
-│       └── makan_model.dart
-├── routes/
-│   └── makan/
-│       └── makan_routes.dart
-└── middleware/
-    └── makan/ (opsional jika dibutuhkan)
-```
-
-⚠️ **LARANGAN:** Jangan pernah meletakkan file langsung di root `controllers/`, `models/`, atau `routes/` tanpa dibungkus subfolder nama fiturnya.
+4. **Feature-Based Grouping (`backend/lib/`):**
+   - `lib/controllers/<nama_fitur>/`
+   - `lib/models/<nama_fitur>/`
+   - `lib/routes/<nama_fitur>/`
+   - `lib/middleware/<nama_fitur>/` (opsional)
+   - Dilarang meletakkan file fitur langsung di root `controllers/`, `models/`, atau `routes/`.
 
 ---
 
-## 6. 👥 Pembagian Tugas & Kepemilikan Fitur Tim (Team Feature Ownership)
+## 5. 👥 Pembagian Tugas & Kepemilikan Fitur Tim (Team Feature Ownership)
 
-Untuk menjaga batas pengerjaan kode dan mencegah konflik antar-anggota tim saat berkolaborasi:
-
-### 👤 Pengguna (Yoga / User Lead):
-- 🔑 **Autentikasi** (`auth`): Alur Login, Register, Forgot Password, Reset Password, JWT Auth Token, Auth Middleware.
-- 📅 **Jadwal** (`schedule` / `agenda`): Course Schedule, Personal Schedule, CRUD Agenda, API Sync, Deteksi Konflik Jadwal.
-- 👤 **User Profile** (`profile` / `student`): Profil Mahasiswa, Edit Data Diri, Ganti Password, Statistik Akun.
-
-### 👤 Habhindra:
-- 📊 **Dashboard**: Halaman Beranda (Home Dashboard), Ringkasan Statistik, Kartu Agenda Hari Ini, Navigasi Utama.
-- 👥 **Kelompok** (`team` / `kelompok`): Manajemen Kelompok Belajar/Tubes, Join Team via Invite Code, Create Team, Meeting Schedule.
-- 📝 **Task** (`task` / `tugas`): Manajemen Tugas Akademik, Tambah/Edit Tugas, Bobot Nilai & Sisa Waktu, Smart Priority Rekomendasi.
-
-⚠️ **ATURAN AGENT:**
-Saat mengimplementasikan fitur atau memperbaiki bug, Agent **WAJIB** fokus pada ruang lingkup fitur pengguna (Autentikasi, Jadwal, User Profile). **DILARANG** merombak atau memodifikasi logika fitur milik Habhindra (Dashboard, Kelompok, Task) tanpa persetujuan atau instruksi tegas dari pengguna.
+- **Backend (`Impal-02-07/backend/`):** Pengguna bertanggung jawab menyelesaikan seluruh modul backend (`auth`, `agenda`, `course`, `profile`, `task`, `smart_priority`, `groups`, `notification`, `todo`, `dashboard`).
+- **Frontend (`Impal-02-07/frontend/`):**
+  - **Pengguna:** `auth`, `schedule`, `profile`.
+  - **Habhindra:** `dashboard`, `team`, `task` (jangan diubah UI-nya tanpa izin eksplisit pengguna).
 
 ---
 
-## 7. 📝 Pencatatan Riwayat Perubahan & Penambahan Fitur Wajib (`.agents/features/`)
+## 6. 📝 Pencatatan Riwayat Fitur & Update Skill Wajib
 
-Setiap kali Agent melakukan penambahan fitur baru, perbaikan kode (*bug fix*), *security hardening*, atau perubahan logika pada suatu fitur (baik di sisi Frontend maupun Backend):
-
-1. **Lokasi Direktori & Penamaan Berkas Wajib:**
-   - Agent **WAJIB** membuat atau memperbarui berkas dokumentasi di dalam folder:
-     📂 `.agents/features/[nama_fitur].md`
-   - Nama berkas **HARUS** berupa nama fitur yang baru saja diubah atau ditambahkan (misal: `user_profile.md`, `schedule.md`, `auth.md`, `cybersecurity_hardening.md`).
-
-2. **Format & Isi Berkas Wajib Mencakup:**
-   - 📌 **Nama Fitur & Tanggal Perubahan**.
-   - 📂 **Daftar Berkas yang Dibuat / Dimodifikasi** (sertakan path lengkap).
-   - ⚙️ **Rincian Teknis Perubahan** (apa fungsi baru yang ditambahkan, logika apa yang diubah).
-   - 📐 **Rujukan Desain**: Keselarasan dengan `Class_Diagram.md` / `Entity_Relationship_Diagram.md`.
-   - 🛡️ **Pengecekan Keamanan**: Verifikasi terhadap aturan `.agents/cybersecurity.md` (BOLA/IDOR, parameterized queries, auth context, sanitasi input/output).
-
-3. **Kewajiban Otomatis:**
-   - **DILARANG** menyelesaikan respon ke pengguna tanpa mencatat atau memperbarui berkas fitur terkait di folder `.agents/features/`.
-
-
-
-
+Setiap kali selesai menambah fitur, memperbaiki bug, atau melakukan *security hardening*:
+1. Buat atau perbarui log di `.agents/features/<nama_fitur>.md` (tanggal, daftar berkas, rincian teknis, keselarasan schema, verifikasi `.agents/cybersecurity.md`).
+2. Jalankan protokol `.agents/skills/sync-project-skills/SKILL.md` dan verifikasi dengan `validate_agent_sync.dart`.

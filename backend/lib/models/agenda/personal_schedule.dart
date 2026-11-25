@@ -55,7 +55,7 @@ class PersonalSchedule extends Agenda {
 
     return PersonalSchedule(
       agendaId: row['id_agenda']?.toString() ?? '',
-      idUser: (row['id_user'] ?? row['id_student'])?.toString(),
+      idUser: row['id_user']?.toString(),
       title: row['title']?.toString() ?? '',
       startTime: parseTime(row['start_time']),
       endTime: parseTime(row['end_time']),
@@ -75,7 +75,10 @@ class PersonalSchedule extends Agenda {
 
     final catLower = category.toLowerCase();
     final locLower = location.toLowerCase();
-    final resolvedType = (catLower == 'meeting' || locLower.contains('meet') || locLower.contains('zoom') || locLower.contains('team'))
+    final resolvedType = (catLower == 'meeting' ||
+            locLower.contains('meet') ||
+            locLower.contains('zoom') ||
+            locLower.contains('team'))
         ? 'Meeting'
         : 'External';
 
@@ -114,23 +117,18 @@ class PersonalSchedule extends Agenda {
       ORDER BY ps.date ASC, a.start_time ASC
     ''';
 
-    try {
-      final results = await Database.query(sql, {'idUser': idUser});
-      return results.rows.map((r) => PersonalSchedule.fromRow(r.assoc())).toList();
-    } catch (e) {
-      if (e.toString().contains('id_user')) {
-        final fallbackSql = sql.replaceAll('a.id_user', 'a.id_student');
-        final results = await Database.query(fallbackSql, {'idUser': idUser});
-        return results.rows.map((r) => PersonalSchedule.fromRow(r.assoc())).toList();
-      }
-      rethrow;
-    }
+    final results = await Database.query(sql, {'idUser': idUser});
+    return results.rows.map((r) => PersonalSchedule.fromRow(r.assoc())).toList();
   }
 
   // Backwards compatible alias
-  static Future<List<PersonalSchedule>> findByStudent(String idStudent) => findByUser(idStudent);
+  static Future<List<PersonalSchedule>> findByStudent(String idStudent) =>
+      findByUser(idStudent);
 
-  static Future<PersonalSchedule?> findById(String idAgenda, String idUser) async {
+  static Future<PersonalSchedule?> findById(
+    String idAgenda,
+    String idUser,
+  ) async {
     const sql = '''
       SELECT a.id_agenda, a.id_user, a.title, a.start_time, a.end_time, a.agenda_type,
              ps.date, ps.category, ps.location, ps.notes
@@ -140,19 +138,12 @@ class PersonalSchedule extends Agenda {
       LIMIT 1
     ''';
 
-    try {
-      final results = await Database.query(sql, {'idAgenda': idAgenda, 'idUser': idUser});
-      if (results.rows.isEmpty) return null;
-      return PersonalSchedule.fromRow(results.rows.first.assoc());
-    } catch (e) {
-      if (e.toString().contains('id_user')) {
-        final fallbackSql = sql.replaceAll('a.id_user', 'a.id_student');
-        final results = await Database.query(fallbackSql, {'idAgenda': idAgenda, 'idUser': idUser});
-        if (results.rows.isEmpty) return null;
-        return PersonalSchedule.fromRow(results.rows.first.assoc());
-      }
-      rethrow;
-    }
+    final results = await Database.query(sql, {
+      'idAgenda': idAgenda,
+      'idUser': idUser,
+    });
+    if (results.rows.isEmpty) return null;
+    return PersonalSchedule.fromRow(results.rows.first.assoc());
   }
 
   static Future<void> create({
@@ -167,57 +158,46 @@ class PersonalSchedule extends Agenda {
     String? location,
     String? notes,
   }) async {
-    final userId = idUser;
+    final safeTitle = title.trim().length > 150
+        ? title.trim().substring(0, 150)
+        : title.trim();
+    final safeCategory = category.trim().length > 50
+        ? category.trim().substring(0, 50)
+        : category.trim();
+    final rawLocation = (location ?? '').trim();
+    final safeLocation = rawLocation.length > 100
+        ? rawLocation.substring(0, 100)
+        : rawLocation;
 
-    // 1. Insert ke tabel superclass agenda (prioritaskan id_student untuk skema PostgreSQL saat ini)
-    try {
-      await Database.query(
+    await Database.transaction((tx) async {
+      await tx.query(
         '''
-        INSERT INTO agenda (id_agenda, id_student, title, start_time, end_time, agenda_type)
-        VALUES (:idAgenda, :idUser, :title, :startTime::time, :endTime::time, 'PERSONAL')
+        INSERT INTO agenda (id_agenda, id_user, title, start_time, end_time, agenda_type, created_at, updated_at)
+        VALUES (:idAgenda, :idUser, :title, :startTime::time, :endTime::time, 'PERSONAL', NOW(), NOW())
         ''',
         {
           'idAgenda': idAgenda,
-          'idUser': userId,
-          'title': title,
+          'idUser': idUser,
+          'title': safeTitle,
           'startTime': startTime,
           'endTime': endTime,
         },
       );
-    } catch (e) {
-      if (e.toString().contains('id_student')) {
-        await Database.query(
-          '''
-          INSERT INTO agenda (id_agenda, id_user, title, start_time, end_time, agenda_type)
-          VALUES (:idAgenda, :idUser, :title, :startTime::time, :endTime::time, 'PERSONAL')
-          ''',
-          {
-            'idAgenda': idAgenda,
-            'idUser': userId,
-            'title': title,
-            'startTime': startTime,
-            'endTime': endTime,
-          },
-        );
-      } else {
-        rethrow;
-      }
-    }
 
-    // 2. Insert ke tabel subclass personal_schedule
-    await Database.query(
-      '''
-      INSERT INTO personal_schedule (id_agenda, date, category, location, notes)
-      VALUES (:idAgenda, :date::date, :category, :location, :notes)
-      ''',
-      {
-        'idAgenda': idAgenda,
-        'date': date,
-        'category': category,
-        'location': location ?? '',
-        'notes': notes ?? '',
-      },
-    );
+      await tx.query(
+        '''
+        INSERT INTO personal_schedule (id_agenda, date, category, location, notes)
+        VALUES (:idAgenda, :date::date, :category, :location, :notes)
+        ''',
+        {
+          'idAgenda': idAgenda,
+          'date': date,
+          'category': safeCategory,
+          'location': safeLocation,
+          'notes': notes ?? '',
+        },
+      );
+    });
   }
 
   static Future<void> update({
@@ -232,108 +212,98 @@ class PersonalSchedule extends Agenda {
     String? location,
     String? notes,
   }) async {
-    final userId = idUser;
-
-    // 🛡️ BOLA / IDOR Protection: Verifikasi kepemilikan agenda sebelum update
-    final existing = await findById(idAgenda, userId);
+    // BOLA / IDOR Protection: verify ownership before update
+    final existing = await findById(idAgenda, idUser);
     if (existing == null) {
       throw Exception('Jadwal personal tidak ditemukan atau bukan milik Anda.');
     }
 
-    final agendaUpdates = <String>[];
-    final agendaParams = <String, dynamic>{
-      'idAgenda': idAgenda,
-      'idUser': userId,
-    };
+    final safeTitle = title != null
+        ? (title.trim().length > 150 ? title.trim().substring(0, 150) : title.trim())
+        : null;
+    final safeCategory = category != null
+        ? (category.trim().length > 50 ? category.trim().substring(0, 50) : category.trim())
+        : null;
+    final safeLocation = location != null
+        ? (location.trim().length > 100 ? location.trim().substring(0, 100) : location.trim())
+        : null;
 
-    if (title != null) {
-      agendaUpdates.add('title = :title');
-      agendaParams['title'] = title;
-    }
-    if (startTime != null) {
-      agendaUpdates.add('start_time = :startTime::time');
-      agendaParams['startTime'] = startTime;
-    }
-    if (endTime != null) {
-      agendaUpdates.add('end_time = :endTime::time');
-      agendaParams['endTime'] = endTime;
-    }
+    await Database.transaction((tx) async {
+      final agendaUpdates = <String>[];
+      final agendaParams = <String, dynamic>{
+        'idAgenda': idAgenda,
+        'idUser': idUser,
+      };
 
-    if (agendaUpdates.isNotEmpty) {
-      try {
-        await Database.query(
-          'UPDATE agenda SET ${agendaUpdates.join(', ')} WHERE id_agenda = :idAgenda AND id_user = :idUser',
+      if (safeTitle != null) {
+        agendaUpdates.add('title = :title');
+        agendaParams['title'] = safeTitle;
+      }
+      if (startTime != null) {
+        agendaUpdates.add('start_time = :startTime::time');
+        agendaParams['startTime'] = startTime;
+      }
+      if (endTime != null) {
+        agendaUpdates.add('end_time = :endTime::time');
+        agendaParams['endTime'] = endTime;
+      }
+
+      if (agendaUpdates.isNotEmpty) {
+        agendaUpdates.add('updated_at = NOW()');
+        await tx.query(
+          'UPDATE agenda SET ${agendaUpdates.join(', ')} '
+          'WHERE id_agenda = :idAgenda AND id_user = :idUser',
           agendaParams,
         );
-      } catch (e) {
-        if (e.toString().contains('id_user')) {
-          await Database.query(
-            'UPDATE agenda SET ${agendaUpdates.join(', ')} WHERE id_agenda = :idAgenda AND id_student = :idUser',
-            agendaParams,
-          );
-        } else {
-          rethrow;
-        }
       }
-    }
 
-    final psUpdates = <String>[];
-    final psParams = <String, dynamic>{
-      'idAgenda': idAgenda,
-      'idUser': userId,
-    };
+      final psUpdates = <String>[];
+      final psParams = <String, dynamic>{'idAgenda': idAgenda};
 
-    if (date != null) {
-      psUpdates.add('date = :date::date');
-      psParams['date'] = date;
-    }
-    if (category != null) {
-      psUpdates.add('category = :category');
-      psParams['category'] = category;
-    }
-    if (location != null) {
-      psUpdates.add('location = :location');
-      psParams['location'] = location;
-    }
-    if (notes != null) {
-      psUpdates.add('notes = :notes');
-      psParams['notes'] = notes;
-    }
+      if (date != null) {
+        psUpdates.add('date = :date::date');
+        psParams['date'] = date;
+      }
+      if (safeCategory != null) {
+        psUpdates.add('category = :category');
+        psParams['category'] = safeCategory;
+      }
+      if (safeLocation != null) {
+        psUpdates.add('location = :location');
+        psParams['location'] = safeLocation;
+      }
+      if (notes != null) {
+        psUpdates.add('notes = :notes');
+        psParams['notes'] = notes;
+      }
 
-    if (psUpdates.isNotEmpty) {
-      try {
-        await Database.query(
-          'UPDATE personal_schedule SET ${psUpdates.join(', ')} WHERE id_agenda = :idAgenda AND id_agenda IN (SELECT id_agenda FROM agenda WHERE id_user = :idUser)',
+      if (psUpdates.isNotEmpty) {
+        await tx.query(
+          'UPDATE personal_schedule SET ${psUpdates.join(', ')} '
+          'WHERE id_agenda = :idAgenda',
           psParams,
         );
-      } catch (e) {
-        if (e.toString().contains('id_user')) {
-          await Database.query(
-            'UPDATE personal_schedule SET ${psUpdates.join(', ')} WHERE id_agenda = :idAgenda AND id_agenda IN (SELECT id_agenda FROM agenda WHERE id_student = :idUser)',
-            psParams,
-          );
-        } else {
-          rethrow;
-        }
       }
-    }
+    });
   }
 
   static Future<void> delete(String idAgenda, String idUser) async {
-    try {
-      await Database.query(
+    await Database.transaction((tx) async {
+      final owned = await tx.query(
+        'SELECT id_agenda FROM agenda WHERE id_agenda = :idAgenda AND id_user = :idUser LIMIT 1',
+        {'idAgenda': idAgenda, 'idUser': idUser},
+      );
+      if (owned.rows.isEmpty) return;
+
+      // Delete child first because legacy live DB tables lack ON DELETE CASCADE FK
+      await tx.query(
+        'DELETE FROM personal_schedule WHERE id_agenda = :idAgenda',
+        {'idAgenda': idAgenda},
+      );
+      await tx.query(
         'DELETE FROM agenda WHERE id_agenda = :idAgenda AND id_user = :idUser',
         {'idAgenda': idAgenda, 'idUser': idUser},
       );
-    } catch (e) {
-      if (e.toString().contains('id_user')) {
-        await Database.query(
-          'DELETE FROM agenda WHERE id_agenda = :idAgenda AND id_student = :idUser',
-          {'idAgenda': idAgenda, 'idUser': idUser},
-        );
-      } else {
-        rethrow;
-      }
-    }
+    });
   }
 }
