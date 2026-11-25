@@ -52,9 +52,13 @@
 ### 9. Dokumentasi & Roadmap Wajib
 - Selesai mengerjakan fitur, bugfix, atau refactoring, **WAJIB** memperbarui [ROADMAP_AUDIT_DAN_PENINGKATAN.md](file:///C:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/ROADMAP_AUDIT_DAN_PENINGKATAN.md).
 
-### 9. Standar Teknologi Backend (Dart Frog & PostgreSQL)
-- **Framework REST API**: **Dart Frog** (`dart_frog`) sebagai framework resmi server backend.
-- **Koneksi Database**: **PostgreSQL 15+** remote server Yoga (`10.147.115.231:5432`) menggunakan driver resmi `package:postgres`.
-- **Format Envelope JSON**: `{ "status": "success" | "error", "message": "...", "data": ... }`.
-- **Arsitektur Sinkronisasi**: Isar DB (Frontend) $\leftrightarrow$ Dart Frog (Backend Gateway) $\leftrightarrow$ PostgreSQL (Remote Database).
-- **Dokumentasi Arsitektur Lengkap**: [backend_dart_frog_architecture.md](file:///D:/Telkom%20University/Semester%205/TodoList/Impal-02-07/.agents/features/backend_dart_frog_architecture.md) & [DART_FROG_ARCHITECTURE.md](file:///D:/Telkom%20University/Semester%205/TodoList/Impal-02-07/document/DART_FROG_ARCHITECTURE.md).
+### 10. Struktur Tim & Pembagian Domain Kerja
+- **Tim Backend**:
+  - **Yoga (Lead / Pengguna)**: Autentikasi (`auth`), Jadwal/Agenda (`schedule`/`agenda`), Profil Pengguna (`profile`/`student`), Database & Arsitektur Sinkronisasi.
+  - **Habindra**: Dashboard API, Manajemen Kelompok (`team`/`kelompok`), Task & ToDo (`task`/`todo`).
+- **Tim Frontend**:
+  - **Valen** & **Kafi**: Antarmuka Flutter, UI Components, State Management, Isar DB Local Client.
+- **Prinsip Kerja Agen dengan Yoga**:
+  - Fokus utama pekerjaan adalah arsitektur **Backend** (Dart Frog, PostgreSQL, Database Connection, Query Security, API Endpoints, Controller/Model/Routes, Response Envelope).
+  - Frontend hanya disentuh apabila ada kebutuhan penyesuaian/integrasi langsung dengan kontrak API Backend (DTO, API Service, Endpoint alignment).
+

@@ -31,6 +31,7 @@ import '../task/widgets/desktop/desktop_personal_task_modal.dart';
 import '../task/widgets/desktop/desktop_tasks_management_view.dart';
 import '../team/dashboard_team_page.dart';
 import '../team/models/desktop_team_directory_models.dart';
+import '../team/models/team_task_repository.dart';
 import '../team/pop_up_create_meeting.dart';
 import '../team/pop_up_create_team.dart';
 import '../team/pop_up_join_team.dart';
@@ -976,7 +977,12 @@ class _HomePageState extends State<HomePage> {
               Navigator.pop(ctx);
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool('is_logged_in', false);
+              await prefs.remove('auth_token');
+              await prefs.remove('jwt_token');
               await prefs.remove('auth_user');
+              TeamRepository().clear();
+              TaskRepository().clear();
+              TeamTaskRepository().clear();
               if (mounted) {
                 Navigator.pushReplacement(
                   context,

@@ -11,6 +11,7 @@ import '../../../schedule/models/schedule_repository.dart';
 import '../../../schedule/pop_up_konfirmasi_delete.dart';
 import '../../../schedule/pop_up_schedule_conflict_dialog.dart';
 import '../../../schedule/widgets/team_meeting_autocomplete.dart';
+import '../../models/team_task_repository.dart';
 
 /// Centered Desktop Pop-Up Modal for Creating and Editing Team Meetings.
 ///
@@ -317,7 +318,9 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
     final teamNameValue =
         _isTeamMeeting && _teamController.text.trim().isNotEmpty
             ? _teamController.text.trim()
-            : null;
+            : ((widget.teamName?.trim().isNotEmpty ?? false)
+                ? widget.teamName!.trim()
+                : null);
 
     final scheduleDate = _selectedDate;
     final meetingUrlVal = _meetingUrlController.text.trim().isNotEmpty
@@ -352,7 +355,11 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
         isAlertEnabled: _isAlertEnabled,
       );
 
-      await ScheduleRepository().updateSchedule(updated);
+      if (teamNameValue != null && teamNameValue.isNotEmpty) {
+        await TeamTaskRepository().updateMeeting(teamNameValue, updated);
+      } else {
+        await ScheduleRepository().updateSchedule(updated);
+      }
 
       if (!mounted) return;
       widget.onUpdated?.call(updated);
@@ -379,7 +386,11 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
         isAlertEnabled: _isAlertEnabled,
       );
 
-      await ScheduleRepository().addSchedule(newSchedule);
+      if (teamNameValue != null && teamNameValue.isNotEmpty) {
+        await TeamTaskRepository().addMeeting(teamNameValue, newSchedule);
+      } else {
+        await ScheduleRepository().addSchedule(newSchedule);
+      }
 
       if (!mounted) return;
       widget.onCreated?.call(newSchedule);
@@ -399,7 +410,11 @@ class _DesktopTeamMeetingModalState extends State<DesktopTeamMeetingModal> {
     );
 
     if (confirmed == true && mounted) {
-      await ScheduleRepository().deleteSchedule(existing.id);
+      if (existing.teamName != null && existing.teamName!.isNotEmpty) {
+        await TeamTaskRepository().deleteMeeting(existing.teamName!, existing.id);
+      } else {
+        await ScheduleRepository().deleteSchedule(existing.id);
+      }
       if (mounted) {
         PopUpPemberitahuan.meetingDeleted(context);
         _close(existing);

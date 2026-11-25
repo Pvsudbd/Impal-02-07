@@ -282,3 +282,42 @@ Pada grup "cihuyotomotif" yang beranggotakan dua orang (Yoga Perkasa dan Habindr
 4. **URL Encoding & Sinkronisasi Direktori**:
    - Menggunakan `Uri.encodeComponent(targetId)` di `TeamRepository.fetchGroupMembers` agar aman terhadap spasi atau nama tim.
    - Menyinkronkan daftar tim di desktop melalui listener `teamsNotifier` di `home_page.dart`.
+5. **Serialisasi Aman Objek PostgreSQL `DateTime` di Backend (`group_controller.dart`)**:
+   - Mengatasi crash `Converting object to an encodable object failed: Instance of 'DateTime'` dengan membungkus seluruh payload response (`getGroupDetails`, `getGroupMeetings`, `getGroupTasks`) menggunakan `_toJsonSafe()`.
+6. **Eliminasi Hardcode Fallback "Jarvis" pada Form Assign Task (`create_task_team.dart` & `desktop_team_task_modal.dart`)**:
+   - Meneruskan `userName: widget.userName` ke `CreateTaskTeamPage` dan `DesktopTeamTaskModal`.
+   - Mengganti fallback lama `widget.userInitials == 'JS' ? 'Jarvis' : ...` dengan nama user aktif atau list anggota API riil, sehingga nama fiktif "Jarvis" tidak lagi muncul di pilihan penugasan task.
+7. **Sinkronisasi Desain Model Milestone (ERD, Use Case, Activity Diagram)**:
+   - Menambahkan entitas `group_milestone` dan relasi `group_task.id_milestone` pada `Entity_Relationship_Diagram.md`.
+   - Menambahkan use case `UC-31: Mengelola Milestone Tim (Sprint)` beserta skenario lengkap pada `Use_Case_Diagram.md`.
+   - Menambahkan alur kerja swimlane `4.3.7 Activity Diagram: Pengelolaan Milestone dan Pemantauan Sprint Kelompok` pada `Activity_Diagram.md`.
+
+## 13. Perbaikan Persistensi & Offline-First Milestone Tim (Hilang Setelah Login Ulang - 22 November 2026)
+
+### A. Gejala Masalah
+Pengguna membuat Milestone baru pada dashboard tim, dan data berhasil masuk ke basis data PostgreSQL (`group_milestone`). Namun, ketika pengguna logout dan login kembali, daftar Milestone pada tim tersebut hilang (kosong).
+
+### B. Akar Masalah (Root Cause Analysis)
+1. **Absennya Panggilan `fetchMilestonesFromApi` di Siklus Hidup Halaman**:
+   - Pada `DashboardTeamPage.initState()` dan `didUpdateWidget()`, aplikasi hanya mengambil data anggota tim (`TeamRepository().fetchGroupMembers()`) dan tidak pernah memanggil `fetchMilestonesFromApi()`.
+   - Akibatnya, saat aplikasi dibuka kembali setelah login, antarmuka tidak pernah meminta data milestone dari server backend REST API.
+2. **Ketidaksesuaian Kunci Identifier (`_teamLookupKey` UUID vs `widget.teamCode` Invite Code)**:
+   - Di backend PostgreSQL, milestone disimpan dengan `id_group` bertipe UUID (`realIdGroup`).
+   - `DashboardTeamPage` sebelumnya membaca `_teamTaskRepository.getMilestones(widget.teamCode)` di mana `widget.teamCode` berisi kode undangan (misal `'7X29'`), sedangkan repository mengindeks berdasarkan UUID atau sebaliknya.
+3. **Asinkronitas Pembacaan Cache Lokal**:
+   - Pada pemanggilan `getMilestones()`, `_loadMilestonesFromLocal()` dipanggil secara unawaited, sehingga pada frame pertama Flutter mengembalikan list kosong sebelum `SharedPreferences` selesai membaca.
+
+### C. Solusi Rekayasa yang Diterapkan
+1. **Inisialisasi Otomatis & Reaktif di `DashboardTeamPage`**:
+   - Menambahkan pemanggilan `_teamTaskRepository.fetchMilestonesFromApi(_teamLookupKey)` pada `initState()` dan `didUpdateWidget()`.
+   - Memastikan seluruh pembacaan milestone di desktop workspace (`DesktopGroupWorkspaceView`), mobile horizontal bar (`TeamMilestonesSection`), dan filter task list (`_buildTeamTaskSection()`) menggunakan `_teamLookupKey`.
+2. **Arsitektur Multi-Key Indexing & Offline Cache di `TeamTaskRepository`**:
+   - `fetchMilestonesFromApi()` memuat cache lokal seketika (0ms, Offline-First) sebelum menghubungi API backend.
+   - Menyimpan dan memetakan data milestone di bawah kunci `teamCode` sekaligus `m.teamCode` (UUID dan invite code), sehingga pencarian dengan identifier apapun selalu menemukan data yang sesuai.
+   - Fallback otomatis ke `offline_milestones_*` pada `SharedPreferences` jika koneksi server sedang offline / tidak terjangkau.
+3. **Idempotensi Pembuatan Milestone di Backend (`group_controller.dart`)**:
+   - Menambahkan klausa `ON CONFLICT (id_milestone) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, deadline = EXCLUDED.deadline` pada kueri insert backend untuk menjamin sinkronisasi offline aman tanpa benturan duplikasi key.
+4. **Standardisasi UUID v4**:
+   - Menggunakan `const Uuid().v4()` pada `PopUpCreateMilestone` dan `DesktopMilestoneModal` agar selalu mematuhi batasan `VARCHAR(36)` PostgreSQL.
+5. **Pembersihan Bersih Saat Logout**:
+   - Memanggil `TeamTaskRepository().clear()` di dialog Sign Out desktop dan mobile untuk membersihkan memori runtime tanpa menghapus cache offline storage perangkat.

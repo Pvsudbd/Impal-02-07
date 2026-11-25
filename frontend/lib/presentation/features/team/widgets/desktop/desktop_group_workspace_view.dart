@@ -6,13 +6,13 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/responsive_context.dart';
 import '../../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../../schedule/models/schedule_model.dart';
-import '../../../schedule/models/schedule_repository.dart';
 import '../../../smart_system/models/course_rubric_repository.dart';
 import '../../../smart_system/widgets/course_rubric_modals.dart';
 import '../../models/team_member_model.dart';
 import '../../models/team_milestone_model.dart';
 import '../../models/team_repository.dart';
 import '../../models/team_task_model.dart';
+import '../../models/team_task_repository.dart';
 import 'desktop_team_schedule_banner.dart';
 import 'desktop_team_workspace_panel.dart';
 
@@ -124,6 +124,7 @@ class DesktopGroupWorkspaceView extends StatefulWidget {
   final ValueChanged<ScheduleModel> onDeleteSchedule;
   final VoidCallback onMembersTap;
   final bool Function(TeamTaskModel) isAssignedToCurrentUser;
+  final List<ScheduleModel>? meetings;
 
   const DesktopGroupWorkspaceView({
     super.key,
@@ -153,6 +154,7 @@ class DesktopGroupWorkspaceView extends StatefulWidget {
     required this.onDeleteSchedule,
     required this.onMembersTap,
     required this.isAssignedToCurrentUser,
+    this.meetings,
   });
 
   @override
@@ -179,33 +181,9 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
     } catch (_) {}
   }
 
-  List<ScheduleModel> _teamMeetings(List<ScheduleModel> allSchedules) {
-    return allSchedules.where((s) {
-      final type = s.type.trim().toLowerCase();
-      if (type == 'lecture') return false;
-      if (s.id == 'sch_3' || s.id == 'sch_4') return true;
-      if (type == 'team' ||
-          type == 'team meeting' ||
-          type == 'meeting' ||
-          type == 'rapat' ||
-          type == 'group') {
-        return true;
-      }
-      final t = s.title.toLowerCase();
-      final loc = (s.location ?? '').toLowerCase();
-      return t.contains('meet') ||
-          t.contains('mentoring') ||
-          t.contains('sprint') ||
-          t.contains('sync') ||
-          loc.contains('discord') ||
-          loc.contains('group') ||
-          (s.teamName?.trim().isNotEmpty ?? false);
-    }).toList();
-  }
-
   void _handleToggleMeetingAlert(ScheduleModel meeting) {
     final updated = meeting.copyWith(isAlertEnabled: !meeting.isAlertEnabled);
-    ScheduleRepository().updateSchedule(updated);
+    TeamTaskRepository().updateMeeting(widget.teamCode, updated);
     PopUpPemberitahuan.show(
       context,
       title: updated.isAlertEnabled
@@ -254,9 +232,10 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
       children: [
         _buildHeroWorkspaceCard(context),
         const SizedBox(height: 16),
-        ValueListenableBuilder<List<ScheduleModel>>(
-          valueListenable: ScheduleRepository().schedulesNotifier,
-          builder: (context, allSchedules, _) {
+        ListenableBuilder(
+          listenable: TeamTaskRepository(),
+          builder: (context, _) {
+            final activeMeetings = widget.meetings ?? TeamTaskRepository().getMeetings(widget.teamCode);
             return DesktopTeamScheduleBanner(
               containerKey: const ValueKey(
                 'desktop_workspace_meeting_card',
@@ -264,7 +243,7 @@ class _DesktopGroupWorkspaceViewState extends State<DesktopGroupWorkspaceView> {
               joinButtonKey: const ValueKey(
                 'desktop_workspace_join_meeting_btn',
               ),
-              meetings: _teamMeetings(allSchedules),
+              meetings: activeMeetings,
               showCreateMeetingButton: true,
               onCreateMeetingTap: widget.onCreateMeeting,
               onJoinMeetingTap: _handleJoinMeeting,

@@ -101,18 +101,25 @@ backend/lib/
 
 Untuk menjaga batas pengerjaan kode dan mencegah konflik antar-anggota tim saat berkolaborasi:
 
-### 👤 Pengguna (Yoga / User Lead):
-- 🔑 **Autentikasi** (`auth`): Alur Login, Register, Forgot Password, Reset Password, JWT Auth Token, Auth Middleware.
-- 📅 **Jadwal** (`schedule` / `agenda`): Course Schedule, Personal Schedule, CRUD Agenda, API Sync, Deteksi Konflik Jadwal.
-- 👤 **User Profile** (`profile` / `student`): Profil Mahasiswa, Edit Data Diri, Ganti Password, Statistik Akun.
+### ⚙️ Tim Backend (Dart Frog & PostgreSQL):
+- **👤 Yoga (Pengguna / Lead Backend)**:
+  - 🔑 **Autentikasi** (`auth`): Alur Login, Register, Forgot Password, Reset Password, JWT Auth Token, Auth Middleware.
+  - 📅 **Jadwal** (`schedule` / `agenda`): Course Schedule, Personal Schedule, CRUD Agenda, API Sync, Deteksi Konflik Jadwal.
+  - 👤 **User Profile** (`profile` / `student`): Profil Mahasiswa, Edit Data Diri, Ganti Password, Statistik Akun.
+  - 🗄️ **Database & Sinkronisasi**: Koneksi PostgreSQL, Normalisasi Dialek SQL, Parameterized Query Security.
+- **👤 Habindra**:
+  - 📊 **Dashboard API**: Ringkasan statistik, kalkulasi agenda hari ini.
+  - 👥 **Kelompok** (`team` / `kelompok`): Manajemen Kelompok Belajar/Tubes, Join Team via Invite Code, Create Team, Meeting Schedule.
+  - 📝 **Task & ToDo** (`task` / `todo`): Manajemen Tugas Akademik, Bobot Nilai & Sisa Waktu, Smart Priority Rekomendasi, Todo Item.
 
-### 👤 Habhindra:
-- 📊 **Dashboard**: Halaman Beranda (Home Dashboard), Ringkasan Statistik, Kartu Agenda Hari Ini, Navigasi Utama.
-- 👥 **Kelompok** (`team` / `kelompok`): Manajemen Kelompok Belajar/Tubes, Join Team via Invite Code, Create Team, Meeting Schedule.
-- 📝 **Task** (`task` / `tugas`): Manajemen Tugas Akademik, Tambah/Edit Tugas, Bobot Nilai & Sisa Waktu, Smart Priority Rekomendasi.
+### 📱 Tim Frontend (Flutter):
+- **👤 Valen** & **👤 Kafi**:
+  - Mengembangkan UI Flutter, komponen modular, State Management, Integrasi Isar DB lokal, dan navigasi aplikasi.
 
-⚠️ **ATURAN AGENT:**
-Saat mengimplementasikan fitur atau memperbaiki bug, Agent **WAJIB** fokus pada ruang lingkup fitur pengguna (Autentikasi, Jadwal, User Profile). **DILARANG** merombak atau memodifikasi logika fitur milik Habhindra (Dashboard, Kelompok, Task) tanpa persetujuan atau instruksi tegas dari pengguna.
+⚠️ **ATURAN AGENT KETIKA BEKERJA DENGAN YOGA:**
+1. Fokus utama pekerjaan adalah pada layer **Backend (Dart Frog, PostgreSQL, Model/Controller/Routes)**.
+2. Dilarang merombak antarmuka Frontend kecuali ada penyesuaian/integrasi eksplisit yang diperlukan untuk menyelaraskan dengan API Backend (misal: format DTO / API Client / sync endpoint).
+3. Untuk modul backend, selalu prioritaskan fitur Yoga (Autentikasi, Jadwal, Profile, DB), dan hanya menyentuh modul Habindra jika diminta secara spesifik.
 
 ---
 

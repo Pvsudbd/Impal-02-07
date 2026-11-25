@@ -117,6 +117,14 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     ScheduleRepository().init();
     _teamTaskRepository.init();
     _teamTaskRepository.addListener(_onRepositoryChanged);
+    _teamTaskRepository.fetchMeetingsFromApi(_teamLookupKey, targetTeamName: widget.teamName);
+    _teamTaskRepository.fetchMilestonesFromApi(_teamLookupKey);
+    _teamTaskRepository.fetchTasksFromApi(_teamLookupKey);
+    if (widget.teamCode.isNotEmpty && widget.teamCode != _teamLookupKey) {
+      _teamTaskRepository.fetchMeetingsFromApi(widget.teamCode, targetTeamName: widget.teamName);
+      _teamTaskRepository.fetchMilestonesFromApi(widget.teamCode);
+      _teamTaskRepository.fetchTasksFromApi(widget.teamCode);
+    }
     _teamMembers = TeamRepository().getCachedMembers(
       _teamLookupKey,
       fallbackUserName: widget.userName,
@@ -137,6 +145,14 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.teamCode != widget.teamCode || oldWidget.teamId != widget.teamId) {
       _desktopDrawerMode = DesktopTeamDrawerMode.none;
+      _teamTaskRepository.fetchMeetingsFromApi(_teamLookupKey, targetTeamName: widget.teamName);
+      _teamTaskRepository.fetchMilestonesFromApi(_teamLookupKey);
+      _teamTaskRepository.fetchTasksFromApi(_teamLookupKey);
+      if (widget.teamCode.isNotEmpty && widget.teamCode != _teamLookupKey) {
+        _teamTaskRepository.fetchMeetingsFromApi(widget.teamCode, targetTeamName: widget.teamName);
+        _teamTaskRepository.fetchMilestonesFromApi(widget.teamCode);
+        _teamTaskRepository.fetchTasksFromApi(widget.teamCode);
+      }
       _teamMembers = TeamRepository().getCachedMembers(
         _teamLookupKey,
         fallbackUserName: widget.userName,
@@ -182,8 +198,8 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       // Auto-scroll horizontal milestone bar to first active milestone
       // so completed milestones remain to the left and user scrolls left to see them
       if (_firstActiveMilestoneKey.currentContext != null) {
-        final milestones = _teamTaskRepository.getMilestones(widget.teamCode);
-        final allTasks = _teamTaskRepository.getTasks(widget.teamCode);
+        final milestones = _teamTaskRepository.getMilestones(_teamLookupKey);
+        final allTasks = _teamTaskRepository.getTasks(_teamLookupKey);
         final hasCompleted = milestones.any((m) => m.isAllCompleted(allTasks));
         if (hasCompleted) {
           Scrollable.ensureVisible(
@@ -241,6 +257,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     );
     if (result != null && mounted) {
       PopUpPemberitahuan.meetingCreated(context);
+      _teamTaskRepository.fetchMeetingsFromApi(_teamLookupKey, targetTeamName: widget.teamName);
     }
   }
 
@@ -253,6 +270,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     );
     if (result != null && mounted) {
       PopUpPemberitahuan.meetingUpdated(context);
+      _teamTaskRepository.fetchMeetingsFromApi(_teamLookupKey, targetTeamName: widget.teamName);
     }
   }
 
@@ -266,7 +284,11 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           : 'Are you sure you want to delete this schedule? This action cannot be undone.',
     );
     if (confirmed == true) {
-      await ScheduleRepository().deleteSchedule(item.id);
+      if (isMeeting) {
+        await _teamTaskRepository.deleteMeeting(_teamLookupKey, item.id);
+      } else {
+        await ScheduleRepository().deleteSchedule(item.id);
+      }
       if (mounted) {
         if (isMeeting) {
           PopUpPemberitahuan.meetingDeleted(context);
@@ -289,20 +311,21 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     final result = await Navigator.of(context).push<TeamTaskModel>(
       MaterialPageRoute(
         builder: (_) => CreateTaskTeamPage(
+          userName: widget.userName,
           teamCode: _teamLookupKey,
           teamName: widget.teamName,
           groupMembers: _teamMembers,
           onTaskCreated: (task) {
-            _teamTaskRepository.addTask(widget.teamCode, task);
+            _teamTaskRepository.addTask(_teamLookupKey, task);
           },
         ),
       ),
     );
     if (result != null && mounted) {
       if (!_teamTaskRepository
-          .getTasks(widget.teamCode)
+          .getTasks(_teamLookupKey)
           .any((t) => t.id == result.id)) {
-        _teamTaskRepository.addTask(widget.teamCode, result);
+        _teamTaskRepository.addTask(_teamLookupKey, result);
       }
     }
   }
@@ -314,6 +337,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         existingTask: task,
         teamCode: _teamLookupKey,
         teamName: widget.teamName,
+        userName: widget.userName,
         groupMembers: _teamMembers,
         onTaskUpdated: (updatedTask) {
           _teamTaskRepository.updateTask(widget.teamCode, updatedTask);
@@ -325,6 +349,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       MaterialPageRoute(
         builder: (_) => CreateTaskTeamPage(
           existingTask: task,
+          userName: widget.userName,
           teamCode: _teamLookupKey,
           teamName: widget.teamName,
           groupMembers: _teamMembers,
@@ -342,14 +367,14 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   Future<void> _openCreateMilestone() async {
     await PopUpCreateMilestone.show(
       context,
-      teamCode: widget.teamCode,
+      teamCode: _teamLookupKey,
     );
   }
 
   Future<void> _openEditMilestone(TeamMilestoneModel milestone) async {
     await PopUpCreateMilestone.show(
       context,
-      teamCode: widget.teamCode,
+      teamCode: _teamLookupKey,
       existingMilestone: milestone,
     );
   }
@@ -362,7 +387,10 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           'Are you sure you want to delete "${milestone.title}"? Member tasks will remain in the dashboard.',
     );
     if (confirmed == true && mounted) {
-      _teamTaskRepository.deleteMilestone(widget.teamCode, milestone.id);
+      _teamTaskRepository.deleteMilestone(_teamLookupKey, milestone.id);
+      if (widget.teamCode.isNotEmpty && widget.teamCode != _teamLookupKey) {
+        _teamTaskRepository.deleteMilestone(widget.teamCode, milestone.id);
+      }
       PopUpPemberitahuan.milestoneDeleted(context, title: milestone.title);
     }
   }
@@ -388,8 +416,8 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
                 : (_teamMembers.isNotEmpty
                     ? _teamMembers.map((m) => m.avatarColor).toList()
                     : widget.memberColors)),
-        milestones: _teamTaskRepository.getMilestones(widget.teamCode),
-        allTasks: _teamTaskRepository.getTasks(widget.teamCode),
+        milestones: _teamTaskRepository.getMilestones(_teamLookupKey),
+        allTasks: _teamTaskRepository.getTasks(_teamLookupKey),
         selectedMilestoneId: _selectedMilestoneId,
         assignedToMeOnly: _assignedToMeOnly,
         scrollController: _scrollController,
@@ -409,6 +437,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         onDeleteSchedule: _deleteSchedule,
         onMembersTap: _showTeamMembersModal,
         isAssignedToCurrentUser: _isAssignedToCurrentUser,
+        meetings: _teamTaskRepository.getMeetings(_teamLookupKey),
       );
 
       final drawerMode = _effectiveDrawerMode;
@@ -417,11 +446,12 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
             key: const ValueKey('desktop_team_task_slide_drawer'),
             teamCode: _teamLookupKey,
             teamName: widget.teamName,
+            userName: widget.userName,
             groupMembers: _teamMembers,
             embeddedPanel: true,
             onClose: () => _setDrawerMode(DesktopTeamDrawerMode.none),
             onTaskCreated: (task) {
-              _teamTaskRepository.addTask(widget.teamCode, task);
+              _teamTaskRepository.addTask(_teamLookupKey, task);
               _setDrawerMode(DesktopTeamDrawerMode.none);
             },
           ),
@@ -431,7 +461,10 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
             showTeamMeetingOption: false,
             embeddedPanel: true,
             onClose: () => _setDrawerMode(DesktopTeamDrawerMode.none),
-            onCreated: (_) => _setDrawerMode(DesktopTeamDrawerMode.none),
+            onCreated: (_) {
+              _setDrawerMode(DesktopTeamDrawerMode.none);
+              _teamTaskRepository.fetchMeetingsFromApi(_teamLookupKey, targetTeamName: widget.teamName);
+            },
           ),
         DesktopTeamDrawerMode.none => null,
       };
@@ -478,14 +511,17 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
               const SizedBox(height: 16),
               TeamScheduleSection(
                 isDashboard: true,
+                teamName: widget.teamName,
+                teamCode: _teamLookupKey,
+                meetings: _teamTaskRepository.getMeetings(_teamLookupKey),
                 onActionTap: _openCreateMeeting,
                 onEditSchedule: _openEditSchedule,
                 onDeleteSchedule: _deleteSchedule,
               ),
               const SizedBox(height: 16),
               TeamMilestonesSection(
-                milestones: _teamTaskRepository.getMilestones(widget.teamCode),
-                allTasks: _teamTaskRepository.getTasks(widget.teamCode),
+                milestones: _teamTaskRepository.getMilestones(_teamLookupKey),
+                allTasks: _teamTaskRepository.getTasks(_teamLookupKey),
                 selectedMilestoneId: _selectedMilestoneId,
                 onMilestoneSelected: _toggleMilestoneSelection,
                 onAddMilestone: _openCreateMilestone,
@@ -626,7 +662,12 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
               Navigator.pop(ctx);
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool('is_logged_in', false);
+              await prefs.remove('auth_token');
+              await prefs.remove('jwt_token');
               await prefs.remove('auth_user');
+              TeamRepository().clear();
+              TaskRepository().clear();
+              TeamTaskRepository().clear();
               if (mounted) {
                 Navigator.pushReplacement(
                   context,
@@ -1114,8 +1155,8 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
   }
 
   Widget _buildTeamTaskSection() {
-    final allTasks = _teamTaskRepository.getTasks(widget.teamCode);
-    final milestones = _teamTaskRepository.getMilestones(widget.teamCode);
+    final allTasks = _teamTaskRepository.getTasks(_teamLookupKey);
+    final milestones = _teamTaskRepository.getMilestones(_teamLookupKey);
 
     final selectedMilestone = _selectedMilestoneId != null
         ? milestones.where((m) => m.id == _selectedMilestoneId).firstOrNull

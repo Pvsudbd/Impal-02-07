@@ -384,6 +384,82 @@ class GroupController {
         }
       } catch (_) {}
     }
+
+    // Fallback: cari berdasarkan name / email jika uid adalah nama atau email
+    final nameQueries = [
+      'SELECT id_user, name, email FROM users WHERE LOWER(name) = LOWER(@uid) LIMIT 1',
+      'SELECT id_user, name, email FROM users WHERE LOWER(email) = LOWER(@uid) LIMIT 1',
+      'SELECT id_user, name, email FROM users WHERE name ILIKE @likeUid LIMIT 1',
+      'SELECT id_user, name, email FROM users WHERE email ILIKE @likeUid LIMIT 1',
+    ];
+    for (final q in nameQueries) {
+      try {
+        final res = await Database.query(q, {'uid': uid, 'likeUid': '%$uid%'});
+        if (res.rows.isNotEmpty) {
+          return res.rows.first.assoc();
+        }
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  // Helper resolusi penanggung jawab (assignee) task kelompok secara robust
+  static Future<String?> _resolveAssignedUser(String? input, {String? idGroup}) async {
+    if (input == null) return null;
+    final trimmed = input.trim();
+    if (trimmed.isEmpty || trimmed.toLowerCase() == 'unassigned') return null;
+
+    // 1. Jika multi assignee (dipisah koma), ambil token pertama (PIC utama)
+    final candidate = trimmed.contains(',') ? trimmed.split(',').first.trim() : trimmed;
+    if (candidate.isEmpty || candidate.toLowerCase() == 'unassigned') return null;
+
+    // 2. Bersihkan prefix umum jika ada (misal: "member_", "leader_", "mem_", "user_")
+    String cleanId = candidate;
+    for (final prefix in ['member_', 'leader_', 'mem_', 'user_']) {
+      if (cleanId.toLowerCase().startsWith(prefix)) {
+        cleanId = cleanId.substring(prefix.length).trim();
+        break;
+      }
+    }
+
+    // 3. Cari user via ID langsung atau nama
+    final byId = await _findUserById(cleanId.isNotEmpty ? cleanId : candidate);
+    if (byId != null && byId['id_user'] != null) {
+      return byId['id_user']?.toString();
+    }
+
+    // 4. Periksa apakah candidate adalah id_member di tabel group_member
+    try {
+      final gm = await Database.query(
+        'SELECT id_user FROM group_member WHERE id_member::text = @mid LIMIT 1',
+        {'mid': candidate},
+      );
+      if (gm.rows.isNotEmpty) {
+        final uid = gm.rows.first['id_user']?.toString();
+        if (uid != null && uid.isNotEmpty) return uid;
+      }
+    } catch (_) {}
+
+    // 5. Jika idGroup tersedia, cari anggota grup yang namanya cocok
+    if (idGroup != null && idGroup.isNotEmpty) {
+      try {
+        final gmUsers = await Database.query('''
+          SELECT u.id_user, u.name, u.email
+          FROM group_member gm
+          JOIN users u ON gm.id_user::text = u.id_user::text
+          WHERE gm.id_group::text = @gid
+        ''', {'gid': idGroup});
+        for (final row in gmUsers.rows) {
+          final uName = row['name']?.toString().toLowerCase() ?? '';
+          final candLower = candidate.toLowerCase();
+          if (uName.isNotEmpty && (uName == candLower || uName.contains(candLower) || candLower.contains(uName))) {
+            return row['id_user']?.toString();
+          }
+        }
+      } catch (_) {}
+    }
+
     return null;
   }
 
@@ -512,8 +588,38 @@ class GroupController {
         }
       }
 
+      // Ambil milestone kelompok
+      QueryResult milestonesQuery;
+      try {
+        milestonesQuery = await Database.query('''
+          SELECT * FROM group_milestone
+          WHERE id_group::text = @idGroup
+          ORDER BY deadline ASC
+        ''', {'idGroup': realIdGroup});
+      } catch (_) {
+        milestonesQuery = await Database.query('SELECT 1 WHERE 1=0');
+      }
+
+      final List<Map<String, dynamic>> milestoneList = [];
+      for (final mRow in milestonesQuery.rows) {
+        final idMilestone = mRow['id_milestone']?.toString();
+        List<String> taskIds = [];
+        if (idMilestone != null && idMilestone.isNotEmpty) {
+          try {
+            final tRes = await Database.query(
+              'SELECT id_group_task FROM group_task WHERE id_milestone::text = @idMilestone',
+              {'idMilestone': idMilestone},
+            );
+            taskIds = tRes.rows.map((r) => r['id_group_task']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+          } catch (_) {}
+        }
+        final rowData = Map<String, dynamic>.from(mRow.assoc());
+        rowData['task_ids'] = taskIds;
+        milestoneList.add(_serializeRow(rowData));
+      }
+
       return Response.ok(
-        jsonEncode({
+        jsonEncode(_toJsonSafe({
           'status': 'success',
           'data': {
             'id_group': group['id_group']?.toString(),
@@ -524,8 +630,9 @@ class GroupController {
             'members': memberList.map(_serializeRow).toList(),
             'meetings': meetingsQuery.rows.map((r) => _serializeRow(r.assoc())).toList(),
             'tasks': tasksQuery.rows.map((r) => _serializeRow(r.assoc())).toList(),
+            'milestones': milestoneList,
           },
-        }),
+        })),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e, stack) {
@@ -546,16 +653,16 @@ class GroupController {
 
       final results = await Database.query('''
         SELECT * FROM meeting_schedule
-        WHERE id_group = @idGroup
+        WHERE id_group::text = @idGroup OR id_group::text = @rawId
         ORDER BY start_time ASC
-      ''', {'idGroup': realIdGroup});
+      ''', {'idGroup': realIdGroup, 'rawId': idGroup});
 
       return Response.ok(
-        jsonEncode({
+        jsonEncode(_toJsonSafe({
           'status': 'success',
           'count': results.rows.length,
           'data': results.rows.map((r) => r.assoc()).toList(),
-        }),
+        })),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
@@ -584,20 +691,44 @@ class GroupController {
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idMeeting = _uuid.v4();
-      final sql = '''
-        INSERT INTO meeting_schedule (id_meeting, id_group, meeting_title, description, start_time, platform_location, created_at)
-        VALUES (@idMeeting, @idGroup, @title, @description, @startTime::timestamptz, @location, CURRENT_TIMESTAMP)
-      ''';
+      final frontendMeetingId = (body['id_meeting'] ?? body['id'])?.toString().trim();
+      final idMeeting = (frontendMeetingId != null && frontendMeetingId.isNotEmpty) ? frontendMeetingId : _uuid.v4();
 
-      await Database.query(sql, {
-        'idMeeting': idMeeting,
-        'idGroup': realIdGroup,
-        'title': title,
-        'description': description,
-        'startTime': startTime,
-        'location': platformLocation,
-      });
+      final existingMeeting = await Database.query(
+        'SELECT id_meeting FROM meeting_schedule WHERE id_meeting::text = @id LIMIT 1',
+        {'id': idMeeting},
+      );
+
+      if (existingMeeting.rows.isNotEmpty) {
+        await Database.query('''
+          UPDATE meeting_schedule
+          SET id_group = @idGroup,
+              meeting_title = @title,
+              description = @description,
+              start_time = @startTime::timestamp,
+              platform_location = @location
+          WHERE id_meeting::text = @idMeeting
+        ''', {
+          'idMeeting': idMeeting,
+          'idGroup': realIdGroup,
+          'title': title,
+          'description': description,
+          'startTime': startTime,
+          'location': platformLocation,
+        });
+      } else {
+        await Database.query('''
+          INSERT INTO meeting_schedule (id_meeting, id_group, meeting_title, description, start_time, platform_location, created_at)
+          VALUES (@idMeeting, @idGroup, @title, @description, @startTime::timestamp, @location, CURRENT_TIMESTAMP)
+        ''', {
+          'idMeeting': idMeeting,
+          'idGroup': realIdGroup,
+          'title': title,
+          'description': description,
+          'startTime': startTime,
+          'location': platformLocation,
+        });
+      }
 
       return Response(201,
         body: jsonEncode({
@@ -623,6 +754,99 @@ class GroupController {
     }
   }
 
+  // PUT /api/groups/<idGroup>/meetings/<idMeeting>
+  static Future<Response> updateMeeting(Request req, String idGroup, String idMeeting) async {
+    try {
+      final group = await _findGroupRecord(idGroup);
+      final realIdGroup = group?['id_group']?.toString() ?? idGroup;
+
+      final body = jsonDecode(await req.readAsString()) as Map<String, dynamic>;
+      final title = (body['meeting_title'] ?? body['title'])?.toString().trim();
+      final description = body['description']?.toString();
+      final startTime = body['start_time']?.toString() ?? body['date']?.toString();
+      final platformLocation = (body['platform_location'] ?? body['location'])?.toString().trim();
+
+      final updates = <String>[];
+      final params = <String, dynamic>{
+        'idMeeting': idMeeting,
+        'idGroup': realIdGroup,
+      };
+
+      if (title != null && title.isNotEmpty) {
+        updates.add('meeting_title = @title');
+        params['title'] = title;
+      }
+      if (description != null) {
+        updates.add('description = @desc');
+        params['desc'] = description;
+      }
+      if (startTime != null && startTime.isNotEmpty) {
+        updates.add('start_time = @startTime::timestamp');
+        params['startTime'] = startTime;
+      }
+      if (platformLocation != null && platformLocation.isNotEmpty) {
+        updates.add('platform_location = @loc');
+        params['loc'] = platformLocation;
+      }
+
+      if (updates.isNotEmpty) {
+        final sql = '''
+          UPDATE meeting_schedule
+          SET ${updates.join(', ')}
+          WHERE id_meeting::text = @idMeeting AND (id_group::text = @idGroup OR id_group::text = @rawGroup)
+        ''';
+        params['rawGroup'] = idGroup;
+        await Database.query(sql, params);
+      }
+
+      return Response.ok(
+        jsonEncode({
+          'status': 'success',
+          'message': 'Meeting updated successfully',
+          'data': {'id_meeting': idMeeting},
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, stack) {
+      print('[GROUPS] updateMeeting error: $e\n$stack');
+      return Response.internalServerError(
+        body: jsonEncode({'status': 'error', 'message': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // DELETE /api/groups/<idGroup>/meetings/<idMeeting>
+  static Future<Response> deleteMeeting(Request req, String idGroup, String idMeeting) async {
+    try {
+      final group = await _findGroupRecord(idGroup);
+      final realIdGroup = group?['id_group']?.toString() ?? idGroup;
+
+      await Database.query('''
+        DELETE FROM meeting_schedule
+        WHERE id_meeting::text = @idMeeting AND (id_group::text = @idGroup OR id_group::text = @rawGroup)
+      ''', {
+        'idMeeting': idMeeting,
+        'idGroup': realIdGroup,
+        'rawGroup': idGroup,
+      });
+
+      return Response.ok(
+        jsonEncode({
+          'status': 'success',
+          'message': 'Meeting deleted successfully',
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, stack) {
+      print('[GROUPS] deleteMeeting error: $e\n$stack');
+      return Response.internalServerError(
+        body: jsonEncode({'status': 'error', 'message': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
   // ─── 6. TUGAS KELOMPOK (GROUP TASKS) ───────────────────────────────────────
   // GET /api/groups/<idGroup>/tasks
   static Future<Response> getGroupTasks(Request req, String idGroup) async {
@@ -633,17 +857,17 @@ class GroupController {
       final tasksQuery = await Database.query('''
         SELECT gt.*, u.name AS pic_name
         FROM group_task gt
-        LEFT JOIN users u ON gt.id_assigned_to = u.id_user
-        WHERE gt.id_group = @idGroup
+        LEFT JOIN users u ON gt.id_assigned_to::text = u.id_user::text
+        WHERE gt.id_group::text = @idGroup OR gt.id_group::text = @rawId
         ORDER BY gt.deadline ASC
-      ''', {'idGroup': realIdGroup});
+      ''', {'idGroup': realIdGroup, 'rawId': idGroup});
 
       return Response.ok(
-        jsonEncode({
+        jsonEncode(_toJsonSafe({
           'status': 'success',
           'count': tasksQuery.rows.length,
           'data': tasksQuery.rows.map((r) => r.assoc()).toList(),
-        }),
+        })),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
@@ -665,8 +889,23 @@ class GroupController {
       final description = body['description']?.toString() ?? '';
       final deadline = body['deadline']?.toString() ?? DateTime.now().toIso8601String();
       final gradeWeight = (body['grade_weight'] as num?)?.toDouble() ?? 0.0;
-      final priority = body['priority']?.toString() ?? 'MEDIUM';
-      final assignedTo = body['id_assigned_to']?.toString();
+      
+      // Sanitasi batasan VARCHAR(6) pada kolom priority
+      var priority = (body['priority']?.toString() ?? 'MEDIUM').toUpperCase().trim();
+      if (priority.length > 6) {
+        if (priority.contains('HIGH')) {
+          priority = 'HIGH';
+        } else if (priority.contains('LOW')) {
+          priority = 'LOW';
+        } else {
+          priority = 'MEDIUM';
+        }
+      }
+
+      final assignedTo = (body['id_assigned_to'] ?? body['assigned_to'])?.toString();
+      final idMilestone = (body['id_milestone'] ?? body['milestone_id'])?.toString();
+      final frontendTaskId = (body['id_group_task'] ?? body['id'])?.toString().trim() ?? '';
+      final idGroupTask = frontendTaskId.isNotEmpty ? frontendTaskId : _uuid.v4();
 
       if (taskTitle == null || taskTitle.isEmpty) {
         return Response(400,
@@ -674,22 +913,90 @@ class GroupController {
             headers: {'Content-Type': 'application/json'});
       }
 
-      final idGroupTask = _uuid.v4();
-      final sql = '''
-        INSERT INTO group_task (id_group_task, id_group, id_assigned_to, task_title, description, deadline, grade_weight, priority, is_completed, created_at, updated_at)
-        VALUES (@idGroupTask, @idGroup, @assignedTo, @title, @desc, @deadline::timestamptz, @weight, @priority, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ''';
+      // Validasi id_milestone terhadap tabel group_milestone agar tidak memicu foreign key violation (23503)
+      String? effectiveMilestoneId;
+      if (idMilestone != null && idMilestone.trim().isNotEmpty) {
+        final cleanMid = idMilestone.trim();
+        final mCheck = await Database.query(
+          'SELECT id_milestone FROM group_milestone WHERE id_milestone::text = @mid LIMIT 1',
+          {'mid': cleanMid},
+        );
+        if (mCheck.rows.isNotEmpty) {
+          effectiveMilestoneId = cleanMid;
+        } else {
+          // Cari jika milestone tersimpan di grup yang sama berdasarkan title atau id
+          final mGroupCheck = await Database.query(
+            'SELECT id_milestone FROM group_milestone WHERE id_group::text = @gid AND (id_milestone::text = @mid OR title::text = @mid) LIMIT 1',
+            {'gid': realIdGroup, 'mid': cleanMid},
+          );
+          if (mGroupCheck.rows.isNotEmpty) {
+            effectiveMilestoneId = mGroupCheck.rows.first['id_milestone']?.toString();
+          }
+        }
+      }
 
-      await Database.query(sql, {
-        'idGroupTask': idGroupTask,
-        'idGroup': realIdGroup,
-        'assignedTo': assignedTo,
-        'title': taskTitle,
-        'desc': description,
-        'deadline': deadline,
-        'weight': gradeWeight,
-        'priority': priority,
-      });
+      // Validasi assignedTo (toleran terhadap id_assigned_to, assigned_to string nama/email, atau ID member)
+      final effectiveAssignedTo = await _resolveAssignedUser(assignedTo, idGroup: realIdGroup);
+
+      final isCompleted = (body['is_completed'] == 1 || body['is_completed'] == true || body['is_completed'] == 'true') ? 1 : 0;
+
+      // Cek apakah task sudah ada (check-then-insert/update) untuk menghindari error 42P10
+      // karena PostgreSQL tidak memiliki unique constraint pada id_group_task
+      final existingTask = await Database.query(
+        'SELECT id_group_task FROM group_task WHERE id_group_task::text = @id LIMIT 1',
+        {'id': idGroupTask},
+      );
+
+      if (existingTask.rows.isNotEmpty) {
+        await Database.query('''
+          UPDATE group_task
+          SET id_group = @idGroup,
+              id_assigned_to = @assignedTo,
+              task_title = @title,
+              description = @desc,
+              deadline = @deadline::timestamp,
+              grade_weight = @weight,
+              priority = @priority,
+              id_milestone = @idMilestone,
+              is_completed = @isCompleted,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id_group_task::text = @idGroupTask
+        ''', {
+          'idGroupTask': idGroupTask,
+          'idGroup': realIdGroup,
+          'assignedTo': effectiveAssignedTo,
+          'title': taskTitle,
+          'desc': description,
+          'deadline': deadline,
+          'weight': gradeWeight,
+          'priority': priority,
+          'idMilestone': effectiveMilestoneId,
+          'isCompleted': isCompleted,
+        });
+      } else {
+        await Database.query('''
+          INSERT INTO group_task (
+            id_group_task, id_group, id_assigned_to, task_title, description,
+            deadline, grade_weight, priority, id_milestone, is_fuzzy_auto,
+            is_completed, created_at, updated_at
+          ) VALUES (
+            @idGroupTask, @idGroup, @assignedTo, @title, @desc,
+            @deadline::timestamp, @weight, @priority, @idMilestone, 0,
+            @isCompleted, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+          )
+        ''', {
+          'idGroupTask': idGroupTask,
+          'idGroup': realIdGroup,
+          'assignedTo': effectiveAssignedTo,
+          'title': taskTitle,
+          'desc': description,
+          'deadline': deadline,
+          'weight': gradeWeight,
+          'priority': priority,
+          'idMilestone': effectiveMilestoneId,
+          'isCompleted': isCompleted,
+        });
+      }
 
       return Response(201,
         body: jsonEncode({
@@ -698,16 +1005,399 @@ class GroupController {
           'data': {
             'id_group_task': idGroupTask,
             'id_group': realIdGroup,
+            'id_assigned_to': effectiveAssignedTo,
             'task_title': taskTitle,
             'deadline': deadline,
             'grade_weight': gradeWeight,
             'priority': priority,
+            'id_milestone': effectiveMilestoneId,
+            'is_completed': isCompleted,
           },
         }),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e, stack) {
       print('[GROUPS] createGroupTask error: $e\n$stack');
+      return Response.internalServerError(
+        body: jsonEncode({'status': 'error', 'message': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // PUT /api/groups/<idGroup>/tasks/<idTask>
+  static Future<Response> updateGroupTask(Request req, String idGroup, String idTask) async {
+    try {
+      final group = await _findGroupRecord(idGroup);
+      final realIdGroup = group?['id_group']?.toString() ?? idGroup;
+
+      final body = jsonDecode(await req.readAsString()) as Map<String, dynamic>;
+      final taskTitle = (body['task_title'] ?? body['title'])?.toString().trim();
+      final description = body['description']?.toString();
+      final deadline = body['deadline']?.toString();
+      final gradeWeight = (body['grade_weight'] as num?)?.toDouble();
+
+      String? priority;
+      if (body['priority'] != null) {
+        priority = body['priority'].toString().toUpperCase().trim();
+        if (priority.length > 6) {
+          if (priority.contains('HIGH')) {
+            priority = 'HIGH';
+          } else if (priority.contains('LOW')) {
+            priority = 'LOW';
+          } else {
+            priority = 'MEDIUM';
+          }
+        }
+      }
+
+      final assignedTo = (body['id_assigned_to'] ?? body['assigned_to'])?.toString();
+      final idMilestone = (body['id_milestone'] ?? body['milestone_id'])?.toString();
+      final isCompleted = body['is_completed'] != null
+          ? ((body['is_completed'] == 1 || body['is_completed'] == true || body['is_completed'] == 'true') ? 1 : 0)
+          : null;
+
+      String? effectiveMilestoneId;
+      if (idMilestone != null && idMilestone.trim().isNotEmpty) {
+        final cleanMid = idMilestone.trim();
+        final mCheck = await Database.query(
+          'SELECT id_milestone FROM group_milestone WHERE id_milestone::text = @mid LIMIT 1',
+          {'mid': cleanMid},
+        );
+        if (mCheck.rows.isNotEmpty) {
+          effectiveMilestoneId = cleanMid;
+        }
+      }
+
+      final effectiveAssignedTo = await _resolveAssignedUser(assignedTo, idGroup: realIdGroup);
+
+      final updates = <String>[];
+      final params = <String, dynamic>{
+        'idTask': idTask,
+        'idGroup': realIdGroup,
+      };
+
+      if (taskTitle != null && taskTitle.isNotEmpty) {
+        updates.add('task_title = @title');
+        params['title'] = taskTitle;
+      }
+      if (description != null) {
+        updates.add('description = @desc');
+        params['desc'] = description;
+      }
+      if (deadline != null && deadline.isNotEmpty) {
+        updates.add('deadline = @deadline::timestamp');
+        params['deadline'] = deadline;
+      }
+      if (gradeWeight != null) {
+        updates.add('grade_weight = @weight');
+        params['weight'] = gradeWeight;
+      }
+      if (priority != null) {
+        updates.add('priority = @priority');
+        params['priority'] = priority;
+      }
+      if (body.containsKey('id_milestone') || body.containsKey('milestone_id')) {
+        updates.add('id_milestone = @idMilestone');
+        params['idMilestone'] = effectiveMilestoneId;
+      }
+      if (body.containsKey('id_assigned_to') || body.containsKey('assigned_to')) {
+        updates.add('id_assigned_to = @assignedTo');
+        params['assignedTo'] = effectiveAssignedTo;
+      }
+      if (isCompleted != null) {
+        updates.add('is_completed = @isCompleted');
+        params['isCompleted'] = isCompleted;
+      }
+
+      updates.add('updated_at = CURRENT_TIMESTAMP');
+
+      if (updates.isNotEmpty) {
+        final sql = '''
+          UPDATE group_task
+          SET ${updates.join(', ')}
+          WHERE id_group_task::text = @idTask
+        ''';
+        await Database.query(sql, params);
+      }
+
+      return Response.ok(
+        jsonEncode({
+          'status': 'success',
+          'message': 'Group task updated successfully',
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, stack) {
+      print('[GROUPS] updateGroupTask error: $e\n$stack');
+      return Response.internalServerError(
+        body: jsonEncode({'status': 'error', 'message': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // DELETE /api/groups/<idGroup>/tasks/<idTask>
+  static Future<Response> deleteGroupTask(Request req, String idGroup, String idTask) async {
+    try {
+      await Database.query(
+        'DELETE FROM group_task WHERE id_group_task::text = @idTask',
+        {'idTask': idTask},
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'status': 'success',
+          'message': 'Group task deleted successfully',
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, stack) {
+      print('[GROUPS] deleteGroupTask error: $e\n$stack');
+      return Response.internalServerError(
+        body: jsonEncode({'status': 'error', 'message': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // PATCH /api/groups/<idGroup>/tasks/<idTask>/toggle
+  static Future<Response> toggleGroupTask(Request req, String idGroup, String idTask) async {
+    try {
+      await Database.query('''
+        UPDATE group_task
+        SET is_completed = CASE WHEN is_completed = 1 THEN 0 ELSE 1 END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id_group_task::text = @idTask
+      ''', {'idTask': idTask});
+
+      return Response.ok(
+        jsonEncode({
+          'status': 'success',
+          'message': 'Group task completion toggled successfully',
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, stack) {
+      print('[GROUPS] toggleGroupTask error: $e\n$stack');
+      return Response.internalServerError(
+        body: jsonEncode({'status': 'error', 'message': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // ─── 7. MILESTONE KELOMPOK (GROUP MILESTONES) ──────────────────────────────
+  // GET /api/groups/<idGroup>/milestones
+  static Future<Response> getGroupMilestones(Request req, String idGroup) async {
+    try {
+      final group = await _findGroupRecord(idGroup);
+      final realIdGroup = group?['id_group']?.toString() ?? idGroup;
+
+      QueryResult results;
+      try {
+        results = await Database.query('''
+          SELECT * FROM group_milestone
+          WHERE id_group::text = @idGroup
+          ORDER BY deadline ASC
+        ''', {'idGroup': realIdGroup});
+      } catch (_) {
+        results = await Database.query('SELECT 1 WHERE 1=0');
+      }
+
+      final List<Map<String, dynamic>> milestoneList = [];
+      for (final mRow in results.rows) {
+        final idMilestone = mRow['id_milestone']?.toString();
+        List<String> taskIds = [];
+        if (idMilestone != null && idMilestone.isNotEmpty) {
+          try {
+            final tRes = await Database.query(
+              'SELECT id_group_task FROM group_task WHERE id_milestone::text = @idMilestone',
+              {'idMilestone': idMilestone},
+            );
+            taskIds = tRes.rows.map((r) => r['id_group_task']?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+          } catch (_) {}
+        }
+        final rowData = Map<String, dynamic>.from(mRow.assoc());
+        rowData['task_ids'] = taskIds;
+        milestoneList.add(_serializeRow(rowData));
+      }
+
+      return Response.ok(
+        jsonEncode(_toJsonSafe({
+          'status': 'success',
+          'count': milestoneList.length,
+          'data': milestoneList,
+        })),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, stack) {
+      print('[GROUPS] getGroupMilestones error: $e\n$stack');
+      return Response.internalServerError(
+        body: jsonEncode({'status': 'error', 'message': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // POST /api/groups/<idGroup>/milestones
+  static Future<Response> createGroupMilestone(Request req, String idGroup) async {
+    try {
+      final group = await _findGroupRecord(idGroup);
+      final realIdGroup = group?['id_group']?.toString() ?? idGroup;
+
+      final body = jsonDecode(await req.readAsString()) as Map<String, dynamic>;
+      final title = (body['title'] ?? body['milestone_title'])?.toString().trim();
+      final description = body['description']?.toString();
+      final deadline = body['deadline']?.toString() ?? DateTime.now().add(const Duration(days: 7)).toIso8601String();
+      final taskIds = (body['task_ids'] ?? body['taskIds']) as List<dynamic>?;
+
+      if (title == null || title.isEmpty) {
+        return Response(400,
+            body: jsonEncode({'status': 'error', 'message': 'Milestone title is required'}),
+            headers: {'Content-Type': 'application/json'});
+      }
+
+      final idMilestone = (body['id'] ?? body['id_milestone'])?.toString() ?? _uuid.v4();
+      final sql = '''
+        INSERT INTO group_milestone (id_milestone, id_group, title, description, deadline, created_at)
+        VALUES (@idMilestone, @idGroup, @title, @description, @deadline::timestamptz, CURRENT_TIMESTAMP)
+        ON CONFLICT (id_milestone) DO UPDATE SET
+          title = EXCLUDED.title,
+          description = EXCLUDED.description,
+          deadline = EXCLUDED.deadline
+      ''';
+
+      await Database.query(sql, {
+        'idMilestone': idMilestone,
+        'idGroup': realIdGroup,
+        'title': title,
+        'description': description,
+        'deadline': deadline,
+      });
+
+      // Update task associations if taskIds provided
+      if (taskIds != null && taskIds.isNotEmpty) {
+        for (final tid in taskIds) {
+          try {
+            await Database.query(
+              'UPDATE group_task SET id_milestone = @idMilestone WHERE id_group_task::text = @tid',
+              {'idMilestone': idMilestone, 'tid': tid.toString()},
+            );
+          } catch (_) {}
+        }
+      }
+
+      return Response(201,
+        body: jsonEncode(_toJsonSafe({
+          'status': 'success',
+          'message': 'Milestone created successfully',
+          'data': {
+            'id_milestone': idMilestone,
+            'id': idMilestone,
+            'id_group': realIdGroup,
+            'title': title,
+            'description': description,
+            'deadline': deadline,
+            'task_ids': taskIds?.map((e) => e.toString()).toList() ?? [],
+          },
+        })),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, stack) {
+      print('[GROUPS] createGroupMilestone error: $e\n$stack');
+      return Response.internalServerError(
+        body: jsonEncode({'status': 'error', 'message': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // PUT /api/groups/<idGroup>/milestones/<idMilestone>
+  static Future<Response> updateGroupMilestone(Request req, String idGroup, String idMilestone) async {
+    try {
+      final body = jsonDecode(await req.readAsString()) as Map<String, dynamic>;
+      final title = (body['title'] ?? body['milestone_title'])?.toString().trim();
+      final description = body['description']?.toString();
+      final deadline = body['deadline']?.toString();
+      final taskIds = (body['task_ids'] ?? body['taskIds']) as List<dynamic>?;
+
+      final updates = <String>[];
+      final params = <String, dynamic>{'idMilestone': idMilestone};
+
+      if (title != null && title.isNotEmpty) {
+        updates.add('title = @title');
+        params['title'] = title;
+      }
+      if (description != null) {
+        updates.add('description = @description');
+        params['description'] = description;
+      }
+      if (deadline != null && deadline.isNotEmpty) {
+        updates.add('deadline = @deadline::timestamptz');
+        params['deadline'] = deadline;
+      }
+
+      if (updates.isNotEmpty) {
+        final sql = 'UPDATE group_milestone SET ${updates.join(', ')} WHERE id_milestone::text = @idMilestone';
+        await Database.query(sql, params);
+      }
+
+      if (taskIds != null) {
+        try {
+          await Database.query(
+            'UPDATE group_task SET id_milestone = NULL WHERE id_milestone::text = @idMilestone',
+            {'idMilestone': idMilestone},
+          );
+          for (final tid in taskIds) {
+            await Database.query(
+              'UPDATE group_task SET id_milestone = @idMilestone WHERE id_group_task::text = @tid',
+              {'idMilestone': idMilestone, 'tid': tid.toString()},
+            );
+          }
+        } catch (_) {}
+      }
+
+      return Response.ok(
+        jsonEncode(_toJsonSafe({
+          'status': 'success',
+          'message': 'Milestone updated successfully',
+        })),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, stack) {
+      print('[GROUPS] updateGroupMilestone error: $e\n$stack');
+      return Response.internalServerError(
+        body: jsonEncode({'status': 'error', 'message': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // DELETE /api/groups/<idGroup>/milestones/<idMilestone>
+  static Future<Response> deleteGroupMilestone(Request req, String idGroup, String idMilestone) async {
+    try {
+      try {
+        await Database.query(
+          'UPDATE group_task SET id_milestone = NULL WHERE id_milestone::text = @idMilestone',
+          {'idMilestone': idMilestone},
+        );
+      } catch (_) {}
+
+      await Database.query(
+        'DELETE FROM group_milestone WHERE id_milestone::text = @idMilestone',
+        {'idMilestone': idMilestone},
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'status': 'success',
+          'message': 'Milestone deleted successfully',
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, stack) {
+      print('[GROUPS] deleteGroupMilestone error: $e\n$stack');
       return Response.internalServerError(
         body: jsonEncode({'status': 'error', 'message': e.toString()}),
         headers: {'Content-Type': 'application/json'},

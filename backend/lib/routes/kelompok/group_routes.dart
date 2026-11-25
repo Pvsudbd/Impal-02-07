@@ -51,6 +51,20 @@ class GroupRoutes {
       )(req),
     );
 
+    router.put(
+      '/<idGroup>/meetings/<idMeeting>',
+      (Request req, String idGroup, String idMeeting) => authPipeline.addHandler(
+        (Request r) => GroupController.updateMeeting(r, idGroup, idMeeting),
+      )(req),
+    );
+
+    router.delete(
+      '/<idGroup>/meetings/<idMeeting>',
+      (Request req, String idGroup, String idMeeting) => authPipeline.addHandler(
+        (Request r) => GroupController.deleteMeeting(r, idGroup, idMeeting),
+      )(req),
+    );
+
     // ─── TUGAS KELOMPOK (/api/groups/<idGroup>/tasks) ────────────────────────
     router.get(
       '/<idGroup>/tasks',
@@ -63,6 +77,56 @@ class GroupRoutes {
       '/<idGroup>/tasks',
       (Request req, String idGroup) => authPipeline.addHandler(
         (Request r) => GroupController.createGroupTask(r, idGroup),
+      )(req),
+    );
+
+    router.put(
+      '/<idGroup>/tasks/<idTask>',
+      (Request req, String idGroup, String idTask) => authPipeline.addHandler(
+        (Request r) => GroupController.updateGroupTask(r, idGroup, idTask),
+      )(req),
+    );
+
+    router.delete(
+      '/<idGroup>/tasks/<idTask>',
+      (Request req, String idGroup, String idTask) => authPipeline.addHandler(
+        (Request r) => GroupController.deleteGroupTask(r, idGroup, idTask),
+      )(req),
+    );
+
+    router.patch(
+      '/<idGroup>/tasks/<idTask>/toggle',
+      (Request req, String idGroup, String idTask) => authPipeline.addHandler(
+        (Request r) => GroupController.toggleGroupTask(r, idGroup, idTask),
+      )(req),
+    );
+
+    // ─── MILESTONE KELOMPOK (/api/groups/<idGroup>/milestones) ───────────────
+    router.get(
+      '/<idGroup>/milestones',
+      (Request req, String idGroup) => authPipeline.addHandler(
+        (Request r) => GroupController.getGroupMilestones(r, idGroup),
+      )(req),
+    );
+
+    router.post(
+      '/<idGroup>/milestones',
+      (Request req, String idGroup) => authPipeline.addHandler(
+        (Request r) => GroupController.createGroupMilestone(r, idGroup),
+      )(req),
+    );
+
+    router.put(
+      '/<idGroup>/milestones/<idMilestone>',
+      (Request req, String idGroup, String idMilestone) => authPipeline.addHandler(
+        (Request r) => GroupController.updateGroupMilestone(r, idGroup, idMilestone),
+      )(req),
+    );
+
+    router.delete(
+      '/<idGroup>/milestones/<idMilestone>',
+      (Request req, String idGroup, String idMilestone) => authPipeline.addHandler(
+        (Request r) => GroupController.deleteGroupMilestone(r, idGroup, idMilestone),
       )(req),
     );
 

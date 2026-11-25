@@ -175,6 +175,9 @@ class _DesktopGroupDirectoryViewState extends State<DesktopGroupDirectoryView> {
           'Are you sure you want to delete "${meeting.title}"? This action cannot be undone.',
     );
     if (confirmed == true && mounted) {
+      if (meeting.teamName != null && meeting.teamName!.isNotEmpty) {
+        _teamTaskRepo.deleteMeeting(meeting.teamName!, meeting.id);
+      }
       _scheduleRepo.deleteSchedule(meeting.id);
       PopUpPemberitahuan.meetingDeleted(context);
     }
@@ -265,7 +268,10 @@ class _DesktopGroupDirectoryViewState extends State<DesktopGroupDirectoryView> {
         _teamTaskRepo,
       ]),
       builder: (context, _) {
-        final meetings = _teamMeetings(_scheduleRepo.schedulesNotifier.value);
+        final repoMeetings = _teamTaskRepo.allMeetings;
+        final meetings = repoMeetings.isNotEmpty
+            ? repoMeetings
+            : _teamMeetings(_scheduleRepo.schedulesNotifier.value);
         final deadlines = _buildLiveDeadlines();
 
         return Padding(

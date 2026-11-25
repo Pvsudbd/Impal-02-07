@@ -41,6 +41,7 @@ class CreateTaskTeamPage extends StatefulWidget {
   final void Function(TeamTaskModel task)? onTaskCreated;
   final void Function(TeamTaskModel updatedTask)? onTaskUpdated;
   final VoidCallback? onBack;
+  final String? userName;
   final String userInitials;
   final String teamCode;
   final String teamName;
@@ -52,6 +53,7 @@ class CreateTaskTeamPage extends StatefulWidget {
     this.onTaskCreated,
     this.onTaskUpdated,
     this.onBack,
+    this.userName,
     this.userInitials = 'JS',
     this.teamCode = '7X29',
     this.teamName = 'IMPAL Team',
@@ -85,8 +87,9 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
     CourseRubricRepository().init();
     TaskTagRepository().init();
 
-    final fallbackName =
-        widget.userInitials == 'JS' ? 'Jarvis' : widget.userInitials;
+    final fallbackName = (widget.userName != null && widget.userName!.trim().isNotEmpty)
+        ? widget.userName!
+        : (widget.userInitials != 'JS' ? widget.userInitials : 'You');
     final cached = TeamRepository().getCachedMembers(
       widget.teamCode,
       fallbackUserName: fallbackName,
@@ -134,7 +137,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
       final now = DateTime.now();
       _selectedDate = task.deadline ?? DateTime(now.year, now.month, now.day);
       _selectedTime = _parseTimeOfDay(task.timeRange);
-      _selectedMembers = _matchMembers(task.assignedTo);
+      _selectedMembers = _matchMembers(task.assignedTo, assignedMemberId: task.assignedMemberId);
       _selectedTagLabels = task.tags.map((t) => t.label).toList();
       final existingMilestone =
           TeamTaskRepository().getMilestoneForTask(widget.teamCode, task.id);
@@ -180,7 +183,17 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
     return const TimeOfDay(hour: 23, minute: 59);
   }
 
-  List<TeamMemberModel> _matchMembers(String assignedTo) {
+  List<TeamMemberModel> _matchMembers(String assignedTo, {String? assignedMemberId}) {
+    if (assignedMemberId != null && assignedMemberId.isNotEmpty) {
+      final cleanId = assignedMemberId.toLowerCase();
+      final idMatch = _availableMembers.where((m) =>
+          m.id.toLowerCase() == cleanId ||
+          cleanId.contains(m.id.toLowerCase()) ||
+          m.id.toLowerCase().contains(cleanId)).firstOrNull;
+      if (idMatch != null) {
+        return [idMatch];
+      }
+    }
     final names = assignedTo
         .split(',')
         .map((s) => s.trim().toLowerCase())
@@ -248,6 +261,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
     final assignedNames = _selectedMembers.map((m) => m.name).join(', ');
     final primaryAvatarColor = _selectedMembers.first.avatarColor;
     final assignedColors = _selectedMembers.map((m) => m.avatarColor).toList();
+    final primaryMemberId = _selectedMembers.isNotEmpty ? _selectedMembers.first.id : null;
 
     final daysDiff = _selectedDate.difference(DateTime.now()).inDays;
     final dueBadgeStr = isPastDeadline ? 'Overdue' : (daysDiff > 0 ? '${daysDiff}d' : '12h');
@@ -262,6 +276,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
       final updatedTask = widget.existingTask!.copyWith(
         title: taskName,
         assignedTo: assignedNames,
+        assignedMemberId: primaryMemberId,
         assigneeColor: primaryAvatarColor,
         assigneeColors: assignedColors,
         timeRange: timeStr,
@@ -297,6 +312,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         title: taskName,
         priority: TaskPriority.medium,
         assignedTo: assignedNames,
+        assignedMemberId: primaryMemberId,
         assigneeColor: primaryAvatarColor,
         assigneeColors: assignedColors,
         timeRange: timeStr,
@@ -310,11 +326,17 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
         tags: tagModels,
       );
 
-      TeamTaskRepository().setTaskMilestone(
-        teamCode: widget.teamCode,
-        taskId: newTaskId,
-        milestoneId: _selectedMilestoneId,
-      );
+      // 1. Add task to repository FIRST so it exists before milestone association.
+      TeamTaskRepository().addTask(widget.teamCode, newTask, milestoneId: _selectedMilestoneId);
+
+      // 2. THEN link to milestone (task must already be in repository for setTaskMilestone to work).
+      if (_selectedMilestoneId != null) {
+        TeamTaskRepository().setTaskMilestone(
+          teamCode: widget.teamCode,
+          taskId: newTaskId,
+          milestoneId: _selectedMilestoneId,
+        );
+      }
 
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -323,6 +345,7 @@ class _CreateTaskTeamPageState extends State<CreateTaskTeamPage> {
           taskName: taskName,
           assignees: assignedNames,
         );
+        // 3. Notify parent (addTask is idempotent so double-add is safe).
         widget.onTaskCreated?.call(newTask);
         if (Navigator.of(context).canPop()) {
           Navigator.of(context).pop(newTask);

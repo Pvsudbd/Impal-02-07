@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dotenv/dotenv.dart';
 import 'package:postgres/postgres.dart';
 
@@ -26,7 +27,27 @@ class Database {
 
   static void init() {
     if (!_initialized) {
-      _env = DotEnv(includePlatformEnvironment: true)..load();
+      _env = DotEnv(includePlatformEnvironment: true);
+      final candidates = [
+        '.env',
+        'backend/.env',
+        'D:/Telkom University/Semester 5/TodoList/Impal-02-07/backend/.env',
+      ];
+      bool loaded = false;
+      for (final p in candidates) {
+        if (File(p).existsSync()) {
+          try {
+            _env.load([p]);
+            loaded = true;
+            break;
+          } catch (_) {}
+        }
+      }
+      if (!loaded) {
+        try {
+          _env.load();
+        } catch (_) {}
+      }
       _initialized = true;
     }
   }
@@ -40,7 +61,7 @@ class Database {
     if (_connection == null || !_connection!.isOpen) {
       final host = _env['DB_HOST'] ?? '10.147.115.231';
       final port = int.tryParse(_env['DB_PORT'] ?? '5432') ?? 5432;
-      final user = _env['DB_USER'] ?? 'Todolist_Dev';
+      final user = _env['DB_USER'] ?? 'todolist_dev';
       final password = _env['DB_PASSWORD'] ?? 'ProjectImpal227';
       final database = dbName;
       final sslMode = (_env['DB_SSL']?.toLowerCase() == 'true')

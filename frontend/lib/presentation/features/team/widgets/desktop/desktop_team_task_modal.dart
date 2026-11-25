@@ -29,6 +29,7 @@ class DesktopTeamTaskModal extends StatefulWidget {
   final TeamTaskModel? existingTask;
   final String teamCode;
   final String teamName;
+  final String? userName;
   final bool embeddedPanel;
   final void Function(TeamTaskModel task)? onTaskCreated;
   final void Function(TeamTaskModel updatedTask)? onTaskUpdated;
@@ -41,6 +42,7 @@ class DesktopTeamTaskModal extends StatefulWidget {
     this.existingTask,
     this.teamCode = '7X29',
     this.teamName = 'IMPAL Team',
+    this.userName,
     this.embeddedPanel = false,
     this.onTaskCreated,
     this.onTaskUpdated,
@@ -54,6 +56,7 @@ class DesktopTeamTaskModal extends StatefulWidget {
     TeamTaskModel? existingTask,
     String teamCode = '7X29',
     String teamName = 'IMPAL Team',
+    String? userName,
     void Function(TeamTaskModel task)? onTaskCreated,
     void Function(TeamTaskModel updatedTask)? onTaskUpdated,
     VoidCallback? onTaskDeleted,
@@ -66,6 +69,7 @@ class DesktopTeamTaskModal extends StatefulWidget {
         existingTask: existingTask,
         teamCode: teamCode,
         teamName: teamName,
+        userName: userName,
         onTaskCreated: onTaskCreated,
         onTaskUpdated: onTaskUpdated,
         onTaskDeleted: onTaskDeleted,
@@ -107,23 +111,31 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
     CourseRubricRepository().init();
     TaskTagRepository().init();
 
-    final cached = TeamRepository().getCachedMembers(widget.teamCode);
+    final cached = TeamRepository().getCachedMembers(
+      widget.teamCode,
+      fallbackUserName: widget.userName,
+    );
     final initialList = (widget.groupMembers != null && widget.groupMembers!.length >= cached.length)
         ? widget.groupMembers!
         : cached;
     _availableMembers = initialList.isNotEmpty ? initialList : [];
 
     if (_availableMembers.isEmpty) {
-      _availableMembers = const [
+      _availableMembers = [
         TeamMemberModel(
           id: 'member_self',
-          name: 'You',
-          avatarColor: Color(0xFFF3A683),
+          name: (widget.userName != null && widget.userName!.trim().isNotEmpty)
+              ? widget.userName!
+              : 'You',
+          avatarColor: const Color(0xFFF3A683),
         ),
       ];
     }
 
-    TeamRepository().fetchGroupMembers(widget.teamCode).then((fetched) {
+    TeamRepository().fetchGroupMembers(
+      widget.teamCode,
+      fallbackUserName: widget.userName,
+    ).then((fetched) {
       if (mounted && fetched.isNotEmpty) {
         setState(() {
           _availableMembers = fetched;
@@ -144,7 +156,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
       final now = DateTime.now();
       _selectedDate = task.deadline ?? DateTime(now.year, now.month, now.day);
       _selectedTime = _parseTimeOfDay(task.timeRange);
-      _selectedMembers = _matchMembers(task.assignedTo);
+      _selectedMembers = _matchMembers(task.assignedTo, assignedMemberId: task.assignedMemberId);
       _selectedTagLabels = task.tags.map((t) => t.label).toList();
       final existingMilestone =
           TeamTaskRepository().getMilestoneForTask(widget.teamCode, task.id);
@@ -190,7 +202,17 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
     return const TimeOfDay(hour: 23, minute: 59);
   }
 
-  List<TeamMemberModel> _matchMembers(String assignedTo) {
+  List<TeamMemberModel> _matchMembers(String assignedTo, {String? assignedMemberId}) {
+    if (assignedMemberId != null && assignedMemberId.isNotEmpty) {
+      final cleanId = assignedMemberId.toLowerCase();
+      final idMatch = _availableMembers.where((m) =>
+          m.id.toLowerCase() == cleanId ||
+          cleanId.contains(m.id.toLowerCase()) ||
+          m.id.toLowerCase().contains(cleanId)).firstOrNull;
+      if (idMatch != null) {
+        return [idMatch];
+      }
+    }
     final names = assignedTo
         .split(',')
         .map((s) => s.trim().toLowerCase())
@@ -291,6 +313,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
     final assignedNames = _selectedMembers.map((m) => m.name).join(', ');
     final primaryAvatarColor = _selectedMembers.first.avatarColor;
     final assignedColors = _selectedMembers.map((m) => m.avatarColor).toList();
+    final primaryMemberId = _selectedMembers.isNotEmpty ? _selectedMembers.first.id : null;
     final fullDeadline = DateTime(
       _selectedDate.year,
       _selectedDate.month,
@@ -311,6 +334,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
       final updatedTask = widget.existingTask!.copyWith(
         title: taskName,
         assignedTo: assignedNames,
+        assignedMemberId: primaryMemberId,
         assigneeColor: primaryAvatarColor,
         assigneeColors: assignedColors,
         timeRange: timeStr,
@@ -342,6 +366,7 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
         title: taskName,
         priority: TaskPriority.medium,
         assignedTo: assignedNames,
+        assignedMemberId: primaryMemberId,
         assigneeColor: primaryAvatarColor,
         assigneeColors: assignedColors,
         timeRange: timeStr,
@@ -355,12 +380,19 @@ class _DesktopTeamTaskModalState extends State<DesktopTeamTaskModal> {
         tags: tagModels,
       );
 
-      TeamTaskRepository().setTaskMilestone(
-        teamCode: widget.teamCode,
-        taskId: newTaskId,
-        milestoneId: _selectedMilestoneId,
-      );
+      // 1. Add task to repository FIRST so it exists before milestone association.
+      TeamTaskRepository().addTask(widget.teamCode, newTask, milestoneId: _selectedMilestoneId);
 
+      // 2. THEN link to milestone (task must already be in repository for setTaskMilestone to work).
+      if (_selectedMilestoneId != null) {
+        TeamTaskRepository().setTaskMilestone(
+          teamCode: widget.teamCode,
+          taskId: newTaskId,
+          milestoneId: _selectedMilestoneId,
+        );
+      }
+
+      // 3. Notify parent (addTask is idempotent so double-add is safe).
       widget.onTaskCreated?.call(newTask);
       if (mounted) {
         PopUpPemberitahuanTeam.taskCreated(

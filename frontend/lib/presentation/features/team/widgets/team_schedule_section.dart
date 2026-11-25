@@ -8,6 +8,9 @@ import '../../schedule/models/schedule_repository.dart';
 /// Reusable team schedule section for both Team List and Team Dashboard.
 class TeamScheduleSection extends StatelessWidget {
   final bool isDashboard;
+  final String? teamName;
+  final String? teamCode;
+  final List<ScheduleModel>? meetings;
   final VoidCallback onActionTap;
   final VoidCallback? onAddScheduleTap;
   final void Function(ScheduleModel) onEditSchedule;
@@ -16,6 +19,9 @@ class TeamScheduleSection extends StatelessWidget {
   const TeamScheduleSection({
     super.key,
     this.isDashboard = false,
+    this.teamName,
+    this.teamCode,
+    this.meetings,
     required this.onActionTap,
     this.onAddScheduleTap,
     required this.onEditSchedule,
@@ -53,12 +59,57 @@ class TeamScheduleSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (meetings != null) {
+      final curTeam = (teamName ?? '').trim().toLowerCase();
+      final curCode = (teamCode ?? '').trim().toLowerCase();
+      final isImpalTeam = curCode == '7x29' ||
+          curTeam.contains('impal') ||
+          curTeam == 'kelompok impal' ||
+          curTeam == 'proyek impal';
+      return _buildWithSchedules(context, meetings!, isImpalFallback: isImpalTeam);
+    }
     return ValueListenableBuilder<List<ScheduleModel>>(
       valueListenable: ScheduleRepository().schedulesNotifier,
       builder: (context, allSchedules, _) {
+        final curTeam = (teamName ?? '').trim().toLowerCase();
+        final curCode = (teamCode ?? '').trim().toLowerCase();
+        final isImpalTeam = curCode == '7x29' ||
+            curTeam.contains('impal') ||
+            curTeam == 'kelompok impal' ||
+            curTeam == 'proyek impal';
+
         final rawTeamSchedules = allSchedules.where((s) {
           final type = s.type.trim().toLowerCase();
           if (type == 'lecture') return false;
+
+          // sch_3 and sch_4 are default fixtures for IMPAL team only
+          if (s.id == 'sch_3' || s.id == 'sch_4') {
+            return isImpalTeam;
+          }
+
+          if (s.teamName != null && s.teamName!.trim().isNotEmpty) {
+            final sTeam = s.teamName!.trim().toLowerCase();
+            if (curTeam.isNotEmpty &&
+                (sTeam == curTeam ||
+                    curTeam.contains(sTeam) ||
+                    sTeam.contains(curTeam))) {
+              return true;
+            }
+            if (curCode.isNotEmpty &&
+                (sTeam == curCode ||
+                    curCode.contains(sTeam) ||
+                    sTeam.contains(curCode))) {
+              return true;
+            }
+            if (curTeam.isEmpty && curCode.isEmpty) return true;
+            return false;
+          }
+
+          // If viewing a non-IMPAL group, do not capture random untagged meetings
+          if (curTeam.isNotEmpty && !isImpalTeam) {
+            return false;
+          }
+
           if (type == 'team' ||
               type == 'team meeting' ||
               type == 'meeting' ||
@@ -105,32 +156,42 @@ class TeamScheduleSection extends StatelessWidget {
               loc.contains('zoom');
         }).toList();
 
-        final teamSchedules = rawTeamSchedules;
-        teamSchedules.sort((a, b) {
-          int statusWeight(String s) {
-            final st = s.toLowerCase();
-            if (st == 'overdue' || st == 'completed') return 0;
-            if (st == 'ongoing') return 1;
-            return 2;
-          }
+        return _buildWithSchedules(context, rawTeamSchedules, isImpalFallback: isImpalTeam);
+      },
+    );
+  }
 
-          final wA = statusWeight(a.status);
-          final wB = statusWeight(b.status);
-          if (wA != wB) return wA.compareTo(wB);
+  Widget _buildWithSchedules(
+    BuildContext context,
+    List<ScheduleModel> rawTeamSchedules, {
+    bool isImpalFallback = false,
+  }) {
+    final teamSchedules = List<ScheduleModel>.from(rawTeamSchedules);
+    teamSchedules.sort((a, b) {
+      int statusWeight(String s) {
+        final st = s.toLowerCase();
+        if (st == 'overdue' || st == 'completed') return 0;
+        if (st == 'ongoing') return 1;
+        return 2;
+      }
 
-          final dtA = a.startDateTime ?? DateTime(2000);
-          final dtB = b.startDateTime ?? DateTime(2000);
-          return dtA.compareTo(dtB);
-        });
+      final wA = statusWeight(a.status);
+      final wB = statusWeight(b.status);
+      if (wA != wB) return wA.compareTo(wB);
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final availableWidth = constraints.maxWidth;
+      final dtA = a.startDateTime ?? DateTime(2000);
+      final dtB = b.startDateTime ?? DateTime(2000);
+      return dtA.compareTo(dtB);
+    });
 
-            Widget scheduleContent;
-            if (teamSchedules.isEmpty) {
-              scheduleContent = isDashboard
-                  ? ImpalScheduleCard(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+
+        Widget scheduleContent;
+        if (teamSchedules.isEmpty) {
+          scheduleContent = (isDashboard && isImpalFallback)
+              ? ImpalScheduleCard(
                       schedule: ScheduleRepository.defaultTeamSchedule,
                       isHorizontal: false,
                       isLast: true,
@@ -269,7 +330,5 @@ class TeamScheduleSection extends StatelessWidget {
             );
           },
         );
-      },
-    );
   }
 }

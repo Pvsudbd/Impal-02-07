@@ -25,6 +25,7 @@ class TeamTaskModel {
   final String title;
   final TaskPriority priority;
   final String assignedTo;
+  final String? assignedMemberId;
   final Color assigneeColor;
   final List<Color>? assigneeColors;
   final String timeRange;
@@ -43,6 +44,7 @@ class TeamTaskModel {
     required this.title,
     required this.priority,
     required this.assignedTo,
+    this.assignedMemberId,
     required this.assigneeColor,
     this.assigneeColors,
     required this.timeRange,
@@ -118,6 +120,7 @@ class TeamTaskModel {
     String? title,
     TaskPriority? priority,
     String? assignedTo,
+    String? assignedMemberId,
     Color? assigneeColor,
     List<Color>? assigneeColors,
     String? timeRange,
@@ -136,6 +139,7 @@ class TeamTaskModel {
       title: title ?? this.title,
       priority: priority ?? this.priority,
       assignedTo: assignedTo ?? this.assignedTo,
+      assignedMemberId: assignedMemberId ?? this.assignedMemberId,
       assigneeColor: assigneeColor ?? this.assigneeColor,
       assigneeColors: assigneeColors ?? this.assigneeColors,
       timeRange: timeRange ?? this.timeRange,
@@ -149,6 +153,63 @@ class TeamTaskModel {
       gradeWeightPercent: gradeWeightPercent ?? this.gradeWeightPercent,
       tags: tags ?? this.tags,
     );
+  }
+
+  /// Creates a [TeamTaskModel] from a backend API map (group_task row).
+  factory TeamTaskModel.fromMap(Map<String, dynamic> map) {
+    final priorityRaw = (map['priority'] as String? ?? 'MEDIUM').toUpperCase();
+    final priority = priorityRaw == 'HIGH'
+        ? TaskPriority.high
+        : (priorityRaw == 'LOW' ? TaskPriority.low : TaskPriority.medium);
+
+    DateTime? deadline;
+    final rawDeadline = map['deadline'];
+    if (rawDeadline != null) {
+      deadline = DateTime.tryParse(rawDeadline.toString());
+    }
+
+    final picName = map['pic_name']?.toString();
+    final rawAssignedTo = map['assigned_to']?.toString();
+    final rawIdAssignedTo = (map['id_assigned_to'] ?? map['assigned_to_id'])?.toString();
+
+    final assignedName = (picName != null && picName.isNotEmpty)
+        ? picName
+        : ((rawAssignedTo != null && rawAssignedTo.isNotEmpty)
+            ? rawAssignedTo
+            : (rawIdAssignedTo ?? ''));
+
+    return TeamTaskModel(
+      id: (map['id_group_task'] ?? '').toString(),
+      title: (map['task_title'] ?? map['title'] ?? '').toString(),
+      priority: priority,
+      assignedTo: assignedName,
+      assignedMemberId: rawIdAssignedTo,
+      assigneeColor: const Color(0xFF786FA6),
+      timeRange: deadline != null
+          ? '${deadline.hour.toString().padLeft(2, '0')}:${deadline.minute.toString().padLeft(2, '0')} WIB'
+          : '--:-- WIB',
+      isDone: (map['is_completed'] == true || map['is_completed'] == 1 || map['is_completed'] == 'true'),
+      description: map['description']?.toString(),
+      deadline: deadline,
+      isAlertEnabled: true,
+    );
+  }
+
+  /// Converts this model to a map for sending to backend API.
+  Map<String, dynamic> toApiMap() {
+    return {
+      'id_group_task': id,
+      'task_title': title,
+      'description': description ?? '',
+      'deadline': deadline?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      'grade_weight': gradeWeightPercent != null ? gradeWeightPercent! / 100.0 : 0.0,
+      'priority': priority.name.toUpperCase(),
+      'is_completed': isDone ? 1 : 0,
+      if (assignedMemberId != null && assignedMemberId!.trim().isNotEmpty)
+        'id_assigned_to': assignedMemberId!.trim(),
+      if (assignedTo.trim().isNotEmpty)
+        'assigned_to': assignedTo.trim(),
+    };
   }
 
   /// Helper comparator to sort team tasks by nearest deadline first.

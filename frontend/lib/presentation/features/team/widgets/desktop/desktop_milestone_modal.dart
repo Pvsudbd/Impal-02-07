@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/responsive_context.dart';
 import '../../../../../core/widgets/unfocus_on_tap.dart';
@@ -152,8 +153,7 @@ class _DesktopMilestoneModalState extends State<DesktopMilestoneModal> {
     );
 
     final milestone = TeamMilestoneModel(
-      id: widget.existingMilestone?.id ??
-          'milestone_${DateTime.now().millisecondsSinceEpoch}',
+      id: widget.existingMilestone?.id ?? const Uuid().v4(),
       teamCode: widget.teamCode,
       title: title,
       description: desc.isNotEmpty ? desc : null,

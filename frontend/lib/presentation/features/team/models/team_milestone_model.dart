@@ -107,6 +107,69 @@ class TeamMilestoneModel {
     return members.every((t) => t.isDone);
   }
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'id_milestone': id,
+      'teamCode': teamCode,
+      'id_group': teamCode,
+      'title': title,
+      'description': description,
+      'deadline': deadline.toIso8601String(),
+      'formattedDeadline': formattedDeadline,
+      'dueBadge': dueBadge,
+      'task_ids': taskIds,
+      'taskIds': taskIds,
+      'dateCreated': dateCreated.toIso8601String(),
+      'created_at': dateCreated.toIso8601String(),
+    };
+  }
+
+  factory TeamMilestoneModel.fromMap(Map<String, dynamic> map) {
+    DateTime parsedDeadline;
+    final rawDeadline = map['deadline'];
+    if (rawDeadline is DateTime) {
+      parsedDeadline = rawDeadline;
+    } else if (rawDeadline is String) {
+      parsedDeadline = DateTime.tryParse(rawDeadline) ?? DateTime.now();
+    } else {
+      parsedDeadline = DateTime.now();
+    }
+
+    DateTime parsedCreated;
+    final rawCreated = map['created_at'] ?? map['dateCreated'];
+    if (rawCreated is DateTime) {
+      parsedCreated = rawCreated;
+    } else if (rawCreated is String) {
+      parsedCreated = DateTime.tryParse(rawCreated) ?? DateTime.now();
+    } else {
+      parsedCreated = DateTime.now();
+    }
+
+    List<String> parsedTaskIds = [];
+    final rawTaskIds = map['task_ids'] ?? map['taskIds'];
+    if (rawTaskIds is List) {
+      parsedTaskIds = rawTaskIds.map((e) => e.toString()).toList();
+    }
+
+    final id = (map['id_milestone'] ?? map['id'] ?? '').toString();
+    final teamCode = (map['id_group'] ?? map['teamCode'] ?? '').toString();
+    final title = (map['title'] ?? map['milestone_title'] ?? '').toString();
+    final description = map['description']?.toString();
+
+    return TeamMilestoneModel(
+      id: id,
+      teamCode: teamCode,
+      title: title,
+      description: description,
+      deadline: parsedDeadline,
+      formattedDeadline: map['formattedDeadline']?.toString(),
+      dueBadge: map['dueBadge']?.toString(),
+      taskIds: parsedTaskIds,
+      dateCreated: parsedCreated,
+    );
+  }
+
   TeamMilestoneModel copyWith({
     String? id,
     String? teamCode,
