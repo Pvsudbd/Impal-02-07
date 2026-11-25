@@ -313,7 +313,17 @@ class TaskController {
         priority: priority,
         isFuzzyAuto: isFuzzyAuto,
         isCompleted: isCompleted,
+        tags: Task.parseTags(body['tags']),
       );
+
+      if (createdTask.tags.isNotEmpty) {
+        try {
+          await Database.query(
+            'UPDATE task SET tags = @tags::jsonb WHERE id_task = @idTask',
+            {'tags': jsonEncode(createdTask.tags), 'idTask': idTask},
+          );
+        } catch (_) {}
+      }
 
       print('[TASK] Task created successfully in DB: $idTask ("$taskTitle") for user: $idUser');
 
@@ -501,6 +511,19 @@ class TaskController {
         }
       }
 
+      final finalTags = body['tags'] is List
+          ? Task.parseTags(body['tags'])
+          : Task.parseTags(current['tags']);
+
+      if (body['tags'] is List) {
+        try {
+          await Database.query(
+            'UPDATE task SET tags = @tags::jsonb WHERE id_task = @idTask',
+            {'tags': jsonEncode(finalTags), 'idTask': idTask},
+          );
+        } catch (_) {}
+      }
+
       return Response.ok(
         jsonEncode({
           'status': 'success',
@@ -517,6 +540,7 @@ class TaskController {
             'priority': finalPriority,
             'is_fuzzy_auto': finalFuzzy,
             'is_completed': finalCompleted,
+            'tags': finalTags,
           },
         }),
         headers: {'Content-Type': 'application/json'},

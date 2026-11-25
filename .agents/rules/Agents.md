@@ -118,8 +118,8 @@ Untuk menjaga batas pengerjaan kode dan mencegah konflik antar-anggota tim saat 
 
 ⚠️ **ATURAN AGENT KETIKA BEKERJA DENGAN YOGA:**
 1. Fokus utama pekerjaan adalah pada layer **Backend (Dart Frog, PostgreSQL, Model/Controller/Routes)**.
-2. Dilarang merombak antarmuka Frontend kecuali ada penyesuaian/integrasi eksplisit yang diperlukan untuk menyelaraskan dengan API Backend (misal: format DTO / API Client / sync endpoint).
-3. Untuk modul backend, selalu prioritaskan fitur Yoga (Autentikasi, Jadwal, Profile, DB), dan hanya menyentuh modul Habindra jika diminta secara spesifik.
+2. Dilarang merombak antarmuka Frontend (**Valen** & **Kafi**) kecuali ada penyesuaian/integrasi eksplisit yang diperlukan untuk menyelaraskan dengan API Backend (misal: format DTO / API Client / sync endpoint / Isar DB).
+3. Untuk modul backend, selain fitur Yoga (Autentikasi, Jadwal, Profile, DB), **modul backend milik Habindra (`dashboard`, `kelompok`/`team`, `task`/`todo`) juga dapat di-handle dan dimodifikasi oleh sesama tim backend, yaitu Yoga**, sesuai kebutuhan integrasi dan perbaikan sistem.
 
 ---
 

@@ -47,18 +47,23 @@ const UserCollectionSchema = CollectionSchema(
       name: r'phoneNumber',
       type: IsarType.string,
     ),
-    r'remoteId': PropertySchema(
+    r'preferencesJson': PropertySchema(
       id: 6,
+      name: r'preferencesJson',
+      type: IsarType.string,
+    ),
+    r'remoteId': PropertySchema(
+      id: 7,
       name: r'remoteId',
       type: IsarType.string,
     ),
     r'studentId': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'studentId',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -117,6 +122,12 @@ int _userCollectionEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  {
+    final value = object.preferencesJson;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.remoteId.length * 3;
   {
     final value = object.studentId;
@@ -139,9 +150,10 @@ void _userCollectionSerialize(
   writer.writeString(offsets[3], object.majorCampus);
   writer.writeString(offsets[4], object.name);
   writer.writeString(offsets[5], object.phoneNumber);
-  writer.writeString(offsets[6], object.remoteId);
-  writer.writeString(offsets[7], object.studentId);
-  writer.writeDateTime(offsets[8], object.updatedAt);
+  writer.writeString(offsets[6], object.preferencesJson);
+  writer.writeString(offsets[7], object.remoteId);
+  writer.writeString(offsets[8], object.studentId);
+  writer.writeDateTime(offsets[9], object.updatedAt);
 }
 
 UserCollection _userCollectionDeserialize(
@@ -158,9 +170,10 @@ UserCollection _userCollectionDeserialize(
   object.majorCampus = reader.readStringOrNull(offsets[3]);
   object.name = reader.readString(offsets[4]);
   object.phoneNumber = reader.readStringOrNull(offsets[5]);
-  object.remoteId = reader.readString(offsets[6]);
-  object.studentId = reader.readStringOrNull(offsets[7]);
-  object.updatedAt = reader.readDateTime(offsets[8]);
+  object.preferencesJson = reader.readStringOrNull(offsets[6]);
+  object.remoteId = reader.readString(offsets[7]);
+  object.studentId = reader.readStringOrNull(offsets[8]);
+  object.updatedAt = reader.readDateTime(offsets[9]);
   return object;
 }
 
@@ -184,10 +197,12 @@ P _userCollectionDeserializeProp<P>(
     case 5:
       return (reader.readStringOrNull(offset)) as P;
     case 6:
-      return (reader.readString(offset)) as P;
-    case 7:
       return (reader.readStringOrNull(offset)) as P;
+    case 7:
+      return (reader.readString(offset)) as P;
     case 8:
+      return (reader.readStringOrNull(offset)) as P;
+    case 9:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1190,6 +1205,160 @@ extension UserCollectionQueryFilter
   }
 
   QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'preferencesJson',
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'preferencesJson',
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'preferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'preferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'preferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'preferencesJson',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'preferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'preferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'preferencesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'preferencesJson',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'preferencesJson',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
+      preferencesJsonIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'preferencesJson',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterFilterCondition>
       remoteIdEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1621,6 +1790,20 @@ extension UserCollectionQuerySortBy
     });
   }
 
+  QueryBuilder<UserCollection, UserCollection, QAfterSortBy>
+      sortByPreferencesJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'preferencesJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterSortBy>
+      sortByPreferencesJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'preferencesJson', Sort.desc);
+    });
+  }
+
   QueryBuilder<UserCollection, UserCollection, QAfterSortBy> sortByRemoteId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'remoteId', Sort.asc);
@@ -1752,6 +1935,20 @@ extension UserCollectionQuerySortThenBy
     });
   }
 
+  QueryBuilder<UserCollection, UserCollection, QAfterSortBy>
+      thenByPreferencesJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'preferencesJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<UserCollection, UserCollection, QAfterSortBy>
+      thenByPreferencesJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'preferencesJson', Sort.desc);
+    });
+  }
+
   QueryBuilder<UserCollection, UserCollection, QAfterSortBy> thenByRemoteId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'remoteId', Sort.asc);
@@ -1835,6 +2032,14 @@ extension UserCollectionQueryWhereDistinct
     });
   }
 
+  QueryBuilder<UserCollection, UserCollection, QDistinct>
+      distinctByPreferencesJson({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'preferencesJson',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<UserCollection, UserCollection, QDistinct> distinctByRemoteId(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1900,6 +2105,13 @@ extension UserCollectionQueryProperty
       phoneNumberProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'phoneNumber');
+    });
+  }
+
+  QueryBuilder<UserCollection, String?, QQueryOperations>
+      preferencesJsonProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'preferencesJson');
     });
   }
 

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:uuid/uuid.dart';
 import '../../config/db.dart';
@@ -20,6 +21,7 @@ class ProfileModel {
   final int schedulesCount;
   final int coursesCount;
   final int groupsCount;
+  final Map<String, dynamic>? preferences;
 
   ProfileModel({
     required this.idUser,
@@ -32,6 +34,7 @@ class ProfileModel {
     this.schedulesCount = 0,
     this.coursesCount = 0,
     this.groupsCount = 0,
+    this.preferences,
   });
 
   // Getter aliases for backwards compatibility
@@ -57,6 +60,7 @@ class ProfileModel {
         'coursesCount': coursesCount,
         'groupsCount': groupsCount,
       },
+      if (preferences != null) 'preferences': preferences,
     };
   }
 
@@ -192,6 +196,11 @@ class ProfileModel {
       } catch (_) {}
     }
 
+    Map<String, dynamic>? preferences;
+    try {
+      preferences = await getPreferences(idUser);
+    } catch (_) {}
+
     return ProfileModel(
       idUser: (row['id_user'] ?? row['id_student'])?.toString() ?? '',
       name: row['name']?.toString() ?? '',
@@ -203,7 +212,271 @@ class ProfileModel {
       schedulesCount: schedules,
       coursesCount: courses,
       groupsCount: groups,
+      preferences: preferences,
     );
+  }
+
+  // ─── REMINDER, BRIEFING & AI PREFERENCES ──────────────────────────────────
+  static Map<String, dynamic> get defaultPreferences => {
+        'sound_vibration_enabled': true,
+        'is_fuzzy_model_active': true,
+        'score_explainability_enabled': true,
+        'task_deadline_alerts': {
+          'enabled': true,
+          'timings': ['H-1 (24 Hours)', '1 Hour'],
+          'soundMode': 'vibrationOnly',
+        },
+        'lecture_schedule_alerts': {
+          'enabled': true,
+          'timings': ['30 Minutes', '15 Minutes'],
+          'soundMode': 'soundAndVibrate',
+        },
+        'external_schedule_alerts': {
+          'enabled': true,
+          'timings': ['H-1 (24 Hours)', '1 Hour'],
+          'soundMode': 'vibrationOnly',
+        },
+        'team_task_alerts': {
+          'enabled': true,
+          'timings': ['H-1 (24 Hours)', '3 Hours'],
+          'soundMode': 'vibrationOnly',
+        },
+        'team_meeting_alerts': {
+          'enabled': true,
+          'timings': ['1 Hour', '15 Minutes'],
+          'soundMode': 'soundOnly',
+        },
+        'daily_briefing_enabled': true,
+        'daily_briefing_time': '07:00 WIB',
+        'daily_briefing_topics': [
+          'personal_tasks',
+          'lecture_schedule',
+          'external_schedule',
+          'team_tasks',
+          'team_meetings',
+        ],
+        'daily_briefing_compact': false,
+      };
+
+  static bool _parseBool(dynamic v, bool fallback) {
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) {
+      final low = v.toLowerCase();
+      if (low == 'true' || low == '1' || low == 't') return true;
+      if (low == 'false' || low == '0' || low == 'f') return false;
+    }
+    return fallback;
+  }
+
+  static Map<String, dynamic> _decodeJsonMap(dynamic v, Map<String, dynamic> fallback) {
+    if (v is Map<String, dynamic>) return Map<String, dynamic>.from(v);
+    if (v is Map) return Map<String, dynamic>.from(v.cast<String, dynamic>());
+    if (v is String && v.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(v);
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded.cast<String, dynamic>());
+        }
+      } catch (_) {}
+    }
+    return Map<String, dynamic>.from(fallback);
+  }
+
+  static List<String> _decodeStringList(dynamic v, List<String> fallback) {
+    if (v is List) return v.map((e) => e.toString()).toList();
+    if (v is String && v.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(v);
+        if (decoded is List) return decoded.map((e) => e.toString()).toList();
+      } catch (_) {}
+    }
+    return List<String>.from(fallback);
+  }
+
+  static Map<String, dynamic> _normalizePreferencesRow(Map<String, dynamic> row) {
+    final defaults = defaultPreferences;
+    return {
+      'id_user': (row['id_user'] ?? '').toString(),
+      'sound_vibration_enabled': _parseBool(
+        row['sound_vibration_enabled'],
+        defaults['sound_vibration_enabled'] as bool,
+      ),
+      'is_fuzzy_model_active': _parseBool(
+        row['is_fuzzy_model_active'],
+        defaults['is_fuzzy_model_active'] as bool,
+      ),
+      'score_explainability_enabled': _parseBool(
+        row['score_explainability_enabled'],
+        defaults['score_explainability_enabled'] as bool,
+      ),
+      'task_deadline_alerts': _decodeJsonMap(
+        row['task_deadline_alerts'],
+        defaults['task_deadline_alerts'] as Map<String, dynamic>,
+      ),
+      'lecture_schedule_alerts': _decodeJsonMap(
+        row['lecture_schedule_alerts'],
+        defaults['lecture_schedule_alerts'] as Map<String, dynamic>,
+      ),
+      'external_schedule_alerts': _decodeJsonMap(
+        row['external_schedule_alerts'],
+        defaults['external_schedule_alerts'] as Map<String, dynamic>,
+      ),
+      'team_task_alerts': _decodeJsonMap(
+        row['team_task_alerts'],
+        defaults['team_task_alerts'] as Map<String, dynamic>,
+      ),
+      'team_meeting_alerts': _decodeJsonMap(
+        row['team_meeting_alerts'],
+        defaults['team_meeting_alerts'] as Map<String, dynamic>,
+      ),
+      'daily_briefing_enabled': _parseBool(
+        row['daily_briefing_enabled'],
+        defaults['daily_briefing_enabled'] as bool,
+      ),
+      'daily_briefing_time': (row['daily_briefing_time'] ?? defaults['daily_briefing_time']).toString(),
+      'daily_briefing_topics': _decodeStringList(
+        row['daily_briefing_topics'],
+        defaults['daily_briefing_topics'] as List<String>,
+      ),
+      'daily_briefing_compact': _parseBool(
+        row['daily_briefing_compact'],
+        defaults['daily_briefing_compact'] as bool,
+      ),
+      if (row['updated_at'] != null) 'updated_at': row['updated_at'].toString(),
+    };
+  }
+
+  static Future<Map<String, dynamic>> getPreferences(String idUser) async {
+    try {
+      final res = await Database.query(
+        '''
+        SELECT id_user, sound_vibration_enabled, is_fuzzy_model_active, score_explainability_enabled,
+               task_deadline_alerts, lecture_schedule_alerts, external_schedule_alerts,
+               team_task_alerts, team_meeting_alerts,
+               daily_briefing_enabled, daily_briefing_time, daily_briefing_topics,
+               daily_briefing_compact, updated_at
+        FROM user_preferences
+        WHERE id_user = :idUser
+        LIMIT 1
+        ''',
+        {'idUser': idUser},
+      );
+      if (res.rows.isEmpty) {
+        return {'id_user': idUser, ...defaultPreferences};
+      }
+      return _normalizePreferencesRow(res.rows.first.assoc());
+    } catch (_) {
+      return {'id_user': idUser, ...defaultPreferences};
+    }
+  }
+
+  static Future<Map<String, dynamic>> upsertPreferences(
+    String idUser,
+    Map<String, dynamic> body,
+  ) async {
+    final current = await getPreferences(idUser);
+
+    final soundVibration = _parseBool(
+      body['sound_vibration_enabled'] ?? body['soundVibrationEnabled'],
+      current['sound_vibration_enabled'] as bool,
+    );
+    final isFuzzyActive = _parseBool(
+      body['is_fuzzy_model_active'] ?? body['isFuzzyModelActive'],
+      current['is_fuzzy_model_active'] as bool,
+    );
+    final scoreExplainability = _parseBool(
+      body['score_explainability_enabled'] ?? body['scoreExplainabilityEnabled'],
+      current['score_explainability_enabled'] as bool,
+    );
+    final taskDeadlineAlerts = _decodeJsonMap(
+      body['task_deadline_alerts'] ?? body['taskDeadlineAlerts'],
+      current['task_deadline_alerts'] as Map<String, dynamic>,
+    );
+    final lectureScheduleAlerts = _decodeJsonMap(
+      body['lecture_schedule_alerts'] ?? body['lectureScheduleAlerts'],
+      current['lecture_schedule_alerts'] as Map<String, dynamic>,
+    );
+    final externalScheduleAlerts = _decodeJsonMap(
+      body['external_schedule_alerts'] ?? body['externalScheduleAlerts'],
+      current['external_schedule_alerts'] as Map<String, dynamic>,
+    );
+    final teamTaskAlerts = _decodeJsonMap(
+      body['team_task_alerts'] ?? body['teamTaskAlerts'],
+      current['team_task_alerts'] as Map<String, dynamic>,
+    );
+    final teamMeetingAlerts = _decodeJsonMap(
+      body['team_meeting_alerts'] ?? body['teamMeetingAlerts'],
+      current['team_meeting_alerts'] as Map<String, dynamic>,
+    );
+    final dailyBriefingEnabled = _parseBool(
+      body['daily_briefing_enabled'] ?? body['isDailyBriefingEnabled'],
+      current['daily_briefing_enabled'] as bool,
+    );
+    final dailyBriefingTime = (body['daily_briefing_time'] ??
+            body['dailyMorningBriefingTime'] ??
+            current['daily_briefing_time'])
+        .toString()
+        .trim();
+    final dailyBriefingTopics = _decodeStringList(
+      body['daily_briefing_topics'] ?? body['dailyBriefingTopics'],
+      current['daily_briefing_topics'] as List<String>,
+    );
+    final dailyBriefingCompact = _parseBool(
+      body['daily_briefing_compact'] ?? body['isDailyBriefingCompact'],
+      current['daily_briefing_compact'] as bool,
+    );
+
+    final params = <String, dynamic>{
+      'idUser': idUser,
+      'soundVibration': soundVibration,
+      'isFuzzyActive': isFuzzyActive,
+      'scoreExplainability': scoreExplainability,
+      'taskDeadlineAlerts': jsonEncode(taskDeadlineAlerts),
+      'lectureScheduleAlerts': jsonEncode(lectureScheduleAlerts),
+      'externalScheduleAlerts': jsonEncode(externalScheduleAlerts),
+      'teamTaskAlerts': jsonEncode(teamTaskAlerts),
+      'teamMeetingAlerts': jsonEncode(teamMeetingAlerts),
+      'dailyBriefingEnabled': dailyBriefingEnabled,
+      'dailyBriefingTime': dailyBriefingTime.isEmpty ? '07:00 WIB' : dailyBriefingTime,
+      'dailyBriefingTopics': jsonEncode(dailyBriefingTopics),
+      'dailyBriefingCompact': dailyBriefingCompact,
+    };
+
+    await Database.query(
+      '''
+      INSERT INTO user_preferences (
+        id_user, sound_vibration_enabled, is_fuzzy_model_active, score_explainability_enabled,
+        task_deadline_alerts, lecture_schedule_alerts, external_schedule_alerts,
+        team_task_alerts, team_meeting_alerts,
+        daily_briefing_enabled, daily_briefing_time, daily_briefing_topics,
+        daily_briefing_compact, updated_at
+      ) VALUES (
+        :idUser, :soundVibration, :isFuzzyActive, :scoreExplainability,
+        :taskDeadlineAlerts::jsonb, :lectureScheduleAlerts::jsonb, :externalScheduleAlerts::jsonb,
+        :teamTaskAlerts::jsonb, :teamMeetingAlerts::jsonb,
+        :dailyBriefingEnabled, :dailyBriefingTime, :dailyBriefingTopics::jsonb,
+        :dailyBriefingCompact, NOW()
+      )
+      ON CONFLICT (id_user) DO UPDATE SET
+        sound_vibration_enabled = EXCLUDED.sound_vibration_enabled,
+        is_fuzzy_model_active = EXCLUDED.is_fuzzy_model_active,
+        score_explainability_enabled = EXCLUDED.score_explainability_enabled,
+        task_deadline_alerts = EXCLUDED.task_deadline_alerts,
+        lecture_schedule_alerts = EXCLUDED.lecture_schedule_alerts,
+        external_schedule_alerts = EXCLUDED.external_schedule_alerts,
+        team_task_alerts = EXCLUDED.team_task_alerts,
+        team_meeting_alerts = EXCLUDED.team_meeting_alerts,
+        daily_briefing_enabled = EXCLUDED.daily_briefing_enabled,
+        daily_briefing_time = EXCLUDED.daily_briefing_time,
+        daily_briefing_topics = EXCLUDED.daily_briefing_topics,
+        daily_briefing_compact = EXCLUDED.daily_briefing_compact,
+        updated_at = NOW()
+      ''',
+      params,
+    );
+
+    return await getPreferences(idUser);
   }
 
   // ─── UPDATE PROFILE (NAME & EMAIL) ─────────────────────────────────────────

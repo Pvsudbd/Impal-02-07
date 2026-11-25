@@ -5,10 +5,13 @@ import '../../../../core/utils/page_transitions.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../auth/login_page.dart';
 import '../../notifikasi/widgets/notification_bell_button.dart';
+import '../../notifikasi/models/notification_repository.dart';
 import '../../profile/profile_page.dart';
+import '../../profile/models/user_profile_model.dart';
 import '../../team/models/team_repository.dart';
 import '../../team/models/team_task_repository.dart';
 import '../../task/models/task_repository.dart';
+import '../../../../core/services/reminder_notification_service.dart';
 
 /// Top header banner showing user greeting, pending task count, and avatar.
 /// Standardized across Home, Task, Team List, and Schedule pages.
@@ -74,6 +77,9 @@ class HomeHeader extends StatelessWidget {
               TeamRepository().clear();
               TaskRepository().clear();
               TeamTaskRepository().clear();
+              await UserProfileRepository().resetForLogout();
+              await NotificationRepository.instance.clearForLogout();
+              await ReminderNotificationService().stopAndReset();
               if (context.mounted) {
                 Navigator.pushReplacement(
                   context,

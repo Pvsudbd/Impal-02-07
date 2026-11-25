@@ -60,5 +60,6 @@
   - **Valen** & **Kafi**: Antarmuka Flutter, UI Components, State Management, Isar DB Local Client.
 - **Prinsip Kerja Agen dengan Yoga**:
   - Fokus utama pekerjaan adalah arsitektur **Backend** (Dart Frog, PostgreSQL, Database Connection, Query Security, API Endpoints, Controller/Model/Routes, Response Envelope).
-  - Frontend hanya disentuh apabila ada kebutuhan penyesuaian/integrasi langsung dengan kontrak API Backend (DTO, API Service, Endpoint alignment).
+  - Modul backend milik **Habindra** (`dashboard`, `kelompok`/`team`, `task`/`todo`) **dapat di-handle dan dimodifikasi oleh sesama tim backend, yaitu Yoga**.
+  - Frontend (**Valen** & **Kafi**) hanya disentuh apabila ada kebutuhan penyesuaian/integrasi langsung dengan kontrak API Backend (DTO, API Service, Endpoint alignment, atau Isar DB) atau atas permintaan eksplisit.
 

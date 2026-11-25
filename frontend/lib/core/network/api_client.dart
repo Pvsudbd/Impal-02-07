@@ -131,6 +131,36 @@ class ApiClient {
     }
   }
 
+  static Future<Map<String, dynamic>> patch(
+    String endpoint,
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
+    final uri = Uri.parse('$baseUrl$endpoint');
+    final headers = {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+
+    final response = await http
+        .patch(
+          uri,
+          headers: headers,
+          body: jsonEncode(body),
+        )
+        .timeout(requestTimeout);
+
+    try {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {
+        'status': 'error',
+        'statusCode': response.statusCode,
+        'message': response.body.isNotEmpty ? response.body : 'HTTP ${response.statusCode}',
+      };
+    }
+  }
+
   // ==========================================
   // Instance-based Methods (ApiResponse<T>)
   // ==========================================

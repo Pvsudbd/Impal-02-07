@@ -7,7 +7,12 @@ import '../../../../../core/utils/responsive_context.dart';
 import '../../../../../core/widgets/desktop_slide_drawer_pane.dart';
 import '../../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../../../auth/login_page.dart';
+import '../../../notifikasi/models/notification_repository.dart';
 import '../../../smart_system/smart_priority_page.dart';
+import '../../../task/models/task_repository.dart';
+import '../../../team/models/team_repository.dart';
+import '../../../team/models/team_task_repository.dart';
+import '../../../../../core/services/reminder_notification_service.dart';
 import '../../models/user_profile_model.dart';
 import 'desktop_alert_settings_modal.dart';
 import 'desktop_daily_briefing_modal.dart';
@@ -258,7 +263,15 @@ class _DesktopProfileSettingsViewState
     if (confirmed != true || !mounted) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_logged_in', false);
+    await prefs.remove('auth_token');
+    await prefs.remove('jwt_token');
     await prefs.remove('auth_user');
+    TeamRepository().clear();
+    TaskRepository().clear();
+    TeamTaskRepository().clear();
+    await UserProfileRepository().resetForLogout();
+    await NotificationRepository.instance.clearForLogout();
+    await ReminderNotificationService().stopAndReset();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       AuthFadeRoute(page: const Login()),

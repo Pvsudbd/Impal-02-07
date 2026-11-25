@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Task {
   String _taskId;
   String _userId;
@@ -10,6 +12,7 @@ class Task {
   String _priority;
   bool _isFuzzyAuto;
   bool _isCompleted;
+  List<Map<String, dynamic>> _tags;
 
   Task({
     required String taskId,
@@ -23,6 +26,7 @@ class Task {
     required String priority,
     required bool isFuzzyAuto,
     bool isCompleted = false,
+    List<Map<String, dynamic>> tags = const [],
   })  : _taskId = taskId,
         _userId = userId,
         _courseCode = courseCode,
@@ -33,7 +37,27 @@ class Task {
         _priorityScore = priorityScore,
         _priority = priority,
         _isFuzzyAuto = isFuzzyAuto,
-        _isCompleted = isCompleted;
+        _isCompleted = isCompleted,
+        _tags = tags;
+
+  static List<Map<String, dynamic>> parseTags(dynamic raw) {
+    if (raw == null) return const [];
+    dynamic decoded = raw;
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        decoded = jsonDecode(raw);
+      } catch (_) {
+        return const [];
+      }
+    }
+    if (decoded is List) {
+      return decoded
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+    }
+    return const [];
+  }
 
   // Conversion for API JSON
   factory Task.fromJson(Map<String, dynamic> json) {
@@ -55,6 +79,7 @@ class Task {
       priority: (json['priority']?.toString() ?? 'MEDIUM').toUpperCase(),
       isFuzzyAuto: json['is_fuzzy_auto'] == 1 || json['is_fuzzy_auto'] == true,
       isCompleted: json['is_completed'] == 1 || json['is_completed'] == true,
+      tags: parseTags(json['tags']),
     );
   }
 
@@ -76,6 +101,7 @@ class Task {
       'priority': _priority,
       'is_fuzzy_auto': _isFuzzyAuto,
       'is_completed': _isCompleted,
+      'tags': _tags,
     };
   }
 
@@ -91,6 +117,7 @@ class Task {
   String get priority => _priority;
   bool get isFuzzyAuto => _isFuzzyAuto;
   bool get isCompleted => _isCompleted;
+  List<Map<String, dynamic>> get tags => _tags;
   bool get isOverdue => _deadline.isBefore(DateTime.now());
 
   set userId(String val) => _userId = val;

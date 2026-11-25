@@ -162,6 +162,19 @@ class TeamTaskRepository with ChangeNotifier {
     return List.unmodifiable(list);
   }
 
+  /// Returns all loaded team tasks across all teams without altering initialization state.
+  List<TeamTaskModel> get allTasks {
+    final list = <TeamTaskModel>[];
+    for (final tList in _teamTasks.values) {
+      for (final t in tList) {
+        if (!list.any((existing) => existing.id == t.id)) {
+          list.add(t);
+        }
+      }
+    }
+    return List.unmodifiable(list);
+  }
+
   /// Sinkronisasi daftar meeting dari remote PostgreSQL (/api/groups/<teamCode>/meetings)
   Future<List<ScheduleModel>> fetchMeetingsFromApi(
     String teamCode, {
@@ -441,12 +454,40 @@ class TeamTaskRepository with ChangeNotifier {
       final res = await ApiClient.get('/api/groups/$encodedCode/tasks', token: token);
       if (res['status'] == 'success' && res['data'] is List) {
         final List<dynamic> raw = res['data'];
-        final fetched = raw
-            .map((item) => TeamTaskModel.fromMap(item as Map<String, dynamic>))
-            .where((t) => t.id.isNotEmpty && t.title.isNotEmpty)
-            .toList();
+        final fetched = <TeamTaskModel>[];
+        final milestoneTaskMap = <String, List<String>>{};
+        for (final item in raw) {
+          if (item is! Map) continue;
+          final row = Map<String, dynamic>.from(item);
+          final task = TeamTaskModel.fromMap(row);
+          if (task.id.isNotEmpty && task.title.isNotEmpty) {
+            fetched.add(task);
+            final mid = row['id_milestone']?.toString().trim();
+            if (mid != null && mid.isNotEmpty) {
+              milestoneTaskMap.putIfAbsent(mid, () => []).add(task.id);
+            }
+          }
+        }
 
         _teamTasks[teamCode] = fetched;
+        final existingMilestones = _teamMilestones[teamCode];
+        if (existingMilestones != null && milestoneTaskMap.isNotEmpty) {
+          bool milestoneChanged = false;
+          for (int i = 0; i < existingMilestones.length; i++) {
+            final m = existingMilestones[i];
+            final linkedIds = milestoneTaskMap[m.id];
+            if (linkedIds != null && linkedIds.isNotEmpty) {
+              final mergedIds = {...m.taskIds, ...linkedIds}.toList();
+              if (mergedIds.length != m.taskIds.length) {
+                existingMilestones[i] = m.copyWith(taskIds: mergedIds);
+                milestoneChanged = true;
+              }
+            }
+          }
+          if (milestoneChanged) {
+            await _saveMilestonesToLocal(teamCode);
+          }
+        }
         notifyListeners();
         return fetched;
       }
@@ -725,15 +766,27 @@ class TeamTaskRepository with ChangeNotifier {
     required String taskId,
   }) {
     init();
-    final list = _teamTasks[teamCode];
-    if (list != null) {
-      final index = list.indexWhere((t) => t.id == taskId);
-      if (index != -1) {
-        list[index] = list[index].copyWith(isDone: !list[index].isDone);
-        _syncWithTaskRepository(teamCode);
-        notifyListeners();
-        _pushToggleTask(teamCode, taskId);
+    String targetKey = teamCode;
+    List<TeamTaskModel>? list = _teamTasks[teamCode];
+    int index = list?.indexWhere((t) => t.id == taskId) ?? -1;
+
+    if (index == -1) {
+      for (final entry in _teamTasks.entries) {
+        final foundIdx = entry.value.indexWhere((t) => t.id == taskId);
+        if (foundIdx != -1) {
+          targetKey = entry.key;
+          list = entry.value;
+          index = foundIdx;
+          break;
+        }
       }
+    }
+
+    if (list != null && index != -1) {
+      list[index] = list[index].copyWith(isDone: !list[index].isDone);
+      _syncWithTaskRepository(targetKey);
+      notifyListeners();
+      _pushToggleTask(targetKey, taskId);
     }
   }
 

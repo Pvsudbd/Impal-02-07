@@ -256,8 +256,22 @@ class GroupController {
       final groupRow = groupQuery.rows.first;
       final idGroup = groupRow['id_group'].toString();
       final groupName = groupRow['group_name'].toString();
+      final idLeader = groupRow['id_leader']?.toString();
 
-      // 2. Cek apakah user sudah terdaftar di kelompok ini
+      // 2. Cek apakah user adalah leader grup atau sudah terdaftar di group_member
+      if (idLeader != null && idLeader == idUser) {
+        return Response(400,
+            body: jsonEncode({
+              'status': 'error',
+              'message': 'You are already a member of this team.',
+              'data': {
+                'id_group': idGroup,
+                'group_name': groupName,
+              },
+            }),
+            headers: {'Content-Type': 'application/json'});
+      }
+
       QueryResult memberCheck;
       try {
         memberCheck = await Database.query(
@@ -319,6 +333,25 @@ class GroupController {
           rethrow;
         }
       }
+
+      // 4. Sinkronkan group_size (jumlah anggota aktual) jika kolom tersedia
+      try {
+        await Database.query(
+          '''
+          UPDATE "groups" g
+          SET group_size = GREATEST(
+            COALESCE((
+              SELECT COUNT(*)::INT
+              FROM group_member gm
+              WHERE gm.id_group::text = g.id_group::text
+            ), 0),
+            1
+          )
+          WHERE g.id_group::text = @idGroup
+          ''',
+          {'idGroup': idGroup},
+        );
+      } catch (_) {}
 
       return Response.ok(
         jsonEncode({
@@ -998,6 +1031,15 @@ class GroupController {
         });
       }
 
+      if (body['tags'] is List) {
+        try {
+          await Database.query(
+            'UPDATE group_task SET tags = @tags::jsonb WHERE id_group_task::text = @idGroupTask',
+            {'tags': jsonEncode(body['tags']), 'idGroupTask': idGroupTask},
+          );
+        } catch (_) {}
+      }
+
       return Response(201,
         body: jsonEncode({
           'status': 'success',
@@ -1118,7 +1160,26 @@ class GroupController {
           SET ${updates.join(', ')}
           WHERE id_group_task::text = @idTask
         ''';
-        await Database.query(sql, params);
+        try {
+          await Database.query(sql, params);
+        } catch (e) {
+          if (isCompleted != null &&
+              (e.toString().contains('boolean') || e.toString().contains('42804'))) {
+            params['isCompleted'] = isCompleted == 1;
+            await Database.query(sql, params);
+          } else {
+            rethrow;
+          }
+        }
+      }
+
+      if (body['tags'] is List) {
+        try {
+          await Database.query(
+            'UPDATE group_task SET tags = @tags::jsonb WHERE id_group_task::text = @idTask',
+            {'tags': jsonEncode(body['tags']), 'idTask': idTask},
+          );
+        } catch (_) {}
       }
 
       return Response.ok(
@@ -1164,12 +1225,25 @@ class GroupController {
   // PATCH /api/groups/<idGroup>/tasks/<idTask>/toggle
   static Future<Response> toggleGroupTask(Request req, String idGroup, String idTask) async {
     try {
-      await Database.query('''
-        UPDATE group_task
-        SET is_completed = CASE WHEN is_completed = 1 THEN 0 ELSE 1 END,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id_group_task::text = @idTask
-      ''', {'idTask': idTask});
+      try {
+        await Database.query('''
+          UPDATE group_task
+          SET is_completed = CASE WHEN is_completed = 1 THEN 0 ELSE 1 END,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id_group_task::text = @idTask
+        ''', {'idTask': idTask});
+      } catch (e) {
+        if (e.toString().contains('boolean') || e.toString().contains('42804')) {
+          await Database.query('''
+            UPDATE group_task
+            SET is_completed = NOT COALESCE(is_completed, FALSE),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id_group_task::text = @idTask
+          ''', {'idTask': idTask});
+        } else {
+          rethrow;
+        }
+      }
 
       return Response.ok(
         jsonEncode({
@@ -1259,22 +1333,42 @@ class GroupController {
       }
 
       final idMilestone = (body['id'] ?? body['id_milestone'])?.toString() ?? _uuid.v4();
-      final sql = '''
-        INSERT INTO group_milestone (id_milestone, id_group, title, description, deadline, created_at)
-        VALUES (@idMilestone, @idGroup, @title, @description, @deadline::timestamptz, CURRENT_TIMESTAMP)
-        ON CONFLICT (id_milestone) DO UPDATE SET
-          title = EXCLUDED.title,
-          description = EXCLUDED.description,
-          deadline = EXCLUDED.deadline
-      ''';
+      final existingMilestone = await Database.query(
+        'SELECT id_milestone FROM group_milestone WHERE id_milestone::text = @idMilestone LIMIT 1',
+        {'idMilestone': idMilestone},
+      );
 
-      await Database.query(sql, {
-        'idMilestone': idMilestone,
-        'idGroup': realIdGroup,
-        'title': title,
-        'description': description,
-        'deadline': deadline,
-      });
+      if (existingMilestone.rows.isNotEmpty) {
+        await Database.query(
+          '''
+          UPDATE group_milestone
+          SET title = @title,
+              description = @description,
+              deadline = @deadline::timestamptz
+          WHERE id_milestone::text = @idMilestone
+          ''',
+          {
+            'idMilestone': idMilestone,
+            'title': title,
+            'description': description,
+            'deadline': deadline,
+          },
+        );
+      } else {
+        await Database.query(
+          '''
+          INSERT INTO group_milestone (id_milestone, id_group, title, description, deadline, created_at)
+          VALUES (@idMilestone, @idGroup, @title, @description, @deadline::timestamptz, CURRENT_TIMESTAMP)
+          ''',
+          {
+            'idMilestone': idMilestone,
+            'idGroup': realIdGroup,
+            'title': title,
+            'description': description,
+            'deadline': deadline,
+          },
+        );
+      }
 
       // Update task associations if taskIds provided
       if (taskIds != null && taskIds.isNotEmpty) {

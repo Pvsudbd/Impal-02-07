@@ -120,11 +120,6 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     _teamTaskRepository.fetchMeetingsFromApi(_teamLookupKey, targetTeamName: widget.teamName);
     _teamTaskRepository.fetchMilestonesFromApi(_teamLookupKey);
     _teamTaskRepository.fetchTasksFromApi(_teamLookupKey);
-    if (widget.teamCode.isNotEmpty && widget.teamCode != _teamLookupKey) {
-      _teamTaskRepository.fetchMeetingsFromApi(widget.teamCode, targetTeamName: widget.teamName);
-      _teamTaskRepository.fetchMilestonesFromApi(widget.teamCode);
-      _teamTaskRepository.fetchTasksFromApi(widget.teamCode);
-    }
     _teamMembers = TeamRepository().getCachedMembers(
       _teamLookupKey,
       fallbackUserName: widget.userName,
@@ -148,11 +143,6 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
       _teamTaskRepository.fetchMeetingsFromApi(_teamLookupKey, targetTeamName: widget.teamName);
       _teamTaskRepository.fetchMilestonesFromApi(_teamLookupKey);
       _teamTaskRepository.fetchTasksFromApi(_teamLookupKey);
-      if (widget.teamCode.isNotEmpty && widget.teamCode != _teamLookupKey) {
-        _teamTaskRepository.fetchMeetingsFromApi(widget.teamCode, targetTeamName: widget.teamName);
-        _teamTaskRepository.fetchMilestonesFromApi(widget.teamCode);
-        _teamTaskRepository.fetchTasksFromApi(widget.teamCode);
-      }
       _teamMembers = TeamRepository().getCachedMembers(
         _teamLookupKey,
         fallbackUserName: widget.userName,
@@ -340,7 +330,7 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
         userName: widget.userName,
         groupMembers: _teamMembers,
         onTaskUpdated: (updatedTask) {
-          _teamTaskRepository.updateTask(widget.teamCode, updatedTask);
+          _teamTaskRepository.updateTask(_teamLookupKey, updatedTask);
         },
       );
       return;
@@ -354,13 +344,13 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
           teamName: widget.teamName,
           groupMembers: _teamMembers,
           onTaskUpdated: (updatedTask) {
-            _teamTaskRepository.updateTask(widget.teamCode, updatedTask);
+            _teamTaskRepository.updateTask(_teamLookupKey, updatedTask);
           },
         ),
       ),
     );
     if (result != null && mounted) {
-      _teamTaskRepository.updateTask(widget.teamCode, result);
+      _teamTaskRepository.updateTask(_teamLookupKey, result);
     }
   }
 
@@ -1131,12 +1121,12 @@ class _DashboardTeamPageState extends State<DashboardTeamPage> {
     HapticFeedback.lightImpact();
     final willComplete = !task.isDone;
     _teamTaskRepository.toggleTaskCompletion(
-      teamCode: widget.teamCode,
+      teamCode: _teamLookupKey,
       taskId: task.id,
     );
     if (willComplete) {
       final allDone =
-          _teamTaskRepository.areAllTasksCompleted(widget.teamCode);
+          _teamTaskRepository.areAllTasksCompleted(_teamLookupKey);
       if (allDone) {
         PopUpPemberitahuan.show(
           context,

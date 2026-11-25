@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/reminder_notification_service.dart';
+import '../notifikasi/models/notification_repository.dart';
 import '../../../core/utils/page_transitions.dart';
 import '../../../core/utils/responsive_context.dart';
 import '../../../core/widgets/desktop_slide_drawer_pane.dart';
@@ -93,6 +95,8 @@ class _HomePageState extends State<HomePage> {
     CourseRubricRepository().init();
     TaskTagRepository().init();
     UserProfileRepository().init(userName: widget.userName);
+    NotificationRepository.instance.init();
+    ReminderNotificationService().init();
     TeamRepository().fetchTeamsFromApi();
     TeamRepository().teamsNotifier.addListener(_syncTeamsFromRepo);
     _syncTeamsFromRepo();
@@ -980,9 +984,11 @@ class _HomePageState extends State<HomePage> {
               await prefs.remove('auth_token');
               await prefs.remove('jwt_token');
               await prefs.remove('auth_user');
+              await prefs.remove('saved_task_tags_v1');
               TeamRepository().clear();
               TaskRepository().clear();
               TeamTaskRepository().clear();
+              TaskTagRepository().clear();
               if (mounted) {
                 Navigator.pushReplacement(
                   context,

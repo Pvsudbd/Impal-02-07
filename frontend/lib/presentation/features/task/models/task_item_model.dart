@@ -242,6 +242,26 @@ class TaskItemModel {
         ),
     ];
 
+    final rawCustomTags = json['tags'];
+    if (rawCustomTags is List) {
+      for (final item in rawCustomTags) {
+        if (item is Map) {
+          final label = (item['label'] ?? '').toString().trim();
+          if (label.isEmpty) continue;
+          final already = tags.any((t) => t.label.toLowerCase() == label.toLowerCase());
+          if (!already) {
+            tags.add(
+              TaskTagModel(
+                label: label,
+                backgroundColor: Color((item['background_color'] as num?)?.toInt() ?? 0xFF778BEB),
+                textColor: Color((item['text_color'] as num?)?.toInt() ?? 0xFF1E296B),
+              ),
+            );
+          }
+        }
+      }
+    }
+
     final score = (json['priority_score'] as num?)?.toDouble() ?? 0.0;
     final centroidStr = isPastDeadline
         ? 'N/A (Overdue)'
@@ -283,6 +303,13 @@ class TaskItemModel {
       'is_fuzzy_auto': isAutomaticWeight,
       'is_completed': isCompleted,
       'grade_weight': (gradeWeightPercent != null ? gradeWeightPercent!.toDouble() : 0.0),
+      'tags': tags
+          .map((t) => {
+                'label': t.label,
+                'background_color': t.backgroundColor.toARGB32(),
+                'text_color': t.textColor.toARGB32(),
+              })
+          .toList(),
     };
   }
 

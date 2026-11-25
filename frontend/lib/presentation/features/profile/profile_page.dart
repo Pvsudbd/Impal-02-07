@@ -20,6 +20,9 @@ import 'widgets/profile_settings_group.dart';
 import 'widgets/profile_stats_row.dart';
 import '../team/models/team_repository.dart';
 import '../task/models/task_repository.dart';
+import '../team/models/team_task_repository.dart';
+import '../notifikasi/models/notification_repository.dart';
+import '../../../../core/services/reminder_notification_service.dart';
 
 // Aliases for backwards compatibility with Figma exports
 typedef Profile = ProfilePage;
@@ -245,6 +248,10 @@ class _ProfilePageState extends State<ProfilePage> {
               await prefs.remove('auth_user');
               TeamRepository().clear();
               TaskRepository().clear();
+              TeamTaskRepository().clear();
+              await UserProfileRepository().resetForLogout();
+              await NotificationRepository.instance.clearForLogout();
+              await ReminderNotificationService().stopAndReset();
               if (context.mounted) {
                 Navigator.pushReplacement(
                   context,

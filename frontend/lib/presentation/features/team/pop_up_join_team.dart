@@ -103,6 +103,13 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
     return null;
   }
 
+  bool _isAlreadyJoined(String code) {
+    if (code.length < 4) return false;
+    return TeamRepository().teams.any(
+      (team) => team.inviteCode?.trim().toUpperCase() == code,
+    );
+  }
+
   void _handleJoin() {
     final code = _codeController.text.trim().toUpperCase();
     if (code.length < 4) {
@@ -110,6 +117,15 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
         context,
         title: 'Invite Code Required',
         message: 'Please enter the 4-character team invite code.',
+      );
+      return;
+    }
+
+    if (_isAlreadyJoined(code)) {
+      PopUpPemberitahuan.teamWarning(
+        context,
+        title: 'Already Joined',
+        message: 'You have already joined this team.',
       );
       return;
     }
@@ -127,7 +143,8 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
     final code = _codeController.text.trim().toUpperCase();
     final hasFullCode = code.length == 4;
     final matchedTeam = _findTeamByCode(code);
-    final canSubmit = hasFullCode;
+    final isAlreadyJoined = hasFullCode && _isAlreadyJoined(code);
+    final canSubmit = hasFullCode && !isAlreadyJoined;
     final disableMotion = MediaQuery.disableAnimationsOf(context);
     final animDuration =
         disableMotion ? Duration.zero : const Duration(milliseconds: 180);
@@ -177,6 +194,7 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
                               context,
                               code: code,
                               matchedTeam: matchedTeam,
+                              isAlreadyJoined: isAlreadyJoined,
                             ),
                           )
                         : const SizedBox.shrink(),
@@ -370,14 +388,48 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
     BuildContext context, {
     required String code,
     required DesktopTeamCardData? matchedTeam,
+    bool isAlreadyJoined = false,
   }) {
     final isFound = matchedTeam != null;
-    final accentColor = isFound ? const Color(0xFF10B981) : AppColors.primaryAccent;
+    final Color accentColor;
+    final Key bannerKey;
+    final IconData badgeIcon;
+    final String badgeText;
+    final String messageText;
+    final Color messageColor;
+    final FontWeight messageWeight;
+
+    if (isAlreadyJoined) {
+      accentColor = PopUpPemberitahuan.negativeColor;
+      bannerKey = const ValueKey('join_team_already_joined_banner');
+      badgeIcon = Icons.info_outline_rounded;
+      badgeText = 'ALREADY JOINED';
+      messageText = matchedTeam != null
+          ? 'You have already joined "${matchedTeam.name}".'
+          : 'You have already joined the team with code "$code".';
+      messageColor = Colors.white;
+      messageWeight = FontWeight.w600;
+    } else if (isFound) {
+      accentColor = const Color(0xFF10B981);
+      bannerKey = const ValueKey('join_team_found_banner');
+      badgeIcon = Icons.check_rounded;
+      badgeText = 'TEAM FOUND';
+      messageText =
+          '${matchedTeam.name} (${matchedTeam.badgeLabel} • ${matchedTeam.members.length} Members)';
+      messageColor = Colors.white;
+      messageWeight = FontWeight.w600;
+    } else {
+      accentColor = AppColors.primaryAccent;
+      bannerKey = const ValueKey('join_team_not_found_banner');
+      badgeIcon = Icons.vpn_key_rounded;
+      badgeText = 'TEAM INVITE CODE';
+      messageText = 'Invite code "$code" ready. Tap Join Study Team to connect.';
+      messageColor = AppColors.textMuted;
+      messageWeight = FontWeight.w400;
+    }
 
     return Container(
-      key: ValueKey(
-        isFound ? 'join_team_found_banner' : 'join_team_not_found_banner',
-      ),
+      key: bannerKey,
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -399,13 +451,13 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  isFound ? Icons.check_rounded : Icons.vpn_key_rounded,
+                  badgeIcon,
                   size: 13,
                   color: Colors.white,
                 ),
                 const SizedBox(width: 5),
                 Text(
-                  isFound ? 'TEAM FOUND' : 'TEAM INVITE CODE',
+                  badgeText,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10.5,
@@ -419,14 +471,12 @@ class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
           ),
           const SizedBox(height: 8),
           Text(
-            isFound
-                ? '${matchedTeam.name} (${matchedTeam.badgeLabel} • ${matchedTeam.members.length} Members)'
-                : 'Invite code "$code" ready. Tap Join Study Team to connect.',
+            messageText,
             style: TextStyle(
-              color: isFound ? Colors.white : AppColors.textMuted,
+              color: messageColor,
               fontSize: context.rFont(13, min: 12, max: 14),
               fontFamily: 'Inter',
-              fontWeight: isFound ? FontWeight.w600 : FontWeight.w400,
+              fontWeight: messageWeight,
             ),
           ),
         ],

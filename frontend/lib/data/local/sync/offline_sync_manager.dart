@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:impal_smart_todolist/core/network/api_client.dart';
-import '../isar_service.dart';
+import '../isar_service_io.dart';
 
 /// Pengelola Sinkronisasi Latar Belakang (Offline-First Sync Manager).
 ///

@@ -9,6 +9,8 @@ import '../lib/routes/profile/profile_routes.dart';
 import '../lib/routes/kelompok/group_routes.dart';
 import '../lib/routes/todo/todo_routes.dart';
 import '../lib/routes/task/task_routes.dart';
+import '../lib/routes/tags/tag_routes.dart';
+import '../lib/routes/notifications/notification_routes.dart';
 
 void main(List<String> args) async {
   Database.init();
@@ -121,6 +123,16 @@ void main(List<String> args) async {
   final taskRoutes = fromShelfHandler(TaskRoutes().router);
   app.mount('/api/task', taskRoutes);
   app.mount('/api/tasks', taskRoutes);
+
+  // 7. Mount Tag routes under /api/tags and /api/v1/tags
+  final tagRoutes = fromShelfHandler(TagRoutes().router);
+  app.mount('/api/tags', tagRoutes);
+  app.mount('/api/v1/tags', tagRoutes);
+
+  // 8. Mount Notification routes under /api/notifications and /api/v1/notifications
+  final notificationRoutes = fromShelfHandler(NotificationRoutes().router);
+  app.mount('/api/notifications', notificationRoutes);
+  app.mount('/api/v1/notifications', notificationRoutes);
 
   // ─── GLOBAL DART FROG PIPELINE ────────────────────────────────────────────
   final handler = const Pipeline()

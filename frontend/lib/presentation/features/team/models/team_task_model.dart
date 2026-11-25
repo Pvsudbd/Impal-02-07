@@ -178,6 +178,24 @@ class TeamTaskModel {
             ? rawAssignedTo
             : (rawIdAssignedTo ?? ''));
 
+    final rawTags = map['tags'];
+    final parsedTags = <TaskTagModel>[];
+    if (rawTags is List) {
+      for (final item in rawTags) {
+        if (item is Map) {
+          final label = (item['label'] ?? '').toString().trim();
+          if (label.isEmpty) continue;
+          parsedTags.add(
+            TaskTagModel(
+              label: label,
+              backgroundColor: Color((item['background_color'] as num?)?.toInt() ?? 0xFF778BEB),
+              textColor: Color((item['text_color'] as num?)?.toInt() ?? 0xFF1E296B),
+            ),
+          );
+        }
+      }
+    }
+
     return TeamTaskModel(
       id: (map['id_group_task'] ?? '').toString(),
       title: (map['task_title'] ?? map['title'] ?? '').toString(),
@@ -192,6 +210,7 @@ class TeamTaskModel {
       description: map['description']?.toString(),
       deadline: deadline,
       isAlertEnabled: true,
+      tags: parsedTags,
     );
   }
 
@@ -209,6 +228,13 @@ class TeamTaskModel {
         'id_assigned_to': assignedMemberId!.trim(),
       if (assignedTo.trim().isNotEmpty)
         'assigned_to': assignedTo.trim(),
+      'tags': tags
+          .map((t) => {
+                'label': t.label,
+                'background_color': t.backgroundColor.toARGB32(),
+                'text_color': t.textColor.toARGB32(),
+              })
+          .toList(),
     };
   }
 
