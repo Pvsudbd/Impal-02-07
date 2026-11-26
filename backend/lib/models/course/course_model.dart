@@ -380,4 +380,28 @@ class CourseModel {
       );
     });
   }
+
+  /// Removes a user-owned custom course when it is no longer referenced by any
+  /// `course_schedule` or `task`. Never touches global courses (`id_user IS NULL`).
+  static Future<bool> cleanupUnusedCustomCourse(
+    DbTransaction tx, {
+    required String idCourse,
+    required String idUser,
+  }) async {
+    final result = await tx.query(
+      '''
+      DELETE FROM course
+      WHERE id_course = :idCourse
+        AND id_user = :idUser
+        AND NOT EXISTS (
+          SELECT 1 FROM course_schedule cs WHERE cs.id_course = course.id_course
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM task t WHERE t.id_course = course.id_course
+        )
+      ''',
+      {'idCourse': idCourse, 'idUser': idUser},
+    );
+    return result.affectedRows > 0;
+  }
 }

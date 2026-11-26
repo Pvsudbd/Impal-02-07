@@ -7,6 +7,7 @@ import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../auth/forgot_password_page.dart';
 import '../auth/login_page.dart';
 import '../auth/terms_privacy_page.dart';
+import '../schedule/models/schedule_repository.dart';
 import '../smart_system/smart_priority_page.dart';
 import 'edit_profile_page.dart';
 import 'models/user_profile_model.dart';
@@ -237,6 +238,7 @@ class _ProfilePageState extends State<ProfilePage> {
               await prefs.remove('auth_token');
               await prefs.remove('jwt_token');
               await prefs.remove('auth_user');
+              await ScheduleRepository().clearLocalCache();
               if (context.mounted) {
                 Navigator.pushReplacement(
                   context,

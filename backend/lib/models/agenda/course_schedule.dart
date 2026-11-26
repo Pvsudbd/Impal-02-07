@@ -373,16 +373,32 @@ class CourseSchedule extends Agenda {
           csParams,
         );
       }
+
+      if (resolvedCourseId != null && resolvedCourseId != existing.idCourse) {
+        await CourseModel.cleanupUnusedCustomCourse(
+          tx,
+          idCourse: existing.idCourse,
+          idUser: idUser,
+        );
+      }
     });
   }
 
   static Future<void> delete(String idAgenda, String idUser) async {
     await Database.transaction((tx) async {
       final owned = await tx.query(
-        'SELECT id_agenda FROM agenda WHERE id_agenda = :idAgenda AND id_user = :idUser LIMIT 1',
+        '''
+        SELECT cs.id_course
+        FROM agenda a
+        LEFT JOIN course_schedule cs ON a.id_agenda = cs.id_agenda
+        WHERE a.id_agenda = :idAgenda AND a.id_user = :idUser
+        LIMIT 1
+        ''',
         {'idAgenda': idAgenda, 'idUser': idUser},
       );
       if (owned.rows.isEmpty) return;
+
+      final oldCourseId = owned.rows.first.assoc()['id_course']?.toString();
 
       // Delete child first because legacy live DB tables lack ON DELETE CASCADE FK
       await tx.query(
@@ -393,6 +409,14 @@ class CourseSchedule extends Agenda {
         'DELETE FROM agenda WHERE id_agenda = :idAgenda AND id_user = :idUser',
         {'idAgenda': idAgenda, 'idUser': idUser},
       );
+
+      if (oldCourseId != null && oldCourseId.isNotEmpty) {
+        await CourseModel.cleanupUnusedCustomCourse(
+          tx,
+          idCourse: oldCourseId,
+          idUser: idUser,
+        );
+      }
     });
   }
 }

@@ -376,7 +376,14 @@ void main() {
       expect(updatedData['timeStart'], '09:00');
       expect(updatedData['timeEnd'], '11:30');
 
-      // Delete and verify zero orphan rows in both agenda & course_schedule
+      // Previous unused custom course must be auto-cleaned after switching course
+      final oldCourseCheck = await Database.query(
+        'SELECT COUNT(*) FROM course WHERE id_course = :id',
+        {'id': createdCourseId},
+      );
+      expect(int.parse(oldCourseCheck.rows.first.colAt(0).toString()), 0);
+
+      // Delete and verify zero orphan rows in agenda, course_schedule, & unused custom course
       final delRes = await authed(
         (req) => AgendaController.deleteCourseSchedule(req, agendaId),
         jsonRequest('DELETE', '/api/agenda/course/$agendaId', token: tokenA),
@@ -391,8 +398,13 @@ void main() {
         'SELECT COUNT(*) FROM course_schedule WHERE id_agenda = :id',
         {'id': agendaId},
       );
+      final cleanedCourseCheck = await Database.query(
+        'SELECT COUNT(*) FROM course WHERE id_course = :id',
+        {'id': updatedCourseId},
+      );
       expect(int.parse(parentCheck.rows.first.colAt(0).toString()), 0);
       expect(int.parse(childCheck.rows.first.colAt(0).toString()), 0);
+      expect(int.parse(cleanedCourseCheck.rows.first.colAt(0).toString()), 0);
     });
 
     test('PersonalSchedule CRUD and orphan-free delete', () async {
@@ -525,9 +537,27 @@ void main() {
       );
       expect(delSchedRes.statusCode, 200);
 
+      // Deleting the last referencing schedule auto-cleans the custom course
+      final autoCleanCheck = await Database.query(
+        'SELECT COUNT(*) FROM course WHERE id_course = :id',
+        {'id': customId},
+      );
+      expect(int.parse(autoCleanCheck.rows.first.colAt(0).toString()), 0);
+
+      // Verify explicit DELETE /api/courses/:idCourse works for standalone custom courses
+      final standaloneRes = await authed(
+        CourseController.createCourse,
+        jsonRequest('POST', '/api/courses', token: tokenB, body: {
+          'courseName': 'Standalone Custom $runId',
+        }),
+      );
+      expect(standaloneRes.statusCode, 201);
+      final standaloneId = ((jsonDecode(await standaloneRes.readAsString()) as Map<String, dynamic>)['data'] as Map<String, dynamic>)['idCourse'] as String;
+      createdCourseIds.add(standaloneId);
+
       final allowedDel = await authed(
-        (req) => CourseController.deleteCourse(req, customId),
-        jsonRequest('DELETE', '/api/courses/$customId', token: tokenB),
+        (req) => CourseController.deleteCourse(req, standaloneId),
+        jsonRequest('DELETE', '/api/courses/$standaloneId', token: tokenB),
       );
       expect(allowedDel.statusCode, 200);
 

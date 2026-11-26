@@ -197,9 +197,20 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
     );
     if (confirmed != true) return;
 
-    await ScheduleRepository().deleteSchedule(widget.schedule!.id);
+    final error = await ScheduleRepository().deleteSchedule(widget.schedule!.id);
 
     if (mounted) {
+      if (error != null) {
+        PopUpPemberitahuan.show(
+          context,
+          title: 'Delete Failed',
+          message: error,
+          icon: Icons.error_outline_rounded,
+          iconBgColor: PopUpPemberitahuan.negativeColor,
+          duration: const Duration(milliseconds: 4200),
+        );
+        return;
+      }
       if (isMeeting) {
         PopUpPemberitahuan.meetingDeleted(context);
       } else {
@@ -212,6 +223,21 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
   Future<void> _submitForm() async {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
+
+    final startMinutes = _startTime.hour * 60 + _startTime.minute;
+    final endMinutes = _endTime.hour * 60 + _endTime.minute;
+    if (startMinutes >= endMinutes) {
+      PopUpPemberitahuan.show(
+        context,
+        title: 'Invalid Time Range',
+        message: 'Start time must be earlier than end time.',
+        icon: Icons.error_outline_rounded,
+        iconBgColor: PopUpPemberitahuan.negativeColor,
+        duration: const Duration(milliseconds: 4200),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     final isEdit = widget.isEdit;
@@ -289,16 +315,28 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
         repeat: _repeatWeekly,
       );
 
-      await ScheduleRepository().updateSchedule(updated);
+      final error = await ScheduleRepository().updateSchedule(updated);
 
-      if (mounted) {
-        if (isMeeting) {
-          PopUpPemberitahuan.meetingUpdated(context);
-        } else {
-          PopUpPemberitahuan.scheduleUpdated(context);
-        }
-        Navigator.of(context).pop(true);
+      if (!mounted) return;
+      if (error != null) {
+        setState(() => _isSubmitting = false);
+        PopUpPemberitahuan.show(
+          context,
+          title: 'Failed to Save Schedule',
+          message: error,
+          icon: Icons.error_outline_rounded,
+          iconBgColor: PopUpPemberitahuan.negativeColor,
+          duration: const Duration(milliseconds: 4200),
+        );
+        return;
       }
+
+      if (isMeeting) {
+        PopUpPemberitahuan.meetingUpdated(context);
+      } else {
+        PopUpPemberitahuan.scheduleUpdated(context);
+      }
+      Navigator.of(context).pop(true);
     } else {
       if (!conflictConfirmed) {
         final confirmed = await PopUpMakeSchedule.show(context);
@@ -332,16 +370,28 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
         repeat: _repeatWeekly,
       );
 
-      await ScheduleRepository().addSchedule(newSchedule);
+      final error = await ScheduleRepository().addSchedule(newSchedule);
 
-      if (mounted) {
-        if (isMeeting) {
-          PopUpPemberitahuan.meetingCreated(context);
-        } else {
-          PopUpPemberitahuan.scheduleCreated(context);
-        }
-        Navigator.of(context).pop(true);
+      if (!mounted) return;
+      if (error != null) {
+        setState(() => _isSubmitting = false);
+        PopUpPemberitahuan.show(
+          context,
+          title: 'Failed to Save Schedule',
+          message: error,
+          icon: Icons.error_outline_rounded,
+          iconBgColor: PopUpPemberitahuan.negativeColor,
+          duration: const Duration(milliseconds: 4200),
+        );
+        return;
       }
+
+      if (isMeeting) {
+        PopUpPemberitahuan.meetingCreated(context);
+      } else {
+        PopUpPemberitahuan.scheduleCreated(context);
+      }
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -509,7 +559,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
                       _buildTextField(
                         key: isMeeting ? const ValueKey('create_meeting_location_input') : null,
                         controller: _locationController,
-                        maxLength: 80,
+                        maxLength: isLecture ? 50 : 100,
                         hint: isLecture
                             ? 'e.g. KTT B-106 • SSIF-04-REG-GAB02'
                             : (isMeeting

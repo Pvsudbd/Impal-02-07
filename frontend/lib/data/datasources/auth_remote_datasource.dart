@@ -14,11 +14,11 @@ class AuthRemoteDatasource {
     if (response['status'] == 'success') {
       return response;
     } else {
-      throw Exception(response['message'] ?? 'Login gagal');
+      throw Exception(response['message'] ?? 'Login failed');
     }
   }
 
-  /// Register — returns idStudent atau throws Exception dengan pesan error
+  /// Register — returns idUser atau throws Exception dengan pesan error
   static Future<String> register({
     required String name,
     required String email,
@@ -34,9 +34,9 @@ class AuthRemoteDatasource {
     );
 
     if (response['status'] == 'success') {
-      return response['idStudent'] as String;
+      return (response['idUser'] ?? response['idStudent'])?.toString() ?? '';
     } else {
-      throw Exception(response['message'] ?? 'Registrasi gagal');
+      throw Exception(response['message'] ?? 'Registration failed');
     }
   }
 }

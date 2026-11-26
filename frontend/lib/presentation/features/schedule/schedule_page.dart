@@ -239,15 +239,23 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
           : 'Are you sure you want to delete this schedule? This action cannot be undone.',
     );
     if (confirmed == true) {
-      await _repo.deleteSchedule(item.id);
-      if (mounted) {
-        if (isMeeting) {
-          PopUpPemberitahuan.meetingDeleted(context);
-        } else {
-          PopUpPemberitahuan.scheduleDeleted(context);
-        }
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
+      final error = await _repo.deleteSchedule(item.id);
+      if (!mounted) return;
+      if (error != null) {
+        PopUpPemberitahuan.error(
+          context,
+          title: 'Delete Failed',
+          message: error,
+        );
+        return;
+      }
+      if (isMeeting) {
+        PopUpPemberitahuan.meetingDeleted(context);
+      } else {
+        PopUpPemberitahuan.scheduleDeleted(context);
+      }
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             duration: const Duration(seconds: 4),
             backgroundColor: const Color(0xFF323846),
@@ -266,7 +274,6 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
             ),
           ),
         );
-      }
     }
   }
 

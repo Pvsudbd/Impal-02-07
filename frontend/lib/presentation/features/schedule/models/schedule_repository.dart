@@ -83,44 +83,49 @@ class ScheduleRepository {
     }
   }
 
-  Future<void> addSchedule(ScheduleModel item) async {
-    // 1. Optimistic update tampilan lokal
-    final current = List<ScheduleModel>.from(schedulesNotifier.value);
+  Future<String?> addSchedule(ScheduleModel item) async {
+    // 1. Optimistic update tampilan lokal (simpan snapshot untuk rollback)
+    final previousList = List<ScheduleModel>.from(schedulesNotifier.value);
+    final current = List<ScheduleModel>.from(previousList);
     current.insert(0, item);
     schedulesNotifier.value = current;
     await _persist();
 
-    // 2. Kirim dan simpan ke Backend API & MySQL
+    // 2. Kirim dan simpan ke Backend API & PostgreSQL
     final token = await _getToken();
-    if (token != null && token.isNotEmpty) {
-      try {
-        String dayName(DateTime dt) {
-          const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-          return days[dt.weekday - 1];
-        }
+    if (token == null || token.isEmpty) return null;
 
-        final isCourse = item.type.toLowerCase() == 'lecture';
-        final isMeeting = item.type.toLowerCase() == 'meeting';
-        final body = {
-          'id': item.id,
-          'title': item.title,
-          'type': item.type,
-          'agendaType': isCourse ? 'COURSE' : 'PERSONAL',
-          'timeStart': item.timeStart,
-          'timeEnd': item.timeEnd,
-          'date': item.date.toIso8601String(),
-          'courseCode': item.course ?? item.title,
-          'day': dayName(item.date),
-          'room': item.location ?? 'Classroom',
-          'category': isCourse ? 'Kuliah' : (isMeeting ? 'Meeting' : 'External'),
-          'location': item.location ?? '',
-          'notes': item.notes ?? '',
-          if (item.meetingUrl != null && item.meetingUrl!.isNotEmpty) 'meetingUrl': item.meetingUrl,
-          if (item.teamName != null && item.teamName!.isNotEmpty) 'teamName': item.teamName,
-        };
+    try {
+      String dayName(DateTime dt) {
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        return days[dt.weekday - 1];
+      }
 
-        final response = await ApiClient.post('/api/agenda', body, token: token);
-        if (response['status'] == 'success' && response['data'] != null) {
+      final isCourse = item.type.toLowerCase() == 'lecture';
+      final isMeeting = item.type.toLowerCase() == 'meeting';
+      final resolvedCourseName = item.course ?? item.title;
+      final body = {
+        'id': item.id,
+        'title': item.title,
+        'type': item.type,
+        'agendaType': isCourse ? 'COURSE' : 'PERSONAL',
+        'timeStart': item.timeStart,
+        'timeEnd': item.timeEnd,
+        'date': item.date.toIso8601String(),
+        'course': resolvedCourseName,
+        'courseName': resolvedCourseName,
+        'day': dayName(item.date),
+        'room': item.location ?? 'Classroom',
+        'category': isCourse ? 'Kuliah' : (isMeeting ? 'Meeting' : 'External'),
+        'location': item.location ?? '',
+        'notes': item.notes ?? '',
+        if (item.meetingUrl != null && item.meetingUrl!.isNotEmpty) 'meetingUrl': item.meetingUrl,
+        if (item.teamName != null && item.teamName!.isNotEmpty) 'teamName': item.teamName,
+      };
+
+      final response = await ApiClient.post('/api/agenda', body, token: token);
+      if (response['status'] == 'success') {
+        if (response['data'] is Map<String, dynamic>) {
           final serverItem = ScheduleModel.fromMap(response['data'] as Map<String, dynamic>);
           final updatedList = List<ScheduleModel>.from(schedulesNotifier.value);
           final idx = updatedList.indexWhere((s) => s.id == item.id);
@@ -130,15 +135,28 @@ class ScheduleRepository {
             await _persist();
           }
         }
-      } catch (e) {
-        debugPrint('[SCHEDULE_REPO] addSchedule API error: $e');
+        return null;
       }
+
+      // Rollback jika server menolak
+      schedulesNotifier.value = previousList;
+      await _persist();
+      return _normalizeApiError(
+        response['message'],
+        'Failed to sync schedule with server.',
+      );
+    } catch (e) {
+      debugPrint('[SCHEDULE_REPO] addSchedule API error: $e');
+      schedulesNotifier.value = previousList;
+      await _persist();
+      return 'Unable to connect to server. Changes were reverted.';
     }
   }
 
-  Future<void> updateSchedule(ScheduleModel item) async {
-    // 1. Optimistic update tampilan lokal
-    final current = List<ScheduleModel>.from(schedulesNotifier.value);
+  Future<String?> updateSchedule(ScheduleModel item) async {
+    // 1. Optimistic update tampilan lokal (simpan snapshot untuk rollback)
+    final previousList = List<ScheduleModel>.from(schedulesNotifier.value);
+    final current = List<ScheduleModel>.from(previousList);
     final index = current.indexWhere((s) => s.id == item.id);
     if (index != -1) {
       current[index] = item;
@@ -146,58 +164,131 @@ class ScheduleRepository {
       await _persist();
     }
 
-    // 2. Kirim update ke Backend API & MySQL
+    // 2. Kirim update ke Backend API & PostgreSQL
     final token = await _getToken();
-    if (token != null && token.isNotEmpty) {
-      try {
-        String dayName(DateTime dt) {
-          const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-          return days[dt.weekday - 1];
-        }
+    if (token == null || token.isEmpty) return null;
 
-        final isCourse = item.type.toLowerCase() == 'lecture';
-        final isMeeting = item.type.toLowerCase() == 'meeting';
-        final body = {
-          'id': item.id,
-          'title': item.title,
-          'type': item.type,
-          'agendaType': isCourse ? 'COURSE' : 'PERSONAL',
-          'timeStart': item.timeStart,
-          'timeEnd': item.timeEnd,
-          'date': item.date.toIso8601String(),
-          'courseCode': item.course ?? item.title,
-          'day': dayName(item.date),
-          'room': item.location ?? 'Classroom',
-          'category': isCourse ? 'Kuliah' : (isMeeting ? 'Meeting' : 'External'),
-          'location': item.location ?? '',
-          'notes': item.notes ?? '',
-          if (item.meetingUrl != null && item.meetingUrl!.isNotEmpty) 'meetingUrl': item.meetingUrl,
-          if (item.teamName != null && item.teamName!.isNotEmpty) 'teamName': item.teamName,
-        };
-
-        await ApiClient.put('/api/agenda/${item.id}', body, token: token);
-      } catch (e) {
-        debugPrint('[SCHEDULE_REPO] updateSchedule API error: $e');
+    try {
+      String dayName(DateTime dt) {
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        return days[dt.weekday - 1];
       }
+
+      final isCourse = item.type.toLowerCase() == 'lecture';
+      final isMeeting = item.type.toLowerCase() == 'meeting';
+      final resolvedCourseName = item.course ?? item.title;
+      final body = {
+        'id': item.id,
+        'title': item.title,
+        'type': item.type,
+        'agendaType': isCourse ? 'COURSE' : 'PERSONAL',
+        'timeStart': item.timeStart,
+        'timeEnd': item.timeEnd,
+        'date': item.date.toIso8601String(),
+        'course': resolvedCourseName,
+        'courseName': resolvedCourseName,
+        'day': dayName(item.date),
+        'room': item.location ?? 'Classroom',
+        'category': isCourse ? 'Kuliah' : (isMeeting ? 'Meeting' : 'External'),
+        'location': item.location ?? '',
+        'notes': item.notes ?? '',
+        if (item.meetingUrl != null && item.meetingUrl!.isNotEmpty) 'meetingUrl': item.meetingUrl,
+        if (item.teamName != null && item.teamName!.isNotEmpty) 'teamName': item.teamName,
+      };
+
+      final response = await ApiClient.put('/api/agenda/${item.id}', body, token: token);
+      if (response['status'] == 'success') {
+        if (response['data'] is Map<String, dynamic>) {
+          final serverItem = ScheduleModel.fromMap(response['data'] as Map<String, dynamic>);
+          final updatedList = List<ScheduleModel>.from(schedulesNotifier.value);
+          final idx = updatedList.indexWhere((s) => s.id == item.id);
+          if (idx != -1) {
+            updatedList[idx] = serverItem;
+            schedulesNotifier.value = updatedList;
+            await _persist();
+          }
+        }
+        return null;
+      }
+
+      schedulesNotifier.value = previousList;
+      await _persist();
+      return _normalizeApiError(
+        response['message'],
+        'Failed to update schedule on server.',
+      );
+    } catch (e) {
+      debugPrint('[SCHEDULE_REPO] updateSchedule API error: $e');
+      schedulesNotifier.value = previousList;
+      await _persist();
+      return 'Unable to connect to server. Changes were reverted.';
     }
   }
 
-  Future<void> deleteSchedule(String id) async {
-    // 1. Optimistic delete tampilan lokal
-    final current = List<ScheduleModel>.from(schedulesNotifier.value);
+  Future<String?> deleteSchedule(String id) async {
+    // 1. Optimistic delete tampilan lokal (simpan snapshot untuk rollback)
+    final previousList = List<ScheduleModel>.from(schedulesNotifier.value);
+    final current = List<ScheduleModel>.from(previousList);
     current.removeWhere((s) => s.id == id);
     schedulesNotifier.value = current;
     await _persist();
 
-    // 2. Hapus di Backend API & MySQL
+    // 2. Hapus di Backend API & PostgreSQL
     final token = await _getToken();
-    if (token != null && token.isNotEmpty) {
-      try {
-        await ApiClient.delete('/api/agenda/$id', token: token);
-      } catch (e) {
-        debugPrint('[SCHEDULE_REPO] deleteSchedule API error: $e');
+    if (token == null || token.isEmpty) return null;
+
+    try {
+      final response = await ApiClient.delete('/api/agenda/$id', token: token);
+      if (response['status'] == 'success') {
+        return null;
       }
+
+      schedulesNotifier.value = previousList;
+      await _persist();
+      return _normalizeApiError(
+        response['message'],
+        'Failed to delete schedule on server.',
+      );
+    } catch (e) {
+      debugPrint('[SCHEDULE_REPO] deleteSchedule API error: $e');
+      schedulesNotifier.value = previousList;
+      await _persist();
+      return 'Unable to connect to server. Changes were reverted.';
     }
+  }
+
+  static String _normalizeApiError(dynamic rawMessage, String fallback) {
+    final msg = rawMessage?.toString().trim() ?? '';
+    if (msg.isEmpty) return fallback;
+    final lower = msg.toLowerCase();
+    if (lower.contains('waktu mulai harus lebih awal')) {
+      return 'Start time must be earlier than end time.';
+    }
+    if (lower.contains('maksimal 30 mata kuliah')) {
+      return 'Maximum limit of 30 custom courses reached.';
+    }
+    if (lower.contains('room maksimal 50')) {
+      return 'Location / room cannot exceed 50 characters.';
+    }
+    if (lower.contains('format waktu')) {
+      return 'Invalid time format. Use HH:MM (00:00 - 23:59).';
+    }
+    if (lower.contains('field wajib diisi')) {
+      return 'Please complete all required schedule fields.';
+    }
+    if (lower.contains('tidak ditemukan')) {
+      return 'Schedule or course not found on server.';
+    }
+    return msg;
+  }
+
+  Future<void> clearLocalCache() async {
+    _initialized = false;
+    schedulesNotifier.value = [];
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_storageKey);
+    } catch (_) {}
   }
 
   void resetToDefault() {
