@@ -6,6 +6,7 @@
 - **DILARANG KERAS** menggunakan `BackdropFilter` blur GPU berat di HP Kentang. Wajib menggunakan warna semi-transparan datar (*flat opacity*).
 - **DILARANG** meletakkan `Column` tanpa batas tinggi di dalam `Dialog` atau `BottomSheet` yang menyebabkan layout error (*unbounded vertical viewport*).
 - **DILARANG** menggunakan `SingleChildScrollView + Column` untuk daftar data > 20 item. Wajib gunakan `ListView.builder` atau `SliverList`.
+- **DILARANG** memakai `Container(alignment: Alignment.center)` (atau `Align` tanpa `widthFactor: 1.0`) untuk pill, badge, atau tombol di dalam `Wrap` / bounded width. Di Flutter, `RenderPositionedBox` dengan `widthFactor: null` dan `constraints.maxWidth` berhingga akan melebar 100% mengikuti lebar induk (*full-width bar*) dan turun baris; selalu gunakan `Row(mainAxisSize: MainAxisSize.min)` atau `Center(widthFactor: 1.0, heightFactor: 1.0)`.
 
 ### 2. Badge & Kartu Tugas
 - **DILARANG** membuat kontainer `Stack` kartu tugas tanpa `width: double.infinity`. Jika kontainer menyusut (*shrink-wrap*), badge akan menempel pada judul yang pendek (*anti-clustering violation*).

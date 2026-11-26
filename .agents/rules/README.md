@@ -19,6 +19,7 @@ Direktori ini adalah **pusat standarisasi modular (*single source of truth*)** u
 | [motion_spec.md](./motion_spec.md) | Protokol Animasi 60 FPS, Durasi 150–350 ms, Shimmer Skeleton Loader, dan Kepatuhan *Reduced Motion*. |
 | [security_hardening_rules.md](./security_hardening_rules.md) | Standar Keamanan OWASP Mobile Top 10, Zero Insecure Storage (`flutter_secure_storage`), Anti-SQL Injection, & Proteksi Token. |
 | [figcraft_canvas_rules.md](./figcraft_canvas_rules.md) | Inisiasi Day-0 Design System (9 Pilar), Gerbang Persetujuan Skill Desain, & Sinkronisasi Tiga Arah (Figma $\leftrightarrow$ Flutter). |
+| [desktop_form_modal_rules.md](./desktop_form_modal_rules.md) | Paritas Wording & Header Mobile pada Modal Formulir Desktop (`Title Case` non-ALL-CAPS, tanpa subjudul ekstra di bawah judul, `Time Duration`/`Repeat Weekly`, `[✕]` tanpa `Cancel` redundan, & border fokus oranye). |
 
 ---
 

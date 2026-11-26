@@ -39,6 +39,13 @@ class TaskRoutes {
       )(req),
     );
 
+    router.put(
+      '/<idTask>/toggle',
+      (Request req, String idTask) => authPipeline.addHandler(
+        (Request r) => TaskController.toggleComplete(r, idTask),
+      )(req),
+    );
+
     router.delete(
       '/<idTask>',
       (Request req, String idTask) => authPipeline.addHandler(

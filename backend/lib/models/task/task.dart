@@ -16,7 +16,7 @@ class Task {
   String _priority;
   bool _isFuzzyAuto;
   bool _isCompleted;
-  List<String> _tags;
+  List<dynamic> _tags;
   DateTime? _createdAt;
   DateTime? _updatedAt;
 
@@ -33,7 +33,7 @@ class Task {
     required String priority,
     required bool isFuzzyAuto,
     bool isCompleted = false,
-    List<String> tags = const [],
+    List<dynamic> tags = const [],
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : _taskId = taskId,
@@ -48,23 +48,33 @@ class Task {
         _priority = priority,
         _isFuzzyAuto = isFuzzyAuto,
         _isCompleted = isCompleted,
-        _tags = List<String>.from(tags),
+        _tags = List<dynamic>.from(tags),
         _createdAt = createdAt,
         _updatedAt = updatedAt;
 
-  static List<String> _parseTags(dynamic raw) {
+  static List<dynamic> _parseTags(dynamic raw) {
+    List<dynamic> normalizeList(List items) {
+      final result = <dynamic>[];
+      for (final item in items) {
+        if (item is Map) {
+          result.add(Map<String, dynamic>.from(item));
+        } else {
+          final text = item.toString().trim();
+          if (text.isNotEmpty) result.add(text);
+        }
+      }
+      return result;
+    }
+
     if (raw == null) return [];
     if (raw is List) {
-      return raw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+      return normalizeList(raw);
     }
     if (raw is String && raw.trim().isNotEmpty) {
       try {
         final decoded = jsonDecode(raw);
         if (decoded is List) {
-          return decoded
-              .map((e) => e.toString())
-              .where((e) => e.isNotEmpty)
-              .toList();
+          return normalizeList(decoded);
         }
       } catch (_) {}
     }
@@ -142,6 +152,7 @@ class Task {
       'id_user': _idUser,
       'idCourse': _idCourse,
       'id_course': _idCourse,
+      'course': _courseName,
       'courseName': _courseName,
       'course_name': _courseName,
       'title': _taskTitle,
@@ -177,7 +188,7 @@ class Task {
   String get priority => _priority;
   bool get isFuzzyAuto => _isFuzzyAuto;
   bool get isCompleted => _isCompleted;
-  List<String> get tags => List.unmodifiable(_tags);
+  List<dynamic> get tags => List.unmodifiable(_tags);
   DateTime? get createdAt => _createdAt;
   DateTime? get updatedAt => _updatedAt;
 
@@ -298,7 +309,7 @@ class Task {
     bool isFuzzyAuto = true,
     String? manualPriority,
     double? manualPriorityScore,
-    List<String> tags = const [],
+    List<dynamic> tags = const [],
   }) async {
     final safeTitle = taskTitle.trim().length > 150
         ? taskTitle.trim().substring(0, 150)
@@ -384,7 +395,7 @@ class Task {
     String? manualPriority,
     double? manualPriorityScore,
     bool? isCompleted,
-    List<String>? tags,
+    List<dynamic>? tags,
   }) async {
     final existing = await findById(idTask, idUser);
     if (existing == null) return null;

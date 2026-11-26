@@ -1,26 +1,41 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
+import '../detail_card_smart_priority.dart';
 import '../models/smart_priority_model.dart';
 
 class SmartPriorityTaskCard extends StatelessWidget {
   final SmartPriorityModel item;
   final VoidCallback onTap;
+  final bool isExpanded;
+  final bool showExpandChevron;
 
   const SmartPriorityTaskCard({
     super.key,
     required this.item,
     required this.onTap,
+    this.isExpanded = false,
+    this.showExpandChevron = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final disableMotion = MediaQuery.disableAnimationsOf(context);
+    final animDuration =
+        disableMotion ? Duration.zero : const Duration(milliseconds: 220);
+
     return Container(
       width: double.infinity,
       margin: EdgeInsets.only(bottom: context.rSpacing(12)),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
         borderRadius: BorderRadius.circular(14),
+        border: isExpanded
+            ? Border.all(
+                color: item.levelColor.withValues(alpha: 0.55),
+                width: 1.2,
+              )
+            : null,
         boxShadow: const [
           BoxShadow(
             color: Color(0x22000000),
@@ -42,7 +57,7 @@ class SmartPriorityTaskCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Top Row: Rank Category Label + Crisp Score & Level Badge
+                // Top Row: Rank Category Label + Crisp Score, Level Badge & Expand Chevron
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -95,6 +110,19 @@ class SmartPriorityTaskCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (showExpandChevron) ...[
+                          SizedBox(width: context.rSpacing(4)),
+                          AnimatedRotation(
+                            turns: isExpanded ? 0.5 : 0.0,
+                            duration: animDuration,
+                            curve: Curves.easeInOut,
+                            child: Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: context.rIcon(18),
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -195,6 +223,29 @@ class SmartPriorityTaskCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+
+                // Inline Expandable XAI Dropdown Details (Mobile Accordion)
+                AnimatedSize(
+                  duration: animDuration,
+                  curve: Curves.easeInOut,
+                  alignment: Alignment.topCenter,
+                  child: isExpanded
+                      ? Column(
+                          key: ValueKey('smart_priority_expanded_${item.id}'),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(height: context.rSpacing(14)),
+                            const Divider(
+                              color: AppColors.borderSubtle,
+                              height: 1,
+                            ),
+                            SizedBox(height: context.rSpacing(14)),
+                            SmartPriorityExplainabilityDetails(item: item),
+                          ],
+                        )
+                      : const SizedBox(width: double.infinity),
                 ),
               ],
             ),

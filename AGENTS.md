@@ -49,7 +49,7 @@
 - **5 Aturan Emas 60 FPS:** Konstruktor `const`, `cacheWidth`/`cacheHeight` pada bitmap, `ListView.builder`/`SliverList` untuk > 20 item, hindari `BackdropFilter` berat (pakai *flat opacity*), dan isolasi animasi dengan `RepaintBoundary`.
 - **Standar UX & Formulir:** Matriks 5 State (Ideal, Empty, Shimmer, Error Recovery, Offline), no-paste-blocking, tombol loading tetap menampilkan label teks, `FocusScope.of(context).unfocus()`, anti double-submit, `FontFeature.tabularFigures()` pada jam/angka, dan `r_inner = r_outer - padding`.
 - **Standar Kartu & Pop-Up:** Lihat detail di [schedule_card_rules.md](.agents/rules/schedule_card_rules.md), [ui_language_rules.md](.agents/rules/ui_language_rules.md), dan `.agents/memory/project_conventions.md` (100% English UI untuk pop-up, positif `#10B981`, negatif/peringatan `#FA6144`).
-- **Desktop ($\ge 1024$ dp):** BottomNav $\rightarrow$ `NavigationRail` (240–280 dp), List $\rightarrow$ Master-Detail Split View (panel kiri 380 dp), BottomSheet $\rightarrow$ Centered Dialog (max 520 dp), Pull-to-refresh $\rightarrow$ Explicit Refresh Button.
+- **Desktop ($\ge 1024$ dp):** BottomNav $\rightarrow$ `NavigationRail` (240–280 dp), List $\rightarrow$ Master-Detail Split View (panel kiri 380 dp), BottomSheet $\rightarrow$ Centered Dialog (max 520 dp), Pull-to-refresh $\rightarrow$ Explicit Refresh Button, dan modal paritas mobile ([desktop_form_modal_rules.md](.agents/rules/desktop_form_modal_rules.md)).
 - **Protokol Retrofit 3 Langkah:** Audit Gap $\rightarrow$ Micro-Refactoring Terfokus $\rightarrow$ Test Lockdown (`dart analyze` 0 error/warning).
 
 ---

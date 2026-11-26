@@ -1,5 +1,6 @@
 class ToDoItem {
   String _itemId;
+  String _userId;
   String _activityTitle;
   String _notes;
   DateTime _date;
@@ -7,11 +8,13 @@ class ToDoItem {
 
   ToDoItem({
     required String itemId,
+    String userId = '',
     required String activityTitle,
     required String notes,
     required DateTime date,
     bool isDone = false,
   })  : _itemId = itemId,
+        _userId = userId,
         _activityTitle = activityTitle,
         _notes = notes,
         _date = date,
@@ -25,9 +28,10 @@ class ToDoItem {
     }
 
     return ToDoItem(
-      itemId: json['id_item'] ?? '',
-      activityTitle: json['activity_title'] ?? '',
-      notes: json['notes'] ?? '',
+      itemId: json['id_item']?.toString() ?? '',
+      userId: json['id_user']?.toString() ?? json['userId']?.toString() ?? '',
+      activityTitle: json['activity_title']?.toString() ?? json['title']?.toString() ?? '',
+      notes: json['notes']?.toString() ?? '',
       date: parseDate(json['date']),
       isDone: json['is_done'] == 1 || json['is_done'] == true,
     );
@@ -36,6 +40,7 @@ class ToDoItem {
   Map<String, dynamic> toJson() {
     return {
       'id_item': _itemId,
+      'id_user': _userId,
       'activity_title': _activityTitle,
       'notes': _notes,
       'date': _date.toIso8601String(),
@@ -44,10 +49,13 @@ class ToDoItem {
   }
 
   String get itemId => _itemId;
+  String get userId => _userId;
   String get activityTitle => _activityTitle;
   String get notes => _notes;
   DateTime get date => _date;
   bool get isDone => _isDone;
+
+  set userId(String val) => _userId = val;
 
   void toggleStatus() {
     _isDone = !_isDone;

@@ -82,6 +82,7 @@ Berikut adalah pembagian peran penyimpanan untuk setiap entitas yang didefinisik
 | **11** | **`meeting_schedule` (Rapat Tim)** | **Ya** *(Cache Kalender Tim)* | **Ya** *(Jadwal Bersama)* | **Hybrid**. Jadwal rapat tim dicache di Isar agar anggota tim tahu agenda sinkronisasi berikutnya dan tautan platform/ruangan. |
 | **12** | **`group_task` (Tugas Besar Tim)** | **Ya** *(Cache Tugas Tim)* | **Ya** *(Pusat Kolaborasi)* | **Hybrid**. Disimpan di Isar untuk monitoring progres kelompok offline. Penunjukan PIC (`assignPIC`) disinkronkan ke seluruh anggota melalui PostgreSQL. |
 | **13** | **`group_sub_task` (Sub-Tugas Anggota)**| **Ya** *(Local Work Unit)* | **Ya** *(Tabel Rincian)* | **Hybrid**. Setiap anggota dapat melihat dan menandai selesai sub-tugas yang didelegasikan kepadanya, lalu di-push ke server untuk mengupdate persentase akumulasi bobot kelompok. |
+| **14** | **`user_preferences` (Preferensi Reminder & Briefing)** | **Ya** *(`UserCollection.preferencesJson` / SharedPreferences)* | **Ya** *(Primary SSOT)* | **Hybrid**. Menyimpan aturan pengingat (`Task Deadlines`, `Schedule Alerts`, `Team Alerts`), jadwal `Daily Morning Briefing`, `soundMode`, serta toggle AI (`isFuzzyModelActive`, `scoreExplainabilityEnabled`) per user. |
 
 ---
 
@@ -175,6 +176,36 @@ class AgendaCollection {
 }
 ```
 
+### C. Contoh Model Koleksi Isar: `GroupCollection`
+```dart
+import 'package:isar/isar.dart';
+
+part 'group_collection.g.dart';
+
+@collection
+class GroupCollection {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true)
+  late String remoteId; // id_group (UUID v4 di PostgreSQL)
+
+  late String idLeader;
+  late String groupName;
+  String? description;
+
+  @Index()
+  late String inviteCode;
+
+  late int groupSize; // Jumlah anggota aktual (minimal 1)
+  late DateTime createdAt;
+
+  // Metadata Sinkronisasi
+  late DateTime updatedAt;
+  late bool isSynced;
+  String? syncAction;
+}
+```
+
 ---
 
 ## 5. Spesifikasi Struktur PostgreSQL (Remote Relational DDL di Server)
@@ -257,9 +288,26 @@ CREATE TABLE task (
     priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM' CHECK (priority IN ('VERY HIGH', 'HIGH', 'MEDIUM', 'LOW')),
     is_fuzzy_auto BOOLEAN NOT NULL DEFAULT TRUE,
     is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    tags JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ============================================================================
+-- 5B. TABEL: task_tags (Custom Task Tags per User)
+-- ============================================================================
+CREATE TABLE task_tags (
+    id_tag VARCHAR(36) PRIMARY KEY,
+    id_user VARCHAR(36) NOT NULL REFERENCES users(id_user) ON DELETE CASCADE,
+    label VARCHAR(24) NOT NULL,
+    background_color BIGINT NOT NULL,
+    text_color BIGINT NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX uq_task_tags_user_label ON task_tags (id_user, LOWER(label));
 
 -- ============================================================================
 -- 6. TABEL: todo_item (Item Checklist Harian)
@@ -276,14 +324,38 @@ CREATE TABLE todo_item (
 );
 
 -- ============================================================================
--- 7. TABEL: notification (Riwayat Pengingat & Alert)
+-- 7. TABEL: notification (Riwayat Pengingat & Alert) & user_preferences
 -- ============================================================================
-CREATE TABLE notification (
+CREATE TABLE IF NOT EXISTS user_preferences (
+    id_user VARCHAR(50) PRIMARY KEY,
+    sound_vibration_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    is_fuzzy_model_active BOOLEAN NOT NULL DEFAULT TRUE,
+    score_explainability_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    task_deadline_alerts JSONB NOT NULL DEFAULT '{"enabled": true, "timings": ["H-1 (24 Hours)", "1 Hour"], "soundMode": "vibrationOnly"}'::jsonb,
+    lecture_schedule_alerts JSONB NOT NULL DEFAULT '{"enabled": true, "timings": ["30 Minutes", "15 Minutes"], "soundMode": "soundAndVibrate"}'::jsonb,
+    external_schedule_alerts JSONB NOT NULL DEFAULT '{"enabled": true, "timings": ["H-1 (24 Hours)", "1 Hour"], "soundMode": "vibrationOnly"}'::jsonb,
+    team_task_alerts JSONB NOT NULL DEFAULT '{"enabled": true, "timings": ["H-1 (24 Hours)", "3 Hours"], "soundMode": "vibrationOnly"}'::jsonb,
+    team_meeting_alerts JSONB NOT NULL DEFAULT '{"enabled": true, "timings": ["1 Hour", "15 Minutes"], "soundMode": "soundOnly"}'::jsonb,
+    daily_briefing_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    daily_briefing_time VARCHAR(20) NOT NULL DEFAULT '07:00 WIB',
+    daily_briefing_topics JSONB NOT NULL DEFAULT '["personal_tasks", "lecture_schedule", "external_schedule", "team_tasks", "team_meetings"]'::jsonb,
+    daily_briefing_compact BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS notification (
     id_notification VARCHAR(50) PRIMARY KEY,
-    id_user VARCHAR(50) NOT NULL REFERENCES users(id_user) ON DELETE CASCADE,
-    id_task VARCHAR(50) REFERENCES task(id_task) ON DELETE SET NULL,
-    message_title VARCHAR(100) NOT NULL,
+    id_user VARCHAR(50) NOT NULL,
+    id_task VARCHAR(50),
+    category VARCHAR(30) NOT NULL DEFAULT 'deadline',
+    category_label VARCHAR(100) NOT NULL DEFAULT 'Reminder',
+    status_tag VARCHAR(60) NOT NULL DEFAULT 'Upcoming',
+    message_title VARCHAR(150) NOT NULL,
     message TEXT NOT NULL,
+    action_label VARCHAR(50) DEFAULT 'View →',
+    action_type VARCHAR(30) DEFAULT 'view_task',
+    target_id VARCHAR(50),
+    dedup_key VARCHAR(150),
     sent_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -299,6 +371,7 @@ CREATE TABLE groups (
     group_name VARCHAR(100) NOT NULL,
     description TEXT,
     invite_code VARCHAR(20) UNIQUE NOT NULL,
+    group_size INT NOT NULL DEFAULT 1 CHECK (group_size >= 1),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -415,7 +488,7 @@ CREATE INDEX idx_sub_task_assigned ON group_sub_task(id_assigned_to);
 ## 8. Spesifikasi Arsitektur Backend API (Dart Frog & PostgreSQL)
 
 1. **Framework Resmi**: **Dart Frog** (`dart_frog`) digunakan sebagai standar framework backend RESTful API.
-2. **Koneksi Database Remote**: Menggunakan driver resmi `postgres: ^3.6.0` yang terhubung ke instance PostgreSQL server (`172.22.245.175:5432`) dengan database `db_manajemen_tugas`.
+2. **Koneksi Database Remote**: Menggunakan driver resmi `postgres: ^3.6.0` yang terhubung ke instance PostgreSQL server Yoga (`10.147.115.231:5432`) dengan database `db_manajemen_tugas`.
 3. **Standar Format Response (JSON Envelope)**:
    Seluruh endpoint mengembalikan format response standar yang konsisten:
    ```json

@@ -23,17 +23,24 @@ class TaskController {
     );
   }
 
-  static List<String>? _validateTags(dynamic raw) {
+  static List<dynamic>? _validateTags(dynamic raw) {
     if (raw == null) return null;
     if (raw is! List) return null;
     if (raw.length > 20) return null;
-    final result = <String>[];
+    final result = <dynamic>[];
     for (final item in raw) {
-      if (item is! String) return null;
-      final trimmed = item.trim();
-      if (trimmed.isNotEmpty) {
-        if (trimmed.length > 32) return null;
-        result.add(trimmed);
+      if (item is String) {
+        final trimmed = item.trim();
+        if (trimmed.isNotEmpty) {
+          if (trimmed.length > 32) return null;
+          result.add(trimmed);
+        }
+      } else if (item is Map) {
+        final label = (item['label'] ?? '').toString().trim();
+        if (label.isEmpty || label.length > 32) return null;
+        result.add(Map<String, dynamic>.from(item));
+      } else {
+        return null;
       }
     }
     return result;
@@ -243,14 +250,15 @@ class TaskController {
         );
       }
 
-      var tags = const <String>[];
+      var tags = const <dynamic>[];
       if (decoded.containsKey('tags') && decoded['tags'] != null) {
         final parsedTags = _validateTags(decoded['tags']);
         if (parsedTags == null) {
           return Response.badRequest(
             body: jsonEncode({
               'status': 'error',
-              'message': 'Field tags harus berupa list string (maksimal 20 tag).',
+              'message':
+                  'Field tags harus berupa list tag string/objek (maksimal 20 tag).',
             }),
             headers: _jsonHeaders,
           );
@@ -269,11 +277,14 @@ class TaskController {
         idTask: idTask,
         idUser: idUser,
         idCourse: (decoded['idCourse'] ?? decoded['id_course'])?.toString(),
-        courseName:
-            (decoded['courseName'] ?? decoded['course_name'] ?? decoded['course'])
-                ?.toString(),
+        courseName: (decoded['courseName'] ??
+                decoded['course_name'] ??
+                decoded['course'] ??
+                decoded['courseCode'] ??
+                decoded['course_code'])
+            ?.toString(),
         taskTitle: rawTitle,
-        description: (decoded['description'] ?? '').toString(),
+        description: (decoded['description'] ?? decoded['notes'] ?? '').toString(),
         deadline: deadline,
         gradeWeight: gradeWeight,
         isFuzzyAuto: isFuzzyAuto,
@@ -452,14 +463,15 @@ class TaskController {
         );
       }
 
-      List<String>? tags;
+      List<dynamic>? tags;
       if (decoded.containsKey('tags')) {
         tags = _validateTags(decoded['tags']);
         if (tags == null) {
           return Response.badRequest(
             body: jsonEncode({
               'status': 'error',
-              'message': 'Field tags harus berupa list string (maksimal 20 tag).',
+              'message':
+                  'Field tags harus berupa list tag string/objek (maksimal 20 tag).',
             }),
             headers: _jsonHeaders,
           );
@@ -470,12 +482,15 @@ class TaskController {
         idTask: idTask,
         idUser: idUser,
         idCourse: (decoded['idCourse'] ?? decoded['id_course'])?.toString(),
-        courseName:
-            (decoded['courseName'] ?? decoded['course_name'] ?? decoded['course'])
-                ?.toString(),
+        courseName: (decoded['courseName'] ??
+                decoded['course_name'] ??
+                decoded['course'] ??
+                decoded['courseCode'] ??
+                decoded['course_code'])
+            ?.toString(),
         clearCourse: decoded['clearCourse'] == true,
         taskTitle: title,
-        description: decoded['description']?.toString(),
+        description: (decoded['description'] ?? decoded['notes'])?.toString(),
         deadline: deadline,
         gradeWeight: gradeWeight,
         isFuzzyAuto: isFuzzyAuto,

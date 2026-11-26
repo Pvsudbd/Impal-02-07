@@ -230,7 +230,7 @@ class _ScheduleFormPageState extends State<ScheduleFormPage> {
       PopUpPemberitahuan.show(
         context,
         title: 'Invalid Time Range',
-        message: 'Start time must be earlier than end time.',
+        message: 'Start time must be earlier than end time (${_formatTime(_startTime)}).',
         icon: Icons.error_outline_rounded,
         iconBgColor: PopUpPemberitahuan.negativeColor,
         duration: const Duration(milliseconds: 4200),

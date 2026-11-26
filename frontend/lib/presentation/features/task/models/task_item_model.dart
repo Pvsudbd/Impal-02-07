@@ -81,6 +81,10 @@ class TaskItemModel {
   final bool isCollegeTask;
   final bool isAlertEnabled;
   final bool isCompleted;
+  final String? rubricCourseId;
+  final String? rubricComponentId;
+  final String? rubricComponentName;
+  final int? gradeWeightPercent;
 
   const TaskItemModel({
     required this.id,
@@ -108,6 +112,10 @@ class TaskItemModel {
     this.isCollegeTask = true,
     this.isAlertEnabled = true,
     this.isCompleted = false,
+    this.rubricCourseId,
+    this.rubricComponentId,
+    this.rubricComponentName,
+    this.gradeWeightPercent,
   });
 
   String get priorityLabel {
@@ -152,6 +160,13 @@ class TaskItemModel {
       }) ||
       groupMembers.length > 1;
 
+  /// Whether this task has passed its submission deadline.
+  bool get isOverdue {
+    if (durationBadge.toLowerCase() == 'overdue') return true;
+    final now = DateTime.now();
+    return deadlineDate.isBefore(DateTime(now.year, now.month, now.day));
+  }
+
   /// Effective team or group name displayed under the title on Task Page.
   String get effectiveTeamName {
     if (teamName != null && teamName!.trim().isNotEmpty) {
@@ -161,6 +176,141 @@ class TaskItemModel {
       return 'Kelompok IMPAL';
     }
     return 'Kelompok IMPAL';
+  }
+
+  /// Formats a DateTime into standardized UI format (e.g. 'Sat 11 Oct 2026, 23: 59 WIB').
+  static String formatDeadlineDateTime(DateTime dt) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final dayName = days[dt.weekday - 1];
+    final monthName = months[dt.month - 1];
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$dayName ${dt.day} $monthName ${dt.year}, $h: $m WIB';
+  }
+
+  /// Deserializes a backend JSON Map (from GET /api/task or POST /api/task) into TaskItemModel.
+  factory TaskItemModel.fromBackendJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is DateTime) return val;
+      return DateTime.tryParse(val.toString()) ?? DateTime.now();
+    }
+
+    final id = json['id_task']?.toString() ?? json['id']?.toString() ?? '';
+    final title = json['task_title']?.toString() ?? json['title']?.toString() ?? 'Untitled Task';
+    final course = json['course_code']?.toString() ?? json['course']?.toString() ?? '';
+    final notes = json['description']?.toString() ?? json['notes']?.toString() ?? '';
+    final dt = parseDate(json['deadline']);
+    final isCompleted = json['is_completed'] == 1 || json['is_completed'] == true;
+    final isAutomaticWeight = json['is_fuzzy_auto'] != false && json['is_fuzzy_auto'] != 0;
+    final priority = TaskPriorityLevel.fromString(json['priority']?.toString() ?? 'medium');
+
+    final now = DateTime.now();
+    final isPastDeadline = dt.isBefore(now);
+
+    String durationBadge;
+    Color durationBadgeColor;
+    if (isPastDeadline) {
+      durationBadge = 'Overdue';
+      durationBadgeColor = const Color(0xFFFF7D65);
+    } else {
+      final diffHours = dt.difference(now).inHours;
+      if (diffHours < 24) {
+        durationBadge = '${diffHours > 0 ? diffHours : 1}h';
+      } else {
+        final daysDiff = dt.difference(now).inDays;
+        durationBadge = '${daysDiff}d';
+      }
+      durationBadgeColor = const Color(0xFF5B93FF);
+    }
+
+    final tags = <TaskTagModel>[
+      TaskTagModel(
+        label: isPastDeadline ? 'Overdue' : 'Task',
+        backgroundColor: isPastDeadline ? const Color(0xFFFF7D65) : priority.badgeBg,
+        textColor: Colors.white,
+      ),
+      if (course.isNotEmpty)
+        TaskTagModel(
+          label: course.length > 20 ? course.substring(0, 20) : course,
+          backgroundColor: const Color(0xFF786FA6),
+          textColor: Colors.white,
+        ),
+    ];
+
+    final rawCustomTags = json['tags'];
+    if (rawCustomTags is List) {
+      for (final item in rawCustomTags) {
+        if (item is Map) {
+          final label = (item['label'] ?? '').toString().trim();
+          if (label.isEmpty) continue;
+          final already = tags.any((t) => t.label.toLowerCase() == label.toLowerCase());
+          if (!already) {
+            tags.add(
+              TaskTagModel(
+                label: label,
+                backgroundColor: Color((item['background_color'] as num?)?.toInt() ?? 0xFF778BEB),
+                textColor: Color((item['text_color'] as num?)?.toInt() ?? 0xFF1E296B),
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    final score = (json['priority_score'] as num?)?.toDouble() ?? 0.0;
+    final centroidStr = isPastDeadline
+        ? 'N/A (Overdue)'
+        : (score > 0.0 ? 'z* = ${score.toStringAsFixed(1)}' : 'z* = 32.4');
+    final gradeWeight = (json['grade_weight'] as num?)?.round();
+
+    return TaskItemModel(
+      id: id,
+      title: title,
+      priority: priority,
+      durationBadge: durationBadge,
+      durationBadgeColor: durationBadgeColor,
+      durationTextColor: Colors.white,
+      deadlineDate: dt,
+      formattedDeadline: formatDeadlineDateTime(dt),
+      tags: tags,
+      course: course,
+      notes: notes,
+      isAutomaticWeight: isAutomaticWeight,
+      isCompleted: isCompleted,
+      isCollegeTask: course.isNotEmpty,
+      centroidDefuzzification: centroidStr,
+      centroidScale: 'scale(0-100)',
+      warningNotice: '*This task is assigned to you',
+      dateCreated: 'Created',
+      gradeWeightPercent: gradeWeight,
+    );
+  }
+
+  /// Serializes TaskItemModel into backend compatible JSON payload.
+  Map<String, dynamic> toBackendJson() {
+    return {
+      'id_task': id,
+      'task_title': title,
+      'description': notes,
+      'course_code': course,
+      'deadline': deadlineDate.toIso8601String(),
+      'priority': priority.label.toUpperCase(),
+      'is_fuzzy_auto': isAutomaticWeight,
+      'is_completed': isCompleted,
+      'grade_weight': (gradeWeightPercent != null ? gradeWeightPercent!.toDouble() : 0.0),
+      'tags': tags
+          .map((t) => {
+                'label': t.label,
+                'background_color': t.backgroundColor.toARGB32(),
+                'text_color': t.textColor.toARGB32(),
+              })
+          .toList(),
+    };
   }
 
   TaskItemModel copyWith({
@@ -189,6 +339,10 @@ class TaskItemModel {
     bool? isCollegeTask,
     bool? isAlertEnabled,
     bool? isCompleted,
+    String? rubricCourseId,
+    String? rubricComponentId,
+    String? rubricComponentName,
+    int? gradeWeightPercent,
   }) {
     return TaskItemModel(
       id: id ?? this.id,
@@ -217,6 +371,10 @@ class TaskItemModel {
       isCollegeTask: isCollegeTask ?? this.isCollegeTask,
       isAlertEnabled: isAlertEnabled ?? this.isAlertEnabled,
       isCompleted: isCompleted ?? this.isCompleted,
+      rubricCourseId: rubricCourseId ?? this.rubricCourseId,
+      rubricComponentId: rubricComponentId ?? this.rubricComponentId,
+      rubricComponentName: rubricComponentName ?? this.rubricComponentName,
+      gradeWeightPercent: gradeWeightPercent ?? this.gradeWeightPercent,
     );
   }
 
@@ -444,6 +602,78 @@ class TaskItemModel {
           centroidScale: 'scale(0-100)',
           warningNotice: '*This task is assigned to you, and you can’t delete',
           notes: 'Prepare transcript and draft curriculum plan for consultation.',
+          isAutomaticWeight: false,
+          isCollegeTask: false,
+        ),
+        TaskItemModel(
+          id: 'task_figma',
+          title: 'IMPAL Figma Design',
+          priority: TaskPriorityLevel.medium,
+          durationBadge: '6d',
+          durationBadgeColor: const Color(0xFF5B93FF),
+          durationTextColor: Colors.white,
+          subtitle: 'Create team UI page',
+          deadlineDate: DateTime(2026, 10, 11, 23, 59),
+          formattedDeadline: 'Sat 11 Oct 2026, 23: 59 WIB',
+          memberAvatars: const [],
+          progressPercent: null,
+          tags: const [
+            TaskTagModel(
+              label: 'Personal',
+              backgroundColor: Color(0xFF778BEB),
+              textColor: Color(0xFF2E3E8C),
+            ),
+            TaskTagModel(
+              label: 'Figma',
+              backgroundColor: Color(0xFF778BEB),
+              textColor: Color(0xFF2E3E8C),
+            ),
+          ],
+          groupMembers: const [
+            'Personal Task • Jarvis',
+          ],
+          course: 'SSIF-04-REG • Software Testing & Implementation',
+          dateCreated: 'Tuesday, 01 Oct 2026',
+          centroidDefuzzification: 'z* = 34.2',
+          centroidScale: 'scale(0-100)',
+          warningNotice: '*This task is assigned to you, and you can’t delete',
+          notes: 'Figma mockups for team and task pages.',
+          isAutomaticWeight: false,
+          isCollegeTask: false,
+        ),
+        TaskItemModel(
+          id: 'task_frontend',
+          title: 'IMPAL Frontend Slicing',
+          priority: TaskPriorityLevel.low,
+          durationBadge: '17d',
+          durationBadgeColor: const Color(0xFF5B93FF),
+          durationTextColor: Colors.white,
+          subtitle: 'Dashboard UI implementation',
+          deadlineDate: DateTime(2026, 10, 11, 23, 59),
+          formattedDeadline: 'Sat 11 Oct 2026, 23: 59 WIB',
+          memberAvatars: const [],
+          progressPercent: null,
+          tags: const [
+            TaskTagModel(
+              label: 'Personal',
+              backgroundColor: Color(0xFF778BEB),
+              textColor: Color(0xFF2E3E8C),
+            ),
+            TaskTagModel(
+              label: 'Code',
+              backgroundColor: Color(0xFF63CDDA),
+              textColor: Color(0xFF1C636D),
+            ),
+          ],
+          groupMembers: const [
+            'Personal Task • Jarvis',
+          ],
+          course: 'SSIF-04-REG • Software Testing & Implementation',
+          dateCreated: 'Thursday, 03 Oct 2026',
+          centroidDefuzzification: 'z* = 19.8',
+          centroidScale: 'scale(0-100)',
+          warningNotice: '*This task is assigned to you, and you can’t delete',
+          notes: 'Flutter frontend slicing for dashboard.',
           isAutomaticWeight: false,
           isCollegeTask: false,
         ),

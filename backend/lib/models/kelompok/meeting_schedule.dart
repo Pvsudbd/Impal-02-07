@@ -1,5 +1,6 @@
 class MeetingSchedule {
   String _meetingId;
+  String _groupId;
   String _title;
   String? _description;
   DateTime _startTime;
@@ -7,11 +8,13 @@ class MeetingSchedule {
 
   MeetingSchedule({
     required String meetingId,
+    String groupId = '',
     required String title,
     String? description,
     required DateTime startTime,
     required String platformLocation,
   })  : _meetingId = meetingId,
+        _groupId = groupId,
         _title = title,
         _description = description,
         _startTime = startTime,
@@ -25,17 +28,19 @@ class MeetingSchedule {
     }
 
     return MeetingSchedule(
-      meetingId: json['id_meeting'] ?? '',
-      title: json['meeting_title'] ?? '',
-      description: json['description'],
+      meetingId: json['id_meeting']?.toString() ?? '',
+      groupId: json['id_group']?.toString() ?? json['groupId']?.toString() ?? '',
+      title: json['meeting_title']?.toString() ?? json['title']?.toString() ?? '',
+      description: json['description']?.toString(),
       startTime: parseDate(json['start_time']),
-      platformLocation: json['platform_location'] ?? '',
+      platformLocation: json['platform_location']?.toString() ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id_meeting': _meetingId,
+      'id_group': _groupId,
       'meeting_title': _title,
       'description': _description,
       'start_time': _startTime.toIso8601String(),
@@ -44,10 +49,13 @@ class MeetingSchedule {
   }
 
   String get meetingId => _meetingId;
+  String get groupId => _groupId;
   String get title => _title;
   String? get description => _description;
   DateTime get startTime => _startTime;
   String get platformLocation => _platformLocation;
+
+  set groupId(String val) => _groupId = val;
 
   String getMeetingDetails() {
     return '$_title pada $_startTime di $_platformLocation';

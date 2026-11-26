@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../../../core/widgets/unfocus_on_tap.dart';
@@ -43,6 +44,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   bool _isSubmitting = false;
 
+  String? _nameError;
+  String? _emailError;
+  String? _phoneError;
+  String? _bioError;
+
   @override
   void initState() {
     super.initState();
@@ -60,6 +66,63 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _phoneController.dispose();
     _bioController.dispose();
     super.dispose();
+  }
+
+  String? _validateFullName(String val) {
+    final trimmed = val.trim();
+    if (trimmed.isEmpty) {
+      return 'Full name cannot be empty.';
+    }
+    if (trimmed.length < 2) {
+      return 'Full name must be at least 2 characters.';
+    }
+    if (trimmed.length > 70) {
+      return 'Full name cannot exceed 70 characters.';
+    }
+    if (!RegExp(r"^[a-zA-Z\s.'-]+$").hasMatch(trimmed)) {
+      return 'Full name can only contain letters and standard punctuation.';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String val) {
+    final trimmed = val.trim();
+    if (trimmed.isEmpty) {
+      return 'Email address cannot be empty.';
+    }
+    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(trimmed)) {
+      return 'Please enter a valid email address.';
+    }
+    return null;
+  }
+
+  String? _validatePhone(String val) {
+    final trimmed = val.trim();
+    if (trimmed.isEmpty) {
+      return 'Phone number cannot be empty.';
+    }
+    // Block any letters immediately
+    if (RegExp(r'[a-zA-Z]').hasMatch(trimmed)) {
+      return 'Phone number cannot contain letters.';
+    }
+    // Allowed characters: digits, optional leading +, space, hyphen, parentheses
+    if (!RegExp(r'^\+?[0-9\s\-()]+$').hasMatch(trimmed)) {
+      return 'Phone number contains invalid characters.';
+    }
+    // Check numeric digit length (standard 9 to 15 digits)
+    final digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length < 9 || digits.length > 15) {
+      return 'Phone number must be between 9 and 15 digits (e.g., 08123456789).';
+    }
+    return null;
+  }
+
+  String? _validateBio(String val) {
+    final trimmed = val.trim();
+    if (trimmed.length > 250) {
+      return 'Bio/Status cannot exceed 250 characters (current: ${trimmed.length}).';
+    }
+    return null;
   }
 
   void _showChangePhotoModal() {
@@ -157,12 +220,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _handleSave() async {
     if (_isSubmitting) return;
 
-    final fullName = _fullNameController.text.trim();
-    if (fullName.isEmpty) {
+    final name = _fullNameController.text;
+    final email = _emailController.text;
+    final phone = _phoneController.text;
+    final bio = _bioController.text;
+
+    final nameErr = _validateFullName(name);
+    final emailErr = _validateEmail(email);
+    final phoneErr = _validatePhone(phone);
+    final bioErr = _validateBio(bio);
+
+    setState(() {
+      _nameError = nameErr;
+      _emailError = emailErr;
+      _phoneError = phoneErr;
+      _bioError = bioErr;
+    });
+
+    final firstError = nameErr ?? emailErr ?? phoneErr ?? bioErr;
+    if (firstError != null) {
       PopUpPemberitahuan.warning(
         context,
         title: 'Validation Error',
-        message: 'Full name cannot be empty.',
+        message: firstError,
       );
       return;
     }
@@ -171,10 +251,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final updated = widget.currentProfile.copyWith(
-      fullName: fullName,
-      email: _emailController.text.trim(),
-      phoneNumber: _phoneController.text.trim(),
-      bio: _bioController.text.trim(),
+      fullName: name.trim(),
+      email: email.trim(),
+      phoneNumber: phone.trim(),
+      bio: bio.trim(),
     );
 
     if (mounted) {
@@ -357,6 +437,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 label: 'FULL NAME',
                 controller: _fullNameController,
                 leadingIcon: Icons.person_outline_rounded,
+                textInputAction: TextInputAction.next,
+                errorText: _nameError,
+                onChanged: (val) {
+                  if (_nameError != null) {
+                    setState(() => _nameError = _validateFullName(val));
+                  }
+                },
               ),
               SizedBox(height: context.rSpacing(14)),
 
@@ -366,6 +453,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 controller: _emailController,
                 leadingIcon: Icons.mail_outline_rounded,
                 keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                errorText: _emailError,
+                onChanged: (val) {
+                  if (_emailError != null) {
+                    setState(() => _emailError = _validateEmail(val));
+                  }
+                },
                 trailing: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 7,
@@ -409,6 +503,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 controller: _phoneController,
                 leadingIcon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s()]')),
+                ],
+                errorText: _phoneError,
+                onChanged: (val) {
+                  if (_phoneError != null) {
+                    setState(() => _phoneError = _validatePhone(val));
+                  }
+                },
               ),
               SizedBox(height: context.rSpacing(14)),
 
@@ -418,6 +522,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 controller: _bioController,
                 leadingIcon: Icons.edit_note_rounded,
                 maxLines: 3,
+                errorText: _bioError,
+                onChanged: (val) {
+                  if (_bioError != null) {
+                    setState(() => _bioError = _validateBio(val));
+                  }
+                },
               ),
               SizedBox(height: context.rSpacing(16)),
 

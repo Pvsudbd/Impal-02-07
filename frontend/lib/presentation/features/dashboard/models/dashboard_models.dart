@@ -61,6 +61,7 @@ class TaskItem {
   final String notes;
   final bool isCollegeTask;
   final bool isCompleted;
+  final bool isAlertEnabled;
 
   const TaskItem({
     this.id = '',
@@ -87,6 +88,7 @@ class TaskItem {
     this.notes = '',
     this.isCollegeTask = true,
     this.isCompleted = false,
+    this.isAlertEnabled = true,
   });
 
   bool get isTeamTask =>
@@ -118,6 +120,7 @@ class TaskItem {
     String? notes,
     bool? isCollegeTask,
     bool? isCompleted,
+    bool? isAlertEnabled,
   }) {
     return TaskItem(
       id: id ?? this.id,
@@ -140,6 +143,7 @@ class TaskItem {
       notes: notes ?? this.notes,
       isCollegeTask: isCollegeTask ?? this.isCollegeTask,
       isCompleted: isCompleted ?? this.isCompleted,
+      isAlertEnabled: isAlertEnabled ?? this.isAlertEnabled,
     );
   }
 
@@ -165,6 +169,7 @@ class TaskItem {
       warningNotice: warningNotice,
       notes: notes,
       isCollegeTask: isCollegeTask,
+      isAlertEnabled: isAlertEnabled,
       isCompleted: isCompleted,
     );
   }
@@ -191,6 +196,7 @@ class TaskItem {
       notes: model.notes,
       isCollegeTask: model.isCollegeTask,
       isCompleted: model.isCompleted,
+      isAlertEnabled: model.isAlertEnabled,
     );
   }
 }

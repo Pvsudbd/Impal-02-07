@@ -214,6 +214,7 @@ class _RegisterState extends State<Register> {
 
     return AuthCardWrapper(
       topNavBar: topNavBar,
+      onDesktopBack: _navigateBack,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -246,6 +247,7 @@ class _RegisterState extends State<Register> {
             controller: _nameCtrl,
             hintText: 'Enter your full name',
             prefixIcon: Icons.person_outline_rounded,
+            textInputAction: TextInputAction.next,
             errorText: _nameError,
             onTap: TopToast.dismiss,
           ),
@@ -257,6 +259,7 @@ class _RegisterState extends State<Register> {
             hintText: 'Enter your email address',
             prefixIcon: Icons.mail_outline_rounded,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
             errorText: _emailError,
             onTap: TopToast.dismiss,
           ),
@@ -268,6 +271,7 @@ class _RegisterState extends State<Register> {
             hintText: 'Enter new password',
             prefixIcon: Icons.lock_outline_rounded,
             isPassword: true,
+            textInputAction: TextInputAction.next,
             errorText: _pwdError,
             inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
             onTap: TopToast.dismiss,
@@ -330,6 +334,8 @@ class _RegisterState extends State<Register> {
             hintText: 'Confirm your password',
             prefixIcon: Icons.lock_outline_rounded,
             isPassword: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _handleRegister(),
             errorText: _confirmError,
             inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
             onTap: TopToast.dismiss,

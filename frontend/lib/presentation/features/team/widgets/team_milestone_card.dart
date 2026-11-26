@@ -59,7 +59,7 @@ class TeamMilestoneCard extends StatelessWidget {
         child: Container(
           width: effectiveWidth,
           height: 58,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
             color: const Color(0xFF323846),
             borderRadius: BorderRadius.circular(16),

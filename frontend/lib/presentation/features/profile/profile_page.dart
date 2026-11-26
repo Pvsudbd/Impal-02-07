@@ -7,15 +7,23 @@ import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../auth/forgot_password_page.dart';
 import '../auth/login_page.dart';
 import '../auth/terms_privacy_page.dart';
+import '../dashboard/widgets/desktop/desktop_top_header.dart';
 import '../schedule/models/schedule_repository.dart';
 import '../smart_system/smart_priority_page.dart';
 import 'edit_profile_page.dart';
 import 'models/user_profile_model.dart';
+import 'widgets/desktop/desktop_profile_modals.dart';
+import 'widgets/desktop/desktop_profile_settings_view.dart';
 import 'widgets/profile_account_integration_group.dart';
 import 'widgets/profile_fuzzy_card.dart';
 import 'widgets/profile_hero_card.dart';
 import 'widgets/profile_settings_group.dart';
 import 'widgets/profile_stats_row.dart';
+import '../team/models/team_repository.dart';
+import '../task/models/task_repository.dart';
+import '../team/models/team_task_repository.dart';
+import '../notifikasi/models/notification_repository.dart';
+import '../../../../core/services/reminder_notification_service.dart';
 
 // Aliases for backwards compatibility with Figma exports
 typedef Profile = ProfilePage;
@@ -47,6 +55,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final UserProfileRepository _repo = UserProfileRepository();
+  String _desktopSearchQuery = '';
 
   @override
   void initState() {
@@ -239,6 +248,12 @@ class _ProfilePageState extends State<ProfilePage> {
               await prefs.remove('jwt_token');
               await prefs.remove('auth_user');
               await ScheduleRepository().clearLocalCache();
+              TeamRepository().clear();
+              TaskRepository().clear();
+              TeamTaskRepository().clear();
+              await UserProfileRepository().resetForLogout();
+              await NotificationRepository.instance.clearForLogout();
+              await ReminderNotificationService().stopAndReset();
               if (context.mounted) {
                 Navigator.pushReplacement(
                   context,
@@ -259,6 +274,45 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final profile = _repo.profile;
+    if (context.isDesktop) {
+      return Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        body: SafeArea(
+          child: Column(
+            children: [
+              DesktopTopHeader(
+                title: 'Profile & Settings',
+                subtitle:
+                    'Manage your student identity, reminders, AI preferences, and account security',
+                searchQuery: _desktopSearchQuery,
+                searchHint: 'Search settings...',
+                searchBgColor: AppColors.bgSidebar,
+                showLeadingSearchIcon: true,
+                showShortcutHint: true,
+                addButtonLabel: 'Edit Profile',
+                addButtonColor: AppColors.primaryAccent,
+                showNotificationBell: true,
+                titleFontSize: 22,
+                horizontalPadding: 32,
+                onSearchChanged: (value) {
+                  setState(() => _desktopSearchQuery = value);
+                },
+                onAddTaskTap: () => DesktopEditProfileModal.show(
+                  context,
+                  profile: profile,
+                ),
+              ),
+              Expanded(
+                child: DesktopProfileSettingsView(
+                  key: const ValueKey('desktop_profile_settings_view'),
+                  searchQuery: _desktopSearchQuery,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 

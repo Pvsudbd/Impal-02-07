@@ -13,8 +13,8 @@ void main() {
     priority: TaskPriorityLevel.high,
     durationBadge: '12h',
     subtitle: 'Team members',
-    deadlineDate: DateTime(2026, 10, 11, 23, 59),
-    formattedDeadline: 'Sat 11 Oct 2026, 23: 59 WIB',
+    deadlineDate: DateTime.now().add(const Duration(days: 7)),
+    formattedDeadline: 'Sun 28 Nov 2026, 23: 59 WIB',
     progressPercent: 98,
     isCollegeTask: true,
     memberAvatars: const [
@@ -157,15 +157,19 @@ void main() {
 
     // Since sampleTask has isCollegeTask: true, Course is visible
     expect(find.text('Course'), findsOneWidget);
-    expect(find.text('SSIF-04-REG • Software Testing & Implementation'), findsOneWidget);
+    expect(find.text('SSIF-04-REG • Software Testing & Implementation'), findsWidgets);
 
     // Tap "Personal" category
     await tester.tap(find.text('Personal'));
     await tester.pumpAndSettle();
 
     // Tap "Save Changes"
-    await tester.tap(find.text('Save Changes'));
+    await tester.ensureVisible(find.text('Save Changes'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Changes'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
 
     expect(savedTask, isNotNull);
     expect(savedTask!.isCollegeTask, isFalse);

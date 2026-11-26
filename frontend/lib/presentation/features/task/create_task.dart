@@ -5,11 +5,17 @@ import '../../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
 import '../profile/models/user_profile_model.dart';
 import '../schedule/pop_up_konfirmasi_delete.dart';
+import '../smart_system/models/course_rubric_model.dart';
+import '../smart_system/models/course_rubric_repository.dart';
 import '../team/widgets/submission_deadline_picker.dart';
+import 'models/tag_repository.dart';
 import 'models/task_item_model.dart';
 import 'models/task_repository.dart';
 import 'widgets/course_grade_weight_chips.dart';
+import 'widgets/pop_up_overdue_task_dialog.dart';
+import 'widgets/desktop/desktop_personal_task_modal.dart';
 import 'widgets/task_category_selector.dart';
+import 'widgets/task_tag_picker.dart';
 
 // Backward compatibility aliases matching Figma exports
 export 'models/task_item_model.dart';
@@ -59,6 +65,11 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   late TaskPriorityLevel _selectedPriority;
   late bool _isAutomaticWeight;
   late bool _isAlertEnabled;
+  String? _selectedCourseId;
+  String? _selectedComponentId;
+  int? _customWeightPercent;
+  List<String> _selectedTagLabels = [];
+  final CourseRubricRepository _rubricRepo = CourseRubricRepository();
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.targetTask != null;
@@ -66,6 +77,9 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   @override
   void initState() {
     super.initState();
+    _rubricRepo.init();
+    TaskTagRepository().init();
+    _rubricRepo.addListener(_onRubricsChanged);
     final task = widget.targetTask;
     if (task != null) {
       _isCollegeTask = task.isCollegeTask;
@@ -77,14 +91,40 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       _selectedPriority = task.priority;
       _isAutomaticWeight = task.isAutomaticWeight;
       _isAlertEnabled = task.isAlertEnabled;
+      _selectedTagLabels = task.tags
+          .where((t) =>
+              t.label.trim().toLowerCase() != 'task' &&
+              !t.label.contains('%'))
+          .map((t) => t.label)
+          .toList();
+      final matched = _rubricRepo.getCourseById(task.rubricCourseId) ??
+          _rubricRepo.findCourseByTextOrId(task.course);
+      _selectedCourseId = matched?.id;
+      _selectedComponentId = task.rubricComponentId ??
+          (matched != null && matched.components.isNotEmpty
+              ? matched.components.first.id
+              : null);
+      if (task.rubricComponentId == null && task.gradeWeightPercent != null) {
+        _customWeightPercent = task.gradeWeightPercent;
+      }
     } else {
       _isCollegeTask = true;
       _titleController = TextEditingController();
+      final defaultCourse = _rubricRepo.courses.isNotEmpty
+          ? _rubricRepo.courses.first
+          : null;
       _courseController = TextEditingController(
-        text: 'SSIF-04-REG • Software Testing & Implementation',
+        text: defaultCourse?.displayLabel ??
+            'SSIF-04-REG • Software Testing & Implementation',
       );
+      _selectedCourseId = defaultCourse?.id;
+      _selectedComponentId =
+          (defaultCourse != null && defaultCourse.components.isNotEmpty)
+              ? defaultCourse.components.first.id
+              : null;
       _notesController = TextEditingController();
-      _selectedDate = DateTime(2026, 10, 18);
+      final now = DateTime.now();
+      _selectedDate = DateTime(now.year, now.month, now.day);
       _selectedTime = const TimeOfDay(hour: 23, minute: 59);
       _selectedPriority = TaskPriorityLevel.high;
       _isAutomaticWeight = true;
@@ -92,8 +132,17 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
     }
   }
 
+  void _onRubricsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  CourseRubricModel? get _activeRubricCourse =>
+      _rubricRepo.getCourseById(_selectedCourseId) ??
+      _rubricRepo.findCourseByTextOrId(_courseController.text);
+
   @override
   void dispose() {
+    _rubricRepo.removeListener(_onRubricsChanged);
     _titleController.dispose();
     _courseController.dispose();
     _notesController.dispose();
@@ -130,80 +179,185 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       return;
     }
 
-    setState(() => _isSubmitting = true);
+    final fullDeadline = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+    final isPastDeadline = fullDeadline.isBefore(DateTime.now());
+    final formattedDeadline = _formatDeadline(_selectedDate, _selectedTime);
 
-    // Simulate async network latency
-    await Future.delayed(const Duration(milliseconds: 350));
+    if (isPastDeadline) {
+      final confirmed = await PopUpOverdueTaskDialog.show(
+        context,
+        formattedDeadline: formattedDeadline,
+      );
+      if (confirmed != true) {
+        return;
+      }
+    }
+
+    setState(() => _isSubmitting = true);
 
     final title = _titleController.text.trim();
     final course = _isCollegeTask ? _courseController.text.trim() : '';
     final notes = _notesController.text.trim();
-    final formattedDeadline = _formatDeadline(_selectedDate, _selectedTime);
 
-    if (_isEditing) {
-      final updated = widget.targetTask!.copyWith(
-        title: title,
-        course: course.isNotEmpty
-            ? course
-            : (_isCollegeTask ? widget.targetTask!.course : ''),
-        notes: notes,
-        deadlineDate: _selectedDate,
-        formattedDeadline: formattedDeadline,
-        priority: _selectedPriority,
-        isAutomaticWeight: _isAutomaticWeight,
-        isCollegeTask: _isCollegeTask,
-        isAlertEnabled: _isAlertEnabled,
-      );
+    final activeCourse = _activeRubricCourse;
+    final selectedComp = _rubricRepo.findComponent(
+      activeCourse?.id,
+      _selectedComponentId,
+    );
+    final resolvedWeight = _isAutomaticWeight
+        ? (_customWeightPercent ?? (_isCollegeTask ? selectedComp?.weightPercent : 30))
+        : null;
+    final customTags = TaskTagRepository().toTaskTagModels(_selectedTagLabels);
+    final mergedTags = <TaskTagModel>[
+      if (_isCollegeTask && selectedComp != null)
+        TaskTagModel(
+          label:
+              '${selectedComp.name} (${resolvedWeight ?? selectedComp.weightPercent}%)',
+          backgroundColor: _selectedPriority.badgeBg,
+          textColor: Colors.white,
+        ),
+      if (!_isCollegeTask && resolvedWeight != null)
+        TaskTagModel(
+          label: 'Weight: $resolvedWeight%',
+          backgroundColor: _selectedPriority.badgeBg,
+          textColor: Colors.white,
+        ),
+      ...customTags,
+      if (!(_isCollegeTask && selectedComp != null) &&
+          !(!_isCollegeTask && resolvedWeight != null) &&
+          customTags.isEmpty)
+        TaskTagModel(
+          label: isPastDeadline ? 'Overdue' : 'Task',
+          backgroundColor: isPastDeadline ? const Color(0xFFFF7D65) : _selectedPriority.badgeBg,
+          textColor: Colors.white,
+        ),
+    ];
 
-      TaskRepository().updateTask(updated);
-      widget.onTaskUpdated?.call(updated);
-      if (mounted) {
-        PopUpPemberitahuan.taskUpdated(context, taskName: title);
-        Navigator.of(context).pop(updated);
+    try {
+      if (_isEditing) {
+        final updated = widget.targetTask!.copyWith(
+          title: title,
+          course: course.isNotEmpty
+              ? course
+              : (_isCollegeTask ? widget.targetTask!.course : ''),
+          notes: notes,
+          deadlineDate: fullDeadline,
+          formattedDeadline: formattedDeadline,
+          priority: _selectedPriority,
+          durationBadge: isPastDeadline ? 'Overdue' : widget.targetTask!.durationBadge,
+          durationBadgeColor: isPastDeadline ? const Color(0xFFFF7D65) : widget.targetTask!.durationBadgeColor,
+          isAutomaticWeight: isPastDeadline ? false : _isAutomaticWeight,
+          centroidDefuzzification: isPastDeadline ? 'N/A (Overdue)' : widget.targetTask!.centroidDefuzzification,
+          isCollegeTask: _isCollegeTask,
+          isAlertEnabled: _isAlertEnabled,
+          rubricCourseId: _isCollegeTask ? activeCourse?.id : null,
+          rubricComponentId:
+              _isCollegeTask && _customWeightPercent == null ? selectedComp?.id : null,
+          rubricComponentName: _isCollegeTask && _customWeightPercent == null
+              ? selectedComp?.name
+              : null,
+          gradeWeightPercent: resolvedWeight,
+          tags: mergedTags,
+        );
+
+        try {
+          await TaskRepository().updateTaskApi(updated);
+        } catch (_) {
+          TaskRepository().updateTask(updated);
+        }
+        widget.onTaskUpdated?.call(updated);
+        if (mounted) {
+          PopUpPemberitahuan.taskUpdated(context, taskName: title);
+          Navigator.of(context).pop(updated);
+        }
+      } else {
+        final newTask = TaskItemModel(
+          id: '',
+          title: title,
+          course: _isCollegeTask
+              ? (course.isNotEmpty ? course : 'General Course')
+              : '',
+          notes: notes,
+          deadlineDate: fullDeadline,
+          formattedDeadline: formattedDeadline,
+          priority: _selectedPriority,
+          durationBadge: isPastDeadline
+              ? 'Overdue'
+              : (_selectedPriority == TaskPriorityLevel.high ? '12h' : '24h'),
+          durationBadgeColor: isPastDeadline
+              ? const Color(0xFFFF7D65)
+              : const Color(0xFF5B93FF),
+          durationTextColor: Colors.white,
+          isAutomaticWeight: isPastDeadline ? false : _isAutomaticWeight,
+          isCollegeTask: _isCollegeTask,
+          isAlertEnabled: _isAlertEnabled,
+          rubricCourseId: _isCollegeTask ? activeCourse?.id : null,
+          rubricComponentId:
+              _isCollegeTask && _customWeightPercent == null ? selectedComp?.id : null,
+          rubricComponentName: _isCollegeTask && _customWeightPercent == null
+              ? selectedComp?.name
+              : null,
+          gradeWeightPercent: resolvedWeight,
+          subtitle: 'Personal & Team task',
+          tags: mergedTags,
+          groupMembers: const ['Personal Task • Jarvis'],
+          dateCreated: 'Today',
+          centroidDefuzzification: isPastDeadline ? 'N/A (Overdue)' : 'z* = 32.4',
+          centroidScale: 'scale(0-100)',
+        );
+
+        TaskItemModel finalTask = newTask;
+        try {
+          final created = await TaskRepository().createTaskApi(newTask);
+          if (created != null) finalTask = created;
+        } catch (_) {
+          TaskRepository().addTask(newTask);
+        }
+        widget.onTaskCreated?.call(finalTask);
+        if (mounted) {
+          PopUpPemberitahuan.taskCreated(context, taskName: title);
+          Navigator.of(context).pop(finalTask);
+        }
       }
-    } else {
-      final newTask = TaskItemModel(
-        id: 'task_${DateTime.now().millisecondsSinceEpoch}',
-        title: title,
-        course: _isCollegeTask
-            ? (course.isNotEmpty ? course : 'General Course')
-            : '',
-        notes: notes,
-        deadlineDate: _selectedDate,
-        formattedDeadline: formattedDeadline,
-        priority: _selectedPriority,
-        durationBadge: _selectedPriority == TaskPriorityLevel.high ? '12h' : '24h',
-        isAutomaticWeight: _isAutomaticWeight,
-        isCollegeTask: _isCollegeTask,
-        isAlertEnabled: _isAlertEnabled,
-        subtitle: 'Personal & Team task',
-        tags: [
-          TaskTagModel(
-            label: 'Task',
-            backgroundColor: _selectedPriority.badgeBg,
-            textColor: Colors.white,
-          ),
-        ],
-        groupMembers: const ['Personal Task • Jarvis'],
-        dateCreated: 'Today',
-        centroidDefuzzification: 'z* = 32.4',
-        centroidScale: 'scale(0-100)',
-      );
-
-      widget.onTaskCreated?.call(newTask);
+    } catch (e) {
       if (mounted) {
-        PopUpPemberitahuan.taskCreated(context, taskName: title);
-        Navigator.of(context).pop(newTask);
+        final errText = e.toString().replaceAll('Exception:', '').trim();
+        PopUpPemberitahuan.warning(
+          context,
+          title: 'Failed to Save Task',
+          message: errText.isNotEmpty
+              ? errText
+              : 'Could not connect to database. Make sure backend server is running.',
+        );
       }
-    }
-
-    if (mounted) {
-      setState(() => _isSubmitting = false);
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (context.isDesktop) {
+      return Scaffold(
+        backgroundColor: AppColors.bgSecondary,
+        body: DesktopPersonalTaskModal(
+          task: widget.targetTask,
+          userInitials: widget.userInitials,
+          onTaskCreated: widget.onTaskCreated,
+          onTaskUpdated: widget.onTaskUpdated,
+          onClose: widget.onBack,
+        ),
+      );
+    }
+
     final disableMotion = MediaQuery.disableAnimationsOf(context);
 
     return UnfocusOnTap(
@@ -232,15 +386,20 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _isEditing ? 'Edit Task Details' : 'Task Details',
-                        style: TextStyle(
-                          color: AppColors.textWhite,
-                          fontSize: context.rFont(18, min: 16, max: 22),
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
+                      Expanded(
+                        child: Text(
+                          _isEditing ? 'Edit Task Details' : 'Task Details',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.textWhite,
+                            fontSize: context.rFont(18, min: 16, max: 22),
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       _buildAlertToggle(context),
                     ],
                   ),
@@ -285,6 +444,69 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                       children: [
                         _buildFieldLabel(context, 'Course'),
                         const SizedBox(height: 6),
+                        if (_rubricRepo.courses.isNotEmpty) ...[
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: _rubricRepo.courses.map((courseItem) {
+                              final isSelected =
+                                  _activeRubricCourse?.id == courseItem.id;
+                              return InkWell(
+                                key: ValueKey(
+                                    'task_course_chip_${courseItem.id}'),
+                                onTap: () {
+                                  setState(() {
+                                    _selectedCourseId = courseItem.id;
+                                    _courseController.text =
+                                        courseItem.displayLabel;
+                                    _customWeightPercent = null;
+                                    _selectedComponentId =
+                                        courseItem.components.isNotEmpty
+                                            ? courseItem.components.first.id
+                                            : null;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(999),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                            .withValues(alpha: 0.2)
+                                        : AppColors.bgCard,
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : AppColors.borderSubtle,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    courseItem.courseCode.isNotEmpty
+                                        ? '${courseItem.courseCode} • ${courseItem.courseName}'
+                                        : courseItem.courseName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.white
+                                          : AppColors.textMuted,
+                                      fontSize: context.rFont(11,
+                                          min: 10, max: 12.5),
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
                         _buildTextField(
                           controller: _courseController,
                           hintText:
@@ -315,10 +537,27 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                   CourseGradeWeightChips(
                     selectedPriority: _selectedPriority,
                     isAutomatic: _isAutomaticWeight,
+                    isCollegeTask: _isCollegeTask,
+                    rubricComponents: _activeRubricCourse?.components ?? const [],
+                    selectedComponentId: _selectedComponentId,
+                    customWeightPercent: _customWeightPercent,
+                    onComponentSelected: (comp) => setState(() {
+                      _selectedComponentId = comp?.id;
+                    }),
+                    onCustomWeightChanged: (w) => setState(() {
+                      _customWeightPercent = w;
+                    }),
                     onPriorityChanged: (p) =>
                         setState(() => _selectedPriority = p),
                     onAutomaticChanged: (a) =>
                         setState(() => _isAutomaticWeight = a),
+                  ),
+                  SizedBox(height: context.rSpacing(14)),
+
+                  TaskTagSelectorSection(
+                    selectedTags: _selectedTagLabels,
+                    onTagsChanged: (next) =>
+                        setState(() => _selectedTagLabels = next),
                   ),
                   SizedBox(height: context.rSpacing(14)),
 
@@ -436,39 +675,46 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFF323846),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF3B4150), width: 1.0),
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                icon: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white,
-                  size: 16,
+        Expanded(
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF323846),
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: const Color(0xFF3B4150), width: 1.0),
                 ),
-                onPressed: widget.onBack ?? () => Navigator.of(context).pop(),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  onPressed: widget.onBack ?? () => Navigator.of(context).pop(),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              _isEditing ? 'Edit Task' : 'Create Task',
-              style: TextStyle(
-                color: AppColors.textWhite,
-                fontSize: context.rFont(20, min: 18, max: 24),
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w700,
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  _isEditing ? 'Edit Task' : 'Create Task',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textWhite,
+                    fontSize: context.rFont(20, min: 18, max: 24),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        const SizedBox(width: 8),
         Container(
           width: context.rIcon(42),
           height: context.rIcon(42),
@@ -626,12 +872,24 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                 'Are you sure you want to delete this personal task? This action cannot be undone.',
           );
           if (confirmed == true && context.mounted) {
-            TaskRepository().deleteTask(widget.targetTask!.id);
-            PopUpPemberitahuan.taskDeleted(
-              context,
-              taskName: widget.targetTask!.title,
-            );
-            Navigator.of(context).pop();
+            try {
+              await TaskRepository().deleteTaskApi(widget.targetTask!.id);
+              if (context.mounted) {
+                PopUpPemberitahuan.taskDeleted(
+                  context,
+                  taskName: widget.targetTask!.title,
+                );
+                Navigator.of(context).pop();
+              }
+            } catch (e) {
+              if (context.mounted) {
+                PopUpPemberitahuan.warning(
+                  context,
+                  title: 'Failed to Delete',
+                  message: e.toString().replaceAll('Exception:', '').trim(),
+                );
+              }
+            }
           }
         },
         icon: const Icon(

@@ -1,23 +1,41 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/responsive_context.dart';
 import '../../../../core/widgets/unfocus_on_tap.dart';
+import 'desktop_auth_shell.dart';
 
 /// Responsive wrapper for authentication pages.
-/// Provides auto-dismiss keyboard on tap outside, centered card layout on desktop,
-/// and standardized Telkom University footer copyright.
+/// - Mobile (< 600dp): Dark compact layout + copyright footer.
+/// - Tablet (600dp - 1023dp): Centered card + copyright footer.
+/// - Desktop (>= 1024dp): 60/40 Split-Screen Hero + Auth Form Shell.
 class AuthCardWrapper extends StatelessWidget {
   final Widget child;
   final Widget? topNavBar;
   final double maxWidth;
+  final VoidCallback? onDesktopBack;
+  final Widget? desktopTopTrailingAction;
+  final double? desktopFormMaxWidth;
 
   const AuthCardWrapper({
     super.key,
     required this.child,
     this.topNavBar,
     this.maxWidth = 440.0,
+    this.onDesktopBack,
+    this.desktopTopTrailingAction,
+    this.desktopFormMaxWidth,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (context.isDesktop) {
+      return DesktopAuthSplitShell(
+        onBack: onDesktopBack,
+        topTrailingAction: desktopTopTrailingAction,
+        formMaxWidth: desktopFormMaxWidth ?? maxWidth,
+        child: child,
+      );
+    }
+
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isMobile = screenWidth < 600;
 

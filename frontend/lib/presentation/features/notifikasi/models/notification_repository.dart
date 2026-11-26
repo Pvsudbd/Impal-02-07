@@ -1,15 +1,22 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/network/api_client.dart';
 import 'notification_model.dart';
 
 class NotificationRepository extends ChangeNotifier {
   static final NotificationRepository instance = NotificationRepository._internal();
   factory NotificationRepository() => instance;
 
+  static const String _storageKey = 'saved_notifications_v1';
+  static const String _ownerKey = 'saved_notifications_owner';
+
   NotificationRepository._internal() {
     _initDefaultNotifications();
   }
 
   late List<NotificationModel> _notifications;
+  bool _initializedForSession = false;
 
   List<NotificationModel> get notifications => List.unmodifiable(_notifications);
 
@@ -110,11 +117,164 @@ class NotificationRepository extends ChangeNotifier {
     ];
   }
 
+  Future<void> init() async {
+    if (_initializedForSession) return;
+    _initializedForSession = true;
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token') ?? prefs.getString('jwt_token');
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    final currentUserId = prefs.getString('user_id') ?? prefs.getString('auth_user') ?? '';
+    final owner = prefs.getString(_ownerKey);
+    if (owner == null || owner == currentUserId) {
+      final raw = prefs.getString(_storageKey);
+      if (raw != null && raw.trim().isNotEmpty) {
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is List) {
+            _notifications = decoded
+                .whereType<Map>()
+                .map((m) => NotificationModel.fromApiMap(Map<String, dynamic>.from(m)))
+                .toList();
+            notifyListeners();
+          }
+        } catch (_) {}
+      } else {
+        _notifications = [];
+        notifyListeners();
+      }
+    } else {
+      _notifications = [];
+      notifyListeners();
+    }
+
+    await fetchFromApi();
+  }
+
+  Future<void> _persistLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final owner = prefs.getString('user_id') ?? prefs.getString('auth_user') ?? '';
+      if (owner.isNotEmpty) {
+        await prefs.setString(_ownerKey, owner);
+      }
+      final encoded = _notifications.take(100).map((n) => n.toApiMap()).toList();
+      await prefs.setString(_storageKey, jsonEncode(encoded));
+    } catch (_) {}
+  }
+
+  Future<void> fetchFromApi() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? prefs.getString('jwt_token');
+      if (token == null || token.isEmpty) return;
+
+      final res = await ApiClient.get('/api/notifications?limit=100', token: token);
+      if (res['status'] == 'success' && res['data'] is Map) {
+        final data = Map<String, dynamic>.from(res['data'] as Map);
+        final rawItems = data['items'];
+        if (rawItems is List) {
+          final serverList = rawItems
+              .whereType<Map>()
+              .map((m) => NotificationModel.fromApiMap(Map<String, dynamic>.from(m)))
+              .toList();
+          _notifications = serverList;
+          await _persistLocal();
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('[NOTIF_REPO] fetchFromApi error: $e');
+    }
+  }
+
+  bool hasDedupKey(String dedupKey) {
+    return _notifications.any((n) => n.dedupKey == dedupKey);
+  }
+
+  Future<void> recordReminder(
+    NotificationModel notification, {
+    String? dedupKey,
+    String? idTask,
+  }) async {
+    final effectiveKey = dedupKey ?? notification.dedupKey;
+    if (effectiveKey != null && hasDedupKey(effectiveKey)) return;
+
+    final item = NotificationModel(
+      id: notification.id,
+      category: notification.category,
+      categoryLabel: notification.categoryLabel,
+      statusTag: notification.statusTag,
+      statusTagColor: notification.statusTagColor,
+      title: notification.title,
+      description: notification.description,
+      timestamp: notification.timestamp,
+      dateGroup: notification.dateGroup,
+      dateFormatted: notification.dateFormatted,
+      actionLabel: notification.actionLabel,
+      actionType: notification.actionType,
+      accentColor: notification.accentColor,
+      icon: notification.icon,
+      targetId: notification.targetId,
+      dedupKey: effectiveKey,
+      sentAt: notification.sentAt ?? DateTime.now(),
+      isRead: notification.isRead,
+    );
+
+    _notifications = [item, ..._notifications.where((n) => n.id != item.id)];
+    notifyListeners();
+    await _persistLocal();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? prefs.getString('jwt_token');
+      if (token == null || token.isEmpty) return;
+
+      final res = await ApiClient.post(
+        '/api/notifications',
+        item.toApiMap(idTask: idTask),
+        token: token,
+      );
+      if (res['status'] == 'success' && res['data'] is Map) {
+        final serverItem = NotificationModel.fromApiMap(
+          Map<String, dynamic>.from(res['data'] as Map),
+        );
+        final idx = _notifications.indexWhere(
+          (n) => n.id == item.id || (effectiveKey != null && n.dedupKey == effectiveKey),
+        );
+        if (idx != -1) {
+          _notifications[idx] = serverItem;
+          await _persistLocal();
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('[NOTIF_REPO] recordReminder sync error: $e');
+    }
+  }
+
   void markAsRead(String id) {
     final index = _notifications.indexWhere((n) => n.id == id);
     if (index != -1 && !_notifications[index].isRead) {
       _notifications[index].isRead = true;
       notifyListeners();
+      _persistLocal();
+      _syncMarkRead(id);
+    }
+  }
+
+  Future<void> _syncMarkRead(String id) async {
+    if (id.startsWith('notif-') || id.startsWith('local-')) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? prefs.getString('jwt_token');
+      if (token == null || token.isEmpty) return;
+      await ApiClient.patch('/api/notifications/$id/read', {}, token: token);
+    } catch (e) {
+      debugPrint('[NOTIF_REPO] _syncMarkRead error: $e');
     }
   }
 
@@ -128,6 +288,19 @@ class NotificationRepository extends ChangeNotifier {
     }
     if (changed) {
       notifyListeners();
+      _persistLocal();
+      _syncMarkAllRead();
+    }
+  }
+
+  Future<void> _syncMarkAllRead() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? prefs.getString('jwt_token');
+      if (token == null || token.isEmpty) return;
+      await ApiClient.patch('/api/notifications/read-all', {}, token: token);
+    } catch (e) {
+      debugPrint('[NOTIF_REPO] _syncMarkAllRead error: $e');
     }
   }
 
@@ -146,8 +319,19 @@ class NotificationRepository extends ChangeNotifier {
   }
 
   void reset() {
+    _initializedForSession = false;
     _initDefaultNotifications();
     notifyListeners();
   }
-}
 
+  Future<void> clearForLogout() async {
+    _initializedForSession = false;
+    _notifications = [];
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_storageKey);
+      await prefs.remove(_ownerKey);
+    } catch (_) {}
+  }
+}

@@ -3,6 +3,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 import '../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../models/user_profile_model.dart';
+import 'desktop/desktop_alert_settings_modal.dart';
 
 /// Interactive modal bottom sheet for customizing:
 /// 1. Category alert timings (Days, Hours, Minutes, or Custom)
@@ -34,6 +35,16 @@ class DeadlineAlertSettingsModal extends StatefulWidget {
       required AlertSoundVibrationMode mode,
     })? onSave,
   }) async {
+    if (MediaQuery.sizeOf(context).width >= 1024) {
+      await DesktopAlertSettingsModal.show(
+        context,
+        profile: profile,
+        category: category,
+        onSave: onSave,
+      );
+      return;
+    }
+
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,

@@ -501,4 +501,120 @@ class ProfileController {
       );
     }
   }
+
+  // ─── GET /api/profile/preferences ──────────────────────────────────────────
+  static Future<Response> getPreferences(Request req) async {
+    try {
+      final user = _getAuthUser(req);
+      if (user == null) {
+        return Response(
+          401,
+          body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
+          headers: _jsonHeaders,
+        );
+      }
+
+      final idUser =
+          (user['idUser'] ?? user['idStudent'] ?? user['id_user']) as String?;
+      if (idUser == null) {
+        return Response(
+          401,
+          body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
+          headers: _jsonHeaders,
+        );
+      }
+
+      final preferences = await ProfileModel.getPreferences(idUser);
+      return Response.ok(
+        jsonEncode({
+          'status': 'success',
+          'message': 'Preferensi reminder dan jadwal berhasil diambil.',
+          'data': preferences,
+        }),
+        headers: _jsonHeaders,
+      );
+    } catch (e, stack) {
+      print('[PROFILE] getPreferences error: $e\n$stack');
+      return Response.internalServerError(
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Gagal mengambil preferensi.',
+        }),
+        headers: _jsonHeaders,
+      );
+    }
+  }
+
+  // ─── PUT /api/profile/preferences ──────────────────────────────────────────
+  static Future<Response> updatePreferences(Request req) async {
+    try {
+      final user = _getAuthUser(req);
+      if (user == null) {
+        return Response(
+          401,
+          body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
+          headers: _jsonHeaders,
+        );
+      }
+
+      final idUser =
+          (user['idUser'] ?? user['idStudent'] ?? user['id_user']) as String?;
+      if (idUser == null) {
+        return Response(
+          401,
+          body: jsonEncode({'status': 'error', 'message': 'Unauthorized'}),
+          headers: _jsonHeaders,
+        );
+      }
+
+      final bodyText = await req.readAsString();
+      if (bodyText.trim().isEmpty) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Request body tidak boleh kosong.',
+          }),
+          headers: _jsonHeaders,
+        );
+      }
+
+      final decoded = jsonDecode(bodyText);
+      if (decoded is! Map<String, dynamic>) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'status': 'error',
+            'message': 'Format JSON tidak valid.',
+          }),
+          headers: _jsonHeaders,
+        );
+      }
+
+      final updated = await ProfileModel.upsertPreferences(idUser, decoded);
+      return Response.ok(
+        jsonEncode({
+          'status': 'success',
+          'message': 'Preferensi reminder dan jadwal berhasil disimpan.',
+          'data': updated,
+        }),
+        headers: _jsonHeaders,
+      );
+    } on FormatException {
+      return Response.badRequest(
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Format JSON tidak valid.',
+        }),
+        headers: _jsonHeaders,
+      );
+    } catch (e, stack) {
+      print('[PROFILE] updatePreferences error: $e\n$stack');
+      return Response.internalServerError(
+        body: jsonEncode({
+          'status': 'error',
+          'message': 'Gagal menyimpan preferensi.',
+        }),
+        headers: _jsonHeaders,
+      );
+    }
+  }
 }

@@ -335,6 +335,38 @@ class TeamTaskCard extends StatelessWidget {
                   ),
                 ],
               ),
+              if (task.tags.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: task.tags.map((tag) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2.5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: task.isDone
+                            ? const Color(0xFF363C48)
+                            : tag.backgroundColor,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        tag.label,
+                        style: TextStyle(
+                          color: task.isDone
+                              ? const Color(0xFF8E95A5)
+                              : tag.textColor,
+                          fontSize: 10,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
             ],
           ),
         ),

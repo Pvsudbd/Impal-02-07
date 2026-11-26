@@ -4,6 +4,7 @@ import '../../../../core/utils/responsive_context.dart';
 import '../../../common_widgets/impal_time_picker_dialog.dart';
 import '../../../common_widgets/pop_up_pemberitahuan.dart';
 import '../models/user_profile_model.dart';
+import 'desktop/desktop_daily_briefing_modal.dart';
 
 /// Modal bottom sheet for customizing Daily Morning Briefing:
 /// 1. Master enable/disable toggle
@@ -24,6 +25,15 @@ class DailyBriefingSettingsModal extends StatefulWidget {
     required UserProfileModel profile,
     VoidCallback? onSaved,
   }) async {
+    if (MediaQuery.sizeOf(context).width >= 1024) {
+      await DesktopDailyBriefingModal.show(
+        context,
+        profile: profile,
+        onSaved: onSaved,
+      );
+      return;
+    }
+
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/network/api_client.dart';
+import '../../team/models/team_task_repository.dart';
 import 'schedule_model.dart';
 
 class ScheduleRepository {
@@ -34,15 +35,43 @@ class ScheduleRepository {
       final response = await ApiClient.get('/api/agenda', token: token);
       if (response['status'] == 'success' && response['data'] is List) {
         final List<dynamic> rawList = response['data'];
-        final list = rawList
-            .map((item) => ScheduleModel.fromMap(item as Map<String, dynamic>))
+        final currentMap = {for (final s in schedulesNotifier.value) s.id: s};
+        final agendaList = rawList.map((item) {
+          final m = ScheduleModel.fromMap(item as Map<String, dynamic>);
+          final existing = currentMap[m.id];
+          if (existing?.teamName != null &&
+              existing!.teamName!.isNotEmpty &&
+              (m.teamName == null || m.teamName!.isEmpty)) {
+            return m.copyWith(teamName: existing.teamName);
+          }
+          return m;
+        }).toList();
+
+        // Pertahankan rapat kelompok yang sudah ada di schedulesNotifier agar tidak tertimpa
+        final agendaIds = agendaList.map((s) => s.id).toSet();
+        final teamMeetings = schedulesNotifier.value
+            .where((s) =>
+                (s.teamName != null && s.teamName!.isNotEmpty) &&
+                !agendaIds.contains(s.id))
             .toList();
-        schedulesNotifier.value = list;
+
+        schedulesNotifier.value = [...agendaList, ...teamMeetings];
         await _persist();
       }
     } catch (e) {
       debugPrint('[SCHEDULE_REPO] fetchSchedulesFromApi error: $e');
     }
+  }
+
+  /// Sinkronisasi rapat kelompok dari remote PostgreSQL (didelegasikan ke TeamTaskRepository)
+  Future<void> fetchTeamMeetingsFromApi(
+    String teamCodeOrName, {
+    String? targetTeamName,
+  }) async {
+    await TeamTaskRepository().fetchMeetingsFromApi(
+      teamCodeOrName,
+      targetTeamName: targetTeamName,
+    );
   }
 
   Future<void> init() async {
@@ -126,13 +155,25 @@ class ScheduleRepository {
       final response = await ApiClient.post('/api/agenda', body, token: token);
       if (response['status'] == 'success') {
         if (response['data'] is Map<String, dynamic>) {
-          final serverItem = ScheduleModel.fromMap(response['data'] as Map<String, dynamic>);
+          var serverItem = ScheduleModel.fromMap(response['data'] as Map<String, dynamic>);
+          if (item.teamName != null && item.teamName!.isNotEmpty) {
+            serverItem = serverItem.copyWith(teamName: item.teamName);
+          }
           final updatedList = List<ScheduleModel>.from(schedulesNotifier.value);
           final idx = updatedList.indexWhere((s) => s.id == item.id);
           if (idx != -1) {
             updatedList[idx] = serverItem;
             schedulesNotifier.value = updatedList;
             await _persist();
+          }
+        }
+
+        // Sinkronisasi ke PostgreSQL jika berupa rapat kelompok (delegasikan ke TeamTaskRepository)
+        if (item.teamName != null && item.teamName!.trim().isNotEmpty) {
+          try {
+            await TeamTaskRepository().addMeeting(item.teamName!, item);
+          } catch (e) {
+            debugPrint('[SCHEDULE_REPO] addSchedule delegate error: $e');
           }
         }
         return null;
@@ -199,13 +240,23 @@ class ScheduleRepository {
       final response = await ApiClient.put('/api/agenda/${item.id}', body, token: token);
       if (response['status'] == 'success') {
         if (response['data'] is Map<String, dynamic>) {
-          final serverItem = ScheduleModel.fromMap(response['data'] as Map<String, dynamic>);
+          var serverItem = ScheduleModel.fromMap(response['data'] as Map<String, dynamic>);
+          if (item.teamName != null && item.teamName!.isNotEmpty) {
+            serverItem = serverItem.copyWith(teamName: item.teamName);
+          }
           final updatedList = List<ScheduleModel>.from(schedulesNotifier.value);
           final idx = updatedList.indexWhere((s) => s.id == item.id);
           if (idx != -1) {
             updatedList[idx] = serverItem;
             schedulesNotifier.value = updatedList;
             await _persist();
+          }
+        }
+        if (item.teamName != null && item.teamName!.trim().isNotEmpty) {
+          try {
+            await TeamTaskRepository().updateMeeting(item.teamName!, item);
+          } catch (e) {
+            debugPrint('[SCHEDULE_REPO] updateSchedule delegate error: $e');
           }
         }
         return null;
@@ -225,10 +276,13 @@ class ScheduleRepository {
     }
   }
 
-  Future<String?> deleteSchedule(String id) async {
+  Future<String?> deleteSchedule(String id, {String? teamName}) async {
     // 1. Optimistic delete tampilan lokal (simpan snapshot untuk rollback)
     final previousList = List<ScheduleModel>.from(schedulesNotifier.value);
     final current = List<ScheduleModel>.from(previousList);
+    final targetItem = current.where((s) => s.id == id).firstOrNull;
+    final targetTeam = teamName ?? targetItem?.teamName;
+
     current.removeWhere((s) => s.id == id);
     schedulesNotifier.value = current;
     await _persist();
@@ -240,6 +294,13 @@ class ScheduleRepository {
     try {
       final response = await ApiClient.delete('/api/agenda/$id', token: token);
       if (response['status'] == 'success') {
+        if (targetTeam != null && targetTeam.trim().isNotEmpty) {
+          try {
+            await TeamTaskRepository().deleteMeeting(targetTeam, id);
+          } catch (e) {
+            debugPrint('[SCHEDULE_REPO] deleteMeeting delegate error: $e');
+          }
+        }
         return null;
       }
 

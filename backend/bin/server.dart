@@ -6,10 +6,13 @@ import '../lib/middleware/database_provider.dart';
 import '../lib/routes/auth/auth_routes.dart';
 import '../lib/routes/agenda/agenda_routes.dart';
 import '../lib/routes/course/course_routes.dart';
-import '../lib/routes/group/group_routes.dart';
+import '../lib/routes/kelompok/group_routes.dart';
+import '../lib/routes/notifications/notification_routes.dart';
 import '../lib/routes/profile/profile_routes.dart';
 import '../lib/routes/smart_priority/smart_priority_routes.dart';
+import '../lib/routes/tags/tag_routes.dart';
 import '../lib/routes/task/task_routes.dart';
+import '../lib/routes/todo/todo_routes.dart';
 
 void main(List<String> args) async {
   Database.init();
@@ -34,8 +37,13 @@ void main(List<String> args) async {
           'agenda': '/api/agenda',
           'courses': '/api/courses',
           'tasks': '/api/tasks',
+          'task': '/api/task',
+          'todo': '/api/todo',
+          'tags': '/api/tags',
+          'notifications': '/api/notifications',
           'smartPriority': '/api/smart-priority',
           'groups': '/api/groups',
+          'team': '/api/team',
           'course': '/api/agenda/course',
           'personal': '/api/agenda/personal',
           'profile': '/api/profile',
@@ -112,8 +120,10 @@ void main(List<String> args) async {
   // 3. Mount Course catalog routes under /api/courses
   app.mount('/api/courses', fromShelfHandler(CourseRoutes().router));
 
-  // 4. Mount Task CRUD routes under /api/tasks
-  app.mount('/api/tasks', fromShelfHandler(TaskRoutes().router));
+  // 4. Mount Task CRUD routes under /api/tasks and /api/task
+  final taskRoutes = fromShelfHandler(TaskRoutes().router);
+  app.mount('/api/tasks', taskRoutes);
+  app.mount('/api/task', taskRoutes);
 
   // 5. Mount Smart Priority Fuzzy XAI routes under /api/smart-priority
   app.mount(
@@ -121,10 +131,25 @@ void main(List<String> args) async {
     fromShelfHandler(SmartPriorityRoutes().router),
   );
 
-  // 6. Mount Groups / Team routes under /api/groups
-  app.mount('/api/groups', fromShelfHandler(GroupRoutes().router));
+  // 6. Mount Groups / Team routes under /api/groups and /api/team
+  final groupRoutes = fromShelfHandler(GroupRoutes().router);
+  app.mount('/api/groups', groupRoutes);
+  app.mount('/api/team', groupRoutes);
 
-  // 7. Mount Profile routes under /api/profile, /api/user, and /api/student
+  // 7. Mount Todo routes under /api/todo
+  app.mount('/api/todo', fromShelfHandler(TodoRoutes().router));
+
+  // 8. Mount Tag routes under /api/tags and /api/v1/tags
+  final tagRoutes = fromShelfHandler(TagRoutes().router);
+  app.mount('/api/tags', tagRoutes);
+  app.mount('/api/v1/tags', tagRoutes);
+
+  // 9. Mount Notification routes under /api/notifications and /api/v1/notifications
+  final notificationRoutes = fromShelfHandler(NotificationRoutes().router);
+  app.mount('/api/notifications', notificationRoutes);
+  app.mount('/api/v1/notifications', notificationRoutes);
+
+  // 10. Mount Profile routes under /api/profile, /api/user, and /api/student
   final profileRoutes = fromShelfHandler(ProfileRoutes().router);
   app.mount('/api/profile', profileRoutes);
   app.mount('/api/user', profileRoutes);

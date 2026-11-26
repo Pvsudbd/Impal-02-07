@@ -42,10 +42,13 @@
   - **HAL NEGATIF / PERINGATAN MUTLAK ORANYE (`#FA6144`):** Delete, Form Warning, Access Denied.
 - Setiap aksi mutasi data wajib memicu `PopUpPemberitahuan` / `PopUpPemberitahuanTeam`.
 
-### 8. Dokumentasi, Roadmap & Sinkronisasi Skill Wajib
+### 8. Paritas Wording Modal Formulir Desktop (Desktop Form Modal Parity)
+- Mengacu lengkap pada [desktop_form_modal_rules.md](../rules/desktop_form_modal_rules.md): tanpa subtitle tambahan di header modal bila mobile tidak menampilkannya, Title Case konsisten mobile, tutup via `[✕]` kanan atas tanpa tombol `Cancel` redundan.
+
+### 9. Dokumentasi, Roadmap & Sinkronisasi Skill Wajib
 - Selesai mengerjakan fitur, bugfix, atau refactoring, **WAJIB** memperbarui [ROADMAP_AUDIT_DAN_PENINGKATAN.md](../../ROADMAP_AUDIT_DAN_PENINGKATAN.md), `.agents/features/<fitur>.md`, dan menjalankan `.agents/skills/sync-project-skills/SKILL.md`.
 
-### 9. Standar Teknologi & Konvensi Live Backend (Dart Frog & PostgreSQL)
+### 10. Standar Teknologi & Konvensi Live Backend (Dart Frog & PostgreSQL)
 - **Framework REST API**: **Dart Frog** (`dart_frog`) + Shelf sub-routers pada `PORT=3000`.
 - **Koneksi Database**: **PostgreSQL** (`db_manajemen_tugas`) via `Database.getPool()` (`Pool.withEndpoints`) dan `Database.transaction((tx) async { ... })` di `backend/lib/config/db.dart`. Kredensial wajib dari `.env` (tanpa hardcoded fallback).
 - **Format Envelope JSON**: `{ "status": "success" | "error", "message": "...", "data": ... }`.

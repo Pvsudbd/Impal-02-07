@@ -19,6 +19,7 @@ class UserCollection {
   String? majorCampus;
   String? phoneNumber;
   String? bio;
+  String? preferencesJson;
 
   // Metadata Sinkronisasi (Offline-First)
   late DateTime updatedAt;

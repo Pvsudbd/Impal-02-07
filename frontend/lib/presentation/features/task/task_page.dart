@@ -14,9 +14,11 @@ import '../team/models/team_model.dart';
 import '../team/models/team_repository.dart';
 import '../team/models/team_task_repository.dart';
 import 'create_task.dart';
+import 'models/tag_repository.dart';
 import 'models/task_repository.dart';
 import 'widgets/task_expandable_card.dart';
 import 'widgets/task_filter_bar.dart';
+import 'widgets/task_tag_picker.dart';
 import 'widgets/task_timeline_summary.dart';
 
 // Re-exports & Aliases for backward compatibility
@@ -44,7 +46,7 @@ class TaskPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!isStandalone) {
+    if (!isStandalone || context.isDesktop) {
       return HomePage(userName: userName, initialTab: 1);
     }
 
@@ -118,6 +120,7 @@ class _TaskContentViewState extends State<TaskContentView> {
   final GlobalKey _firstActiveTaskKey = GlobalKey();
   String _selectedFilter = 'Today';
   String? _selectedPriority;
+  String? _selectedTagFilter;
   String _searchQuery = '';
   bool _hasAutoScrolled = false;
 
@@ -125,6 +128,8 @@ class _TaskContentViewState extends State<TaskContentView> {
   void initState() {
     super.initState();
     _repository.init();
+    TaskTagRepository().init();
+    _repository.fetchTasksFromApi();
     _repository.addListener(_onRepositoryChanged);
     _teamTaskRepository.init();
     _teamTaskRepository.addListener(_onRepositoryChanged);
@@ -159,59 +164,6 @@ class _TaskContentViewState extends State<TaskContentView> {
     if (mounted) setState(() {});
   }
 
-  bool _isTeamTaskAssignedToCurrentUser(TeamTaskModel task) {
-    final userLower = widget.userName.toLowerCase();
-    final assignedLower = task.assignedTo.toLowerCase();
-    if (assignedLower.contains(userLower)) return true;
-    if (userLower == 'jarvis' &&
-        (assignedLower.contains('yoga') || assignedLower.contains('jarvis'))) {
-      return true;
-    }
-    final parts = userLower.split(' ').where((s) => s.length > 2);
-    for (final p in parts) {
-      if (assignedLower.contains(p)) return true;
-    }
-    return false;
-  }
-
-  TaskItemModel _convertTeamTaskToTaskItem(TeamTaskModel task) {
-    final priorityLevel = task.priority == TaskPriority.high
-        ? TaskPriorityLevel.high
-        : (task.priority == TaskPriority.medium
-            ? TaskPriorityLevel.medium
-            : TaskPriorityLevel.low);
-
-    return TaskItemModel(
-      id: 'team_task_${task.id}',
-      title: task.title,
-      teamName: 'Kelompok IMPAL',
-      priority: priorityLevel,
-      durationBadge: task.effectiveDueBadge,
-      durationBadgeColor: task.isUrgent
-          ? const Color(0xFFFF7D65)
-          : const Color(0xFF5B93FF),
-      durationTextColor: Colors.white,
-      subtitle: task.assignedTo,
-      deadlineDate: task.deadline ?? DateTime(2026, 10, 18, 23, 59),
-      formattedDeadline: 'Sun 18 Oct 2026, ${task.timeRange}',
-      memberAvatars: task.colors,
-      tags: const [
-        TaskTagModel(
-          label: 'Team',
-          backgroundColor: Color(0xFF786FA6),
-          textColor: Color(0xFF4A3C8C),
-        ),
-      ],
-      groupMembers: [task.assignedTo],
-      course: 'Kelompok IMPAL • 7X29',
-      notes: task.description ?? '',
-      isCompleted: task.isDone,
-      isAssignedToUser: true,
-      isCollegeTask: true,
-      isAlertEnabled: task.isAlertEnabled,
-    );
-  }
-
   List<TaskItemModel> get _filteredTasks {
     // 1. Personal & College tasks, plus Team projects in TaskRepository assigned to user
     final repoTasks = _repository.tasks.where((t) {
@@ -220,19 +172,27 @@ class _TaskContentViewState extends State<TaskContentView> {
     }).toList();
 
     // 2. Team tasks from TeamTaskRepository assigned to current user
-    final teamTasks = _teamTaskRepository
-        .getTasks('7X29')
-        .where(_isTeamTaskAssignedToCurrentUser)
-        .map(_convertTeamTaskToTaskItem)
-        .where((converted) => !repoTasks
-            .any((r) => r.title.toLowerCase() == converted.title.toLowerCase()))
-        .toList();
+    final teamTasks = _teamTaskRepository.getAssignedTaskItemsForUser(
+      widget.userName,
+      repoTasks,
+    );
 
     var list = [...repoTasks, ...teamTasks];
-    if (_selectedFilter == 'Next 7 Days') {
+    if (_selectedFilter == 'Today') {
+      final now = DateTime.now();
+      list = list.where((t) {
+        final d = t.deadlineDate;
+        final isSameDay =
+            d.year == now.year && d.month == now.month && d.day == now.day;
+        final badge = t.durationBadge.trim().toLowerCase();
+        final isTodayBadge =
+            badge.endsWith('h') || badge == '<1h' || badge == '0d';
+        return isSameDay || isTodayBadge;
+      }).toList();
+    } else if (_selectedFilter == 'Next 7 Days') {
       list = list.where((t) => t.priority != TaskPriorityLevel.low).toList();
     } else if (_selectedFilter == 'Overdue') {
-      list = list.where((t) => t.priority == TaskPriorityLevel.high).toList();
+      list = list.where((t) => t.isOverdue || t.durationBadge.toLowerCase() == 'overdue').toList();
     }
 
     if (_selectedPriority != null) {
@@ -240,6 +200,15 @@ class _TaskContentViewState extends State<TaskContentView> {
           .where((t) =>
               t.priorityLabel.toLowerCase() ==
               _selectedPriority!.toLowerCase())
+          .toList();
+    }
+
+    if (_selectedTagFilter != null) {
+      final tq = _selectedTagFilter!.trim().toLowerCase();
+      list = list
+          .where(
+            (t) => t.tags.any((tag) => tag.label.trim().toLowerCase() == tq),
+          )
           .toList();
     }
 
@@ -315,7 +284,10 @@ class _TaskContentViewState extends State<TaskContentView> {
           builder: (_) => DashboardTeamPage(
             userName: widget.userName,
             teamName: team.name,
-            teamCode: '7X29',
+            teamId: team.id,
+            teamCode: (team.inviteCode != null && team.inviteCode!.isNotEmpty)
+                ? team.inviteCode!
+                : team.id,
             memberColors: team.memberColors,
             isStandalone: true,
           ),
@@ -352,13 +324,10 @@ class _TaskContentViewState extends State<TaskContentView> {
       return t.isAssignedToUser;
     }).toList();
 
-    final teamTasks = _teamTaskRepository
-        .getTasks('7X29')
-        .where(_isTeamTaskAssignedToCurrentUser)
-        .map(_convertTeamTaskToTaskItem)
-        .where((converted) => !allPersonalAndAssigned
-            .any((r) => r.title.toLowerCase() == converted.title.toLowerCase()))
-        .toList();
+    final teamTasks = _teamTaskRepository.getAssignedTaskItemsForUser(
+      widget.userName,
+      allPersonalAndAssigned,
+    );
 
     for (final task in [...allPersonalAndAssigned, ...teamTasks]) {
       switch (task.priority) {
@@ -377,9 +346,15 @@ class _TaskContentViewState extends State<TaskContentView> {
     final tasks = _sortedTasks;
     final firstActiveId = tasks.where((t) => !t.isCompleted).map((t) => t.id).firstOrNull;
 
-    return CustomScrollView(
-      controller: _scrollController,
-      physics: const BouncingScrollPhysics(),
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _repository.fetchTasksFromApi();
+      },
+      color: AppColors.primary,
+      backgroundColor: AppColors.bgCard,
+      child: CustomScrollView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
@@ -502,6 +477,15 @@ class _TaskContentViewState extends State<TaskContentView> {
                 selectedFilter: _selectedFilter,
                 onFilterSelected: (f) => setState(() => _selectedFilter = f),
               ),
+              SizedBox(height: context.rSpacing(10)),
+              TagFilterStrip(
+                selectedTag: _selectedTagFilter,
+                includeAllOption: true,
+                showAddButton: true,
+                scrollable: true,
+                onTagSelected: (tag) =>
+                    setState(() => _selectedTagFilter = tag),
+              ),
               SizedBox(height: context.rSpacing(14)),
 
               // 4. Quick Search Bar
@@ -542,9 +526,11 @@ class _TaskContentViewState extends State<TaskContentView> {
               ),
               SizedBox(height: context.rSpacing(20)),
 
-              // 6. "Today Task" Section Title
+              // 6. Section Title
               Text(
-                'Today Task',
+                _selectedFilter == 'Today'
+                    ? 'Today Task'
+                    : '$_selectedFilter Tasks',
                 style: TextStyle(
                   color: AppColors.textWhite,
                   fontSize: context.rFont(18, min: 16, max: 22),
@@ -711,6 +697,7 @@ class _TaskContentViewState extends State<TaskContentView> {
           child: SizedBox(height: context.rSpacing(100)),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 }

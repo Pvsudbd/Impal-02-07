@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/responsive_context.dart';
+import '../../../core/widgets/unfocus_on_tap.dart';
 import '../../common_widgets/pop_up_pemberitahuan.dart';
+import 'models/desktop_team_directory_models.dart';
+import 'models/team_repository.dart';
 
 /// Aliases for backwards compatibility with Figma export & routes
 typedef JoinTeam = PopUpJoinTeam;
 
-/// Pop up dialog for joining a team matching the Figma design
+/// Unified Join Study Team modal dialog for both Mobile and Desktop.
+///
+/// Mirrors FigCraft `Modal - Join Team (Pop-Up)` (node `7097`) with the
+/// 4-character invite code boxes, top-right `[✕]` close button, no Team Found
+/// preview card, and full-width `Join Workspace Now` CTA (without Cancel).
 class PopUpJoinTeam extends StatefulWidget {
   final String initialCode;
   final ValueChanged<String>? onJoined;
@@ -15,7 +24,7 @@ class PopUpJoinTeam extends StatefulWidget {
     this.onJoined,
   });
 
-  /// Helper to show the Join Team popup as a modal dialog
+  /// Helper to show the Join Study Team popup as a modal dialog.
   static Future<String?> show(
     BuildContext context, {
     String initialCode = '',
@@ -35,181 +44,442 @@ class PopUpJoinTeam extends StatefulWidget {
 
 class _PopUpJoinTeamState extends State<PopUpJoinTeam> {
   late final TextEditingController _codeController;
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    _codeController = TextEditingController(text: widget.initialCode);
+    _codeController = TextEditingController(
+      text: widget.initialCode.trim().toUpperCase(),
+    );
+    _codeController.addListener(_onCodeChanged);
+    _focusNode.addListener(_onCodeChanged);
+  }
+
+  void _onCodeChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _codeController.removeListener(_onCodeChanged);
+    _focusNode.removeListener(_onCodeChanged);
     _codeController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
+  DesktopTeamCardData? _findTeamByCode(String code) {
+    if (code.length < 4) return null;
+    for (final team in TeamRepository().teams) {
+      if (team.inviteCode?.toUpperCase() == code) {
+        return DesktopTeamCardData(
+          id: team.id,
+          name: team.name,
+          subtitle: 'Kelompok kolaborasi',
+          badgeLabel: 'Mata Kuliah',
+          badgeBgColor: const Color(0xFF47373B),
+          badgeTextColor: AppColors.primaryAccent,
+          category: TeamDirectoryCategory.mataKuliah,
+          members: team.memberColors
+              .map((c) => TeamMemberAvatar(
+                    initials: team.name.isNotEmpty ? team.name[0].toUpperCase() : 'M',
+                    bgColor: c,
+                  ))
+              .toList(),
+          completedTasks: 0,
+          totalTasks: 0,
+          progressColor: AppColors.primaryAccent,
+          percentTextColor: AppColors.primaryAccent,
+          inviteCode: team.inviteCode ?? code,
+        );
+      }
+    }
+    for (final team in DesktopTeamDirectoryFixtures.defaultTeams) {
+      if (team.inviteCode.toUpperCase() == code) {
+        return team;
+      }
+    }
+    return null;
+  }
+
+  bool _isAlreadyJoined(String code) {
+    if (code.length < 4) return false;
+    return TeamRepository().teams.any(
+      (team) => team.inviteCode?.trim().toUpperCase() == code,
+    );
+  }
+
   void _handleJoin() {
-    final code = _codeController.text.trim();
-    if (code.isEmpty) {
+    final code = _codeController.text.trim().toUpperCase();
+    if (code.length < 4) {
       PopUpPemberitahuan.teamWarning(
         context,
         title: 'Invite Code Required',
-        message: 'Please enter team invite code.',
+        message: 'Please enter the 4-character team invite code.',
       );
       return;
     }
 
-    if (widget.onJoined != null) {
-      widget.onJoined!(code);
+    if (_isAlreadyJoined(code)) {
+      PopUpPemberitahuan.teamWarning(
+        context,
+        title: 'Already Joined',
+        message: 'You have already joined this team.',
+      );
+      return;
     }
 
+    widget.onJoined?.call(code);
     Navigator.of(context).pop(code);
   }
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = context.isMobile;
+    final horizontalPad = isMobile ? 18.0 : 28.0;
+    final verticalPad = isMobile ? 18.0 : 24.0;
+    final sectionGap = isMobile ? 16.0 : 22.0;
+    final code = _codeController.text.trim().toUpperCase();
+    final hasFullCode = code.length == 4;
+    final matchedTeam = _findTeamByCode(code);
+    final isAlreadyJoined = hasFullCode && _isAlreadyJoined(code);
+    final canSubmit = hasFullCode && !isAlreadyJoined;
+    final disableMotion = MediaQuery.disableAnimationsOf(context);
+    final animDuration =
+        disableMotion ? Duration.zero : const Duration(milliseconds: 180);
+
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 380),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        clipBehavior: Clip.antiAlias,
-        decoration: ShapeDecoration(
-          color: const Color(0xFF323846),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          shadows: const [
-            BoxShadow(
-              color: Color(0x66000000),
-              blurRadius: 30,
-              offset: Offset(0, 15),
+      elevation: 0,
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 24,
+        vertical: isMobile ? 20 : 24,
+      ),
+      child: UnfocusOnTap(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isMobile ? 360 : 440),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPad,
+              vertical: verticalPad,
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: Title & Close Button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Flexible(
-                  child: Text(
-                    'Join Team',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.07,
-                    ),
-                  ),
+            decoration: BoxDecoration(
+              color: AppColors.bgCard,
+              borderRadius: BorderRadius.circular(isMobile ? 20 : 24),
+              border: Border.all(color: AppColors.borderSubtle, width: 1),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 30,
+                  offset: Offset(0, 15),
                 ),
-                const SizedBox(width: 8),
-                InkWell(
-                  key: const ValueKey('close_join_team_button'),
-                  onTap: () => Navigator.of(context).pop(),
-                  borderRadius: BorderRadius.circular(999),
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: Center(
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: ShapeDecoration(
-                          color: const Color(0x33FA6144),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(999),
-                          ),
+              ],
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeaderRow(context),
+                  SizedBox(height: sectionGap),
+                  _buildCodeBoxes(context),
+                  AnimatedSize(
+                    duration: animDuration,
+                    curve: Curves.easeOutCubic,
+                    child: hasFullCode
+                        ? Padding(
+                            padding: EdgeInsets.only(top: sectionGap),
+                            child: _buildTeamLookupBanner(
+                              context,
+                              code: code,
+                              matchedTeam: matchedTeam,
+                              isAlreadyJoined: isAlreadyJoined,
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  SizedBox(height: sectionGap),
+                  SizedBox(
+                    width: double.infinity,
+                    height: isMobile ? 44 : 46,
+                    child: ElevatedButton(
+                      key: const ValueKey('join_team_submit_button'),
+                      onPressed: canSubmit ? _handleJoin : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        disabledBackgroundColor:
+                            AppColors.primary.withValues(alpha: 0.35),
+                        foregroundColor: Colors.white,
+                        disabledForegroundColor:
+                            Colors.white.withValues(alpha: 0.55),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.close_rounded,
-                          color: Color(0xFFFA6144),
-                          size: 18,
+                      ),
+                      child: Text(
+                        'Join Workspace Now',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: context.rFont(14, min: 13.5, max: 15),
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderRow(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Text(
+            'Join Team',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: context.rFont(20, min: 18, max: 22),
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Material(
+          color: AppColors.bgPrimary,
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            key: const ValueKey('close_join_team_button'),
+            onTap: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              Navigator.of(context).pop();
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.borderSubtle, width: 1),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.close_rounded,
+                size: 16,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCodeBoxes(BuildContext context) {
+    final code = _codeController.text.trim().toUpperCase();
+    final isFocused = _focusNode.hasFocus;
+    final isMobile = context.isMobile;
+    final boxGap = isMobile ? 8.0 : 12.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxBox = isMobile ? 54.0 : 62.0;
+        final boxSize =
+            ((constraints.maxWidth - (boxGap * 3)) / 4).clamp(44.0, maxBox);
+        final totalWidth = (boxSize * 4) + (boxGap * 3);
+
+        return Center(
+          child: SizedBox(
+            width: totalWidth,
+            height: boxSize,
+            child: GestureDetector(
+              onTap: () => _focusNode.requestFocus(),
+              behavior: HitTestBehavior.opaque,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(4, (index) {
+                      final char = index < code.length ? code[index] : '';
+                      final isActive = isFocused &&
+                          (index == code.length ||
+                              (code.length == 4 && index == 3));
+                      final hasChar = char.isNotEmpty;
+
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right: index == 3 ? 0 : boxGap,
+                        ),
+                        child: Container(
+                          width: boxSize,
+                          height: boxSize,
+                          decoration: BoxDecoration(
+                            color: AppColors.bgPrimary,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: (hasChar || isActive)
+                                  ? AppColors.primary
+                                  : AppColors.borderSubtle,
+                              width: (hasChar || isActive) ? 1.5 : 1,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            char,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: context.rFont(22, min: 19, max: 24),
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w700,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  Positioned.fill(
+                    child: Opacity(
+                      opacity: 0,
+                      child: TextField(
+                        key: const ValueKey('join_team_code_input'),
+                        controller: _codeController,
+                        focusNode: _focusNode,
+                        maxLength: 4,
+                        textCapitalization: TextCapitalization.characters,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        buildCounter: (
+                          context, {
+                          required currentLength,
+                          required isFocused,
+                          required maxLength,
+                        }) =>
+                            null,
+                        onSubmitted: (_) => _handleJoin(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTeamLookupBanner(
+    BuildContext context, {
+    required String code,
+    required DesktopTeamCardData? matchedTeam,
+    bool isAlreadyJoined = false,
+  }) {
+    final isFound = matchedTeam != null;
+    final Color accentColor;
+    final Key bannerKey;
+    final IconData badgeIcon;
+    final String badgeText;
+    final String messageText;
+    final Color messageColor;
+    final FontWeight messageWeight;
+
+    if (isAlreadyJoined) {
+      accentColor = PopUpPemberitahuan.negativeColor;
+      bannerKey = const ValueKey('join_team_already_joined_banner');
+      badgeIcon = Icons.info_outline_rounded;
+      badgeText = 'ALREADY JOINED';
+      messageText = matchedTeam != null
+          ? 'You have already joined "${matchedTeam.name}".'
+          : 'You have already joined the team with code "$code".';
+      messageColor = Colors.white;
+      messageWeight = FontWeight.w600;
+    } else if (isFound) {
+      accentColor = const Color(0xFF10B981);
+      bannerKey = const ValueKey('join_team_found_banner');
+      badgeIcon = Icons.check_rounded;
+      badgeText = 'TEAM FOUND';
+      messageText =
+          '${matchedTeam.name} (${matchedTeam.badgeLabel} • ${matchedTeam.members.length} Members)';
+      messageColor = Colors.white;
+      messageWeight = FontWeight.w600;
+    } else {
+      accentColor = AppColors.primaryAccent;
+      bannerKey = const ValueKey('join_team_not_found_banner');
+      badgeIcon = Icons.vpn_key_rounded;
+      badgeText = 'TEAM INVITE CODE';
+      messageText = 'Invite code "$code" ready. Tap Join Study Team to connect.';
+      messageColor = AppColors.textMuted;
+      messageWeight = FontWeight.w400;
+    }
+
+    return Container(
+      key: bannerKey,
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.bgPrimary,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accentColor, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: accentColor,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  badgeIcon,
+                  size: 13,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  badgeText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10.5,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-
-            // Enter Code Input Box
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-              decoration: ShapeDecoration(
-                color: const Color(0xFF282D37),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: TextField(
-                controller: _codeController,
-                maxLength: 20,
-                buildCounter: (context, {required currentLength, required isFocused, required maxLength}) => null,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'Enter Code',
-                  hintStyle: TextStyle(
-                    color: Color(0xFF8E95A5),
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w400,
-                  ),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 14),
-                ),
-                onSubmitted: (_) => _handleJoin(),
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            messageText,
+            style: TextStyle(
+              color: messageColor,
+              fontSize: context.rFont(13, min: 12, max: 14),
+              fontFamily: 'Inter',
+              fontWeight: messageWeight,
             ),
-            const SizedBox(height: 20),
-
-            // Submit Button ("Become Member")
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                key: const ValueKey('join_team_submit_button'),
-                onTap: _handleJoin,
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-                  decoration: ShapeDecoration(
-                    color: const Color(0xFFFA6144),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'Become Member',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

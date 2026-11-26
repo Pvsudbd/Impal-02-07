@@ -31,6 +31,19 @@ class ProfileRoutes {
       authPipeline.addHandler(ProfileController.changePassword),
     );
 
+    // ─── REMINDER, BRIEFING & AI PREFERENCES ──────────────────────────────────
+    // GET  /api/profile/preferences → Ambil preferensi reminder, schedule & AI
+    // PUT  /api/profile/preferences → Simpan preferensi reminder, schedule & AI
+    router.get(
+      '/preferences',
+      authPipeline.addHandler(ProfileController.getPreferences),
+    );
+
+    router.put(
+      '/preferences',
+      authPipeline.addHandler(ProfileController.updatePreferences),
+    );
+
     // ─── CLASS DIAGRAM USER METHODS ───────────────────────────────────────────
     // GET  /api/profile/daily-agenda     → +viewDailyAgenda(date: Date)
     // GET  /api/profile/course-schedules → +viewCourseSchedule()

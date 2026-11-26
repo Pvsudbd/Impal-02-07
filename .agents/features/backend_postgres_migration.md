@@ -8,7 +8,7 @@
 ---
 
 ## 1. Latar Belakang & Masalah
-Sistem basis data utama TodoList Smart System dimigrasikan dari MySQL lokal (Laragon) ke PostgreSQL remote/server (`172.22.245.175:5432`) dengan database `db_manajemen_tugas`.
+Sistem basis data utama TodoList Smart System dimigrasikan dari MySQL lokal (Laragon) ke PostgreSQL remote/server (`10.147.115.231:5432`) dengan database `db_manajemen_tugas`.
 
 Saat pengujian pembuatan jadwal (Meeting, Lecture, dan External), data tidak tersimpan ke database karena beberapa akar masalah:
 1. **Lecture (CourseSchedule)**:

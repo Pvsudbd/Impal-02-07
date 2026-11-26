@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../data/local/isar_service.dart';
 
 /// Output mode for deadline alert notifications.
 enum AlertSoundVibrationMode {
@@ -134,6 +136,46 @@ class CategoryAlertConfig {
       enabled: enabled ?? this.enabled,
       timings: timings ?? this.timings,
       soundMode: soundMode ?? this.soundMode,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'enabled': enabled,
+        'timings': timings,
+        'soundMode': soundMode.name,
+      };
+
+  static AlertSoundVibrationMode _parseSoundMode(dynamic raw) {
+    final s = (raw ?? '').toString().trim();
+    switch (s) {
+      case 'soundAndVibrate':
+      case 'soundAndVibration':
+        return AlertSoundVibrationMode.soundAndVibrate;
+      case 'soundOnly':
+        return AlertSoundVibrationMode.soundOnly;
+      case 'vibrationOnly':
+        return AlertSoundVibrationMode.vibrationOnly;
+      case 'silent':
+        return AlertSoundVibrationMode.silent;
+      default:
+        return AlertSoundVibrationMode.soundAndVibrate;
+    }
+  }
+
+  factory CategoryAlertConfig.fromMap(
+    Map<String, dynamic> map, {
+    CategoryAlertConfig fallback = const CategoryAlertConfig(),
+  }) {
+    final rawTimings = map['timings'];
+    final parsedTimings = rawTimings is List
+        ? rawTimings.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).toList()
+        : fallback.timings;
+    return CategoryAlertConfig(
+      enabled: map['enabled'] is bool ? map['enabled'] as bool : fallback.enabled,
+      timings: parsedTimings,
+      soundMode: map.containsKey('soundMode')
+          ? _parseSoundMode(map['soundMode'])
+          : fallback.soundMode,
     );
   }
 
@@ -483,6 +525,107 @@ class UserProfileModel {
     );
   }
 
+  Map<String, dynamic> toPreferencesMap() => {
+        'sound_vibration_enabled': soundVibrationEnabled,
+        'is_fuzzy_model_active': isFuzzyModelActive,
+        'score_explainability_enabled': scoreExplainabilityEnabled,
+        'task_deadline_alerts': taskDeadlineAlerts.toMap(),
+        'lecture_schedule_alerts': lectureScheduleAlerts.toMap(),
+        'external_schedule_alerts': externalScheduleAlerts.toMap(),
+        'team_task_alerts': teamTaskAlerts.toMap(),
+        'team_meeting_alerts': teamMeetingAlerts.toMap(),
+        'daily_briefing_enabled': isDailyBriefingEnabled,
+        'daily_briefing_time': dailyMorningBriefingTime,
+        'daily_briefing_topics': dailyBriefingTopics,
+        'daily_briefing_compact': isDailyBriefingCompact,
+      };
+
+  static bool _boolFrom(dynamic v, bool fallback) {
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) {
+      final low = v.toLowerCase();
+      if (low == 'true' || low == '1' || low == 't') return true;
+      if (low == 'false' || low == '0' || low == 'f') return false;
+    }
+    return fallback;
+  }
+
+  static Map<String, dynamic>? _mapFrom(dynamic v) {
+    if (v is Map<String, dynamic>) return v;
+    if (v is Map) return Map<String, dynamic>.from(v);
+    if (v is String && v.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(v);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  UserProfileModel applyPreferencesMap(Map<String, dynamic> map) {
+    final taskMap = _mapFrom(map['task_deadline_alerts'] ?? map['taskDeadlineAlerts']);
+    final lectureMap = _mapFrom(map['lecture_schedule_alerts'] ?? map['lectureScheduleAlerts']);
+    final externalMap = _mapFrom(map['external_schedule_alerts'] ?? map['externalScheduleAlerts']);
+    final teamTaskMap = _mapFrom(map['team_task_alerts'] ?? map['teamTaskAlerts']);
+    final teamMeetingMap = _mapFrom(map['team_meeting_alerts'] ?? map['teamMeetingAlerts']);
+
+    final rawTopics = map['daily_briefing_topics'] ?? map['dailyBriefingTopics'];
+    List<String>? topics;
+    if (rawTopics is List) {
+      topics = rawTopics.map((e) => e.toString()).toList();
+    } else if (rawTopics is String && rawTopics.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawTopics);
+        if (decoded is List) {
+          topics = decoded.map((e) => e.toString()).toList();
+        }
+      } catch (_) {}
+    }
+
+    final rawTime = (map['daily_briefing_time'] ?? map['dailyMorningBriefingTime'])?.toString().trim();
+
+    return copyWith(
+      soundVibrationEnabled: _boolFrom(
+        map['sound_vibration_enabled'] ?? map['soundVibrationEnabled'],
+        soundVibrationEnabled,
+      ),
+      isFuzzyModelActive: _boolFrom(
+        map['is_fuzzy_model_active'] ?? map['isFuzzyModelActive'],
+        isFuzzyModelActive,
+      ),
+      scoreExplainabilityEnabled: _boolFrom(
+        map['score_explainability_enabled'] ?? map['scoreExplainabilityEnabled'],
+        scoreExplainabilityEnabled,
+      ),
+      taskDeadlineAlerts: taskMap != null
+          ? CategoryAlertConfig.fromMap(taskMap, fallback: taskDeadlineAlerts)
+          : null,
+      lectureScheduleAlerts: lectureMap != null
+          ? CategoryAlertConfig.fromMap(lectureMap, fallback: lectureScheduleAlerts)
+          : null,
+      externalScheduleAlerts: externalMap != null
+          ? CategoryAlertConfig.fromMap(externalMap, fallback: externalScheduleAlerts)
+          : null,
+      teamTaskAlerts: teamTaskMap != null
+          ? CategoryAlertConfig.fromMap(teamTaskMap, fallback: teamTaskAlerts)
+          : null,
+      teamMeetingAlerts: teamMeetingMap != null
+          ? CategoryAlertConfig.fromMap(teamMeetingMap, fallback: teamMeetingAlerts)
+          : null,
+      isDailyBriefingEnabled: _boolFrom(
+        map['daily_briefing_enabled'] ?? map['isDailyBriefingEnabled'],
+        isDailyBriefingEnabled,
+      ),
+      dailyMorningBriefingTime: (rawTime != null && rawTime.isNotEmpty) ? rawTime : null,
+      dailyBriefingTopics: topics,
+      isDailyBriefingCompact: _boolFrom(
+        map['daily_briefing_compact'] ?? map['isDailyBriefingCompact'],
+        isDailyBriefingCompact,
+      ),
+    );
+  }
+
   static const UserProfileModel defaultProfile = UserProfileModel();
 }
 
@@ -493,31 +636,121 @@ class UserProfileRepository with ChangeNotifier {
   factory UserProfileRepository() => _instance;
   UserProfileRepository._internal();
 
+  static const String _prefsKey = 'user_preferences_json';
+  static const String _prefsOwnerKey = 'user_preferences_owner';
+  static const String _prefsDirtyKey = 'user_preferences_dirty';
+
   UserProfileModel _profile = UserProfileModel.defaultProfile;
   bool _initialized = false;
+  String? _activeUserId;
 
   UserProfileModel get profile => _profile;
   bool get isInitialized => _initialized;
+
+  String? _extractUserIdFromToken(String? token) {
+    if (token == null || token.isEmpty) return null;
+    try {
+      final parts = token.split('.');
+      if (parts.length < 2) return null;
+      final normalized = base64Url.normalize(parts[1]);
+      final payload = jsonDecode(utf8.decode(base64Url.decode(normalized)));
+      if (payload is Map) {
+        final raw = payload['idUser'] ??
+            payload['idStudent'] ??
+            payload['id_user'] ??
+            payload['id_student'] ??
+            payload['sub'];
+        if (raw != null && raw.toString().trim().isNotEmpty) {
+          return raw.toString().trim();
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<String?> _resolveUserId(SharedPreferences prefs) async {
+    if (_activeUserId != null && _activeUserId!.isNotEmpty) return _activeUserId;
+    final fromPrefs = prefs.getString('user_id') ?? prefs.getString('auth_user_id');
+    if (fromPrefs != null && fromPrefs.isNotEmpty) {
+      _activeUserId = fromPrefs;
+      return _activeUserId;
+    }
+    final token = prefs.getString('auth_token') ?? prefs.getString('jwt_token');
+    _activeUserId = _extractUserIdFromToken(token);
+    return _activeUserId;
+  }
 
   void init({String? userName}) {
     if (userName != null && userName.trim().isNotEmpty && userName != 'Jarvis') {
       _profile = _profile.copyWith(fullName: userName);
     }
+    _loadLocalProfile();
     fetchProfileFromApi();
     _initialized = true;
   }
 
-  /// Sinkronisasi profil mahasiswa dari backend API
+  Future<void> _loadLocalProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = await _resolveUserId(prefs);
+      final phone = prefs.getString('user_phone');
+      final bio = prefs.getString('user_bio');
+      if ((phone != null && phone.isNotEmpty) || (bio != null && bio.isNotEmpty)) {
+        _profile = _profile.copyWith(
+          phoneNumber: (phone != null && phone.isNotEmpty) ? phone : _profile.phoneNumber,
+          bio: (bio != null && bio.isNotEmpty) ? bio : _profile.bio,
+        );
+      }
+
+      final owner = prefs.getString(_prefsOwnerKey);
+      final sameOwner = owner == null || userId == null || owner == userId;
+      bool hydratedFromLocal = false;
+
+      if (sameOwner) {
+        final rawPrefs = prefs.getString(_prefsKey);
+        if (rawPrefs != null && rawPrefs.trim().isNotEmpty) {
+          final decoded = jsonDecode(rawPrefs);
+          if (decoded is Map<String, dynamic>) {
+            _profile = _profile.applyPreferencesMap(decoded);
+            hydratedFromLocal = true;
+          } else if (decoded is Map) {
+            _profile = _profile.applyPreferencesMap(Map<String, dynamic>.from(decoded));
+            hydratedFromLocal = true;
+          }
+        }
+      }
+
+      if (!hydratedFromLocal && userId != null && userId.isNotEmpty) {
+        final isarMap = await IsarService().getUserPreferencesMap(userId);
+        if (isarMap != null) {
+          _profile = _profile.applyPreferencesMap(isarMap);
+        }
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[PROFILE_REPO] _loadLocalProfile: $e');
+    }
+  }
+
+  /// Sinkronisasi profil mahasiswa & preferensi reminder dari backend API
   Future<void> fetchProfileFromApi() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = prefs.getString('auth_token') ?? prefs.getString('jwt_token');
+      final savedPhone = prefs.getString('user_phone');
+      final savedBio = prefs.getString('user_bio');
       if (token == null || token.isEmpty) return;
 
       final res = await ApiClient.get('/api/profile', token: token);
       if (res['status'] == 'success' && res['data'] is Map<String, dynamic>) {
         final data = res['data'] as Map<String, dynamic>;
         final stats = data['statistics'] as Map<String, dynamic>?;
+        final apiUserId = (data['idUser'] ?? data['userId'] ?? data['idStudent'])?.toString();
+        if (apiUserId != null && apiUserId.isNotEmpty) {
+          _activeUserId = apiUserId;
+          await prefs.setString('user_id', apiUserId);
+        }
 
         final name = data['name']?.toString() ?? _profile.fullName;
         final studentId = data['studentId']?.toString() ?? _profile.studentId;
@@ -525,15 +758,45 @@ class UserProfileRepository with ChangeNotifier {
 
         final initials = name.trim().split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase();
 
-        _profile = _profile.copyWith(
+        var nextProfile = _profile.copyWith(
           fullName: name,
           studentId: studentId.isNotEmpty ? studentId : _profile.studentId,
           email: email.isNotEmpty ? email : _profile.email,
+          phoneNumber: (savedPhone != null && savedPhone.isNotEmpty) ? savedPhone : _profile.phoneNumber,
+          bio: (savedBio != null && savedBio.isNotEmpty) ? savedBio : _profile.bio,
           avatarInitials: initials.isNotEmpty ? initials : _profile.avatarInitials,
           tasksDoneCount: stats != null ? (stats['tasksDoneCount'] as int? ?? _profile.tasksDoneCount) : _profile.tasksDoneCount,
           tasksPendingCount: stats != null ? (stats['tasksPendingCount'] as int? ?? _profile.tasksPendingCount) : _profile.tasksPendingCount,
           courseCount: stats != null ? (stats['coursesCount'] as int? ?? _profile.courseCount) : _profile.courseCount,
         );
+
+        final isDirty = prefs.getBool(_prefsDirtyKey) ?? false;
+        final owner = prefs.getString(_prefsOwnerKey);
+        final isSameOwner = owner != null && _activeUserId != null && owner == _activeUserId;
+
+        if (isDirty && isSameOwner) {
+          _profile = nextProfile;
+          notifyListeners();
+          await _syncPreferencesToBackend(_profile);
+          return;
+        }
+
+        Map<String, dynamic>? serverPrefs;
+        if (data['preferences'] is Map) {
+          serverPrefs = Map<String, dynamic>.from(data['preferences'] as Map);
+        } else {
+          final prefRes = await ApiClient.get('/api/profile/preferences', token: token);
+          if (prefRes['status'] == 'success' && prefRes['data'] is Map) {
+            serverPrefs = Map<String, dynamic>.from(prefRes['data'] as Map);
+          }
+        }
+
+        if (serverPrefs != null) {
+          nextProfile = nextProfile.applyPreferencesMap(serverPrefs);
+        }
+
+        _profile = nextProfile;
+        await _saveLocalPreferences(_profile, isSynced: true);
         notifyListeners();
       }
     } catch (e) {
@@ -544,13 +807,99 @@ class UserProfileRepository with ChangeNotifier {
   void updateProfile(UserProfileModel newProfile) {
     _profile = newProfile;
     notifyListeners();
+    _saveLocalProfile(newProfile);
+    _saveLocalPreferences(newProfile, isSynced: false);
     _syncToBackend(newProfile);
+    _syncPreferencesToBackend(newProfile);
+  }
+
+  Future<void> _saveLocalProfile(UserProfileModel p) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_phone', p.phoneNumber);
+      await prefs.setString('user_bio', p.bio);
+    } catch (_) {}
+  }
+
+  Future<void> _saveLocalPreferences(
+    UserProfileModel p, {
+    required bool isSynced,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = await _resolveUserId(prefs);
+      final map = p.toPreferencesMap();
+      await prefs.setString(_prefsKey, jsonEncode(map));
+      if (userId != null && userId.isNotEmpty) {
+        await prefs.setString(_prefsOwnerKey, userId);
+        await IsarService().saveUserPreferencesMap(
+          userId,
+          map,
+          name: p.fullName,
+          email: p.email,
+          isSynced: isSynced,
+        );
+      }
+      await prefs.setBool(_prefsDirtyKey, !isSynced);
+    } catch (e) {
+      debugPrint('[PROFILE_REPO] _saveLocalPreferences: $e');
+    }
+  }
+
+  Future<void> _syncPreferencesToBackend(UserProfileModel profile) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? prefs.getString('jwt_token');
+      if (token == null || token.isEmpty) return;
+
+      final res = await ApiClient.put(
+        '/api/profile/preferences',
+        profile.toPreferencesMap(),
+        token: token,
+      );
+      if (res['status'] == 'success') {
+        await prefs.setBool(_prefsDirtyKey, false);
+        final userId = await _resolveUserId(prefs);
+        if (userId != null && userId.isNotEmpty) {
+          await IsarService().saveUserPreferencesMap(
+            userId,
+            profile.toPreferencesMap(),
+            name: profile.fullName,
+            email: profile.email,
+            isSynced: true,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[PROFILE_REPO] _syncPreferencesToBackend error: $e');
+    }
+  }
+
+  void _persistAndSyncPreferences() {
+    _saveLocalPreferences(_profile, isSynced: false);
+    _syncPreferencesToBackend(_profile);
+  }
+
+  Future<void> resetForLogout() async {
+    _profile = UserProfileModel.defaultProfile;
+    _initialized = false;
+    _activeUserId = null;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user_phone');
+      await prefs.remove('user_bio');
+      await prefs.remove('user_id');
+      await prefs.remove(_prefsKey);
+      await prefs.remove(_prefsOwnerKey);
+      await prefs.remove(_prefsDirtyKey);
+    } catch (_) {}
   }
 
   Future<void> _syncToBackend(UserProfileModel newProfile) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final token = prefs.getString('auth_token') ?? prefs.getString('jwt_token');
       if (token == null || token.isEmpty) return;
 
       await ApiClient.put(
@@ -575,6 +924,7 @@ class UserProfileRepository with ChangeNotifier {
       externalScheduleAlerts: externalConfig,
     );
     notifyListeners();
+    _persistAndSyncPreferences();
   }
 
   void updateTeamAlertSettings({
@@ -586,6 +936,7 @@ class UserProfileRepository with ChangeNotifier {
       teamMeetingAlerts: teamMeetingConfig,
     );
     notifyListeners();
+    _persistAndSyncPreferences();
   }
 
   void updateCategoryAlertSettings({
@@ -613,6 +964,7 @@ class UserProfileRepository with ChangeNotifier {
         break;
     }
     notifyListeners();
+    _persistAndSyncPreferences();
   }
 
   void toggleCategoryAlert(AlertCategoryType category, bool enabled) {
@@ -624,6 +976,13 @@ class UserProfileRepository with ChangeNotifier {
         );
         break;
       case AlertCategoryType.schedule:
+        _profile = _profile.copyWith(
+          lectureScheduleAlerts:
+              _profile.lectureScheduleAlerts.copyWith(enabled: enabled),
+          externalScheduleAlerts:
+              _profile.externalScheduleAlerts.copyWith(enabled: enabled),
+        );
+        break;
       case AlertCategoryType.classSchedule:
         _profile = _profile.copyWith(
           lectureScheduleAlerts:
@@ -631,6 +990,13 @@ class UserProfileRepository with ChangeNotifier {
         );
         break;
       case AlertCategoryType.team:
+        _profile = _profile.copyWith(
+          teamTaskAlerts:
+              _profile.teamTaskAlerts.copyWith(enabled: enabled),
+          teamMeetingAlerts:
+              _profile.teamMeetingAlerts.copyWith(enabled: enabled),
+        );
+        break;
       case AlertCategoryType.teamMeeting:
         _profile = _profile.copyWith(
           teamMeetingAlerts:
@@ -639,6 +1005,7 @@ class UserProfileRepository with ChangeNotifier {
         break;
     }
     notifyListeners();
+    _persistAndSyncPreferences();
   }
 
   void toggleDeadlineAlerts(bool value) {
@@ -661,11 +1028,13 @@ class UserProfileRepository with ChangeNotifier {
   void toggleSoundVibration(bool value) {
     _profile = _profile.copyWith(soundVibrationEnabled: value);
     notifyListeners();
+    _persistAndSyncPreferences();
   }
 
   void updateBriefingTime(String newTime) {
     _profile = _profile.copyWith(dailyMorningBriefingTime: newTime);
     notifyListeners();
+    _persistAndSyncPreferences();
   }
 
   void updateDailyBriefingSettings({
@@ -681,20 +1050,24 @@ class UserProfileRepository with ChangeNotifier {
       isDailyBriefingCompact: isCompact,
     );
     notifyListeners();
+    _persistAndSyncPreferences();
   }
 
   void toggleDailyBriefing(bool value) {
     _profile = _profile.copyWith(isDailyBriefingEnabled: value);
     notifyListeners();
+    _persistAndSyncPreferences();
   }
 
   void toggleScoreExplainability(bool value) {
     _profile = _profile.copyWith(scoreExplainabilityEnabled: value);
     notifyListeners();
+    _persistAndSyncPreferences();
   }
 
   void toggleFuzzyModel(bool value) {
     _profile = _profile.copyWith(isFuzzyModelActive: value);
     notifyListeners();
+    _persistAndSyncPreferences();
   }
 }

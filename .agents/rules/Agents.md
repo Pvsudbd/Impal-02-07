@@ -54,10 +54,12 @@ Setiap kali Agent diminta membuat, merancang, atau merefaktor fitur baru:
   - **Pengguna:** `auth`, `schedule`, `profile`.
   - **Habhindra:** `dashboard`, `team`, `task` (jangan diubah UI-nya tanpa izin eksplisit pengguna).
 
+### 🛡️ Standar Integritas UUID & Isolasi State Multi-Akun
+1. **UUID v4 Murni (`VARCHAR(36)`):** Dilarang menambahkan prefix string pada UUID (`'grp_' + _uuid.v4()` melebihi 36 karakter). Selalu pakai `_uuid.v4()`.
+2. **Isolasi Logout:** Setiap alur logout wajib membersihkan seluruh singleton cache (`ScheduleRepository().clearLocalCache()`, `TeamRepository().clear()`, `TaskRepository().clear()`, `TeamTaskRepository().clear()`, `UserProfileRepository().resetForLogout()`, `NotificationRepository.instance.clearForLogout()`), serta sinkronisasi kosong (`[]`) tidak boleh diblokir agar data akun lama tidak bocor.
+
 ---
 
 ## 6. 📝 Pencatatan Riwayat Fitur & Update Skill Wajib
-
-Setiap kali selesai menambah fitur, memperbaiki bug, atau melakukan *security hardening*:
 1. Buat atau perbarui log di `.agents/features/<nama_fitur>.md` (tanggal, daftar berkas, rincian teknis, keselarasan schema, verifikasi `.agents/cybersecurity.md`).
 2. Jalankan protokol `.agents/skills/sync-project-skills/SKILL.md` dan verifikasi dengan `validate_agent_sync.dart`.

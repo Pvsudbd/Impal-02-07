@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive_context.dart';
 import '../models/notification_repository.dart';
 import '../notifikasi_page.dart';
+import 'desktop_notification_popover.dart';
 
 /// Reusable Notification Bell button with real-time unread badge counter.
 /// Placed to the left of the profile avatar in headers across the app.
@@ -25,8 +27,23 @@ class NotificationBellButton extends StatelessWidget {
         return Material(
           color: Colors.transparent,
           child: InkWell(
+            key: const ValueKey('notification_bell_btn'),
             borderRadius: BorderRadius.circular(999),
             onTap: () {
+              if (context.isDesktop) {
+                final box = context.findRenderObject() as RenderBox?;
+                final overlay =
+                    Overlay.of(context).context.findRenderObject() as RenderBox?;
+                if (box != null && overlay != null) {
+                  final topLeft =
+                      box.localToGlobal(Offset.zero, ancestor: overlay);
+                  DesktopNotificationPopover.show(
+                    context,
+                    anchorRect: topLeft & box.size,
+                  );
+                  return;
+                }
+              }
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => const NotifikasiPage(),

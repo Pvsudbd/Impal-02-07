@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/responsive_context.dart';
 import '../../common_widgets/impal_bottom_nav_bar.dart';
 import '../../common_widgets/impal_schedule_card.dart';
 import '../../common_widgets/impal_search_bar.dart';
@@ -10,6 +11,7 @@ import 'models/schedule_model.dart';
 import 'models/schedule_repository.dart';
 import 'pop_up_konfirmasi_delete.dart';
 import 'schedule_form_page.dart';
+import 'widgets/desktop/desktop_schedule_modal.dart';
 import 'widgets/schedule_empty_state.dart';
 import 'widgets/schedule_filter_bar.dart';
 import 'widgets/schedule_header.dart';
@@ -49,16 +51,16 @@ class _SchedulePageState extends State<SchedulePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.isStandalone || context.isDesktop) {
+      return HomePage(
+        userName: widget.userName,
+        initialTab: 3,
+      );
+    }
+
     final canPop = Navigator.of(context).canPop();
     final effectiveShowBack =
         widget.showBackButton ?? (widget.isStandalone && canPop);
-
-    if (!widget.isStandalone) {
-      return ScheduleContentView(
-        userName: widget.userName,
-        showBackButton: false,
-      );
-    }
 
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
@@ -218,12 +220,20 @@ class _ScheduleContentViewState extends State<ScheduleContentView> {
   }
 
   void _openAddSchedule() {
+    if (context.isDesktop) {
+      DesktopScheduleModal.show(context);
+      return;
+    }
     Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const ScheduleFormPage()),
     );
   }
 
   void _openEditSchedule(ScheduleModel item) async {
+    if (context.isDesktop) {
+      await DesktopScheduleModal.show(context, schedule: item);
+      return;
+    }
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => ScheduleFormPage(schedule: item)),
     );

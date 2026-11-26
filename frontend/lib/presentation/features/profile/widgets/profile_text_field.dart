@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_context.dart';
 
@@ -12,6 +13,11 @@ class ProfileTextField extends StatelessWidget {
   final Widget? trailing;
   final bool readOnly;
   final ValueChanged<String>? onChanged;
+  final List<TextInputFormatter>? inputFormatters;
+  final String? errorText;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
+  final String? hintText;
 
   const ProfileTextField({
     super.key,
@@ -23,10 +29,17 @@ class ProfileTextField extends StatelessWidget {
     this.trailing,
     this.readOnly = false,
     this.onChanged,
+    this.inputFormatters,
+    this.errorText,
+    this.textInputAction,
+    this.onSubmitted,
+    this.hintText,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasError = errorText != null && errorText!.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -34,7 +47,7 @@ class ProfileTextField extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: AppColors.textMuted,
+            color: hasError ? AppColors.primary : AppColors.textMuted,
             fontSize: context.rFont(10.5, min: 9.5, max: 12),
             fontFamily: 'Inter',
             fontWeight: FontWeight.w700,
@@ -44,13 +57,16 @@ class ProfileTextField extends StatelessWidget {
         SizedBox(height: context.rSpacing(7)),
 
         // Input Field Box
-        Container(
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             color: AppColors.bgCard,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: const Color(0xFF434A59).withValues(alpha: 0.5),
-              width: 1,
+              color: hasError
+                  ? AppColors.primary
+                  : const Color(0xFF434A59).withValues(alpha: 0.5),
+              width: hasError ? 1.4 : 1,
             ),
           ),
           padding: EdgeInsets.symmetric(
@@ -67,7 +83,7 @@ class ProfileTextField extends StatelessWidget {
                 child: Icon(
                   leadingIcon,
                   size: 18,
-                  color: const Color(0xFF8E95A5),
+                  color: hasError ? AppColors.primary : const Color(0xFF8E95A5),
                 ),
               ),
               const SizedBox(width: 10),
@@ -76,6 +92,9 @@ class ProfileTextField extends StatelessWidget {
                   controller: controller,
                   readOnly: readOnly,
                   keyboardType: keyboardType,
+                  inputFormatters: inputFormatters,
+                  textInputAction: textInputAction,
+                  onSubmitted: onSubmitted,
                   maxLines: maxLines,
                   onChanged: onChanged,
                   enableInteractiveSelection: true, // No paste blocking
@@ -85,10 +104,15 @@ class ProfileTextField extends StatelessWidget {
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w500,
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
+                    hintText: hintText,
+                    hintStyle: const TextStyle(
+                      color: AppColors.textSubtle,
+                      fontSize: 13,
+                    ),
                     border: InputBorder.none,
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
               ),
@@ -99,8 +123,36 @@ class ProfileTextField extends StatelessWidget {
             ],
           ),
         ),
+
+        // Error Feedback Message
+        if (hasError) ...[
+          SizedBox(height: context.rSpacing(6)),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  size: 13,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    errorText!,
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: context.rFont(11, min: 10, max: 12),
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
 }
-

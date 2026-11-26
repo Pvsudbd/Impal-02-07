@@ -24,94 +24,6 @@ class DetailCardSmartPriority extends StatelessWidget {
     );
   }
 
-  Widget _buildFuzzifiedParamRow(
-    BuildContext context,
-    FuzzifiedParameter param,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                param.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: const Color(0xFFCBD5E1),
-                  fontSize: context.rFont(12, min: 10.5, max: 13.5),
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            SizedBox(width: context.rSpacing(8)),
-            Text(
-              param.degreeLabel,
-              style: TextStyle(
-                color: param.accentColor,
-                fontSize: context.rFont(12, min: 10.5, max: 13.5),
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: context.rSpacing(6)),
-
-        // Progress bar indicator
-        Container(
-          width: double.infinity,
-          height: 6,
-          decoration: BoxDecoration(
-            color: const Color(0xFF232833),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: LayoutBuilder(
-            builder: (ctx, constraints) {
-              return Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  width: constraints.maxWidth * param.degree.clamp(0.0, 1.0),
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: param.accentColor,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        SizedBox(height: context.rSpacing(6)),
-
-        // Membership values breakdown row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: param.membershipValues.entries.map((entry) {
-            return Flexible(
-              child: Text(
-                '${entry.key} (${entry.value.toStringAsFixed(2)})',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: context.rFont(10, min: 9, max: 11.5),
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -237,188 +149,7 @@ class DetailCardSmartPriority extends StatelessWidget {
             ),
             SizedBox(height: context.rSpacing(18)),
 
-            // 1. INPUT PARAMETER FUZZIFICATION
-            Row(
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFF5E4D),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                SizedBox(width: context.rSpacing(8)),
-                Expanded(
-                  child: Text(
-                    '1. INPUT PARAMETER FUZZIFICATION',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: context.rFont(12, min: 10.5, max: 13.5),
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: context.rSpacing(10)),
-            _buildFuzzifiedParamRow(context, item.deadlineParam),
-            SizedBox(height: context.rSpacing(12)),
-            _buildFuzzifiedParamRow(context, item.courseWeightParam),
-            SizedBox(height: context.rSpacing(18)),
-
-            // 2. CENTROID DEFUZZIFICATION
-            Row(
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF10B981),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                SizedBox(width: context.rSpacing(8)),
-                Expanded(
-                  child: Text(
-                    '2. CENTROID DEFUZZIFICATION',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: context.rFont(12, min: 10.5, max: 13.5),
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: context.rSpacing(10)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      RichText(
-                        text: TextSpan(
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: context.rFont(12, min: 10.5, max: 13.5),
-                            color: const Color(0xFFCBD5E1),
-                          ),
-                          children: const [
-                            TextSpan(
-                              text: 'Method: ',
-                              style: TextStyle(color: AppColors.textMuted),
-                            ),
-                            TextSpan(
-                              text: 'Center of Gravity (CoG)',
-                              style: TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: context.rSpacing(2)),
-                      Text(
-                        'Aggregation Area: ${item.aggregationAreaText}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: context.rFont(11, min: 9.5, max: 12),
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: context.rSpacing(8)),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'z* = ${item.score.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        color: const Color(0xFF34D399),
-                        fontSize: context.rFont(16, min: 14, max: 19),
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w800,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                    Text(
-                      'Scale [0 - 100]',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: context.rFont(10.5, min: 9.5, max: 11.5),
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            SizedBox(height: context.rSpacing(16)),
-
-            // 3. Why is this task Priority #1?
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(context.rSpacing(12)),
-              decoration: BoxDecoration(
-                color: AppColors.bgPrimary,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.borderSubtle,
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.lightbulb_outline_rounded,
-                        color: const Color(0xFF38BDF8),
-                        size: context.rIcon(16),
-                      ),
-                      SizedBox(width: context.rSpacing(6)),
-                      Expanded(
-                        child: Text(
-                          'Why is this task Priority #${item.rank}?',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: const Color(0xFF38BDF8),
-                            fontSize: context.rFont(12.5, min: 11, max: 14),
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: context.rSpacing(6)),
-                  Text(
-                    item.reasonExplanation,
-                    style: TextStyle(
-                      color: const Color(0xFFCBD5E1),
-                      fontSize: context.rFont(11.5, min: 10, max: 13),
-                      fontFamily: 'Inter',
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            SmartPriorityExplainabilityDetails(item: item),
             SizedBox(height: context.rSpacing(18)),
 
             // Close Button
@@ -449,6 +180,298 @@ class DetailCardSmartPriority extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Shared Mamdani XAI explainability breakdown (Fuzzification, Centroid CoG,
+/// and human-readable Priority Rationale). Reused by both inline Mobile card
+/// dropdown expansion and Desktop bottom sheet modal.
+class SmartPriorityExplainabilityDetails extends StatelessWidget {
+  final SmartPriorityModel item;
+
+  const SmartPriorityExplainabilityDetails({
+    super.key,
+    required this.item,
+  });
+
+  Widget _buildFuzzifiedParamRow(
+    BuildContext context,
+    FuzzifiedParameter param,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                param.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: const Color(0xFFCBD5E1),
+                  fontSize: context.rFont(12, min: 10.5, max: 13.5),
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            SizedBox(width: context.rSpacing(8)),
+            Text(
+              param.degreeLabel,
+              style: TextStyle(
+                color: param.accentColor,
+                fontSize: context.rFont(12, min: 10.5, max: 13.5),
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: context.rSpacing(6)),
+
+        // Progress bar indicator
+        Container(
+          width: double.infinity,
+          height: 6,
+          decoration: BoxDecoration(
+            color: const Color(0xFF232833),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: LayoutBuilder(
+            builder: (ctx, constraints) {
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  width: constraints.maxWidth * param.degree.clamp(0.0, 1.0),
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: param.accentColor,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        SizedBox(height: context.rSpacing(6)),
+
+        // Membership values breakdown row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: param.membershipValues.entries.map((entry) {
+            return Flexible(
+              child: Text(
+                '${entry.key} (${entry.value.toStringAsFixed(2)})',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: context.rFont(10, min: 9, max: 11.5),
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 1. INPUT PARAMETER FUZZIFICATION
+        Row(
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFF5E4D),
+                shape: BoxShape.circle,
+              ),
+            ),
+            SizedBox(width: context.rSpacing(8)),
+            Expanded(
+              child: Text(
+                '1. INPUT PARAMETER FUZZIFICATION',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: context.rFont(12, min: 10.5, max: 13.5),
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: context.rSpacing(10)),
+        _buildFuzzifiedParamRow(context, item.deadlineParam),
+        SizedBox(height: context.rSpacing(12)),
+        _buildFuzzifiedParamRow(context, item.courseWeightParam),
+        SizedBox(height: context.rSpacing(16)),
+
+        // 2. CENTROID DEFUZZIFICATION
+        Row(
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: const BoxDecoration(
+                color: Color(0xFF10B981),
+                shape: BoxShape.circle,
+              ),
+            ),
+            SizedBox(width: context.rSpacing(8)),
+            Expanded(
+              child: Text(
+                '2. CENTROID DEFUZZIFICATION',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: context.rFont(12, min: 10.5, max: 13.5),
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: context.rSpacing(10)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: context.rFont(12, min: 10.5, max: 13.5),
+                        color: const Color(0xFFCBD5E1),
+                      ),
+                      children: const [
+                        TextSpan(
+                          text: 'Method: ',
+                          style: TextStyle(color: AppColors.textMuted),
+                        ),
+                        TextSpan(
+                          text: 'Center of Gravity (CoG)',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: context.rSpacing(2)),
+                  Text(
+                    'Aggregation Area: ${item.aggregationAreaText}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: context.rFont(11, min: 9.5, max: 12),
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: context.rSpacing(8)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'z* = ${item.score.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: const Color(0xFF34D399),
+                    fontSize: context.rFont(16, min: 14, max: 19),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                Text(
+                  'Scale [0 - 100]',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: context.rFont(10.5, min: 9.5, max: 11.5),
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        SizedBox(height: context.rSpacing(14)),
+
+        // 3. Why is this task Priority #1?
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(context.rSpacing(12)),
+          decoration: BoxDecoration(
+            color: AppColors.bgPrimary,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.borderSubtle,
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline_rounded,
+                    color: const Color(0xFF38BDF8),
+                    size: context.rIcon(16),
+                  ),
+                  SizedBox(width: context.rSpacing(6)),
+                  Expanded(
+                    child: Text(
+                      'Why is this task Priority #${item.rank}?',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: const Color(0xFF38BDF8),
+                        fontSize: context.rFont(12.5, min: 11, max: 14),
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: context.rSpacing(6)),
+              Text(
+                item.reasonExplanation,
+                style: TextStyle(
+                  color: const Color(0xFFCBD5E1),
+                  fontSize: context.rFont(11.5, min: 10, max: 13),
+                  fontFamily: 'Inter',
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
