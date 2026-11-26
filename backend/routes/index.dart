@@ -16,6 +16,7 @@ Response onRequest(RequestContext context) {
         'courses': '/api/courses',
         'tasks': '/api/tasks',
         'smartPriority': '/api/smart-priority',
+        'groups': '/api/groups',
         'profile': '/api/profile',
       },
     },

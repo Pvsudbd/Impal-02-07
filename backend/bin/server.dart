@@ -6,6 +6,7 @@ import '../lib/middleware/database_provider.dart';
 import '../lib/routes/auth/auth_routes.dart';
 import '../lib/routes/agenda/agenda_routes.dart';
 import '../lib/routes/course/course_routes.dart';
+import '../lib/routes/group/group_routes.dart';
 import '../lib/routes/profile/profile_routes.dart';
 import '../lib/routes/smart_priority/smart_priority_routes.dart';
 import '../lib/routes/task/task_routes.dart';
@@ -34,6 +35,7 @@ void main(List<String> args) async {
           'courses': '/api/courses',
           'tasks': '/api/tasks',
           'smartPriority': '/api/smart-priority',
+          'groups': '/api/groups',
           'course': '/api/agenda/course',
           'personal': '/api/agenda/personal',
           'profile': '/api/profile',
@@ -119,7 +121,10 @@ void main(List<String> args) async {
     fromShelfHandler(SmartPriorityRoutes().router),
   );
 
-  // 6. Mount Profile routes under /api/profile, /api/user, and /api/student
+  // 6. Mount Groups / Team routes under /api/groups
+  app.mount('/api/groups', fromShelfHandler(GroupRoutes().router));
+
+  // 7. Mount Profile routes under /api/profile, /api/user, and /api/student
   final profileRoutes = fromShelfHandler(ProfileRoutes().router);
   app.mount('/api/profile', profileRoutes);
   app.mount('/api/user', profileRoutes);
@@ -153,6 +158,7 @@ void main(List<String> args) async {
   print('📚 Courses : http://localhost:${server.port}/api/courses');
   print('📝 Tasks   : http://localhost:${server.port}/api/tasks');
   print('🧠 FuzzyAI : http://localhost:${server.port}/api/smart-priority');
+  print('👥 Groups  : http://localhost:${server.port}/api/groups');
   print('📅 Jadwal  : http://localhost:${server.port}/api/agenda');
   print('📅 Kuliah  : http://localhost:${server.port}/api/agenda/course');
   print('📅 Personal: http://localhost:${server.port}/api/agenda/personal');
