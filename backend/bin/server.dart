@@ -7,6 +7,8 @@ import '../lib/routes/auth/auth_routes.dart';
 import '../lib/routes/agenda/agenda_routes.dart';
 import '../lib/routes/course/course_routes.dart';
 import '../lib/routes/profile/profile_routes.dart';
+import '../lib/routes/smart_priority/smart_priority_routes.dart';
+import '../lib/routes/task/task_routes.dart';
 
 void main(List<String> args) async {
   Database.init();
@@ -30,6 +32,8 @@ void main(List<String> args) async {
           'auth': '/api/auth',
           'agenda': '/api/agenda',
           'courses': '/api/courses',
+          'tasks': '/api/tasks',
+          'smartPriority': '/api/smart-priority',
           'course': '/api/agenda/course',
           'personal': '/api/agenda/personal',
           'profile': '/api/profile',
@@ -106,7 +110,16 @@ void main(List<String> args) async {
   // 3. Mount Course catalog routes under /api/courses
   app.mount('/api/courses', fromShelfHandler(CourseRoutes().router));
 
-  // 4. Mount Profile routes under /api/profile, /api/user, and /api/student
+  // 4. Mount Task CRUD routes under /api/tasks
+  app.mount('/api/tasks', fromShelfHandler(TaskRoutes().router));
+
+  // 5. Mount Smart Priority Fuzzy XAI routes under /api/smart-priority
+  app.mount(
+    '/api/smart-priority',
+    fromShelfHandler(SmartPriorityRoutes().router),
+  );
+
+  // 6. Mount Profile routes under /api/profile, /api/user, and /api/student
   final profileRoutes = fromShelfHandler(ProfileRoutes().router);
   app.mount('/api/profile', profileRoutes);
   app.mount('/api/user', profileRoutes);
@@ -138,6 +151,8 @@ void main(List<String> args) async {
   print('📋 Tabel   : http://localhost:${server.port}/tables');
   print('🔐 Auth    : http://localhost:${server.port}/api/auth/login');
   print('📚 Courses : http://localhost:${server.port}/api/courses');
+  print('📝 Tasks   : http://localhost:${server.port}/api/tasks');
+  print('🧠 FuzzyAI : http://localhost:${server.port}/api/smart-priority');
   print('📅 Jadwal  : http://localhost:${server.port}/api/agenda');
   print('📅 Kuliah  : http://localhost:${server.port}/api/agenda/course');
   print('📅 Personal: http://localhost:${server.port}/api/agenda/personal');

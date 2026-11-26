@@ -1,6 +1,6 @@
 # 📑 Dokumen Audit & Roadmap Peningkatan Aplikasi: IMPAL Smart Task Manager
 > **Status Dokumen:** Master Roadmap & Living Audit Document  
-> **Terakhir Diperbarui:** 25 November 2026 (Sinkronisasi Backend `id_course` & Modul `/api/courses` Kuota 30 Matkul Kustom)  
+> **Terakhir Diperbarui:** 26 November 2026 (Implementasi Modul Fuzzy Mamdani XAI `/api/smart-priority` & CRUD `/api/tasks`)  
 > **Arsitektur:** Flutter Feature-First + Dart Frog REST API (PostgreSQL Pool & Transactions), ResponsiveContext, 60 FPS HP Kentang Compliance  
 > **Kepatuhan Mutu:** `dart analyze` — 0 Error, 0 Warning, 0 Deprecations  
 
@@ -311,3 +311,4 @@ Halaman: `SmartPriorityPage`, `DetailCardSmartPriority`, `SmartEngineStatusCard`
 | [`frontend/lib/presentation/features/team/widgets/team_schedule_section.dart`](file:///c:/Telkom/Smt%205/IMPAL/Code/Impal-02-07/frontend/lib/presentation/features/team/widgets/team_schedule_section.dart) | Penyelarasan Lebar Kartu Jadwal Tim: Integrasi `LayoutBuilder` & `availableWidth` pada `TeamListPage` dan `DashboardTeamPage` sehingga ukuran kartu jadwal 100% presisi sama dengan kartu jadwal di `HomePage` | ✅ **SELESAI (100%)** |
 | [`backend/` & `.agents/skills/`](.agents/features/backend_priority0_hardening.md) | **Prioritas 0 Backend Hardening & Workspace Skills Sync:** Migrasi `db.dart` ke `Pool.withEndpoints` + `Database.transaction`, penyelarasan skema live PostgreSQL (`id_user`, flag integer `0/1`), perbaikan bug `CourseSchedule.update` & orphan delete, sanitasi error & validasi input, skrip index `001_recommended_indexes.sql`, serta pembuatan skill `impal-backend-engineer` & `sync-project-skills` | ✅ **SELESAI (100%)** |
 | [`backend/lib/` & `/api/courses`](.agents/features/backend_course_id_migration.md) | **Sinkronisasi Backend `id_course` & Modul `/api/courses`:** Penyelarasan `CourseSchedule`, `AgendaController`, `ProfileModel`, dan `priority0_test.dart` dengan skema `002_course_id_migration.sql` (`id_course`, tanpa `course_code`/`lecturer`), plus CRUD `/api/courses` dengan kuota 30 matkul kustom/user (`dart analyze`: 0 issue, `dart test`: 7/7 pass) | ✅ **SELESAI (100%)** |
+| [`backend/lib/` & `/api/tasks`, `/api/smart-priority`](.agents/features/backend_fuzzy_tasks_module.md) | **Modul Fuzzy Mamdani XAI & CRUD Tugas:** Engine `FuzzyMamdaniService` (9 rule Min-Max + Centroid CoG), CRUD `/api/tasks` dengan auto-Fuzzy & auto-cleanup matkul kustom, serta ranking/simulasi/rekalkulasi `/api/smart-priority` (`dart analyze`: 0 issue, `dart test`: seluruh unit & integration test lulus) | ✅ **SELESAI (100%)** |

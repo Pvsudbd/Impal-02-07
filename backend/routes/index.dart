@@ -14,6 +14,8 @@ Response onRequest(RequestContext context) {
         'auth': '/api/auth',
         'agenda': '/api/agenda',
         'courses': '/api/courses',
+        'tasks': '/api/tasks',
+        'smartPriority': '/api/smart-priority',
         'profile': '/api/profile',
       },
     },
